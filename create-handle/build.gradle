@@ -21,7 +21,7 @@ dependencies {
 }
 
 test {
-    environment "HANDLE_SERVER_HOST", "https://hdl.handle.net"
+    environment "HANDLE_HOST", "https://hdl.handle.net"
     environment "HANDLE_PREFIX", "11250.1"
     environment "DATABASE_URI", "database_uri"
     environment "DATABASE_USER", "database_user"

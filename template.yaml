@@ -12,6 +12,13 @@ Parameters:
     Type: AWS::SSM::Parameter::Value<String>
     Description: URI to the OAUTH endpoint of the Cognito client
     Default: /NVA/CognitoUri
+  HandleHost:
+    Type: String
+    Default: 'https://hdl.handle.net'
+  HandlePrefix:
+    Type: 'AWS::SSM::Parameter::Value<String>'
+    Description: Reference to Handle Prefix to use
+    Default: HandlePrefix
   HandleDatabaseUri:
     Type: String
     Default: "{{resolve:secretsmanager:handle-database:SecretString:URI}}"
@@ -60,7 +67,7 @@ Resources:
       Environment:
         Variables:
           HANDLE_PREFIX: !Ref HandlePrefix
-          HANDLE_SERVER_HOST: !Ref HandleServerHost
+          HANDLE_HOST: !Ref HandleHost
           DATABASE_URI: !Ref HandleDatabaseUri
           DATABASE_USER: !Ref HandleDatabaseUser
           DATABASE_PASSWORD:  !Ref HandleDatabasePassword
