@@ -1,42 +1,48 @@
 package no.sikt.nva.handle;
 
 import com.amazonaws.services.lambda.runtime.Context;
-import com.amazonaws.services.lambda.runtime.RequestHandler;
+import no.sikt.nva.handle.exceptions.MalformedRequestException;
+import no.sikt.nva.handle.model.CreateHandleRequest;
+import no.sikt.nva.handle.model.CreateHandleResponse;
+import nva.commons.apigateway.ApiGatewayHandler;
+import nva.commons.apigateway.RequestInfo;
+import nva.commons.apigateway.exceptions.ApiGatewayException;
 import nva.commons.core.JacocoGenerated;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
-import java.net.URI;
-import java.sql.Connection;
+import java.net.HttpURLConnection;
 
-public class CreateHandleHandler implements RequestHandler<CreateHandleForPublicationEvent, Void> {
+import static java.util.Objects.isNull;
 
-    private static final Logger logger = LoggerFactory.getLogger(CreateHandleHandler.class);
-    public static final String PERSISTED_HANDLE_URI_ON_PUBLICATION = "Persisted handle uri '%s' on publication '%s'";
+public class CreateHandleHandler extends ApiGatewayHandler<CreateHandleRequest, CreateHandleResponse> {
+
+    public static final String NULL_URI_ERROR = "uri can not be null";
     private final HandleDatabase handleDatabase;
 
     @JacocoGenerated
     public CreateHandleHandler() {
-        this.handleDatabase = new HandleDatabase();
+        this(new HandleDatabase());
     }
 
-    public CreateHandleHandler(Connection connection) {
-        this.handleDatabase = new HandleDatabase(connection);
+    public CreateHandleHandler(HandleDatabase handleDatabase) {
+        super(CreateHandleRequest.class);
+        this.handleDatabase = handleDatabase;
     }
 
     @Override
-    public Void handleRequest(CreateHandleForPublicationEvent input, Context context) {
-
-        // 1. Create handle for publication URI (landing page)
-        URI uri = input.getPublicationUri();
-        URI handle = handleDatabase.createHandle(uri);
-
-        // 2. Persist handle on publication
-        String publicationIdentifier = input.getPublicationIdentifier();
-        // TODO
-
-        logger.debug(String.format(PERSISTED_HANDLE_URI_ON_PUBLICATION, handle, publicationIdentifier));
-        return null;
+    protected CreateHandleResponse processInput(CreateHandleRequest input, RequestInfo requestInfo, Context context)
+            throws ApiGatewayException {
+        validate(input);
+        return new CreateHandleResponse(handleDatabase.createHandle(input.getUri()));
     }
 
+    @Override
+    protected Integer getSuccessStatusCode(CreateHandleRequest input, CreateHandleResponse output) {
+        return HttpURLConnection.HTTP_CREATED;
+    }
+
+    private void validate(CreateHandleRequest input) throws MalformedRequestException {
+        if (isNull(input) || isNull(input.getUri())) {
+            throw new MalformedRequestException(NULL_URI_ERROR);
+        }
+    }
 }

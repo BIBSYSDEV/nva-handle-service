@@ -1,7 +1,7 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
 Description: >
-  Lambda creating handle for publications
+  Lambda for creating handle for a URI
 
 Parameters:
   CognitoAuthorizerArn:
@@ -12,6 +12,14 @@ Parameters:
     Type: AWS::SSM::Parameter::Value<String>
     Description: URI to the OAUTH endpoint of the Cognito client
     Default: /NVA/CognitoUri
+  ApiDomain:
+    Type: 'AWS::SSM::Parameter::Value<String>'
+    Description: The Api domain
+    Default: /NVA/ApiDomain
+  CustomDomainBasePath:
+    Type: String
+    Description: Base path mapping in CustomDomain
+    Default: handle
   HandleHost:
     Type: String
     Default: 'https://hdl.handle.net'
@@ -36,6 +44,75 @@ Globals:
     Runtime: java11
 
 Resources:
+
+  ApiAccessLogGroup:
+    Type: AWS::Logs::LogGroup
+
+    NvaCreateHandleFunctionApi:
+      Type: AWS::Serverless::Api
+      Properties:
+        AccessLogSetting:
+          DestinationArn: !GetAtt ApiAccessLogGroup.Arn
+          Format: '{ "apiId": "$context.apiId", "requestId": "$context.requestId", "requestTime": "$context.requestTime", "requestTimeEpoch": "$context.requestTimeEpoch", "httpMethod": "$context.httpMethod", "path": "$context.path", "status": "$context.status",  "error.message": "$context.error.message" }'
+        StageName: Prod
+        EndpointConfiguration: REGIONAL
+        DefinitionBody:
+          openapi: 3.0.0
+          info:
+            title: NVA Create Handle
+            version: '1.0'
+          paths:
+            /:
+              post:
+                summary: Create handle for a URI
+                security:
+                  - CognitoUserPool: [ "https://api.nva.unit.no/scopes/backend" ]
+                requestBody:
+                  required: true
+                  content:
+                    application/json:
+                      schema:
+                        $ref: '#/components/schemas/request'
+                x-amazon-apigateway-integration:
+                  uri:
+                    Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${NvaCreateHandleFunction.Arn}/invocations
+                  responses: { }
+                  httpMethod: POST
+                  type: AWS_PROXY
+                  passthroughBehavior: WHEN_NO_MATCH
+                responses:
+                  '200':
+                    content:
+                      application/json:
+                        schema:
+                          $ref: '#/components/schemas/response'
+          components:
+            securitySchemes:
+              CognitoUserPool:
+                type: apiKey
+                name: Authorization
+                in: header
+                x-amazon-apigateway-authtype: cognito_user_pools
+                x-amazon-apigateway-authorizer:
+                  type: cognito_user_pools
+                  providerARNs:
+                    - !Ref CognitoAuthorizerArn
+            schemas:
+              request:
+                type: object
+                properties:
+                  uri:
+                    type: string
+                required:
+                  - uri
+              response:
+                type: object
+                properties:
+                  handle:
+                    type: string
+                required:
+                  - handle
+
   NvaCreateHandleFunctionRole:
     Type: AWS::IAM::Role
     Properties:
@@ -66,8 +143,97 @@ Resources:
       Role: !GetAtt NvaCreateHandleFunctionRole.Arn
       Environment:
         Variables:
+          ALLOWED_ORIGIN: '*'
+          API_HOST: !Ref ApiDomain
           HANDLE_PREFIX: !Ref HandlePrefix
           HANDLE_HOST: !Ref HandleHost
           DATABASE_URI: !Ref HandleDatabaseUri
           DATABASE_USER: !Ref HandleDatabaseUser
           DATABASE_PASSWORD:  !Ref HandleDatabasePassword
+      Events:
+        CreateHandle:
+          Type: Api
+          Properties:
+            Path: /
+            Method: post
+            RestApiId: !Ref NvaCreateHandleFunctionApi
+
+  #============================ Deploy API ============================================================================#
+  # This solves the problem described here:
+  # https://stackoverflow.com/questions/41423439/cloudformation-doesnt-deploy-to-api-gateway-stages-on-update
+  #====================================================================================================================#
+
+  ApiGatewayCreateDeploymentLambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Path: /
+      ManagedPolicyArns:
+        - 'arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole'
+      Policies:
+        - PolicyName: ApiGatewayAdmin
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - apigateway:POST
+                Resource: !Sub 'arn:aws:apigateway:${AWS::Region}::/restapis/${NvaCreateHandleFunctionApi}/deployments'
+
+  # https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/cfn-lambda-function-code-cfnresponsemodule.html
+  ApiGatewayCreateDeploymentLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      Handler: index.lambda_handler
+      MemorySize: 128
+      Timeout: 30
+      Role: !GetAtt ApiGatewayCreateDeploymentLambdaRole.Arn
+      Runtime: python3.8
+      Code:
+        ZipFile: |
+          import json, boto3
+          import cfnresponse
+          client = boto3.client('apigateway')
+          def lambda_handler(event, context):
+            responseData = {}
+            responseStatus = cfnresponse.SUCCESS
+            if event['RequestType'] == 'Update':
+              try:
+                properties = event['ResourceProperties']
+                response = client.create_deployment(
+                  restApiId=properties['RestApiId'],
+                  stageName=properties['StageName'],
+                  description='Deployed from Custom Resource'
+                )
+              except:
+                responseStatus = cfnresponse.FAILED
+            cfnresponse.send(event, context, responseStatus, responseData)
+
+  ApiGatewayCreateDeploymentCustomResource:
+    Type: AWS::CloudFormation::CustomResource
+    Properties:
+      ServiceToken: !GetAtt ApiGatewayCreateDeploymentLambda.Arn
+      RestApiId: !Ref NvaCreateHandleFunctionApi
+      StageName: !Ref NvaCreateHandleFunctionApi.Stage
+      Timestamp: '${BUILD_TIMESTAMP}'
+      AuthorizerArn: !Ref CognitoAuthorizerArn
+
+  #===========================BasePathMappings========================================================
+
+  NvaCreateHandleBasePathMapping:
+    Type: AWS::ApiGateway::BasePathMapping
+    Properties:
+      BasePath:
+        !If
+        - WithSuffix
+        - !Sub ${CustomDomainBasePath}-${Suffix}
+        - !Sub ${CustomDomainBasePath}
+      DomainName: !Ref ApiDomain
+      RestApiId: !Ref NvaCreateHandleFunctionApi
+      Stage: !Ref NvaCreateHandleFunctionApi.Stage
