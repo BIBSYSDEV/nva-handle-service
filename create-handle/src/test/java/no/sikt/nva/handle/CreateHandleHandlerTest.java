@@ -44,6 +44,8 @@ import static org.hamcrest.core.StringContains.containsString;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 class CreateHandleHandlerTest {
@@ -77,7 +79,7 @@ class CreateHandleHandlerTest {
             throws IOException, SQLException {
         var uri = randomUri();
         var inputStream = createCreateHandleRequest(uri);
-        mockHandleDatabaseCreateHandle(false, true);
+        mockHandleDatabaseCreateHandle(false, true, true);
         var appender = LogUtils.getTestingAppenderForRootLogger();
         handler.handleRequest(inputStream, outputStream, context);
         var response = GatewayResponse.fromOutputStream(outputStream, CreateHandleResponse.class);
@@ -93,7 +95,7 @@ class CreateHandleHandlerTest {
             IOException, SQLException {
         var uri = randomUri();
         var inputStream = createCreateHandleRequest(uri);
-        mockHandleDatabaseCreateHandle(true, false);
+        mockHandleDatabaseCreateHandle(true, false, false);
         var appender = LogUtils.getTestingAppenderForRootLogger();
         handler.handleRequest(inputStream, outputStream, context);
         var response = GatewayResponse.fromOutputStream(outputStream, CreateHandleResponse.class);
@@ -114,15 +116,30 @@ class CreateHandleHandlerTest {
     }
 
     @Test
-    void createHandleRequestReturnsBadGatewayAndLogsErrorWhenNotAbleToCreateHandle() throws IOException, SQLException {
+    void createHandleRequestReturnsBadGatewayAndLogsErrorWhenNotAbleToCreateHandleId() throws IOException,
+            SQLException {
         var uri = randomUri();
         var inputStream = createCreateHandleRequest(uri);
-        mockHandleDatabaseCreateHandle(false, false);
+        mockHandleDatabaseCreateHandle(false, false, false);
         var appender = LogUtils.getTestingAppenderForRootLogger();
         handler.handleRequest(inputStream, outputStream, context);
         var response = GatewayResponse.fromOutputStream(outputStream, Problem.class);
         assertThat(appender.getMessages(), containsString(String.format(ERROR_CREATING_HANDLE_FOR_URI, uri)));
         assertThat(response.getStatusCode(), is(equalTo(HttpURLConnection.HTTP_BAD_GATEWAY)));
+    }
+
+    @Test
+    void createHandleRequestReturnsBadGatewayAndLogsErrorAndRollbackDatabaseTransactionWhenNotAbleToCreateHandle()
+            throws IOException, SQLException {
+        var uri = randomUri();
+        var inputStream = createCreateHandleRequest(uri);
+        mockHandleDatabaseCreateHandle(false, true, false);
+        var appender = LogUtils.getTestingAppenderForRootLogger();
+        handler.handleRequest(inputStream, outputStream, context);
+        var response = GatewayResponse.fromOutputStream(outputStream, Problem.class);
+        assertThat(appender.getMessages(), containsString(String.format(ERROR_CREATING_HANDLE_FOR_URI, uri)));
+        assertThat(response.getStatusCode(), is(equalTo(HttpURLConnection.HTTP_BAD_GATEWAY)));
+        verify(connection, times(1)).rollback();
     }
 
     @Test
@@ -144,15 +161,15 @@ class CreateHandleHandlerTest {
                 .addChild(environment.readEnv(ENV_HANDLE_PREFIX), Integer.toString(handleId)).getUri();
     }
 
-    private void mockHandleDatabaseCreateHandle(boolean uriAlreadyExists, boolean successfulCreate)
-            throws SQLException {
+    private void mockHandleDatabaseCreateHandle(boolean uriAlreadyExists, boolean successfulCreateHandleId,
+                                                boolean successfulCreateHandle) throws SQLException {
         PreparedStatement preparedStatementCheckUrl = createPreparedStatementCheckUrl(uriAlreadyExists);
         when(connection.prepareStatement(CHECK_URL_SQL)).thenReturn(preparedStatementCheckUrl);
 
-        PreparedStatement preparedStatementCreateId = createPreparedStatementCreateId(successfulCreate);
+        PreparedStatement preparedStatementCreateId = createPreparedStatementCreateId(successfulCreateHandleId);
         when(connection.prepareStatement(CREATE_ID_SQL)).thenReturn(preparedStatementCreateId);
 
-        PreparedStatement preparedStatementSetHandle = createPreparedStatementSetHandle();
+        PreparedStatement preparedStatementSetHandle = createPreparedStatementSetHandle(successfulCreateHandle);
         when(connection.prepareStatement(SET_HANDLE_SQL)).thenReturn(preparedStatementSetHandle);
     }
 
@@ -180,9 +197,13 @@ class CreateHandleHandlerTest {
         return preparedStatement;
     }
 
-    private PreparedStatement createPreparedStatementSetHandle() throws SQLException {
+    private PreparedStatement createPreparedStatementSetHandle(boolean success) throws SQLException {
         PreparedStatement preparedStatement = mock(PreparedStatement.class);
-        when(preparedStatement.executeUpdate()).thenReturn(1);
+        if (success) {
+            when(preparedStatement.executeUpdate()).thenReturn(1);
+        } else {
+            when(preparedStatement.executeUpdate()).thenThrow(new SQLException());
+        }
         return preparedStatement;
     }
 
