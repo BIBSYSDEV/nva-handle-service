@@ -114,7 +114,7 @@ class CreateHandleHandlerTest {
     }
 
     @Test
-    void createHandleRequestReturnsBadGatewayWhenNotAbleToCreateHandle() throws IOException, SQLException {
+    void createHandleRequestReturnsBadGatewayAndLogsErrorWhenNotAbleToCreateHandle() throws IOException, SQLException {
         var uri = randomUri();
         var inputStream = createCreateHandleRequest(uri);
         mockHandleDatabaseCreateHandle(false, false);
