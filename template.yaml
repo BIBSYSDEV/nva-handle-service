@@ -4,14 +4,16 @@ Description: >
   Lambda for creating handle for a URI
 
 Parameters:
+  Subnets:
+    Description: Subnet the Lambda-function should be deployed to
+    Type: List<AWS::EC2::Subnet::Id>
+  SecurityGroup:
+    Description: Security Group to use for the Lambda-function
+    Type: AWS::EC2::SecurityGroup::Id
   CognitoAuthorizerArn:
     Type: 'AWS::SSM::Parameter::Value<String>'
     Description: Reference to Cognito UserPool for the stage
     Default: CognitoAuthorizerArn
-  CognitoUri:
-    Type: AWS::SSM::Parameter::Value<String>
-    Description: URI to the OAUTH endpoint of the Cognito client
-    Default: /NVA/CognitoUri
   ApiDomain:
     Type: 'AWS::SSM::Parameter::Value<String>'
     Description: The Api domain
@@ -42,76 +44,31 @@ Globals:
     Timeout: 900
     MemorySize: 1798
     Runtime: java11
+  Api:
+    Cors:
+      AllowMethods: "'OPTIONS,POST'"
+      AllowHeaders: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+      AllowOrigin: "'*'"
 
 Resources:
 
   ApiAccessLogGroup:
     Type: AWS::Logs::LogGroup
 
-    NvaCreateHandleFunctionApi:
-      Type: AWS::Serverless::Api
-      Properties:
-        AccessLogSetting:
-          DestinationArn: !GetAtt ApiAccessLogGroup.Arn
-          Format: '{ "apiId": "$context.apiId", "requestId": "$context.requestId", "requestTime": "$context.requestTime", "requestTimeEpoch": "$context.requestTimeEpoch", "httpMethod": "$context.httpMethod", "path": "$context.path", "status": "$context.status",  "error.message": "$context.error.message" }'
-        StageName: Prod
-        EndpointConfiguration: REGIONAL
-        DefinitionBody:
-          openapi: 3.0.0
-          info:
-            title: NVA Create Handle
-            version: '1.0'
-          paths:
-            /:
-              post:
-                summary: Create handle for a URI
-                security:
-                  - CognitoUserPool: [ "https://api.nva.unit.no/scopes/backend" ]
-                requestBody:
-                  required: true
-                  content:
-                    application/json:
-                      schema:
-                        $ref: '#/components/schemas/request'
-                x-amazon-apigateway-integration:
-                  uri:
-                    Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${NvaCreateHandleFunction.Arn}/invocations
-                  responses: { }
-                  httpMethod: POST
-                  type: AWS_PROXY
-                  passthroughBehavior: WHEN_NO_MATCH
-                responses:
-                  '200':
-                    content:
-                      application/json:
-                        schema:
-                          $ref: '#/components/schemas/response'
-          components:
-            securitySchemes:
-              CognitoUserPool:
-                type: apiKey
-                name: Authorization
-                in: header
-                x-amazon-apigateway-authtype: cognito_user_pools
-                x-amazon-apigateway-authorizer:
-                  type: cognito_user_pools
-                  providerARNs:
-                    - !Ref CognitoAuthorizerArn
-            schemas:
-              request:
-                type: object
-                properties:
-                  uri:
-                    type: string
-                required:
-                  - uri
-              response:
-                type: object
-                properties:
-                  handle:
-                    type: string
-                required:
-                  - handle
+  NvaCreateHandleFunctionApi:
+    Type: AWS::Serverless::Api
+    Properties:
+      AccessLogSetting:
+        DestinationArn: !GetAtt ApiAccessLogGroup.Arn
+        Format: '{ "apiId": "$context.apiId", "requestId": "$context.requestId", "requestTime": "$context.requestTime", "requestTimeEpoch": "$context.requestTimeEpoch", "httpMethod": "$context.httpMethod", "path": "$context.path", "status": "$context.status",  "error.message": "$context.error.message" }'
+      StageName: Prod
+      EndpointConfiguration:
+        Type: PRIVATE
+      DefinitionBody:
+        'Fn::Transform':
+          Name: AWS::Include
+          Parameters:
+            Location: ./docs/openapi.yaml
 
   NvaCreateHandleFunctionRole:
     Type: AWS::IAM::Role
@@ -123,6 +80,8 @@ Resources:
             Principal:
               Service: [ lambda.amazonaws.com ]
             Action: [ 'sts:AssumeRole' ]
+      ManagedPolicyArns:
+        - "arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole"
       Policies:
         - PolicyName: writeLog
           PolicyDocument:
@@ -150,11 +109,15 @@ Resources:
           DATABASE_URI: !Ref HandleDatabaseUri
           DATABASE_USER: !Ref HandleDatabaseUser
           DATABASE_PASSWORD:  !Ref HandleDatabasePassword
+      VpcConfig:
+        SecurityGroupIds:
+          - !Ref SecurityGroup
+        SubnetIds: !Ref Subnets
       Events:
         CreateHandle:
           Type: Api
           Properties:
-            Path: /
+            Path: /handle
             Method: post
             RestApiId: !Ref NvaCreateHandleFunctionApi
 
