@@ -29,7 +29,7 @@ public class HandleDatabase {
     public static final String ENV_DATABASE_PASSWORD = "DATABASE_PASSWORD";
     public static final String ENV_DATABASE_USER = "DATABASE_USER";
     public static final String ENV_HANDLE_PREFIX = "HANDLE_PREFIX";
-    public static final String ENV_HANDLE_HOST = "HANDLE_HOST";
+    public static final String ENV_HANDLE_BASE_URI = "HANDLE_BASE_URI";
     public static final String ENV_DATABASE_URI = "DATABASE_URI";
     public static final String USER = "user";
     public static final String PASSWORD = "password";
@@ -62,7 +62,7 @@ public class HandleDatabase {
             try (ResultSet existingResult = preparedStatementCheckUrl.executeQuery()) {
                 if (existingResult.next()) {
                     final String existingHandleString = existingResult.getString(1);
-                    URI existingHandle = UriWrapper.fromUri(environment.readEnv(ENV_HANDLE_HOST))
+                    URI existingHandle = UriWrapper.fromUri(environment.readEnv(ENV_HANDLE_BASE_URI))
                             .addChild(existingHandleString).getUri();
                     logger.info(String.format(REUSED_EXISTING_HANDLE_FOR_URI, existingHandle, uri));
                     return existingHandle;
@@ -89,7 +89,7 @@ public class HandleDatabase {
                 preparedStatementUpdate.setInt(3, generatedId);
                 preparedStatementUpdate.executeUpdate();
                 connection.commit();
-                URI handle = UriWrapper.fromUri(environment.readEnv(ENV_HANDLE_HOST)).addChild(handleLocalPart)
+                URI handle = UriWrapper.fromUri(environment.readEnv(ENV_HANDLE_BASE_URI)).addChild(handleLocalPart)
                         .getUri();
                 logger.info(String.format(CREATED_HANDLE_FOR_URI, handle, uri));
                 return handle;

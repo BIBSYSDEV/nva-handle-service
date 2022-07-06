@@ -30,7 +30,7 @@ import static no.sikt.nva.handle.HandleDatabase.CHARACTER_SLASH;
 import static no.sikt.nva.handle.HandleDatabase.CHECK_URL_SQL;
 import static no.sikt.nva.handle.HandleDatabase.CREATED_HANDLE_FOR_URI;
 import static no.sikt.nva.handle.HandleDatabase.CREATE_ID_SQL;
-import static no.sikt.nva.handle.HandleDatabase.ENV_HANDLE_HOST;
+import static no.sikt.nva.handle.HandleDatabase.ENV_HANDLE_BASE_URI;
 import static no.sikt.nva.handle.HandleDatabase.ENV_HANDLE_PREFIX;
 import static no.sikt.nva.handle.HandleDatabase.ERROR_CONNECTING_TO_HANDLE_DATABASE;
 import static no.sikt.nva.handle.HandleDatabase.ERROR_CREATING_HANDLE_FOR_URI;
@@ -157,7 +157,7 @@ class CreateHandleHandlerTest {
     }
 
     private URI createHandleFromHandleId(int handleId) {
-        return UriWrapper.fromHost(environment.readEnv(ENV_HANDLE_HOST))
+        return UriWrapper.fromHost(environment.readEnv(ENV_HANDLE_BASE_URI))
                 .addChild(environment.readEnv(ENV_HANDLE_PREFIX), Integer.toString(handleId)).getUri();
     }
 

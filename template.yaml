@@ -22,22 +22,23 @@ Parameters:
     Type: String
     Description: Base path mapping in CustomDomain
     Default: handle
-  HandleHost:
+  HandleBaseUri:
     Type: String
-    Default: 'https://hdl.handle.net'
+    Description: The host part of Handle URIs
+    Default: https://hdl.handle.net
   HandlePrefix:
-    Type: 'AWS::SSM::Parameter::Value<String>'
+    Type: String
     Description: Reference to Handle Prefix to use
-    Default: HandlePrefix
+    Default: 11250.1
   HandleDatabaseUri:
     Type: String
-    Default: "{{resolve:secretsmanager:handle-database:SecretString:URI}}"
+    Default: "{{resolve:secretsmanager:HandleDatabase:SecretString:uri}}"
   HandleDatabaseUser:
     Type: String
-    Default: "{{resolve:secretsmanager:handle-database:SecretString:USER}}"
+    Default: "{{resolve:secretsmanager:HandleDatabase:SecretString:user}}"
   HandleDatabasePassword:
     Type: String
-    Default: "{{resolve:secretsmanager:handle-database:SecretString:PASSWORD}}"
+    Default: "{{resolve:secretsmanager:HandleDatabase:SecretString:password}}"
 
 Globals:
   Function:
@@ -105,7 +106,7 @@ Resources:
           ALLOWED_ORIGIN: '*'
           API_HOST: !Ref ApiDomain
           HANDLE_PREFIX: !Ref HandlePrefix
-          HANDLE_HOST: !Ref HandleHost
+          HANDLE_BASE_URI: !Ref HandleBaseUri
           DATABASE_URI: !Ref HandleDatabaseUri
           DATABASE_USER: !Ref HandleDatabaseUser
           DATABASE_PASSWORD:  !Ref HandleDatabasePassword

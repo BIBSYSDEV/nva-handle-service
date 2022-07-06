@@ -1,8 +1,5 @@
 
 dependencies {
-    api(libs.nva.datamodel) {
-        exclude group: 'com.github.bibsysdev', module: 'nva-commons'
-    }
 
     implementation group: 'org.postgresql', name: 'postgresql', version: '42.4.0'
 
@@ -20,7 +17,7 @@ dependencies {
 }
 
 test {
-    environment "HANDLE_HOST", "https://hdl.handle.net"
+    environment "HANDLE_BASE_URI", "https://hdl.handle.net"
     environment "HANDLE_PREFIX", "11250.1"
     environment "DATABASE_URI", "database_uri"
     environment "DATABASE_USER", "database_user"
