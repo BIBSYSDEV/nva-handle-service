@@ -105,6 +105,7 @@ Resources:
                   - ec2:DeleteNetworkInterface
                   - ec2:AssignPrivateIpAddresses
                   - ec2:UnassignPrivateIpAddresses
+                  - ec2:DescribeVpcs
                 Resource: "*"
 
   NvaCreateHandleFunction:
