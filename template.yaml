@@ -193,11 +193,7 @@ Resources:
   NvaCreateHandleBasePathMapping:
     Type: AWS::ApiGateway::BasePathMapping
     Properties:
-      BasePath:
-        !If
-        - WithSuffix
-        - !Sub ${CustomDomainBasePath}-${Suffix}
-        - !Sub ${CustomDomainBasePath}
+      BasePath: !Sub ${CustomDomainBasePath}
       DomainName: !Ref ApiDomain
       RestApiId: !Ref NvaCreateHandleFunctionApi
       Stage: !Ref NvaCreateHandleFunctionApi.Stage
