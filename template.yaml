@@ -81,8 +81,6 @@ Resources:
             Principal:
               Service: [ lambda.amazonaws.com ]
             Action: [ 'sts:AssumeRole' ]
-      ManagedPolicyArns:
-        - "arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole"
       Policies:
         - PolicyName: writeLog
           PolicyDocument:
@@ -94,7 +92,7 @@ Resources:
                   - logs:CreateLogStream
                   - logs:PutLogEvents
                 Resource: !Sub 'arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:*:*'
-        - PolicyName: describeSubnetsAndSecurityGroups
+        - PolicyName: customAWSLambdaVPCAccessExecutionRole
           PolicyDocument:
             Version: 2012-10-17
             Statement:
@@ -102,6 +100,11 @@ Resources:
                 Action:
                   - ec2:DescribeSubnets
                   - ec2:DescribeSecurityGroups
+                  - ec2:CreateNetworkInterface
+                  - ec2:DescribeNetworkInterfaces
+                  - ec2:DeleteNetworkInterface
+                  - ec2:AssignPrivateIpAddresses
+                  - ec2:UnassignPrivateIpAddresses
                 Resource: "*"
 
   NvaCreateHandleFunction:
