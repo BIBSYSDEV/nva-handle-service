@@ -62,7 +62,8 @@ Resources:
       AccessLogSetting:
         DestinationArn: !GetAtt ApiAccessLogGroup.Arn
         Format: '{ "apiId": "$context.apiId", "requestId": "$context.requestId", "requestTime": "$context.requestTime", "requestTimeEpoch": "$context.requestTimeEpoch", "httpMethod": "$context.httpMethod", "path": "$context.path", "status": "$context.status",  "error.message": "$context.error.message" }'
-      StageName: Prod
+      Name: !Sub "${AWS::StackName}"
+      StageName: v1
       EndpointConfiguration:
         Type: PRIVATE
       DefinitionBody:
@@ -70,6 +71,14 @@ Resources:
           Name: AWS::Include
           Parameters:
             Location: ./docs/openapi.yaml
+      Auth:
+        ResourcePolicy:
+          CustomStatements:
+            - Effect: 'Allow'
+              Action: 'execute-api:Invoke'
+              Resource: [ 'execute-api:/handle' ]
+              Principal:
+                AWS: "arn:aws:iam::${AWS::AccountId}:root"
 
   NvaCreateHandleFunctionRole:
     Type: AWS::IAM::Role
