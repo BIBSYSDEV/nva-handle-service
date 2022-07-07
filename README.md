@@ -4,7 +4,7 @@ API for creating handle for URI. The lambda needs to have a static IP to gain ac
 
 Valid request body JSON:
 
-```
+```json
 {
     "uri" : "<A VALID URI>"
 }
@@ -12,7 +12,7 @@ Valid request body JSON:
 
 Success response body:
 
-```
+```json
 {
     "handle" : "<A CREATED HANDLE URI>"
 }
