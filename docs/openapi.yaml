@@ -2,6 +2,8 @@ openapi: 3.0.0
 info:
   title: NVA Create Handle
   version: '1.0'
+  license:
+    name: MIT
 paths:
   /handle:
     post:
@@ -12,8 +14,6 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/Request'
-      security:
-        - CognitoUserPool: ['https://api.nva.unit.no/scopes/backend', 'https://api.nva.unit.no/scopes/frontend', 'aws.cognito.signin.user.admin']
       x-amazon-apigateway-integration:
         uri:
           Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${NvaCreateHandleFunction.Arn}/invocations
@@ -22,6 +22,7 @@ paths:
         type: AWS_PROXY
       responses:
         '201':
+          description: Handle created
           content:
             application/json:
               schema:
@@ -63,14 +64,3 @@ components:
           type: integer
         detail:
           type: string
-  securitySchemes:
-    CognitoUserPool:
-      type: apiKey
-      name: Authorization
-      in: header
-      x-amazon-apigateway-authtype: cognito_user_pools
-      x-amazon-apigateway-authorizer:
-        type: cognito_user_pools
-        providerARNs:
-          - Ref:
-              CognitoAuthorizerArn
