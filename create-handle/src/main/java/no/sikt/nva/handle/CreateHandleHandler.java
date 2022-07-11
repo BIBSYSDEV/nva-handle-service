@@ -20,7 +20,7 @@ public class CreateHandleHandler extends ApiGatewayHandler<CreateHandleRequest, 
 
     @JacocoGenerated
     public CreateHandleHandler() {
-        this(new HandleDatabase());
+        this(new HandleDatabase(null));
     }
 
     public CreateHandleHandler(HandleDatabase handleDatabase) {

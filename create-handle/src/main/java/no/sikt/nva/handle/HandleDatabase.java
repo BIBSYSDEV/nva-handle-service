@@ -13,6 +13,7 @@ import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.Objects;
 import java.util.Properties;
 
 public class HandleDatabase {
@@ -37,19 +38,8 @@ public class HandleDatabase {
     private final Environment environment = new Environment();
     private final Connection connection;
 
-    @JacocoGenerated
-    public HandleDatabase() {
-        try {
-            this.connection = DriverManager.getConnection(environment.readEnv(ENV_DATABASE_URI),
-                    getConnectionProperties());
-        } catch (SQLException e) {
-            logger.error(ERROR_CONNECTING_TO_HANDLE_DATABASE, e);
-            throw new RuntimeException(e);
-        }
-    }
-
     public HandleDatabase(Connection connection) {
-        this.connection = connection;
+        this.connection = Objects.isNull(connection) ? createConnection() : connection;
     }
 
     public URI createHandle(URI uri) throws CreateHandleException {
@@ -61,18 +51,23 @@ public class HandleDatabase {
             preparedStatementCheckUrl.setString(1, uri.toString());
             try (ResultSet existingResult = preparedStatementCheckUrl.executeQuery()) {
                 if (existingResult.next()) {
-                    final String existingHandleString = existingResult.getString(1);
-                    URI existingHandle = UriWrapper.fromUri(environment.readEnv(ENV_HANDLE_BASE_URI))
-                            .addChild(existingHandleString).getUri();
-                    logger.info(String.format(REUSED_EXISTING_HANDLE_FOR_URI, existingHandle, uri));
-                    return existingHandle;
+                    return getExistingHandle(uri, existingResult);
+                } else {
+                    return createNewHandle(uri, preparedStatementCreate, preparedStatementUpdate);
                 }
-                return createNewHandle(uri, preparedStatementCreate, preparedStatementUpdate);
             }
         } catch (SQLException e) {
             logger.error(String.format(ERROR_CREATING_HANDLE_FOR_URI, uri), e);
             throw new CreateHandleException(String.format(ERROR_CREATING_HANDLE_FOR_URI, uri));
         }
+    }
+
+    private URI getExistingHandle(URI uri, ResultSet existingResult) throws SQLException {
+        final String existingHandleString = existingResult.getString(1);
+        URI existingHandle = UriWrapper.fromUri(environment.readEnv(ENV_HANDLE_BASE_URI))
+                .addChild(existingHandleString).getUri();
+        logger.info(String.format(REUSED_EXISTING_HANDLE_FOR_URI, existingHandle, uri));
+        return existingHandle;
     }
 
     private URI createNewHandle(URI uri, PreparedStatement preparedStatementCreate,
@@ -104,6 +99,17 @@ public class HandleDatabase {
 
     private String createHandleLocalPart(int generatedId) {
         return environment.readEnv(ENV_HANDLE_PREFIX) + CHARACTER_SLASH + generatedId;
+    }
+
+    @JacocoGenerated
+    private Connection createConnection() {
+        try {
+            return DriverManager.getConnection(environment.readEnv(ENV_DATABASE_URI),
+                    getConnectionProperties());
+        } catch (SQLException e) {
+            logger.error(ERROR_CONNECTING_TO_HANDLE_DATABASE, e);
+            throw new RuntimeException(e);
+        }
     }
 
     @JacocoGenerated
