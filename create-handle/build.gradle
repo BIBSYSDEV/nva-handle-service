@@ -1,14 +1,10 @@
 
 dependencies {
-    api(libs.nva.datamodel) {
-        exclude group: 'com.github.bibsysdev', module: 'nva-commons'
-    }
 
     implementation group: 'org.postgresql', name: 'postgresql', version: '42.4.0'
 
     implementation libs.nva.json
     implementation libs.nva.core
-    implementation libs.nva.events
     implementation libs.nva.apigateway
 
     implementation libs.aws.lambda.java.core
@@ -21,10 +17,12 @@ dependencies {
 }
 
 test {
-    environment "HANDLE_SERVER_HOST", "https://hdl.handle.net"
+    environment "HANDLE_BASE_URI", "https://hdl.handle.net"
     environment "HANDLE_PREFIX", "11250.1"
     environment "DATABASE_URI", "database_uri"
     environment "DATABASE_USER", "database_user"
     environment "DATABASE_PASSWORD", "database_password"
+    environment "API_HOST", "api.localhost.nva.aws.unit.no"
+    environment "ALLOWED_ORIGIN", "*"
 }
 

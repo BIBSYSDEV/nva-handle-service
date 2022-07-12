@@ -1,0 +1,66 @@
+openapi: 3.0.0
+info:
+  title: NVA Handle API
+  version: '1.0'
+  license:
+    name: MIT
+paths:
+  /handle:
+    post:
+      summary: Create handle for a URI
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Request'
+      x-amazon-apigateway-integration:
+        uri:
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${NvaCreateHandleFunction.Arn}/invocations
+        responses: { }
+        httpMethod: POST
+        type: AWS_PROXY
+      responses:
+        '201':
+          description: Handle created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Response'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '502':
+          description: Bad Gateway
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+components:
+  schemas:
+    Request:
+      type: object
+      properties:
+        uri:
+          type: string
+      required:
+        - uri
+    Response:
+      type: object
+      properties:
+        handle:
+          type: string
+      required:
+        - handle
+    Problem:
+      type: object
+      properties:
+        title:
+          type: string
+        status:
+          type: integer
+        detail:
+          type: string
