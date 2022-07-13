@@ -1,3 +1,6 @@
+plugins {
+    id 'com.github.johnrengelman.shadow' version '5.2.0'
+}
 
 dependencies {
 
@@ -14,7 +17,16 @@ dependencies {
 
     testImplementation libs.nva.testutils
     testImplementation libs.nva.json
+
+    shadowJar {
+        archiveClassifier.set('')
+        zip64 true
+    }
 }
+
+// We don't want a jar, just a fatJar
+jar.enabled = false
+project.tasks.build.dependsOn project.tasks.shadowJar
 
 test {
     environment "HANDLE_BASE_URI", "https://hdl.handle.net"
