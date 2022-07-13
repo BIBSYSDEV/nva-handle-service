@@ -1,12 +1,8 @@
 [versions]
 nva = { strictly = "1.24.18" }
 jacksonVersion = { strictly = "2.13.3" }
-jakartaVersion = { strictly = "2.1.6" }
-awsSdk2Version = { strictly = "2.17.191" }
 awsLambdaCore = { strictly = '1.2.1' }
-jerseyVersion = { strictly = "2.30.1" }
 problemVersion = { strictly = "0.27.1" }
-commonsValidator = { strictly = "1.7" }
 apacheHttpClient = { strictly = "4.5.13" }
 wiremock = { strictly = "2.32.0" }
 apiGuardian = { strictly = "1.1.2" }
@@ -15,8 +11,6 @@ junit5 = { strictly = '5.8.2' }
 mockito = { strictly = '4.5.1' }
 log4j = { strictly = '2.17.1' }
 slf4j = { strictly = '1.8.0-beta4' }
-nvaLanguage = { strictly = '1.0' }
-guava = { strictly = '31.0.1-jre' }
 awslog4j2 = { strictly = '1.5.1' }
 postgres = { strictly = '42.4.0' }
 
@@ -24,7 +18,6 @@ postgres = { strictly = '42.4.0' }
 nva-core = { group = "com.github.bibsysdev", name = "core", version.ref = "nva" }
 nva-json = { group = "com.github.bibsysdev", name = "json", version.ref = "nva" }
 nva-apigateway = { group = "com.github.bibsysdev", name = "apigateway", version.ref = "nva" }
-nva-secrets = { group = "com.github.bibsysdev", name = "secrets", version.ref = "nva" }
 nva-logutils = { group = "com.github.bibsysdev", name = "logutils", version.ref = "nva" }
 nva-testutils = { group = "com.github.bibsysdev", name = "nvatestutils", version.ref = "nva" }
 
@@ -34,22 +27,14 @@ jackson-datatype-jdk8 = { group = "com.fasterxml.jackson.datatype", name = "jack
 jackson-annotations = { group = "com.fasterxml.jackson.core", name = "jackson-annotations", version.ref = "jacksonVersion" }
 jackson-datatype-jsr310 = { group = "com.fasterxml.jackson.datatype", name = "jackson-datatype-jsr310", version.ref = "jacksonVersion" }
 
-aws-java-sdk2-s3 = { group = "software.amazon.awssdk", name = "s3", version.ref = "awsSdk2Version" }
-aws-sdk2-secrets = { group = 'software.amazon.awssdk', name = 'secretsmanager', version.ref = 'awsSdk2Version' }
-aws-sdk2-core = { group = 'software.amazon.awssdk', name = 'sdk-core', version.ref = 'awsSdk2Version' }
-
 aws-lambda-java-core = { group = "com.amazonaws", name = "aws-lambda-java-core", version.ref = "awsLambdaCore" }
-jakarta = { group = "jakarta.ws.rs", name = "jakarta.ws.rs-api", version.ref = "jakartaVersion" }
-jersey-common = { group = "org.glassfish.jersey.core", name = "jersey-common", version.ref = "jerseyVersion" }
 
 zalando-problem = { group = "org.zalando", name = "problem", version.ref = "problemVersion" }
 zalando-jackson-datatype-problem = { group = "org.zalando", name = "jackson-datatype-problem", version.ref = "problemVersion" }
 
 apiGuardian = { group = "org.apiguardian", name = "apiguardian-api", version.ref = "apiGuardian" }
-commons-validator = { group = "commons-validator", name = "commons-validator", version.ref = "commonsValidator" }
 httpclient = { group = "org.apache.httpcomponents", name = "httpclient", version.ref = "apacheHttpClient" }
 wiremock = { group = "com.github.tomakehurst", name = "wiremock-jre8", version.ref = "wiremock" }
-guava = { group = 'com.google.guava', name = 'guava', version.ref = 'guava' }
 
 mockito-core = { group = 'org.mockito', name = 'mockito-core', version.ref = 'mockito' }
 hamcrest-base = { group = 'org.hamcrest', name = 'hamcrest', version.ref = 'hamcrest' }
