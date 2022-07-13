@@ -104,10 +104,9 @@ public class HandleDatabase {
     @JacocoGenerated
     private Connection createConnection() {
         try {
-            Class.forName("org.postgres.Driver");
             return DriverManager.getConnection(environment.readEnv(ENV_DATABASE_URI),
                     getConnectionProperties());
-        } catch (ClassNotFoundException | SQLException e) {
+        } catch (SQLException e) {
             logger.error(ERROR_CONNECTING_TO_HANDLE_DATABASE, e);
             throw new RuntimeException(e);
         }
