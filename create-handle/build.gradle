@@ -1,32 +1,21 @@
-plugins {
-    id 'com.github.johnrengelman.shadow' version '5.2.0'
-}
 
 dependencies {
 
-    implementation group: 'org.postgresql', name: 'postgresql', version: '42.4.0'
+    implementation libs.postgres
 
     implementation libs.nva.json
     implementation libs.nva.core
     implementation libs.nva.apigateway
 
     implementation libs.aws.lambda.java.core
-    implementation libs.bundles.logging
 
+    implementation libs.bundles.logging
     implementation libs.bundles.jackson
 
     testImplementation libs.nva.testutils
     testImplementation libs.nva.json
 
-    shadowJar {
-        archiveClassifier.set('')
-        zip64 true
-    }
 }
-
-// We don't want a jar, just a fatJar
-jar.enabled = false
-project.tasks.build.dependsOn project.tasks.shadowJar
 
 test {
     environment "HANDLE_BASE_URI", "https://hdl.handle.net"

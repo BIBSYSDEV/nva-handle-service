@@ -18,6 +18,7 @@ slf4j = { strictly = '1.8.0-beta4' }
 nvaLanguage = { strictly = '1.0' }
 guava = { strictly = '31.0.1-jre' }
 awslog4j2 = { strictly = '1.5.1' }
+postgres = { strictly = '42.4.0' }
 
 [libraries]
 nva-core = { group = "com.github.bibsysdev", name = "core", version.ref = "nva" }
@@ -63,6 +64,9 @@ log4j-api = { group = 'org.apache.logging.log4j', name = 'log4j-api', version.re
 log4j-slf4j18-impl = { group = 'org.apache.logging.log4j', name = 'log4j-slf4j18-impl', version.ref = 'log4j' }
 slf4j-api = { group = 'org.slf4j', name = 'slf4j-api', version.ref = 'slf4j' }
 aws-lambda-log4j2 = { group = 'com.amazonaws', name = 'aws-lambda-java-log4j2', version.ref = 'awslog4j2'}
+
+postgres = { group = 'org.postgresql', name = 'postgresql', version.ref = 'postgres'}
+
 
 [bundles]
 testing = ["mockito-core", "hamcrest-base", "hamcrest-core", "junit-jupiter-engine", "junit-jupiter-params",
