@@ -8,6 +8,8 @@ paths:
   /handle:
     post:
       summary: Create handle for a URI
+      security:
+        - CognitoUserPool: [ 'https://api.nva.unit.no/scopes/backend', 'https://api.nva.unit.no/scopes/frontend', 'aws.cognito.signin.user.admin' ]
       requestBody:
         required: true
         content:
@@ -64,3 +66,14 @@ components:
           type: integer
         detail:
           type: string
+  securitySchemes:
+    CognitoUserPool:
+      type: apiKey
+      name: Authorization
+      in: header
+      x-amazon-apigateway-authtype: cognito_user_pools
+      x-amazon-apigateway-authorizer:
+        type: cognito_user_pools
+        providerARNs:
+          - Ref:
+              CognitoAuthorizerArn

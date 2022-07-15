@@ -64,20 +64,12 @@ Resources:
         Format: '{ "apiId": "$context.apiId", "requestId": "$context.requestId", "requestTime": "$context.requestTime", "requestTimeEpoch": "$context.requestTimeEpoch", "httpMethod": "$context.httpMethod", "path": "$context.path", "status": "$context.status",  "error.message": "$context.error.message" }'
       StageName: Prod
       EndpointConfiguration:
-        Type: PRIVATE
+        Type: REGIONAL
       DefinitionBody:
         'Fn::Transform':
           Name: AWS::Include
           Parameters:
             Location: ./docs/openapi.yaml
-      Auth:
-        ResourcePolicy:
-          CustomStatements:
-            - Effect: 'Allow'
-              Action: 'execute-api:Invoke'
-              Resource: [ 'execute-api:/handle' ]
-              Principal:
-                AWS: "arn:aws:iam::${AWS::AccountId}:root"
 
   NvaCreateHandleFunctionRole:
     Type: AWS::IAM::Role
