@@ -1,18 +1,14 @@
 [versions]
-nva = { strictly = "1.24.18" }
-jacksonVersion = { strictly = "2.13.3" }
-awsLambdaCore = { strictly = '1.2.1' }
+nva = { strictly = "1.39.3" }
+jacksonVersion = { strictly = "2.16.1" }
+awsLambdaCore = { strictly = '1.2.3' }
 problemVersion = { strictly = "0.27.1" }
-apacheHttpClient = { strictly = "4.5.13" }
-wiremock = { strictly = "2.32.0" }
-apiGuardian = { strictly = "1.1.2" }
 hamcrest = { strictly = '2.2' }
-junit5 = { strictly = '5.8.2' }
-mockito = { strictly = '4.5.1' }
-log4j = { strictly = '2.17.1' }
-slf4j = { strictly = '1.8.0-beta4' }
-awslog4j2 = { strictly = '1.5.1' }
-postgres = { strictly = '42.4.0' }
+junit = { strictly = '5.10.2' }
+mockito = { strictly = '5.10.0' }
+log4j = { strictly = '2.23.0' }
+slf4j = { strictly = '2.0.12' }
+postgres = { strictly = '42.7.3' }
 
 [libraries]
 nva-core = { group = "com.github.bibsysdev", name = "core", version.ref = "nva" }
@@ -32,30 +28,25 @@ aws-lambda-java-core = { group = "com.amazonaws", name = "aws-lambda-java-core",
 zalando-problem = { group = "org.zalando", name = "problem", version.ref = "problemVersion" }
 zalando-jackson-datatype-problem = { group = "org.zalando", name = "jackson-datatype-problem", version.ref = "problemVersion" }
 
-apiGuardian = { group = "org.apiguardian", name = "apiguardian-api", version.ref = "apiGuardian" }
-httpclient = { group = "org.apache.httpcomponents", name = "httpclient", version.ref = "apacheHttpClient" }
-wiremock = { group = "com.github.tomakehurst", name = "wiremock-jre8", version.ref = "wiremock" }
-
 mockito-core = { group = 'org.mockito', name = 'mockito-core', version.ref = 'mockito' }
 hamcrest-base = { group = 'org.hamcrest', name = 'hamcrest', version.ref = 'hamcrest' }
 hamcrest-core = { group = 'org.hamcrest', name = 'hamcrest-core', version.ref = 'hamcrest' }
-junit-jupiter-engine = { group = 'org.junit.jupiter', name = 'junit-jupiter-engine', version.ref = 'junit5' }
-junit-jupiter-params = { group = 'org.junit.jupiter', name = 'junit-jupiter-params', version.ref = 'junit5' }
-junit-jupiter-api = { group = 'org.junit.jupiter', name = 'junit-jupiter-api', version.ref = 'junit5' }
-junit-vintage-engine = { group = 'org.junit.vintage', name = 'junit-vintage-engine', version.ref = 'junit5' }
+junit-jupiter-engine = { group = 'org.junit.jupiter', name = 'junit-jupiter-engine', version.ref = 'junit' }
+junit-jupiter-params = { group = 'org.junit.jupiter', name = 'junit-jupiter-params', version.ref = 'junit' }
+junit-jupiter-api = { group = 'org.junit.jupiter', name = 'junit-jupiter-api', version.ref = 'junit' }
+junit-vintage-engine = { group = 'org.junit.vintage', name = 'junit-vintage-engine', version.ref = 'junit' }
 
 log4j-core = { group = 'org.apache.logging.log4j', name = 'log4j-core', version.ref = 'log4j' }
 log4j-api = { group = 'org.apache.logging.log4j', name = 'log4j-api', version.ref = 'log4j' }
-log4j-slf4j18-impl = { group = 'org.apache.logging.log4j', name = 'log4j-slf4j18-impl', version.ref = 'log4j' }
+log4j-slf4j-impl = { group = 'org.apache.logging.log4j', name = 'log4j-slf4j2-impl', version.ref = 'log4j' }
 slf4j-api = { group = 'org.slf4j', name = 'slf4j-api', version.ref = 'slf4j' }
-aws-lambda-log4j2 = { group = 'com.amazonaws', name = 'aws-lambda-java-log4j2', version.ref = 'awslog4j2'}
 
 postgres = { group = 'org.postgresql', name = 'postgresql', version.ref = 'postgres'}
 
 
 [bundles]
 testing = ["mockito-core", "hamcrest-base", "hamcrest-core", "junit-jupiter-engine", "junit-jupiter-params",
-    "junit-jupiter-api", "junit-vintage-engine", "nva-testutils", "nva-logutils", "wiremock"]
+    "junit-jupiter-api", "junit-vintage-engine", "nva-testutils", "nva-logutils"]
 problem = ["zalando-jackson-datatype-problem", "zalando-problem"]
-logging = ['log4j-core', 'log4j-api', 'log4j-slf4j18-impl', 'slf4j-api', 'aws-lambda-log4j2']
+logging = ['log4j-core', 'log4j-api', 'log4j-slf4j-impl', 'slf4j-api']
 jackson = ['jackson-core', 'jackson-databind', 'jackson-datatype-jdk8', 'jackson-annotations', 'jackson-datatype-jsr310', 'zalando-jackson-datatype-problem']
