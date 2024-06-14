@@ -6,13 +6,8 @@ repositories {
     gradlePluginPortal()
 }
 
-wrapper {
-    distributionType = Wrapper.DistributionType.ALL
-    gradleVersion = "7.4.2"
-}
-
 dependencies {
-    implementation group: 'nebula.lint', name: 'nebula.lint.gradle.plugin', version: '16.23.0'
-    implementation group: 'org.jacoco', name: 'org.jacoco.core', version: '0.8.7'
-    implementation group: 'org.jacoco', name: 'org.jacoco.report', version: '0.8.7'
+    implementation group: 'nebula.lint', name: 'nebula.lint.gradle.plugin', version: '19.0.2'
+    implementation group: 'org.jacoco', name: 'org.jacoco.core', version: '0.8.12'
+    implementation group: 'org.jacoco', name: 'org.jacoco.report', version: '0.8.12'
 }
