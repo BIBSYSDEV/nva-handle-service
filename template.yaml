@@ -4,12 +4,6 @@ Description: >
   Lambda for creating handle for a URI
 
 Parameters:
-  Subnets:
-    Description: Subnet the Lambda-function should be deployed to
-    Type: List<AWS::EC2::Subnet::Id>
-  SecurityGroup:
-    Description: Security Group to use for the Lambda-function
-    Type: AWS::EC2::SecurityGroup::Id
   CognitoAuthorizerArn:
     Type: 'AWS::SSM::Parameter::Value<String>'
     Description: Reference to Cognito UserPool for the stage
@@ -39,13 +33,22 @@ Parameters:
   HandleDatabasePassword:
     Type: String
     Default: "{{resolve:secretsmanager:HandleDatabase:SecretString:password}}"
+  EIPPrivateSubnet:
+    Type: 'AWS::SSM::Parameter::Value<String>'
+    Description: Private Subnet ID for workloads where we need a static IP
+    Default: /NVA/EIP/PrivateSubnet/id
+  EIPSecurityGroupId:
+    Type: 'AWS::SSM::Parameter::Value<String>'
+    Description: Security Group ID for workloads where we need a static IP
+    Default: /NVA/EIP/SecurityGroup/GroupId
 
 Globals:
   Function:
     Timeout: 900
     MemorySize: 1798
-    Runtime: java11
+    Runtime: java21
   Api:
+    OpenApiVersion: 3.0.1
     Cors:
       AllowMethods: "'OPTIONS,POST'"
       AllowHeaders: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
@@ -55,8 +58,10 @@ Resources:
 
   ApiAccessLogGroup:
     Type: AWS::Logs::LogGroup
+    Properties:
+      RetentionInDays: 180
 
-  NvaCreateHandleFunctionApi:
+  NvaHandleServiceApi:
     Type: AWS::Serverless::Api
     Properties:
       AccessLogSetting:
@@ -71,49 +76,20 @@ Resources:
           Parameters:
             Location: ./docs/openapi.yaml
 
-  NvaCreateHandleFunctionRole:
-    Type: AWS::IAM::Role
+  NvaCreateHandleFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
     Properties:
-      AssumeRolePolicyDocument:
-        Version: 2012-10-17
-        Statement:
-          - Effect: Allow
-            Principal:
-              Service: [ lambda.amazonaws.com ]
-            Action: [ 'sts:AssumeRole' ]
-      Policies:
-        - PolicyName: writeLog
-          PolicyDocument:
-            Version: 2012-10-17
-            Statement:
-              - Effect: Allow
-                Action:
-                  - logs:CreateLogGroup
-                  - logs:CreateLogStream
-                  - logs:PutLogEvents
-                Resource: !Sub 'arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:*:*'
-        - PolicyName: customAWSLambdaVPCAccessExecutionRole
-          PolicyDocument:
-            Version: 2012-10-17
-            Statement:
-              - Effect: Allow
-                Action:
-                  - ec2:DescribeSubnets
-                  - ec2:DescribeSecurityGroups
-                  - ec2:CreateNetworkInterface
-                  - ec2:DescribeNetworkInterfaces
-                  - ec2:DeleteNetworkInterface
-                  - ec2:AssignPrivateIpAddresses
-                  - ec2:UnassignPrivateIpAddresses
-                  - ec2:DescribeVpcs
-                Resource: "*"
+      LogGroupName: !Sub /aws/lambda/${NvaCreateHandleFunction}
+      RetentionInDays: 180
 
   NvaCreateHandleFunction:
     Type: AWS::Serverless::Function
     Properties:
       CodeUri: create-handle
       Handler: no.sikt.nva.handle.CreateHandleHandler::handleRequest
-      Role: !GetAtt NvaCreateHandleFunctionRole.Arn
+      Policies:
+        - AWSLambdaBasicExecutionRole
+        - AWSLambdaVPCAccessExecutionRole
       Environment:
         Variables:
           ALLOWED_ORIGIN: '*'
@@ -125,88 +101,21 @@ Resources:
           DATABASE_PASSWORD:  !Ref HandleDatabasePassword
       VpcConfig:
         SecurityGroupIds:
-          - !Ref SecurityGroup
-        SubnetIds: !Ref Subnets
+          - !Ref EIPSecurityGroupId
+        SubnetIds:
+          - !Ref EIPPrivateSubnet
       Events:
         CreateHandle:
           Type: Api
           Properties:
             Path: /handle
             Method: post
-            RestApiId: !Ref NvaCreateHandleFunctionApi
-
-  #============================ Deploy API ============================================================================#
-  # This solves the problem described here:
-  # https://stackoverflow.com/questions/41423439/cloudformation-doesnt-deploy-to-api-gateway-stages-on-update
-  #====================================================================================================================#
-
-  ApiGatewayCreateDeploymentLambdaRole:
-    Type: AWS::IAM::Role
-    Properties:
-      AssumeRolePolicyDocument:
-        Version: '2012-10-17'
-        Statement:
-          - Effect: Allow
-            Principal:
-              Service: lambda.amazonaws.com
-            Action: sts:AssumeRole
-      Path: /
-      ManagedPolicyArns:
-        - 'arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole'
-      Policies:
-        - PolicyName: ApiGatewayAdmin
-          PolicyDocument:
-            Version: '2012-10-17'
-            Statement:
-              - Effect: Allow
-                Action:
-                  - apigateway:POST
-                Resource: !Sub 'arn:aws:apigateway:${AWS::Region}::/restapis/${NvaCreateHandleFunctionApi}/deployments'
-
-  # https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/cfn-lambda-function-code-cfnresponsemodule.html
-  ApiGatewayCreateDeploymentLambda:
-    Type: AWS::Lambda::Function
-    Properties:
-      Handler: index.lambda_handler
-      MemorySize: 128
-      Timeout: 30
-      Role: !GetAtt ApiGatewayCreateDeploymentLambdaRole.Arn
-      Runtime: python3.8
-      Code:
-        ZipFile: |
-          import json, boto3
-          import cfnresponse
-          client = boto3.client('apigateway')
-          def lambda_handler(event, context):
-            responseData = {}
-            responseStatus = cfnresponse.SUCCESS
-            if event['RequestType'] == 'Update':
-              try:
-                properties = event['ResourceProperties']
-                response = client.create_deployment(
-                  restApiId=properties['RestApiId'],
-                  stageName=properties['StageName'],
-                  description='Deployed from Custom Resource'
-                )
-              except:
-                responseStatus = cfnresponse.FAILED
-            cfnresponse.send(event, context, responseStatus, responseData)
-
-  ApiGatewayCreateDeploymentCustomResource:
-    Type: AWS::CloudFormation::CustomResource
-    Properties:
-      ServiceToken: !GetAtt ApiGatewayCreateDeploymentLambda.Arn
-      RestApiId: !Ref NvaCreateHandleFunctionApi
-      StageName: !Ref NvaCreateHandleFunctionApi.Stage
-      Timestamp: '${BUILD_TIMESTAMP}'
-      AuthorizerArn: !Ref CognitoAuthorizerArn
-
-  #===========================BasePathMappings========================================================
+            RestApiId: !Ref NvaHandleServiceApi
 
   NvaCreateHandleBasePathMapping:
     Type: AWS::ApiGateway::BasePathMapping
     Properties:
       BasePath: !Sub ${CustomDomainBasePath}
       DomainName: !Ref ApiDomain
-      RestApiId: !Ref NvaCreateHandleFunctionApi
-      Stage: !Ref NvaCreateHandleFunctionApi.Stage
+      RestApiId: !Ref NvaHandleServiceApi
+      Stage: !Ref NvaHandleServiceApi.Stage
