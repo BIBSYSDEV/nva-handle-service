@@ -30,9 +30,11 @@ Parameters:
   HandleDatabaseUser:
     Type: String
     Default: "{{resolve:secretsmanager:HandleDatabase:SecretString:user}}"
+    NoEcho: true
   HandleDatabasePassword:
     Type: String
     Default: "{{resolve:secretsmanager:HandleDatabase:SecretString:password}}"
+    NoEcho: true
   EIPPrivateSubnet:
     Type: 'AWS::SSM::Parameter::Value<String>'
     Description: Private Subnet ID for workloads where we need a static IP
