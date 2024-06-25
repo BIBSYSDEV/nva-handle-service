@@ -110,7 +110,7 @@ Resources:
         CreateHandle:
           Type: Api
           Properties:
-            Path: /handle
+            Path: /
             Method: post
             RestApiId: !Ref NvaHandleServiceApi
 

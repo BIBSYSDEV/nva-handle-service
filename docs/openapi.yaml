@@ -5,7 +5,7 @@ info:
   license:
     name: MIT
 paths:
-  /handle:
+  /:
     post:
       summary: Create handle for a URI
       security:
