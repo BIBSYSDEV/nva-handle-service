@@ -7,7 +7,9 @@ info:
 paths:
   /:
     post:
+      description: Create handle for a URI
       summary: Create handle for a URI
+      operationId: createHandle
       security:
         - CognitoUserPool: [ 'https://api.nva.unit.no/scopes/backend', 'https://api.nva.unit.no/scopes/frontend', 'aws.cognito.signin.user.admin' ]
       requestBody:
