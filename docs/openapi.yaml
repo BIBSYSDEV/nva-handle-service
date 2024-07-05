@@ -60,14 +60,34 @@ components:
       required:
         - handle
     Problem:
+      required:
+        - detail
+        - status
+        - title
       type: object
       properties:
-        title:
+        instance:
           type: string
-        status:
-          type: integer
+          description: The requested path associated with the error
+        requestId:
+          type: string
+          description: Identifier of the request causing the problem
         detail:
           type: string
+          description: A more detailed error message describing the error and potential
+            mitigations
+        title:
+          type: string
+          description: Human-readable description of the error status
+        type:
+          type: string
+          description: "A URI describing the error and mitigations, in generic cases,\
+            \ this is about:blank"
+        status:
+          type: integer
+          description: The HTTP status code associated with the problem
+          format: int32
+      description: NVA error reporting object
   securitySchemes:
     CognitoUserPool:
       type: apiKey
