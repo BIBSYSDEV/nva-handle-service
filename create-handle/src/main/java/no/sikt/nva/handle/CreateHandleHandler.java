@@ -29,9 +29,14 @@ public class CreateHandleHandler extends ApiGatewayHandler<CreateHandleRequest, 
     }
 
     @Override
+    protected void validateRequest(CreateHandleRequest createHandleRequest, RequestInfo requestInfo, Context context)
+        throws ApiGatewayException {
+        validate(createHandleRequest);
+    }
+
+    @Override
     protected CreateHandleResponse processInput(CreateHandleRequest input, RequestInfo requestInfo, Context context)
             throws ApiGatewayException {
-        validate(input);
         return new CreateHandleResponse(handleDatabase.createHandle(input.getUri()));
     }
 

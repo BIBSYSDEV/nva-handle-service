@@ -43,6 +43,10 @@ Parameters:
     Type: 'AWS::SSM::Parameter::Value<String>'
     Description: Security Group ID for workloads where we need a static IP
     Default: /NVA/EIP/SecurityGroup/GroupId
+  AllowedOrigins:
+    Type: String
+    Description: comma separated list of external clients that are allowed to contact the HTTP APIs, "*" indicates that all origins are allowed
+    Default: '*'
 
 Globals:
   Function:
@@ -94,7 +98,7 @@ Resources:
         - AWSLambdaVPCAccessExecutionRole
       Environment:
         Variables:
-          ALLOWED_ORIGIN: '*'
+          ALLOWED_ORIGIN: !Ref AllowedOrigins
           API_HOST: !Ref ApiDomain
           HANDLE_PREFIX: !Ref HandlePrefix
           HANDLE_BASE_URI: !Ref HandleBaseUri
