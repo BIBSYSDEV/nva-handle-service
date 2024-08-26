@@ -31,6 +31,7 @@ public class HandleDatabase {
     public static final String CHARACTER_SLASH = "/";
     public static final String ENV_HANDLE_PREFIX = "HANDLE_PREFIX";
     public static final String ENV_HANDLE_BASE_URI = "HANDLE_BASE_URI";
+    public static final int ONE_ROW = 1;
 
     private final Environment environment;
 
@@ -131,7 +132,7 @@ public class HandleDatabase {
 
     private void executeSingleRowUpdate(PreparedStatement preparedStatement) throws SQLException {
         var numberOfRows = preparedStatement.executeUpdate();
-        if (numberOfRows != 1) {
+        if (numberOfRows != ONE_ROW) {
             throw new IllegalStateException(String.format("Expected one row to be updated, but got %s for query \"%s\"",
                                             numberOfRows, preparedStatement));
         }
