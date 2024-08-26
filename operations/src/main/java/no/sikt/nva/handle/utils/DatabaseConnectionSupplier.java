@@ -11,7 +11,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 @JacocoGenerated
-public class DatabaseConnectionSupplier {
+public final class DatabaseConnectionSupplier {
     public static final String ENV_DATABASE_PASSWORD = "DATABASE_PASSWORD";
     public static final String ENV_DATABASE_USER = "DATABASE_USER";
     public static final String ENV_DATABASE_URI = "DATABASE_URI";
