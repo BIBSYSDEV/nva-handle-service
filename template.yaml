@@ -91,7 +91,7 @@ Resources:
   NvaCreateHandleFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: create-handle
+      CodeUri: operations
       Handler: no.sikt.nva.handle.CreateHandleHandler::handleRequest
       Policies:
         - AWSLambdaBasicExecutionRole
@@ -116,6 +116,42 @@ Resources:
           Properties:
             Path: /
             Method: post
+            RestApiId: !Ref NvaHandleServiceApi
+
+  NvaUpdateHandleFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/lambda/${NvaUpdateHandleFunction}
+      RetentionInDays: 180
+
+  NvaUpdateHandleFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: operations
+      Handler: no.sikt.nva.handle.UpdateHandleHandler::handleRequest
+      Policies:
+        - AWSLambdaBasicExecutionRole
+        - AWSLambdaVPCAccessExecutionRole
+      Environment:
+        Variables:
+          ALLOWED_ORIGIN: !Ref AllowedOrigins
+          API_HOST: !Ref ApiDomain
+          HANDLE_PREFIX: !Ref HandlePrefix
+          HANDLE_BASE_URI: !Ref HandleBaseUri
+          DATABASE_URI: !Ref HandleDatabaseUri
+          DATABASE_USER: !Ref HandleDatabaseUser
+          DATABASE_PASSWORD: !Ref HandleDatabasePassword
+      VpcConfig:
+        SecurityGroupIds:
+          - !Ref EIPSecurityGroupId
+        SubnetIds:
+          - !Ref EIPPrivateSubnet
+      Events:
+        CreateHandle:
+          Type: Api
+          Properties:
+            Path: /{prefix}/{suffix}
+            Method: put
             RestApiId: !Ref NvaHandleServiceApi
 
   NvaCreateHandleBasePathMapping:

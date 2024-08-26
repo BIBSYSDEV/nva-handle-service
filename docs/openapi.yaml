@@ -43,6 +43,61 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Problem'
+  /{prefix}/{suffix}:
+    put:
+      description: Update uri for a handle
+      summary: Update uri for a handle
+      operationId: updateHandle
+      parameters:
+        - in: path
+          name: prefix
+          schema:
+            type: string
+          required: true
+          style: simple
+          explode: false
+          description: The prefix, assigned by a registering organization
+        - in: path
+          name: suffix
+          schema:
+            type: string
+          required: true
+          style: simple
+          explode: false
+          description: The suffix, a unique identifier for a specific digital object within the namespace of the registering organization.
+      security:
+        - CognitoUserPool: [ 'https://api.nva.unit.no/scopes/backend', 'https://api.nva.unit.no/scopes/frontend', 'aws.cognito.signin.user.admin' ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Request'
+      x-amazon-apigateway-integration:
+        uri:
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${NvaUpdateHandleFunction.Arn}/invocations
+        responses: { }
+        httpMethod: POST
+        type: AWS_PROXY
+      responses:
+        '200':
+          description: Handle updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Response'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '502':
+          description: Bad Gateway
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
 components:
   schemas:
     Request:
