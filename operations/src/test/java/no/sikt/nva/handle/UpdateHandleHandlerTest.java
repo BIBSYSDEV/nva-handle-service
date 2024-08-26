@@ -80,7 +80,7 @@ class UpdateHandleHandlerTest {
     void updateHandleRequestReturnsOkForValidUri()
         throws IOException, SQLException {
         var uri = randomUri();
-        var inputStream = createUpdateHandleRequest(uri);
+        var inputStream = getUpdateHandleRequest(uri);
 
         PreparedStatement preparedStatementSetHandle = mock(PreparedStatement.class);
         when(preparedStatementSetHandle.executeUpdate()).thenReturn(1);
@@ -91,7 +91,7 @@ class UpdateHandleHandlerTest {
 
         assertThat(response.getStatusCode(), is(equalTo(HttpURLConnection.HTTP_OK)));
         assertThat(response.getBodyObject(HandleResponse.class).handle(),
-                   is(equalTo(createHandleFromHandleId(UPDATE_HANDLE_ID))));
+                   is(equalTo(getFullHandleFromHandleId(UPDATE_HANDLE_ID))));
         verify(connection, times(1)).commit();
     }
 
@@ -99,7 +99,7 @@ class UpdateHandleHandlerTest {
     void updateHandleRequestReturnsErrorIfNotFound()
         throws IOException, SQLException {
         var uri = randomUri();
-        var inputStream = createUpdateHandleRequest(uri);
+        var inputStream = getUpdateHandleRequest(uri);
 
         PreparedStatement preparedStatementSetHandle = mock(PreparedStatement.class);
         when(preparedStatementSetHandle.toString()).thenReturn("some query");
@@ -114,12 +114,12 @@ class UpdateHandleHandlerTest {
     }
 
     @Test
-    void createHandleRequestThrowsHandleExceptionAndLogsErrorWhenNotAbleToConnectToHandleDatabase()
+    void updateHandleRequestThrowsHandleExceptionAndLogsErrorWhenNotAbleToConnectToHandleDatabase()
         throws IOException {
         var appender = LogUtils.getTestingAppenderForRootLogger();
         @SuppressWarnings("unchecked") var connectionSupplier = (Supplier<Connection>) mock(Supplier.class);
         var uri = randomUri();
-        var request = createUpdateHandleRequest(uri);
+        var request = getUpdateHandleRequest(uri);
         var failure = "some connection failure";
         when(connectionSupplier.get()).thenThrow(new RuntimeException(new SQLException(failure)));
         var failingHandler = new UpdateHandleHandler(environment, connectionSupplier);
@@ -132,15 +132,15 @@ class UpdateHandleHandlerTest {
     }
 
     @Test
-    void createHandleRequestReturnsBadRequestResponseWhenUriIsNull() throws IOException {
-        var inputStream = createUpdateHandleRequest(null);
+    void updateHandleRequestReturnsBadRequestResponseWhenUriIsNull() throws IOException {
+        var inputStream = getUpdateHandleRequest(null);
         handler.handleRequest(inputStream, outputStream, context);
         var response = GatewayResponse.fromOutputStream(outputStream, Problem.class);
         assertThat(response.getStatusCode(), is(equalTo(HttpURLConnection.HTTP_BAD_REQUEST)));
         assertThat(response.getBody(), containsString(NULL_URI_ERROR));
     }
 
-    private InputStream createUpdateHandleRequest(URI uri) throws JsonProcessingException {
+    private InputStream getUpdateHandleRequest(URI uri) throws JsonProcessingException {
         HandleRequest request = new HandleRequest(uri);
         return new HandlerRequestBuilder<HandleRequest>(JsonUtils.dtoObjectMapper)
                    .withBody(request)
@@ -149,7 +149,7 @@ class UpdateHandleHandlerTest {
                    .build();
     }
 
-    private URI createHandleFromHandleId(int handleId) {
+    private URI getFullHandleFromHandleId(int handleId) {
         return UriWrapper.fromHost(environment.readEnv(ENV_HANDLE_BASE_URI))
                    .addChild(environment.readEnv(ENV_HANDLE_PREFIX), Integer.toString(handleId)).getUri();
     }
