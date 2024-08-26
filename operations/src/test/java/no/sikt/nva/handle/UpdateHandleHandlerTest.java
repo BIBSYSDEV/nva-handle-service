@@ -12,7 +12,9 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.core.Is.is;
 import static org.hamcrest.core.IsEqual.equalTo;
 import static org.hamcrest.core.StringContains.containsString;
+import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import java.io.ByteArrayOutputStream;
@@ -90,6 +92,7 @@ class UpdateHandleHandlerTest {
         assertThat(response.getStatusCode(), is(equalTo(HttpURLConnection.HTTP_OK)));
         assertThat(response.getBodyObject(HandleResponse.class).handle(),
                    is(equalTo(createHandleFromHandleId(UPDATE_HANDLE_ID))));
+        verify(connection, atLeastOnce()).commit();
     }
 
     @Test
