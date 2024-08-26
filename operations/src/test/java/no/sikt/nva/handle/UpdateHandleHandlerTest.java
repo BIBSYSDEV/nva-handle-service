@@ -12,8 +12,8 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.core.Is.is;
 import static org.hamcrest.core.IsEqual.equalTo;
 import static org.hamcrest.core.StringContains.containsString;
-import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -92,7 +92,7 @@ class UpdateHandleHandlerTest {
         assertThat(response.getStatusCode(), is(equalTo(HttpURLConnection.HTTP_OK)));
         assertThat(response.getBodyObject(HandleResponse.class).handle(),
                    is(equalTo(createHandleFromHandleId(UPDATE_HANDLE_ID))));
-        verify(connection, atLeastOnce()).commit();
+        verify(connection, times(1)).commit();
     }
 
     @Test
@@ -110,6 +110,7 @@ class UpdateHandleHandlerTest {
         var response = GatewayResponse.fromOutputStream(outputStream, HandleResponse.class);
 
         assertThat(response.getStatusCode(), is(equalTo(HttpURLConnection.HTTP_BAD_GATEWAY)));
+        verify(connection, times(1)).rollback();
     }
 
     @Test

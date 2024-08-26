@@ -46,14 +46,11 @@ public class HandleDatabase {
                 logger.info(String.format(REUSED_EXISTING_HANDLE_FOR_URI, existingHandle, uri));
                 return existingHandle;
             } else {
-                var result = createNewHandle(uri, connection);
-                connection.commit();
-                return result;
+                return createNewHandle(uri, connection);
             }
         } catch (SQLException e) {
             var message = String.format(ERROR_CREATING_HANDLE_FOR_URI, uri) + ": " + e.getMessage();
             logger.error(message, e);
-            connection.rollback();
             throw new CreateHandleException(message);
         }
     }
@@ -68,7 +65,6 @@ public class HandleDatabase {
                                                                                               "" : ": ");
             logger.error(message, e);
             logger.error("Rolling back transaction");
-            connection.rollback();
             throw new SQLException(message);
         }
     }

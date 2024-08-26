@@ -2,6 +2,7 @@ package no.sikt.nva.handle;
 
 import com.amazonaws.services.lambda.runtime.Context;
 import java.sql.Connection;
+import java.sql.SQLException;
 import java.util.function.Supplier;
 import no.sikt.nva.handle.exceptions.CreateHandleException;
 import no.sikt.nva.handle.exceptions.MalformedRequestException;
@@ -49,11 +50,24 @@ public class CreateHandleHandler extends ApiGatewayHandler<HandleRequest, Handle
     protected HandleResponse processInput(HandleRequest input, RequestInfo requestInfo, Context context)
             throws ApiGatewayException {
         try (var connection = connectionSupplier.get()) {
-            return new HandleResponse(handleDatabase.createHandle(input.uri(), connection));
+            return createHandle(input, connection);
         } catch (Exception e) {
             var message = getNestedExceptionMessage(String.format(ERROR_CREATING_HANDLE_FOR_URI, input.uri()), e);
             logger.error(message, e);
             throw new CreateHandleException(message);
+        }
+    }
+
+    private HandleResponse createHandle(HandleRequest input, Connection connection)
+        throws SQLException, CreateHandleException {
+        try {
+            logger.info("Creating handle for uri: {}", input.uri());
+            var handle = handleDatabase.createHandle(input.uri(), connection);
+            connection.commit();
+            return new HandleResponse(handle);
+        } catch (Exception e) {
+            connection.rollback();
+            throw e;
         }
     }
 

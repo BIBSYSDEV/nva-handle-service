@@ -102,6 +102,7 @@ class CreateHandleHandlerTest {
         assertThat(response.getStatusCode(), is(equalTo(HttpURLConnection.HTTP_CREATED)));
         assertThat(response.getBodyObject(HandleResponse.class).handle(),
                    is(equalTo(createHandleFromHandleId(CREATED_HANDLE_ID))));
+        verify(connection, times(1)).commit();
     }
 
     @Test

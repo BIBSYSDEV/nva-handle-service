@@ -6,6 +6,7 @@ import static no.sikt.nva.handle.utils.DatabaseConnectionSupplier.getConnectionS
 import com.amazonaws.services.lambda.runtime.Context;
 import java.net.HttpURLConnection;
 import java.sql.Connection;
+import java.sql.SQLException;
 import java.util.function.Supplier;
 import no.sikt.nva.handle.exceptions.MalformedRequestException;
 import no.sikt.nva.handle.exceptions.UpdateHandleException;
@@ -50,14 +51,24 @@ public class UpdateHandleHandler extends ApiGatewayHandler<HandleRequest, Handle
         var prefix = requestInfo.getPathParameter("prefix");
         var suffix = requestInfo.getPathParameter("suffix");
         try (var connection = connectionSupplier.get()) {
-            logger.info("Updating {}/{} to uri: {}", prefix, suffix, input.uri());
-            var uri = handleDatabase.updateHandle(prefix, suffix, input.uri(), connection);
-            connection.commit();
-            return new HandleResponse(uri);
+            return updateHandle(input, prefix, suffix, connection);
         } catch (Exception e) {
             var message = getNestedExceptionMessage(String.format(ERROR_UPDATING_HANDLE_FOR_URI, prefix, suffix), e);
             logger.error(message, e);
             throw new UpdateHandleException(message);
+        }
+    }
+
+    private HandleResponse updateHandle(HandleRequest input, String prefix, String suffix, Connection connection)
+        throws SQLException {
+        try {
+            logger.info("Updating {}/{} to uri: {}", prefix, suffix, input.uri());
+            var handle = handleDatabase.updateHandle(prefix, suffix, input.uri(), connection);
+            connection.commit();
+            return new HandleResponse(handle);
+        } catch (Exception e) {
+            connection.rollback();
+            throw e;
         }
     }
 
