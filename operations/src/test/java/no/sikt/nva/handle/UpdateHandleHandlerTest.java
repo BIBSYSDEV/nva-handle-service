@@ -93,6 +93,23 @@ class UpdateHandleHandlerTest {
     }
 
     @Test
+    void updateHandleRequestReturnsErrorIfNotFound()
+        throws IOException, SQLException {
+        var uri = randomUri();
+        var inputStream = createUpdateHandleRequest(uri);
+
+        PreparedStatement preparedStatementSetHandle = mock(PreparedStatement.class);
+        when(preparedStatementSetHandle.toString()).thenReturn("some query");
+        when(preparedStatementSetHandle.executeUpdate()).thenReturn(0);
+        when(connection.prepareStatement(SET_URI_SQL)).thenReturn(preparedStatementSetHandle);
+
+        handler.handleRequest(inputStream, outputStream, context);
+        var response = GatewayResponse.fromOutputStream(outputStream, HandleResponse.class);
+
+        assertThat(response.getStatusCode(), is(equalTo(HttpURLConnection.HTTP_BAD_GATEWAY)));
+    }
+
+    @Test
     void createHandleRequestThrowsHandleExceptionAndLogsErrorWhenNotAbleToConnectToHandleDatabase()
         throws IOException {
         var appender = LogUtils.getTestingAppenderForRootLogger();

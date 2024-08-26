@@ -17,11 +17,12 @@ import java.sql.SQLException;
 
 @JacocoGenerated
 public class HandleDatabase {
+
     private static final Logger logger = LoggerFactory.getLogger(HandleDatabase.class);
     public static final String CREATE_ID_SQL = "INSERT INTO handle(date_created) VALUES ( current_timestamp ) "
-            + "RETURNING handle_id";
+                                               + "RETURNING handle_id";
     public static final String SET_HANDLE_SQL = "UPDATE handle SET handle =  ?, url = ? WHERE handle_id = ?";
-    public static final String SET_URI_SQL= "UPDATE handle SET url = ? WHERE handle = ?";
+    public static final String SET_URI_SQL = "UPDATE handle SET url = ? WHERE handle = ?";
     public static final String CHECK_URL_SQL = "SELECT handle FROM handle WHERE url = ?";
     public static final String REUSED_EXISTING_HANDLE_FOR_URI = "Reused existing handle '%s' for URI '%s'";
     public static final String CREATED_HANDLE_FOR_URI = "Created handle '%s' for URI '%s'";
@@ -33,12 +34,12 @@ public class HandleDatabase {
 
     private final Environment environment;
 
-    public HandleDatabase(Environment environment ) {
+    public HandleDatabase(Environment environment) {
         this.environment = environment;
     }
 
     public URI createHandle(URI uri, Connection connection) throws CreateHandleException, SQLException {
-        try{
+        try {
             URI existingHandle = fetchExistingHandleByValue(uri, connection);
             if (nonNull(existingHandle)) {
                 logger.info(String.format(REUSED_EXISTING_HANDLE_FOR_URI, existingHandle, uri));
@@ -57,14 +58,15 @@ public class HandleDatabase {
     }
 
     public URI updateHandle(String prefix, String suffix, URI uri, Connection connection) throws SQLException {
-        try{
+        try {
             var handleLocalPart = executeUpdateUri(uri, prefix + CHARACTER_SLASH + suffix, connection);
 
             return convertShortHandleToFull(handleLocalPart);
         } catch (SQLException e) {
-            var message = String.format(ERROR_UPDATING_HANDLE_FOR_URI, prefix, suffix) + (isNull( e.getMessage()) ? "" :
-                              ": " + e.getMessage());
+            var message = String.format(ERROR_UPDATING_HANDLE_FOR_URI, prefix, suffix) + (isNull(e.getMessage()) ?
+                                                                                              "" : ": ");
             logger.error(message, e);
+            logger.error("Rolling back transaction");
             connection.rollback();
             throw new SQLException(message);
         }
@@ -79,7 +81,7 @@ public class HandleDatabase {
                 }
                 final String existingHandleString = existingResult.getString(1);
                 return UriWrapper.fromUri(environment.readEnv(ENV_HANDLE_BASE_URI))
-                                         .addChild(existingHandleString).getUri();
+                           .addChild(existingHandleString).getUri();
             }
         }
     }
@@ -104,7 +106,7 @@ public class HandleDatabase {
 
     private URI convertShortHandleToFull(String handleLocalPart) {
         return UriWrapper.fromUri(environment.readEnv(ENV_HANDLE_BASE_URI)).addChild(handleLocalPart)
-                .getUri();
+                   .getUri();
     }
 
     private String executeUpdateHandle(URI uri, int handleId, Connection connection) throws SQLException {
@@ -113,7 +115,7 @@ public class HandleDatabase {
             preparedStatementUpdate.setString(1, handleLocalPart);
             preparedStatementUpdate.setString(2, uri.toString());
             preparedStatementUpdate.setInt(3, handleId);
-            preparedStatementUpdate.executeUpdate();
+            executeSingleRowUpdate(preparedStatementUpdate);
             return handleLocalPart;
         }
     }
@@ -122,8 +124,16 @@ public class HandleDatabase {
         try (PreparedStatement preparedStatementUpdate = connection.prepareStatement(SET_URI_SQL)) {
             preparedStatementUpdate.setString(1, uri.toString());
             preparedStatementUpdate.setString(2, handleLocalPart);
-            preparedStatementUpdate.executeUpdate();
+            executeSingleRowUpdate(preparedStatementUpdate);
             return handleLocalPart;
+        }
+    }
+
+    private void executeSingleRowUpdate(PreparedStatement preparedStatement) throws SQLException {
+        var numberOfRows = preparedStatement.executeUpdate();
+        if (numberOfRows != 1) {
+            throw new IllegalStateException(String.format("Expected one row to be updated, but got %s for query \"%s\"",
+                                            numberOfRows, preparedStatement));
         }
     }
 
