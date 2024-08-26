@@ -50,6 +50,7 @@ public class UpdateHandleHandler extends ApiGatewayHandler<HandleRequest, Handle
         var prefix = requestInfo.getPathParameter("prefix");
         var suffix = requestInfo.getPathParameter("suffix");
         try (var connection = connectionSupplier.get()) {
+            logger.info("Updating {}/{} to uri: {}", prefix, suffix, input.uri());
             return new HandleResponse(handleDatabase.updateHandle(prefix, suffix, input.uri(), connection));
         } catch (Exception e) {
             var message = getNestedExceptionMessage(String.format(ERROR_UPDATING_HANDLE_FOR_URI, prefix, suffix), e);
