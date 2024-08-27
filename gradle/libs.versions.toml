@@ -1,5 +1,5 @@
 [versions]
-nva = { strictly = "1.40.6" }
+nva = { strictly = "1.40.8" }
 jacksonVersion = { strictly = "2.16.1" }
 awsLambdaCore = { strictly = '1.2.3' }
 problemVersion = { strictly = "0.27.1" }
@@ -9,6 +9,7 @@ mockito = { strictly = '5.10.0' }
 log4j = { strictly = '2.23.0' }
 slf4j = { strictly = '2.0.12' }
 postgres = { strictly = '42.7.3' }
+awsSdk2 = { strictly = '2.24.12' }
 
 [libraries]
 nva-core = { group = "com.github.bibsysdev", name = "core", version.ref = "nva" }
@@ -16,6 +17,7 @@ nva-json = { group = "com.github.bibsysdev", name = "json", version.ref = "nva" 
 nva-apigateway = { group = "com.github.bibsysdev", name = "apigateway", version.ref = "nva" }
 nva-logutils = { group = "com.github.bibsysdev", name = "logutils", version.ref = "nva" }
 nva-testutils = { group = "com.github.bibsysdev", name = "nvatestutils", version.ref = "nva" }
+nva-secrets = { group = "com.github.bibsysdev", name = "secrets", version.ref = "nva" }
 
 jackson-core = { group = "com.fasterxml.jackson.core", name = "jackson-core", version.ref = "jacksonVersion" }
 jackson-databind = { group = "com.fasterxml.jackson.core", name = "jackson-databind", version.ref = "jacksonVersion" }
@@ -24,6 +26,7 @@ jackson-annotations = { group = "com.fasterxml.jackson.core", name = "jackson-an
 jackson-datatype-jsr310 = { group = "com.fasterxml.jackson.datatype", name = "jackson-datatype-jsr310", version.ref = "jacksonVersion" }
 
 aws-lambda-java-core = { group = "com.amazonaws", name = "aws-lambda-java-core", version.ref = "awsLambdaCore" }
+aws-sdk2-secrets = { group = 'software.amazon.awssdk', name = 'secretsmanager', version.ref = 'awsSdk2' }
 
 zalando-problem = { group = "org.zalando", name = "problem", version.ref = "problemVersion" }
 zalando-jackson-datatype-problem = { group = "org.zalando", name = "jackson-datatype-problem", version.ref = "problemVersion" }

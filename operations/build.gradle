@@ -6,8 +6,10 @@ dependencies {
     implementation libs.nva.json
     implementation libs.nva.core
     implementation libs.nva.apigateway
+    implementation libs.nva.secrets
 
     implementation libs.aws.lambda.java.core
+    implementation libs.aws.sdk2.secrets
 
     implementation libs.bundles.logging
     implementation libs.bundles.jackson
@@ -18,14 +20,3 @@ dependencies {
     testImplementation libs.bundles.testing
 
 }
-
-test {
-    environment "HANDLE_BASE_URI", "https://hdl.handle.net"
-    environment "HANDLE_PREFIX", "11250.1"
-    environment "DATABASE_URI", "database_uri"
-    environment "DATABASE_USER", "database_user"
-    environment "DATABASE_PASSWORD", "database_password"
-    environment "API_HOST", "api.localhost.nva.aws.unit.no"
-    environment "ALLOWED_ORIGIN", "*"
-}
-

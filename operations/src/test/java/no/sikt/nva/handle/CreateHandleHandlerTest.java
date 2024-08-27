@@ -1,8 +1,10 @@
 package no.sikt.nva.handle;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import no.sikt.nva.handle.model.CreateHandleRequest;
-import no.sikt.nva.handle.model.CreateHandleResponse;
+import java.util.function.Supplier;
+import no.sikt.nva.handle.exceptions.CreateHandleException;
+import no.sikt.nva.handle.model.HandleRequest;
+import no.sikt.nva.handle.model.HandleResponse;
 import no.unit.nva.commons.json.JsonUtils;
 import no.unit.nva.stubs.FakeContext;
 import no.unit.nva.testutils.HandlerRequestBuilder;
@@ -25,14 +27,12 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.zalando.problem.Problem;
 
-import static no.sikt.nva.handle.CreateHandleHandler.NULL_URI_ERROR;
 import static no.sikt.nva.handle.HandleDatabase.CHARACTER_SLASH;
 import static no.sikt.nva.handle.HandleDatabase.CHECK_URL_SQL;
 import static no.sikt.nva.handle.HandleDatabase.CREATED_HANDLE_FOR_URI;
 import static no.sikt.nva.handle.HandleDatabase.CREATE_ID_SQL;
 import static no.sikt.nva.handle.HandleDatabase.ENV_HANDLE_BASE_URI;
 import static no.sikt.nva.handle.HandleDatabase.ENV_HANDLE_PREFIX;
-import static no.sikt.nva.handle.HandleDatabase.ERROR_CONNECTING_TO_HANDLE_DATABASE;
 import static no.sikt.nva.handle.HandleDatabase.ERROR_CREATING_HANDLE_FOR_URI;
 import static no.sikt.nva.handle.HandleDatabase.REUSED_EXISTING_HANDLE_FOR_URI;
 import static no.sikt.nva.handle.HandleDatabase.SET_HANDLE_SQL;
@@ -43,6 +43,7 @@ import static org.hamcrest.core.IsEqual.equalTo;
 import static org.hamcrest.core.StringContains.containsString;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -57,16 +58,22 @@ class CreateHandleHandlerTest {
     private Connection connection;
     private Environment environment;
     private ByteArrayOutputStream outputStream;
-
+    public static final String ENV_ALLOWED_ORIGIN = "ALLOWED_ORIGIN";
+    public static final String ENV_API_HOST = "API_HOST";
+    public static final String NULL_URI_ERROR = "uri can not be null";
 
     @BeforeEach
     public void init() {
-        this.environment = new Environment();
+        this.environment = mock(Environment.class);
+        when(environment.readEnv(ENV_HANDLE_BASE_URI)).thenReturn("https://hdl.handle.net");
+        when(environment.readEnv(ENV_HANDLE_PREFIX)).thenReturn("11250.1");
+        when(environment.readEnv(ENV_API_HOST)).thenReturn("api.localhost.nva.aws.unit.no");
+        when(environment.readEnv(ENV_ALLOWED_ORIGIN)).thenReturn("*");
+
         this.context = new FakeContext();
         this.outputStream = new ByteArrayOutputStream();
         this.connection = mock(Connection.class);
-        var handleDatabase = new HandleDatabase(connection);
-        this.handler = new CreateHandleHandler(handleDatabase);
+        this.handler = new CreateHandleHandler(environment, () -> connection);
     }
 
     @AfterEach
@@ -76,34 +83,37 @@ class CreateHandleHandlerTest {
 
     @Test
     void createHandleRequestReturnsCreatedHandleForValidUri()
-            throws IOException, SQLException {
+        throws IOException, SQLException {
         var uri = randomUri();
         var inputStream = createCreateHandleRequest(uri);
         mockHandleDatabaseCreateHandle(false, true, true);
         var appender = LogUtils.getTestingAppenderForRootLogger();
         handler.handleRequest(inputStream, outputStream, context);
-        var response = GatewayResponse.fromOutputStream(outputStream, CreateHandleResponse.class);
+        var response = GatewayResponse.fromOutputStream(outputStream, HandleResponse.class);
         assertThat(appender.getMessages(), containsString(String.format(CREATED_HANDLE_FOR_URI,
-                createHandleFromHandleId(CREATED_HANDLE_ID), uri)));
+                                                                        createHandleFromHandleId(CREATED_HANDLE_ID),
+                                                                        uri)));
         assertThat(response.getStatusCode(), is(equalTo(HttpURLConnection.HTTP_CREATED)));
-        assertThat(response.getBodyObject(CreateHandleResponse.class).getHandle(),
-                is(equalTo(createHandleFromHandleId(CREATED_HANDLE_ID))));
+        assertThat(response.getBodyObject(HandleResponse.class).handle(),
+                   is(equalTo(createHandleFromHandleId(CREATED_HANDLE_ID))));
+        verify(connection, times(1)).commit();
     }
 
     @Test
     void createHandleRequestReturnsExistingHandleForValidUriThatAlreadyHasHandle() throws
-            IOException, SQLException {
+                                                                                   IOException, SQLException {
         var uri = randomUri();
         var inputStream = createCreateHandleRequest(uri);
         mockHandleDatabaseCreateHandle(true, false, false);
         var appender = LogUtils.getTestingAppenderForRootLogger();
         handler.handleRequest(inputStream, outputStream, context);
-        var response = GatewayResponse.fromOutputStream(outputStream, CreateHandleResponse.class);
+        var response = GatewayResponse.fromOutputStream(outputStream, HandleResponse.class);
         assertThat(appender.getMessages(), containsString(String.format(REUSED_EXISTING_HANDLE_FOR_URI,
-                createHandleFromHandleId(EXISTING_HANDLE_ID), uri)));
+                                                                        createHandleFromHandleId(EXISTING_HANDLE_ID),
+                                                                        uri)));
         assertThat(response.getStatusCode(), is(equalTo(HttpURLConnection.HTTP_CREATED)));
-        assertThat(response.getBodyObject(CreateHandleResponse.class).getHandle(),
-                is(equalTo(createHandleFromHandleId(EXISTING_HANDLE_ID))));
+        assertThat(response.getBodyObject(HandleResponse.class).handle(),
+                   is(equalTo(createHandleFromHandleId(EXISTING_HANDLE_ID))));
     }
 
     @Test
@@ -117,7 +127,7 @@ class CreateHandleHandlerTest {
 
     @Test
     void createHandleRequestReturnsBadGatewayAndLogsErrorWhenNotAbleToCreateHandleId() throws IOException,
-            SQLException {
+                                                                                              SQLException {
         var uri = randomUri();
         var inputStream = createCreateHandleRequest(uri);
         mockHandleDatabaseCreateHandle(false, false, false);
@@ -130,7 +140,7 @@ class CreateHandleHandlerTest {
 
     @Test
     void createHandleRequestReturnsBadGatewayAndLogsErrorAndRollbackDatabaseTransactionWhenNotAbleToCreateHandle()
-            throws IOException, SQLException {
+        throws IOException, SQLException {
         var uri = randomUri();
         var inputStream = createCreateHandleRequest(uri);
         mockHandleDatabaseCreateHandle(false, true, false);
@@ -143,22 +153,29 @@ class CreateHandleHandlerTest {
     }
 
     @Test
-    void createHandleRequestThrowsRuntimeExceptionAndLogsErrorWhenNotAbleToConnectToHandleDatabase() {
+    void createHandleRequestThrowsHandleExceptionAndLogsErrorWhenNotAbleToConnectToHandleDatabase() {
         var appender = LogUtils.getTestingAppenderForRootLogger();
-        assertThrows(RuntimeException.class, () -> handler = new CreateHandleHandler());
-        assertThat(appender.getMessages(), containsString(ERROR_CONNECTING_TO_HANDLE_DATABASE));
+        @SuppressWarnings("unchecked") var connectionSupplier = (Supplier<Connection>) mock(Supplier.class);
+        var uri = randomUri();
+        var failure = "some connection failure";
+        when(connectionSupplier.get()).thenThrow(new RuntimeException(new SQLException(failure)));
+        var failingHandler = new CreateHandleHandler(environment, connectionSupplier);
+        var request = new HandleRequest(uri);
+        assertThrows(CreateHandleException.class,
+                     () -> failingHandler.processInput(request, null, null));
+        assertThat(appender.getMessages(), containsString(failure));
     }
 
     private InputStream createCreateHandleRequest(URI uri) throws JsonProcessingException {
-        CreateHandleRequest request = new CreateHandleRequest(uri);
-        return new HandlerRequestBuilder<CreateHandleRequest>(JsonUtils.dtoObjectMapper)
-                .withBody(request)
-                .build();
+        HandleRequest request = new HandleRequest(uri);
+        return new HandlerRequestBuilder<HandleRequest>(JsonUtils.dtoObjectMapper)
+                   .withBody(request)
+                   .build();
     }
 
     private URI createHandleFromHandleId(int handleId) {
         return UriWrapper.fromHost(environment.readEnv(ENV_HANDLE_BASE_URI))
-                .addChild(environment.readEnv(ENV_HANDLE_PREFIX), Integer.toString(handleId)).getUri();
+                   .addChild(environment.readEnv(ENV_HANDLE_PREFIX), Integer.toString(handleId)).getUri();
     }
 
     private void mockHandleDatabaseCreateHandle(boolean uriAlreadyExists, boolean successfulCreateHandleId,
@@ -178,7 +195,7 @@ class CreateHandleHandlerTest {
         ResultSet resultSet = mock(ResultSet.class);
         when(resultSet.next()).thenReturn(uriAlreadyExists);
         if (uriAlreadyExists) {
-            when(resultSet.getString(1)).thenReturn(createExistingHandleLocalPart());
+            doReturn(createExistingHandleLocalPart()).when(resultSet).getString(anyInt());
         }
         when(preparedStatement.executeQuery()).thenReturn(resultSet);
         return preparedStatement;
@@ -206,5 +223,4 @@ class CreateHandleHandlerTest {
         }
         return preparedStatement;
     }
-
 }

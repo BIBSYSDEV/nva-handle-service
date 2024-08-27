@@ -24,17 +24,9 @@ Parameters:
     Type: String
     Description: Reference to Handle Prefix to use
     Default: 11250.1
-  HandleDatabaseUri:
+  HandleDatabaseSecretName:
     Type: String
-    Default: "{{resolve:secretsmanager:HandleDatabase:SecretString:uri}}"
-  HandleDatabaseUser:
-    Type: String
-    Default: "{{resolve:secretsmanager:HandleDatabase:SecretString:user}}"
-    NoEcho: true
-  HandleDatabasePassword:
-    Type: String
-    Default: "{{resolve:secretsmanager:HandleDatabase:SecretString:password}}"
-    NoEcho: true
+    Default: HandleDatabase
   EIPPrivateSubnet:
     Type: 'AWS::SSM::Parameter::Value<String>'
     Description: Private Subnet ID for workloads where we need a static IP
@@ -61,7 +53,17 @@ Globals:
       AllowOrigin: "'*'"
 
 Resources:
-
+  ReadHandleDatabaseSecretsManagedPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Action:
+              - secretsmanager:GetSecretValue
+            Resource:
+              - !Sub "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:HandleDatabase-*"
   ApiAccessLogGroup:
     Type: AWS::Logs::LogGroup
     Properties:
@@ -91,20 +93,19 @@ Resources:
   NvaCreateHandleFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: create-handle
+      CodeUri: operations
       Handler: no.sikt.nva.handle.CreateHandleHandler::handleRequest
       Policies:
         - AWSLambdaBasicExecutionRole
         - AWSLambdaVPCAccessExecutionRole
+        - !GetAtt ReadHandleDatabaseSecretsManagedPolicy.PolicyArn
       Environment:
         Variables:
           ALLOWED_ORIGIN: !Ref AllowedOrigins
           API_HOST: !Ref ApiDomain
           HANDLE_PREFIX: !Ref HandlePrefix
           HANDLE_BASE_URI: !Ref HandleBaseUri
-          DATABASE_URI: !Ref HandleDatabaseUri
-          DATABASE_USER: !Ref HandleDatabaseUser
-          DATABASE_PASSWORD:  !Ref HandleDatabasePassword
+          HANDLE_DATABASE_SECRET_NAME: !Ref HandleDatabaseSecretName
       VpcConfig:
         SecurityGroupIds:
           - !Ref EIPSecurityGroupId
@@ -116,6 +117,41 @@ Resources:
           Properties:
             Path: /
             Method: post
+            RestApiId: !Ref NvaHandleServiceApi
+
+  NvaUpdateHandleFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/lambda/${NvaUpdateHandleFunction}
+      RetentionInDays: 180
+
+  NvaUpdateHandleFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: operations
+      Handler: no.sikt.nva.handle.UpdateHandleHandler::handleRequest
+      Policies:
+        - AWSLambdaBasicExecutionRole
+        - AWSLambdaVPCAccessExecutionRole
+        - !GetAtt ReadHandleDatabaseSecretsManagedPolicy.PolicyArn
+      Environment:
+        Variables:
+          ALLOWED_ORIGIN: !Ref AllowedOrigins
+          API_HOST: !Ref ApiDomain
+          HANDLE_PREFIX: !Ref HandlePrefix
+          HANDLE_BASE_URI: !Ref HandleBaseUri
+          HANDLE_DATABASE_SECRET_NAME: !Ref HandleDatabaseSecretName
+      VpcConfig:
+        SecurityGroupIds:
+          - !Ref EIPSecurityGroupId
+        SubnetIds:
+          - !Ref EIPPrivateSubnet
+      Events:
+        CreateHandle:
+          Type: Api
+          Properties:
+            Path: /{prefix}/{suffix}
+            Method: put
             RestApiId: !Ref NvaHandleServiceApi
 
   NvaCreateHandleBasePathMapping:
