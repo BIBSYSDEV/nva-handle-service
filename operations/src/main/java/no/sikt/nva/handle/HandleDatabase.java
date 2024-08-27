@@ -1,8 +1,7 @@
 package no.sikt.nva.handle;
 
 import static java.util.Objects.isNull;
-import static java.util.Objects.nonNull;
-import no.sikt.nva.handle.exceptions.CreateHandleException;
+import java.util.Optional;
 import nva.commons.core.Environment;
 import nva.commons.core.JacocoGenerated;
 import nva.commons.core.paths.UriWrapper;
@@ -39,19 +38,13 @@ public class HandleDatabase {
         this.environment = environment;
     }
 
-    public URI createHandle(URI uri, Connection connection) throws CreateHandleException, SQLException {
-        try {
-            URI existingHandle = fetchExistingHandleByValue(uri, connection);
-            if (nonNull(existingHandle)) {
-                logger.info(String.format(REUSED_EXISTING_HANDLE_FOR_URI, existingHandle, uri));
-                return existingHandle;
-            } else {
-                return createNewHandle(uri, connection);
-            }
-        } catch (SQLException e) {
-            var message = String.format(ERROR_CREATING_HANDLE_FOR_URI, uri) + ": " + e.getMessage();
-            logger.error(message, e);
-            throw new CreateHandleException(message);
+    public URI createHandle(URI uri, Connection connection) throws SQLException {
+        var existingHandle = fetchExistingHandleByValue(uri, connection);
+        if (existingHandle.isPresent()) {
+            logger.info(String.format(REUSED_EXISTING_HANDLE_FOR_URI, existingHandle.get(), uri));
+            return existingHandle.get();
+        } else {
+            return createNewHandle(uri, connection);
         }
     }
 
@@ -64,30 +57,29 @@ public class HandleDatabase {
             var message = String.format(ERROR_UPDATING_HANDLE_FOR_URI, prefix, suffix) + (isNull(e.getMessage()) ?
                                                                                               "" : ": ");
             logger.error(message, e);
-            logger.error("Rolling back transaction");
             throw new SQLException(message);
         }
     }
 
-    private URI fetchExistingHandleByValue(URI value, Connection connection) throws SQLException {
+    private Optional<URI> fetchExistingHandleByValue(URI value, Connection connection) throws SQLException {
         try (PreparedStatement preparedStatementCheckUrl = connection.prepareStatement(CHECK_URL_SQL)) {
             preparedStatementCheckUrl.setString(1, value.toString());
             try (ResultSet existingResult = preparedStatementCheckUrl.executeQuery()) {
                 if (!existingResult.next()) {
-                    return null;
+                    return Optional.empty();
                 }
                 final String existingHandleString = existingResult.getString(1);
-                return UriWrapper.fromUri(environment.readEnv(ENV_HANDLE_BASE_URI))
-                           .addChild(existingHandleString).getUri();
+                return Optional.of(UriWrapper.fromUri(environment.readEnv(ENV_HANDLE_BASE_URI))
+                           .addChild(existingHandleString).getUri());
             }
         }
     }
 
-    private URI createNewHandle(URI uri, Connection connection) throws SQLException, CreateHandleException {
+    private URI createNewHandle(URI uri, Connection connection) throws SQLException {
 
         try (PreparedStatement preparedStatementCreate = connection.prepareStatement(CREATE_ID_SQL);
 
-            ResultSet createResult = preparedStatementCreate.executeQuery()) {
+            var createResult = preparedStatementCreate.executeQuery()) {
             if (createResult.next()) {
                 var handleId = createResult.getInt(1);
                 final String handleLocalPart = executeUpdateHandle(uri, handleId, connection);
@@ -96,7 +88,7 @@ public class HandleDatabase {
                 logger.info(String.format(CREATED_HANDLE_FOR_URI, handle, uri));
                 return handle;
             } else {
-                throw new CreateHandleException(String.format(ERROR_CREATING_HANDLE_FOR_URI, uri));
+                throw new RuntimeException(String.format(ERROR_CREATING_HANDLE_FOR_URI, uri));
             }
         }
     }

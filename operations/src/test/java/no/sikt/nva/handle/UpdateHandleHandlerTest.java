@@ -1,6 +1,5 @@
 package no.sikt.nva.handle;
 
-import static no.sikt.nva.handle.CreateHandleHandler.NULL_URI_ERROR;
 import static no.sikt.nva.handle.HandleDatabase.ENV_HANDLE_BASE_URI;
 import static no.sikt.nva.handle.HandleDatabase.ENV_HANDLE_PREFIX;
 import static no.sikt.nva.handle.HandleDatabase.SET_URI_SQL;
@@ -43,10 +42,11 @@ import org.zalando.problem.Problem;
 
 class UpdateHandleHandlerTest {
 
-    public static final int UPDATE_HANDLE_ID = 2222;
-    public static final String ENV_ALLOWED_ORIGIN = "ALLOWED_ORIGIN";
-    public static final String ENV_API_HOST = "API_HOST";
-    public static final String HANDLE_PREFIX = "11250.1";
+    private static final int UPDATE_HANDLE_ID = 2222;
+    private static final String ENV_ALLOWED_ORIGIN = "ALLOWED_ORIGIN";
+    private static final String ENV_API_HOST = "API_HOST";
+    private static final String HANDLE_PREFIX = "11250.1";
+    private static final String NULL_URI_ERROR = "uri can not be null";
     private FakeContext context;
     private UpdateHandleHandler handler;
     private Connection connection;

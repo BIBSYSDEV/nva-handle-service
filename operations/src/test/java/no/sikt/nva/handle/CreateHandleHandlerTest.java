@@ -27,7 +27,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.zalando.problem.Problem;
 
-import static no.sikt.nva.handle.CreateHandleHandler.NULL_URI_ERROR;
 import static no.sikt.nva.handle.HandleDatabase.CHARACTER_SLASH;
 import static no.sikt.nva.handle.HandleDatabase.CHECK_URL_SQL;
 import static no.sikt.nva.handle.HandleDatabase.CREATED_HANDLE_FOR_URI;
@@ -64,6 +63,7 @@ class CreateHandleHandlerTest {
     private ByteArrayOutputStream outputStream;
     public static final String ENV_ALLOWED_ORIGIN = "ALLOWED_ORIGIN";
     public static final String ENV_API_HOST = "API_HOST";
+    public static final String NULL_URI_ERROR = "uri can not be null";
 
     @BeforeEach
     public void init() {

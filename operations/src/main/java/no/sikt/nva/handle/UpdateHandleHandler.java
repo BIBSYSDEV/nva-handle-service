@@ -23,7 +23,7 @@ import org.slf4j.LoggerFactory;
 @JacocoGenerated
 public class UpdateHandleHandler extends ApiGatewayHandler<HandleRequest, HandleResponse> {
 
-    public static final String NULL_URI_ERROR = "uri can not be null";
+    private static final String NULL_URI_ERROR = "uri can not be null";
     private static final Logger logger = LoggerFactory.getLogger(UpdateHandleHandler.class);
     private final HandleDatabase handleDatabase;
     private final Supplier<Connection> connectionSupplier;

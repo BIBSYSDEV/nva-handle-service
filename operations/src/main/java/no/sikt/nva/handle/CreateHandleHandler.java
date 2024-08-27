@@ -24,7 +24,7 @@ import static no.sikt.nva.handle.utils.DatabaseConnectionSupplier.getConnectionS
 
 public class CreateHandleHandler extends ApiGatewayHandler<HandleRequest, HandleResponse> {
 
-    public static final String NULL_URI_ERROR = "uri can not be null";
+    private static final String NULL_URI_ERROR = "uri can not be null";
     private static final Logger logger = LoggerFactory.getLogger(CreateHandleHandler.class);
     private final HandleDatabase handleDatabase;
     private final Supplier<Connection> connectionSupplier;
@@ -59,7 +59,7 @@ public class CreateHandleHandler extends ApiGatewayHandler<HandleRequest, Handle
     }
 
     private HandleResponse createHandle(HandleRequest input, Connection connection)
-        throws SQLException, CreateHandleException {
+        throws SQLException {
         try {
             logger.info("Creating handle for uri: {}", input.uri());
             var handle = handleDatabase.createHandle(input.uri(), connection);
