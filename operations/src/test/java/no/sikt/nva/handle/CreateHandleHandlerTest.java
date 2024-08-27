@@ -36,9 +36,6 @@ import static no.sikt.nva.handle.HandleDatabase.ENV_HANDLE_PREFIX;
 import static no.sikt.nva.handle.HandleDatabase.ERROR_CREATING_HANDLE_FOR_URI;
 import static no.sikt.nva.handle.HandleDatabase.REUSED_EXISTING_HANDLE_FOR_URI;
 import static no.sikt.nva.handle.HandleDatabase.SET_HANDLE_SQL;
-import static no.sikt.nva.handle.utils.DatabaseConnectionSupplier.ENV_DATABASE_PASSWORD;
-import static no.sikt.nva.handle.utils.DatabaseConnectionSupplier.ENV_DATABASE_URI;
-import static no.sikt.nva.handle.utils.DatabaseConnectionSupplier.ENV_DATABASE_USER;
 import static no.unit.nva.testutils.RandomDataGenerator.randomUri;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.core.Is.is;
@@ -70,9 +67,6 @@ class CreateHandleHandlerTest {
         this.environment = mock(Environment.class);
         when(environment.readEnv(ENV_HANDLE_BASE_URI)).thenReturn("https://hdl.handle.net");
         when(environment.readEnv(ENV_HANDLE_PREFIX)).thenReturn("11250.1");
-        when(environment.readEnv(ENV_DATABASE_URI)).thenReturn("database_uri");
-        when(environment.readEnv(ENV_DATABASE_USER)).thenReturn("database_user");
-        when(environment.readEnv(ENV_DATABASE_PASSWORD)).thenReturn("database_password");
         when(environment.readEnv(ENV_API_HOST)).thenReturn("api.localhost.nva.aws.unit.no");
         when(environment.readEnv(ENV_ALLOWED_ORIGIN)).thenReturn("*");
 

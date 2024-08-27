@@ -24,17 +24,9 @@ Parameters:
     Type: String
     Description: Reference to Handle Prefix to use
     Default: 11250.1
-  HandleDatabaseUri:
+  HandleDatabaseSecretName:
     Type: String
-    Default: "{{resolve:secretsmanager:HandleDatabase:SecretString:uri}}"
-  HandleDatabaseUser:
-    Type: String
-    Default: "{{resolve:secretsmanager:HandleDatabase:SecretString:user}}"
-    NoEcho: true
-  HandleDatabasePassword:
-    Type: String
-    Default: "{{resolve:secretsmanager:HandleDatabase:SecretString:password}}"
-    NoEcho: true
+    Default: HandleDatabase
   EIPPrivateSubnet:
     Type: 'AWS::SSM::Parameter::Value<String>'
     Description: Private Subnet ID for workloads where we need a static IP
@@ -102,9 +94,7 @@ Resources:
           API_HOST: !Ref ApiDomain
           HANDLE_PREFIX: !Ref HandlePrefix
           HANDLE_BASE_URI: !Ref HandleBaseUri
-          DATABASE_URI: !Ref HandleDatabaseUri
-          DATABASE_USER: !Ref HandleDatabaseUser
-          DATABASE_PASSWORD:  !Ref HandleDatabasePassword
+          HANDLE_DATABASE_SECRET_NAME: !Ref HandleDatabaseSecretName
       VpcConfig:
         SecurityGroupIds:
           - !Ref EIPSecurityGroupId
@@ -138,9 +128,7 @@ Resources:
           API_HOST: !Ref ApiDomain
           HANDLE_PREFIX: !Ref HandlePrefix
           HANDLE_BASE_URI: !Ref HandleBaseUri
-          DATABASE_URI: !Ref HandleDatabaseUri
-          DATABASE_USER: !Ref HandleDatabaseUser
-          DATABASE_PASSWORD: !Ref HandleDatabasePassword
+          HANDLE_DATABASE_SECRET_NAME: !Ref HandleDatabaseSecretName
       VpcConfig:
         SecurityGroupIds:
           - !Ref EIPSecurityGroupId
