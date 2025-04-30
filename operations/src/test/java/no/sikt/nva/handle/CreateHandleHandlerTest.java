@@ -53,6 +53,7 @@ class CreateHandleHandlerTest {
 
     public static final int EXISTING_HANDLE_ID = 1111;
     public static final int CREATED_HANDLE_ID = 2222;
+    private static final String COGNITO_AUTHORIZER_URLS = "COGNITO_AUTHORIZER_URLS";
     private FakeContext context;
     private CreateHandleHandler handler;
     private Connection connection;
@@ -69,6 +70,7 @@ class CreateHandleHandlerTest {
         when(environment.readEnv(ENV_HANDLE_PREFIX)).thenReturn("11250.1");
         when(environment.readEnv(ENV_API_HOST)).thenReturn("api.localhost.nva.aws.unit.no");
         when(environment.readEnv(ENV_ALLOWED_ORIGIN)).thenReturn("*");
+        when(environment.readEnv(COGNITO_AUTHORIZER_URLS)).thenReturn("http://localhost:3000");
 
         this.context = new FakeContext();
         this.outputStream = new ByteArrayOutputStream();

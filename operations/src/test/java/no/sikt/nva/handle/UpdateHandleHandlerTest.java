@@ -44,6 +44,7 @@ class UpdateHandleHandlerTest {
     private static final String ENV_API_HOST = "API_HOST";
     private static final String HANDLE_PREFIX = "11250.1";
     private static final String NULL_URI_ERROR = "uri can not be null";
+    private static final String COGNITO_AUTHORIZER_URLS = "COGNITO_AUTHORIZER_URLS";
     private FakeContext context;
     private UpdateHandleHandler handler;
     private Connection connection;
@@ -58,6 +59,7 @@ class UpdateHandleHandlerTest {
         when(environment.readEnv(ENV_API_HOST)).thenReturn("api.localhost.nva.aws.unit.no");
         when(environment.readEnv(ENV_HANDLE_PREFIX)).thenReturn(HANDLE_PREFIX);
         when(environment.readEnv(ENV_ALLOWED_ORIGIN)).thenReturn("*");
+        when(environment.readEnv(COGNITO_AUTHORIZER_URLS)).thenReturn("http://localhost:3000");
 
         this.context = new FakeContext();
         this.outputStream = new ByteArrayOutputStream();

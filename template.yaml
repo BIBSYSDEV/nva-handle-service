@@ -8,6 +8,9 @@ Parameters:
     Type: 'AWS::SSM::Parameter::Value<String>'
     Description: Reference to Cognito UserPool for the stage
     Default: CognitoAuthorizerArn
+  CognitoAuthorizerUrls:
+    Type: AWS::SSM::Parameter::Value<CommaDelimitedList>
+    Default: CognitoAuthorizerUrls
   ApiDomain:
     Type: 'AWS::SSM::Parameter::Value<String>'
     Description: The Api domain
@@ -45,6 +48,12 @@ Globals:
     Timeout: 900
     MemorySize: 1798
     Runtime: java21
+    Architectures:
+      - arm64
+    Environment:
+      Variables:
+        API_HOST: !Ref ApiDomain
+        COGNITO_AUTHORIZER_URLS: !Join [ ",", !Ref CognitoAuthorizerUrls ]
   Api:
     OpenApiVersion: 3.0.1
     Cors:

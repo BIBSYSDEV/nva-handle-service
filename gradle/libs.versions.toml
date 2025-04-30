@@ -1,15 +1,15 @@
 [versions]
-nva = { strictly = "1.40.8" }
-jacksonVersion = { strictly = "2.16.1" }
+nva = { strictly = "2.2.4" }
+jacksonVersion = { strictly = "2.18.3" }
 awsLambdaCore = { strictly = '1.2.3' }
 problemVersion = { strictly = "0.27.1" }
-hamcrest = { strictly = '2.2' }
-junit = { strictly = '5.10.2' }
-mockito = { strictly = '5.10.0' }
-log4j = { strictly = '2.23.0' }
-slf4j = { strictly = '2.0.12' }
-postgres = { strictly = '42.7.3' }
-awsSdk2 = { strictly = '2.24.12' }
+hamcrest = { strictly = '3.0' }
+junit = { strictly = '5.12.0' }
+mockito = { strictly = '5.15.2' }
+log4j = { strictly = '2.24.3' }
+slf4j = { strictly = '2.0.17' }
+postgres = { strictly = '42.7.5' }
+awsSdk2 = { strictly = '2.31.28' }
 
 [libraries]
 nva-core = { group = "com.github.bibsysdev", name = "core", version.ref = "nva" }
