@@ -8,10 +8,10 @@ paths:
   /:
     post:
       description: Create handle for a URI
-      summary: Create handle for a URI
+      summary: Create handle for a URI. Include prefix and suffix in the body for imported handle or use only uri field for default handle.
       operationId: createHandle
       security:
-        - CognitoUserPool: [ 'https://api.nva.unit.no/scopes/backend', 'https://api.nva.unit.no/scopes/frontend', 'aws.cognito.signin.user.admin' ]
+        - CognitoUserPool: [ 'https://api.nva.unit.no/scopes/backend' ]
       requestBody:
         required: true
         content:
@@ -66,7 +66,7 @@ paths:
           explode: false
           description: The suffix, a unique identifier for a specific digital object within the namespace of the registering organization.
       security:
-        - CognitoUserPool: [ 'https://api.nva.unit.no/scopes/backend', 'https://api.nva.unit.no/scopes/frontend', 'aws.cognito.signin.user.admin' ]
+        - CognitoUserPool: [ 'https://api.nva.unit.no/scopes/backend' ]
       requestBody:
         required: true
         content:
@@ -104,6 +104,10 @@ components:
       type: object
       properties:
         uri:
+          type: string
+        prefix:
+          type: string
+        suffix:
           type: string
       required:
         - uri
