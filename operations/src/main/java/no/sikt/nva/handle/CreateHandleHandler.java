@@ -1,10 +1,12 @@
 package no.sikt.nva.handle;
 
 import com.amazonaws.services.lambda.runtime.Context;
+import java.net.URI;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.function.Supplier;
 import no.sikt.nva.handle.exceptions.CreateHandleException;
+import no.sikt.nva.handle.exceptions.HandleAlreadyExistException;
 import no.sikt.nva.handle.exceptions.MalformedRequestException;
 import no.sikt.nva.handle.model.HandleRequest;
 import no.sikt.nva.handle.model.HandleResponse;
@@ -19,6 +21,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import static java.util.Objects.isNull;
+import static java.util.Objects.nonNull;
 import static no.sikt.nva.handle.HandleDatabase.ERROR_CREATING_HANDLE_FOR_URI;
 import static no.sikt.nva.handle.utils.DatabaseConnectionSupplier.getConnectionSupplier;
 
@@ -51,10 +54,12 @@ public class CreateHandleHandler extends ApiGatewayHandler<HandleRequest, Handle
             throws ApiGatewayException {
         try (var connection = connectionSupplier.get()) {
             return createHandle(input, connection);
+        } catch (HandleAlreadyExistException e) {
+            throw new CreateHandleException(e, HttpURLConnection.HTTP_CONFLICT);
         } catch (Exception e) {
             var message = getNestedExceptionMessage(String.format(ERROR_CREATING_HANDLE_FOR_URI, input.uri()), e);
             logger.error(message, e);
-            throw new CreateHandleException(message);
+            throw new CreateHandleException(e, HttpURLConnection.HTTP_BAD_GATEWAY);
         }
     }
 
@@ -62,7 +67,12 @@ public class CreateHandleHandler extends ApiGatewayHandler<HandleRequest, Handle
         throws SQLException {
         try {
             logger.info("Creating handle for uri: {}", input.uri());
-            var handle = handleDatabase.createHandle(input.uri(), connection);
+            URI handle;
+            if (nonNull(input.prefix()) && nonNull(input.suffix())) {
+                handle = handleDatabase.createHandle(input.prefix(), input.suffix(), input.uri(), connection);
+            } else {
+                handle = handleDatabase.createHandle(input.uri(), connection);
+            }
             connection.commit();
             return new HandleResponse(handle);
         } catch (Exception e) {

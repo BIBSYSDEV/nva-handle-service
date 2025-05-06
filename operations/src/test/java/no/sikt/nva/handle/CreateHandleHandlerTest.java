@@ -22,12 +22,12 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import nva.commons.logutils.LogUtils;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.zalando.problem.Problem;
 
 import static no.sikt.nva.handle.HandleDatabase.CHARACTER_SLASH;
+import static no.sikt.nva.handle.HandleDatabase.CHECK_HANDLE_SQL;
 import static no.sikt.nva.handle.HandleDatabase.CHECK_URL_SQL;
 import static no.sikt.nva.handle.HandleDatabase.CREATED_HANDLE_FOR_URI;
 import static no.sikt.nva.handle.HandleDatabase.CREATE_ID_SQL;
@@ -35,7 +35,7 @@ import static no.sikt.nva.handle.HandleDatabase.ENV_HANDLE_BASE_URI;
 import static no.sikt.nva.handle.HandleDatabase.ENV_HANDLE_PREFIX;
 import static no.sikt.nva.handle.HandleDatabase.ERROR_CREATING_HANDLE_FOR_URI;
 import static no.sikt.nva.handle.HandleDatabase.REUSED_EXISTING_HANDLE_FOR_URI;
-import static no.sikt.nva.handle.HandleDatabase.SET_HANDLE_SQL;
+import static no.sikt.nva.handle.HandleDatabase.SET_HANDLE_AND_URI_BY_ID_SQL;
 import static no.unit.nva.testutils.RandomDataGenerator.randomUri;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.core.Is.is;
@@ -64,7 +64,7 @@ class CreateHandleHandlerTest {
     public static final String NULL_URI_ERROR = "uri can not be null";
 
     @BeforeEach
-    public void init() {
+    void init() {
         this.environment = mock(Environment.class);
         when(environment.readEnv(ENV_HANDLE_BASE_URI)).thenReturn("https://hdl.handle.net");
         when(environment.readEnv(ENV_HANDLE_PREFIX)).thenReturn("11250.1");
@@ -76,11 +76,6 @@ class CreateHandleHandlerTest {
         this.outputStream = new ByteArrayOutputStream();
         this.connection = mock(Connection.class);
         this.handler = new CreateHandleHandler(environment, () -> connection);
-    }
-
-    @AfterEach
-    public void tearDown() {
-
     }
 
     @Test
@@ -99,6 +94,40 @@ class CreateHandleHandlerTest {
         assertThat(response.getBodyObject(HandleResponse.class).handle(),
                    is(equalTo(createHandleFromHandleId(CREATED_HANDLE_ID))));
         verify(connection, times(1)).commit();
+    }
+
+    @Test
+    void createHandleRequestReturnsSuccessfulHandleForArbitraryPrefixes()
+        throws IOException, SQLException {
+        var uri = randomUri();
+        var prefix = "some-prefix";
+        var suffix = "some-suffix";
+        var inputStream = getInputStream(new HandleRequest(uri, prefix, suffix));
+        mockHandleDatabaseCreateHandle(false, true, true);
+
+        handler.handleRequest(inputStream, outputStream, context);
+        var response = GatewayResponse.fromOutputStream(outputStream, HandleResponse.class);
+
+        assertThat(response.getStatusCode(), is(equalTo(HttpURLConnection.HTTP_CREATED)));
+        assertThat(response.getBodyObject(HandleResponse.class).handle(),
+                   is(equalTo(getHandleUri(prefix, suffix))));
+        verify(connection, times(1)).commit();
+    }
+
+    @Test
+    void createHandleForArbitraryPrefixesShouldFailOnDuplicate()
+        throws IOException, SQLException {
+        var uri = randomUri();
+        var prefix = "some-prefix";
+        var suffix = "some-suffix";
+        var inputStream = getInputStream(new HandleRequest(uri, prefix, suffix));
+        mockHandleDatabaseCreateHandle(true, true, true);
+
+        handler.handleRequest(inputStream, outputStream, context);
+        var response = GatewayResponse.fromOutputStream(outputStream, HandleResponse.class);
+
+        assertThat(response.getStatusCode(), is(equalTo(HttpURLConnection.HTTP_CONFLICT)));
+        verify(connection, times(1)).rollback();
     }
 
     @Test
@@ -170,14 +199,22 @@ class CreateHandleHandlerTest {
 
     private InputStream createCreateHandleRequest(URI uri) throws JsonProcessingException {
         HandleRequest request = new HandleRequest(uri);
+        return getInputStream(request);
+    }
+
+    private static InputStream getInputStream(HandleRequest request) throws JsonProcessingException {
         return new HandlerRequestBuilder<HandleRequest>(JsonUtils.dtoObjectMapper)
                    .withBody(request)
                    .build();
     }
 
     private URI createHandleFromHandleId(int handleId) {
+        return getHandleUri(environment.readEnv(ENV_HANDLE_PREFIX), Integer.toString(handleId));
+    }
+
+    private URI getHandleUri(String prefix, String suffix) {
         return UriWrapper.fromHost(environment.readEnv(ENV_HANDLE_BASE_URI))
-                   .addChild(environment.readEnv(ENV_HANDLE_PREFIX), Integer.toString(handleId)).getUri();
+                   .addChild(prefix, suffix).getUri();
     }
 
     private void mockHandleDatabaseCreateHandle(boolean uriAlreadyExists, boolean successfulCreateHandleId,
@@ -185,11 +222,14 @@ class CreateHandleHandlerTest {
         PreparedStatement preparedStatementCheckUrl = createPreparedStatementCheckUrl(uriAlreadyExists);
         when(connection.prepareStatement(CHECK_URL_SQL)).thenReturn(preparedStatementCheckUrl);
 
+        PreparedStatement preparedStatementCheckHandle = createPreparedStatementCheckUrl(uriAlreadyExists);
+        when(connection.prepareStatement(CHECK_HANDLE_SQL)).thenReturn(preparedStatementCheckHandle);
+
         PreparedStatement preparedStatementCreateId = createPreparedStatementCreateId(successfulCreateHandleId);
         when(connection.prepareStatement(CREATE_ID_SQL)).thenReturn(preparedStatementCreateId);
 
         PreparedStatement preparedStatementSetHandle = createPreparedStatementSetHandle(successfulCreateHandle);
-        when(connection.prepareStatement(SET_HANDLE_SQL)).thenReturn(preparedStatementSetHandle);
+        when(connection.prepareStatement(SET_HANDLE_AND_URI_BY_ID_SQL)).thenReturn(preparedStatementSetHandle);
     }
 
     private PreparedStatement createPreparedStatementCheckUrl(boolean uriAlreadyExists) throws SQLException {

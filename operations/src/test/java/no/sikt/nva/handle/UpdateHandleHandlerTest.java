@@ -2,7 +2,7 @@ package no.sikt.nva.handle;
 
 import static no.sikt.nva.handle.HandleDatabase.ENV_HANDLE_BASE_URI;
 import static no.sikt.nva.handle.HandleDatabase.ENV_HANDLE_PREFIX;
-import static no.sikt.nva.handle.HandleDatabase.SET_URI_SQL;
+import static no.sikt.nva.handle.HandleDatabase.SET_URI_BY_HANDLE_SQL;
 import static no.unit.nva.testutils.RandomDataGenerator.randomUri;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.core.Is.is;
@@ -32,7 +32,6 @@ import nva.commons.apigateway.GatewayResponse;
 import nva.commons.core.Environment;
 import nva.commons.core.paths.UriWrapper;
 import nva.commons.logutils.LogUtils;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.zalando.problem.Problem;
@@ -52,7 +51,7 @@ class UpdateHandleHandlerTest {
     private ByteArrayOutputStream outputStream;
 
     @BeforeEach
-    public void init() {
+    void init() {
         this.environment = mock(Environment.class);
         when(environment.readEnv(ENV_HANDLE_BASE_URI)).thenReturn("https://hdl.handle.net");
         when(environment.readEnv(ENV_HANDLE_PREFIX)).thenReturn("11250.1");
@@ -67,11 +66,6 @@ class UpdateHandleHandlerTest {
         this.handler = new UpdateHandleHandler(environment, () -> connection);
     }
 
-    @AfterEach
-    public void tearDown() {
-
-    }
-
     @Test
     void updateHandleRequestReturnsOkForValidUri()
         throws IOException, SQLException {
@@ -80,7 +74,7 @@ class UpdateHandleHandlerTest {
 
         PreparedStatement preparedStatementSetHandle = mock(PreparedStatement.class);
         when(preparedStatementSetHandle.executeUpdate()).thenReturn(1);
-        when(connection.prepareStatement(SET_URI_SQL)).thenReturn(preparedStatementSetHandle);
+        when(connection.prepareStatement(SET_URI_BY_HANDLE_SQL)).thenReturn(preparedStatementSetHandle);
 
         handler.handleRequest(inputStream, outputStream, context);
         var response = GatewayResponse.fromOutputStream(outputStream, HandleResponse.class);
@@ -100,7 +94,7 @@ class UpdateHandleHandlerTest {
         PreparedStatement preparedStatementSetHandle = mock(PreparedStatement.class);
         when(preparedStatementSetHandle.toString()).thenReturn("some query");
         when(preparedStatementSetHandle.executeUpdate()).thenReturn(0);
-        when(connection.prepareStatement(SET_URI_SQL)).thenReturn(preparedStatementSetHandle);
+        when(connection.prepareStatement(SET_URI_BY_HANDLE_SQL)).thenReturn(preparedStatementSetHandle);
 
         handler.handleRequest(inputStream, outputStream, context);
         var response = GatewayResponse.fromOutputStream(outputStream, HandleResponse.class);
