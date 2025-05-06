@@ -54,8 +54,8 @@ public class CreateHandleHandler extends ApiGatewayHandler<HandleRequest, Handle
             throws ApiGatewayException {
         try (var connection = connectionSupplier.get()) {
             return createHandle(input, connection);
-        } catch (CreateHandleException e) {
-            throw e;
+        } catch (HandleAlreadyExistException e) {
+            throw new CreateHandleException(e, HttpURLConnection.HTTP_CONFLICT);
         } catch (Exception e) {
             var message = getNestedExceptionMessage(String.format(ERROR_CREATING_HANDLE_FOR_URI, input.uri()), e);
             logger.error(message, e);
@@ -64,7 +64,7 @@ public class CreateHandleHandler extends ApiGatewayHandler<HandleRequest, Handle
     }
 
     private HandleResponse createHandle(HandleRequest input, Connection connection)
-        throws SQLException, CreateHandleException {
+        throws SQLException {
         try {
             logger.info("Creating handle for uri: {}", input.uri());
             URI handle;
@@ -75,9 +75,6 @@ public class CreateHandleHandler extends ApiGatewayHandler<HandleRequest, Handle
             }
             connection.commit();
             return new HandleResponse(handle);
-        } catch (HandleAlreadyExistException e) {
-            connection.rollback();
-            throw new CreateHandleException(e, HttpURLConnection.HTTP_CONFLICT);
         } catch (Exception e) {
             connection.rollback();
             throw e;
