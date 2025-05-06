@@ -51,13 +51,7 @@ public class HandleDatabase {
     }
 
     public URI createHandle(String prefix, String suffix, URI uri, Connection connection) throws SQLException {
-        var existingHandle = fetchExistingHandleByValue(prefix, uri, connection);
-        if (existingHandle.isPresent()) {
-            logger.info(String.format(REUSED_EXISTING_HANDLE_FOR_URI, existingHandle.get(), uri));
-            return existingHandle.get();
-        } else {
-            return createNewHandle(prefix, suffix, uri, connection);
-        }
+        return createNewHandle(prefix, suffix, uri, connection);
     }
 
     public URI updateHandle(String prefix, String suffix, URI uri, Connection connection) throws SQLException {
