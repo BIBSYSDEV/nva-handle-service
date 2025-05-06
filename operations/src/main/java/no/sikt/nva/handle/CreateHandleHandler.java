@@ -55,8 +55,6 @@ public class CreateHandleHandler extends ApiGatewayHandler<HandleRequest, Handle
         try (var connection = connectionSupplier.get()) {
             return createHandle(input, connection);
         } catch (CreateHandleException e) {
-            var message = getNestedExceptionMessage(e.getMessage(), e);
-            logger.error(message, e);
             throw e;
         } catch (Exception e) {
             var message = getNestedExceptionMessage(String.format(ERROR_CREATING_HANDLE_FOR_URI, input.uri()), e);
