@@ -2,6 +2,7 @@ package no.sikt.nva.handle;
 
 import static java.util.Objects.isNull;
 import java.util.Optional;
+import no.sikt.nva.handle.exceptions.HandleAlreadyExistException;
 import nva.commons.core.Environment;
 import nva.commons.core.JacocoGenerated;
 import nva.commons.core.paths.UriWrapper;
@@ -23,6 +24,7 @@ public class HandleDatabase {
     public static final String SET_HANDLE_AND_URI_BY_ID_SQL = "UPDATE handle SET handle =  ?, url = ? WHERE handle_id = ?";
     public static final String SET_URI_BY_HANDLE_SQL = "UPDATE handle SET url = ? WHERE handle = ?";
     public static final String CHECK_URL_SQL = "SELECT handle FROM handle WHERE url = ?";
+    public static final String CHECK_HANDLE_SQL = "SELECT handle FROM handle WHERE handle = ?";
     public static final String REUSED_EXISTING_HANDLE_FOR_URI = "Reused existing handle '%s' for URI '%s'";
     public static final String CREATED_HANDLE_FOR_URI = "Created handle '%s' for URI '%s'";
     public static final String ERROR_CREATING_HANDLE_FOR_URI = "Error creating handle for URI '%s'";
@@ -31,6 +33,7 @@ public class HandleDatabase {
     public static final String ENV_HANDLE_PREFIX = "HANDLE_PREFIX";
     public static final String ENV_HANDLE_BASE_URI = "HANDLE_BASE_URI";
     public static final int ONE_ROW = 1;
+    private static final String ALREADY_EXISTING_HANDLE_FOR_URI = "Handle already exists: ";
 
     private final URI handleBaseUri;
     private final String defaultPrefix;
@@ -51,7 +54,13 @@ public class HandleDatabase {
     }
 
     public URI createHandle(String prefix, String suffix, URI uri, Connection connection) throws SQLException {
-        return createNewHandle(prefix, suffix, uri, connection);
+        var handle = convertPrefixAndSuffixToShortHandle(prefix, suffix);
+        var existingHandle = fetchExistingHandleByHandle(handle, connection);
+        if (existingHandle.isPresent()) {
+            throw new HandleAlreadyExistException(ALREADY_EXISTING_HANDLE_FOR_URI + existingHandle.get());
+        } else {
+            return createNewHandle(prefix, suffix, uri, connection);
+        }
     }
 
     public URI updateHandle(String prefix, String suffix, URI uri, Connection connection) throws SQLException {
@@ -80,6 +89,21 @@ public class HandleDatabase {
                     }
                 }
                 return Optional.empty();
+            }
+        }
+    }
+
+    private Optional<String> fetchExistingHandleByHandle(String handle, Connection connection) throws SQLException {
+        try (PreparedStatement preparedStatementCheckUrl = connection.prepareStatement(CHECK_HANDLE_SQL)) {
+            preparedStatementCheckUrl.setString(1, handle);
+
+            try (ResultSet existingResult = preparedStatementCheckUrl.executeQuery()) {
+                if (existingResult.next()) {
+                    return Optional.of(existingResult.getString(1));
+                }
+                else {
+                    return Optional.empty();
+                }
             }
         }
     }

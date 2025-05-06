@@ -27,6 +27,7 @@ import org.junit.jupiter.api.Test;
 import org.zalando.problem.Problem;
 
 import static no.sikt.nva.handle.HandleDatabase.CHARACTER_SLASH;
+import static no.sikt.nva.handle.HandleDatabase.CHECK_HANDLE_SQL;
 import static no.sikt.nva.handle.HandleDatabase.CHECK_URL_SQL;
 import static no.sikt.nva.handle.HandleDatabase.CREATED_HANDLE_FOR_URI;
 import static no.sikt.nva.handle.HandleDatabase.CREATE_ID_SQL;
@@ -96,7 +97,7 @@ class CreateHandleHandlerTest {
     }
 
     @Test
-    void createHandleRequestReturnsCreatedHandleForArbitaryPrefixes()
+    void createHandleRequestReturnsSuccessfulHandleForArbitraryPrefixes()
         throws IOException, SQLException {
         var uri = randomUri();
         var prefix = "some-prefix";
@@ -111,6 +112,22 @@ class CreateHandleHandlerTest {
         assertThat(response.getBodyObject(HandleResponse.class).handle(),
                    is(equalTo(getHandleUri(prefix, suffix))));
         verify(connection, times(1)).commit();
+    }
+
+    @Test
+    void createHandleForArbitraryPrefixesShouldFailOnDuplicate()
+        throws IOException, SQLException {
+        var uri = randomUri();
+        var prefix = "some-prefix";
+        var suffix = "some-suffix";
+        var inputStream = getInputStream(new HandleRequest(uri, prefix, suffix));
+        mockHandleDatabaseCreateHandle(true, true, true);
+
+        handler.handleRequest(inputStream, outputStream, context);
+        var response = GatewayResponse.fromOutputStream(outputStream, HandleResponse.class);
+
+        assertThat(response.getStatusCode(), is(equalTo(HttpURLConnection.HTTP_CONFLICT)));
+        verify(connection, times(1)).rollback();
     }
 
     @Test
@@ -204,6 +221,9 @@ class CreateHandleHandlerTest {
                                                 boolean successfulCreateHandle) throws SQLException {
         PreparedStatement preparedStatementCheckUrl = createPreparedStatementCheckUrl(uriAlreadyExists);
         when(connection.prepareStatement(CHECK_URL_SQL)).thenReturn(preparedStatementCheckUrl);
+
+        PreparedStatement preparedStatementCheckHandle = createPreparedStatementCheckUrl(uriAlreadyExists);
+        when(connection.prepareStatement(CHECK_HANDLE_SQL)).thenReturn(preparedStatementCheckHandle);
 
         PreparedStatement preparedStatementCreateId = createPreparedStatementCreateId(successfulCreateHandleId);
         when(connection.prepareStatement(CREATE_ID_SQL)).thenReturn(preparedStatementCreateId);

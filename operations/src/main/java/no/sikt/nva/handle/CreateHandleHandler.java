@@ -6,6 +6,7 @@ import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.function.Supplier;
 import no.sikt.nva.handle.exceptions.CreateHandleException;
+import no.sikt.nva.handle.exceptions.HandleAlreadyExistException;
 import no.sikt.nva.handle.exceptions.MalformedRequestException;
 import no.sikt.nva.handle.model.HandleRequest;
 import no.sikt.nva.handle.model.HandleResponse;
@@ -53,15 +54,19 @@ public class CreateHandleHandler extends ApiGatewayHandler<HandleRequest, Handle
             throws ApiGatewayException {
         try (var connection = connectionSupplier.get()) {
             return createHandle(input, connection);
+        } catch (CreateHandleException e) {
+            var message = getNestedExceptionMessage(e.getMessage(), e);
+            logger.error(message, e);
+            throw e;
         } catch (Exception e) {
             var message = getNestedExceptionMessage(String.format(ERROR_CREATING_HANDLE_FOR_URI, input.uri()), e);
             logger.error(message, e);
-            throw new CreateHandleException(message);
+            throw new CreateHandleException(e, HttpURLConnection.HTTP_BAD_GATEWAY);
         }
     }
 
     private HandleResponse createHandle(HandleRequest input, Connection connection)
-        throws SQLException {
+        throws SQLException, CreateHandleException {
         try {
             logger.info("Creating handle for uri: {}", input.uri());
             URI handle;
@@ -72,6 +77,9 @@ public class CreateHandleHandler extends ApiGatewayHandler<HandleRequest, Handle
             }
             connection.commit();
             return new HandleResponse(handle);
+        } catch (HandleAlreadyExistException e) {
+            connection.rollback();
+            throw new CreateHandleException(e, HttpURLConnection.HTTP_CONFLICT);
         } catch (Exception e) {
             connection.rollback();
             throw e;

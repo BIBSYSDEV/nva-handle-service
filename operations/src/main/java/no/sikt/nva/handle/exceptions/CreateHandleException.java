@@ -2,16 +2,14 @@ package no.sikt.nva.handle.exceptions;
 
 import nva.commons.apigateway.exceptions.ApiGatewayException;
 
-import java.net.HttpURLConnection;
-
 public class CreateHandleException extends ApiGatewayException {
 
-    public CreateHandleException(String message) {
-        super(message);
+    public CreateHandleException(Exception exception, Integer statusCode) {
+        super(exception, statusCode);
     }
 
     @Override
     protected Integer statusCode() {
-        return HttpURLConnection.HTTP_BAD_GATEWAY;
+        return getStatusCode();
     }
 }
