@@ -21,7 +21,7 @@ Parameters:
     Default: handle
   ApprovalsDomainBasePath:
     Type: String
-    Default: approvals
+    Default: approval
   HandleBaseUri:
     Type: String
     Description: The host part of Handle URIs
