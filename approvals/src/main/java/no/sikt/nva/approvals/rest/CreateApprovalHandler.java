@@ -5,7 +5,6 @@ import static no.sikt.nva.approvals.utils.ApprovalFactory.newApprovalFromRequest
 import com.amazonaws.services.lambda.runtime.Context;
 import no.sikt.nva.approvals.domain.ApprovalConflictException;
 import no.sikt.nva.approvals.domain.ApprovalService;
-import no.sikt.nva.approvals.domain.ApprovalServiceException;
 import no.sikt.nva.approvals.domain.ApprovalServiceImpl;
 import nva.commons.apigateway.ApiGatewayHandler;
 import nva.commons.apigateway.RequestInfo;
@@ -18,6 +17,8 @@ import nva.commons.core.JacocoGenerated;
 
 public class CreateApprovalHandler extends ApiGatewayHandler<CreateApprovalRequest, Void> {
 
+    public static final String APPROVAL_WITH_ID_EXISTS = "Approval with one of provided identifiers already exists!";
+    public static final String BAD_GATEWAY_EXCEPTION_MESSAGE = "Something went wrong!";
     private final ApprovalService approvalService;
 
     @JacocoGenerated
@@ -42,12 +43,8 @@ public class CreateApprovalHandler extends ApiGatewayHandler<CreateApprovalReque
         try {
             var approval = newApprovalFromRequest(request);
             approvalService.create(approval);
-        } catch (ApprovalServiceException e) {
-            throw new BadGatewayException("Something went wrong!");
-        } catch (ApprovalConflictException e) {
-            throw new ConflictException("Approval with one of provided identifiers already exists!");
-        } catch (IllegalArgumentException e) {
-            throw new BadRequestException(e.getMessage());
+        } catch (Exception e) {
+            handleException(e);
         }
         return null;
     }
@@ -55,5 +52,14 @@ public class CreateApprovalHandler extends ApiGatewayHandler<CreateApprovalReque
     @Override
     protected Integer getSuccessStatusCode(CreateApprovalRequest input, Void output) {
         return HTTP_ACCEPTED;
+    }
+
+    private void handleException(Exception exception)
+        throws BadGatewayException, BadRequestException, ConflictException {
+        switch (exception) {
+            case ApprovalConflictException e -> throw new ConflictException(APPROVAL_WITH_ID_EXISTS);
+            case IllegalArgumentException e -> throw new BadRequestException(e.getMessage());
+            default -> throw new BadGatewayException(BAD_GATEWAY_EXCEPTION_MESSAGE);
+        }
     }
 }
