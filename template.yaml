@@ -11,6 +11,10 @@ Parameters:
   CognitoAuthorizerUrls:
     Type: AWS::SSM::Parameter::Value<CommaDelimitedList>
     Default: CognitoAuthorizerUrls
+  ExternalCognitoAuthorizerArn:
+    Type: 'AWS::SSM::Parameter::Value<String>'
+    Description: Reference to ARN of ExternalUsers UserPool
+    Default: ExternalCognitoAuthorizerArn
   ApiDomain:
     Type: 'AWS::SSM::Parameter::Value<String>'
     Description: The Api domain
