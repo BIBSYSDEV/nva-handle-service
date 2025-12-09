@@ -1,0 +1,24 @@
+openapi: 3.0.1
+info:
+  title: NVA Handle API
+  version: '1.0'
+  license:
+    name: MIT
+paths:
+  /:
+    post:
+      description: Create approval
+      responses:
+        '201':
+          description: Approval created
+components:
+  securitySchemes:
+    CognitoUserPool:
+      type: apiKey
+      name: Authorization
+      in: header
+      x-amazon-apigateway-authtype: cognito_user_pools
+      x-amazon-apigateway-authorizer:
+        type: cognito_user_pools
+        providerARNs:
+          - Ref: CognitoAuthorizerArn

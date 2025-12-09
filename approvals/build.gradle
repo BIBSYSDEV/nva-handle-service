@@ -1,0 +1,15 @@
+
+dependencies {
+    implementation libs.nva.apigateway
+    implementation libs.nva.core
+    implementation libs.nva.json
+
+    implementation libs.bundles.jackson
+
+    testImplementation libs.bundles.testing
+}
+
+test {
+    environment("COGNITO_AUTHORIZER_URLS", "urls")
+    environment("ALLOWED_ORIGIN", "*")
+}
