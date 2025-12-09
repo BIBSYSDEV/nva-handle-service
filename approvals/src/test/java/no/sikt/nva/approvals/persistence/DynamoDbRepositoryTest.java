@@ -90,7 +90,7 @@ class DynamoDbRepositoryTest {
     }
 
     private static Handle randomHandle() {
-        return Handle.fromUri(URI.create("https://www.handle.net/123/123"));
+        return new Handle(URI.create("https://www.handle.net/123/123"));
     }
 
     private static List<Identifier> randomIdentifiers() {

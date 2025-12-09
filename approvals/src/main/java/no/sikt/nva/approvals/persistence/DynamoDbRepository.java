@@ -17,6 +17,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import no.sikt.nva.approvals.domain.Approval;
+import no.sikt.nva.approvals.domain.Handle;
 import no.sikt.nva.approvals.domain.Identifier;
 import no.unit.nva.commons.json.JsonUtils;
 import org.slf4j.Logger;
@@ -60,24 +61,36 @@ public class DynamoDbRepository implements Repository {
 
     @Override
     public Approval getApprovalByIdentifier(UUID identifier) {
-        var entities = fetchEntitiesFromIndexByIdentifier(identifier, GSI1);
-        var handle = entities.stream()
-                         .filter(HandleDao.class::isInstance)
-                         .map(HandleDao.class::cast)
-                         .findFirst()
-                         .map(HandleDao::toHandle)
-                         .orElseThrow();
-        var identifiers = entities.stream()
-                              .filter(IdentifierDao.class::isInstance)
-                              .map(IdentifierDao.class::cast)
-                              .map(IdentifierDao::toIdentifier)
-                              .toList();
-        var approval = entities.stream()
-                           .filter(ApprovalDao.class::isInstance)
-                           .map(ApprovalDao.class::cast)
-                           .findFirst()
-                           .orElseThrow();
+        var entities = fetchEntitiesByApprovalIdentifier(identifier);
+        var handle = getHandle(entities);
+        var identifiers = getIdentifiers(entities);
+        var approval = getApproval(entities);
         return new Approval(approval.identifier(), identifiers, approval.source(), handle);
+    }
+
+    private static Handle getHandle(List<DatabaseEntity> entities) {
+        return entities.stream()
+                   .filter(HandleDao.class::isInstance)
+                   .map(HandleDao.class::cast)
+                   .findFirst()
+                   .map(HandleDao::toHandle)
+                   .orElseThrow();
+    }
+
+    private static List<Identifier> getIdentifiers(List<DatabaseEntity> entities) {
+        return entities.stream()
+                   .filter(IdentifierDao.class::isInstance)
+                   .map(IdentifierDao.class::cast)
+                   .map(IdentifierDao::toIdentifier)
+                   .toList();
+    }
+
+    private static ApprovalDao getApproval(List<DatabaseEntity> entities) {
+        return entities.stream()
+                   .filter(ApprovalDao.class::isInstance)
+                   .map(ApprovalDao.class::cast)
+                   .findFirst()
+                   .orElseThrow();
     }
 
     private static DocumentTableSchema documentTableSchema() {
@@ -112,10 +125,10 @@ public class DynamoDbRepository implements Repository {
         client.transactWriteItems(requestbuilder.build());
     }
 
-    private List<DatabaseEntity> fetchEntitiesFromIndexByIdentifier(UUID approvalIdentifier, String index) {
-        return table.index(index)
+    private List<DatabaseEntity> fetchEntitiesByApprovalIdentifier(UUID identifier) {
+        return table.index(DynamoDbConstants.GSI1)
                    .query(
-                       QueryConditional.keyEqualTo(Key.builder().partitionValue(approvalIdentifier.toString()).build()))
+                       QueryConditional.keyEqualTo(Key.builder().partitionValue(identifier.toString()).build()))
                    .stream()
                    .map(Page::items)
                    .flatMap(List::stream)

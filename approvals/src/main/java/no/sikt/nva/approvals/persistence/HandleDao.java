@@ -11,11 +11,11 @@ import no.sikt.nva.approvals.domain.Handle;
 public record HandleDao(URI uri) implements DatabaseEntity {
 
     public static HandleDao fromHandle(Handle handle) {
-        return new HandleDao(handle.getValue());
+        return new HandleDao(handle.value());
     }
 
     public Handle toHandle() {
-        return Handle.fromUri(uri);
+        return new Handle(uri);
     }
 
     @Override

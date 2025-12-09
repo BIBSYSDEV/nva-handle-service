@@ -10,6 +10,7 @@ import static no.sikt.nva.approvals.persistence.DynamoDbConstants.SK0;
 import static no.sikt.nva.approvals.persistence.DynamoDbConstants.SK1;
 import static no.sikt.nva.approvals.persistence.DynamoDbConstants.SK2;
 import static no.sikt.nva.approvals.persistence.DynamoDbConstants.TABLE_NAME;
+import static nva.commons.core.attempt.Try.attempt;
 import com.amazonaws.services.dynamodbv2.local.shared.access.AmazonDynamoDBLocal;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -47,20 +48,19 @@ public record DynamoDbLocal(DynamoDbClient client) {
     }
 
     private static void createTableIfNotExists(String tableName, DynamoDbClient client) {
-        try {
-            client.createTable(CreateTableRequest.builder()
-                                   .tableName(tableName)
-                                   .provisionedThroughput(createProvisionedThroughput())
-                                   .attributeDefinitions(createAttribute(PK0), createAttribute(SK0),
-                                                         createAttribute(PK1), createAttribute(SK1),
-                                                         createAttribute(PK2), createAttribute(SK2))
-                                   .globalSecondaryIndexes(createGlobalSecondaryIndex(GSI1, PK1, SK1),
-                                                           createGlobalSecondaryIndex(GSI2, PK2, SK2))
-                                   .keySchema(createKeySchemaElements(PK0, SK0))
-                                   .build());
-        } catch (Exception e) {
-            // Table already exists, ignore
-        }
+        attempt(() -> client.createTable(createTableRequest(tableName)));
+    }
+
+    private static CreateTableRequest createTableRequest(String tableName) {
+        return CreateTableRequest.builder()
+                   .tableName(tableName)
+                   .provisionedThroughput(createProvisionedThroughput())
+                   .attributeDefinitions(createAttribute(PK0), createAttribute(SK0), createAttribute(PK1),
+                                         createAttribute(SK1), createAttribute(PK2), createAttribute(SK2))
+                   .globalSecondaryIndexes(createGlobalSecondaryIndex(GSI1, PK1, SK1),
+                                           createGlobalSecondaryIndex(GSI2, PK2, SK2))
+                   .keySchema(createKeySchemaElements(PK0, SK0))
+                   .build();
     }
 
     private static GlobalSecondaryIndex createGlobalSecondaryIndex(String name, String partitionKey, String sortKey) {

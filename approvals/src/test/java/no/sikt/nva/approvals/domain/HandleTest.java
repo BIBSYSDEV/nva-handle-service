@@ -11,34 +11,34 @@ class HandleTest {
 
     @Test
     void shouldThrowIllegalArgumentExceptionWhenCreatingHandleFromNullUri() {
-        assertThrows(IllegalArgumentException.class, () -> Handle.fromUri(null));
+        assertThrows(IllegalArgumentException.class, () -> new Handle(null));
     }
 
     @Test
     void shouldThrowIllegalArgumentExceptionWhenCreatingHandleFromBlankUri() {
-        assertThrows(IllegalArgumentException.class, () -> Handle.fromUri(new URI(EMPTY_STRING)));
+        assertThrows(IllegalArgumentException.class, () -> new Handle(new URI(EMPTY_STRING)));
     }
 
     @Test
     void shouldThrowIllegalArgumentExceptionWhenCreatingHandleFromUriWithNonHandleHostName() {
-        assertThrows(IllegalArgumentException.class, () -> Handle.fromUri(randomUri()));
+        assertThrows(IllegalArgumentException.class, () -> new Handle(randomUri()));
     }
 
     @Test
     void shouldThrowIllegalArgumentExceptionWhenCreatingHandleFromUriWithoutPrefix() {
-        assertThrows(IllegalArgumentException.class, () -> Handle.fromUri(URI.create("https://www.handle.net/")));
+        assertThrows(IllegalArgumentException.class, () -> new Handle(URI.create("https://www.handle.net/")));
     }
 
     @Test
     void shouldThrowIllegalArgumentExceptionWhenCreatingHandleFromUriWithoutSuffix() {
-        assertThrows(IllegalArgumentException.class, () -> Handle.fromUri(URI.create("https://www.handle.net/prefix")));
+        assertThrows(IllegalArgumentException.class, () -> new Handle(URI.create("https://www.handle.net/prefix")));
     }
 
     @Test
     void shouldCreateHandleFromUriWhichMeetsHandleUriRequirements() {
         var uri = URI.create("https://www.handle.net/prefix/suffix");
-        var handle = Handle.fromUri(uri);
+        var handle = new Handle(uri);
 
-        assertEquals(uri, handle.getValue());
+        assertEquals(uri, handle.value());
     }
 }
