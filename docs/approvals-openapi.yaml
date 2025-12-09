@@ -1,9 +1,7 @@
 openapi: 3.0.1
 info:
-  title: NVA Handle API
-  version: '1.0'
-  license:
-    name: MIT
+  title: NVA Approval API
+  version: 1.0.0
 paths:
   /:
     post:
