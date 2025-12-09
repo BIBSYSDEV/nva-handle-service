@@ -6,6 +6,8 @@ paths:
   /:
     post:
       description: Create approval
+      security:
+        - CognitoUserPool: [ 'https://api.nva.unit.no/scopes/third-party/approval-upsert', 'https://api.nva.unit.no/scopes/backend' ]
       x-amazon-apigateway-integration:
         uri:
           Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${NvaCreateApprovalFunction.Arn}/invocations
@@ -36,3 +38,4 @@ components:
         type: cognito_user_pools
         providerARNs:
           - Ref: CognitoAuthorizerArn
+          - Ref: ExternalCognitoAuthorizerArn
