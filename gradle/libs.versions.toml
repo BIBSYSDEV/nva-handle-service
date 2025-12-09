@@ -10,7 +10,7 @@ log4j = { strictly = '2.25.0' }
 slf4j = { strictly = '2.0.17' }
 postgres = { strictly = '42.7.5' }
 awsSdk2 = { strictly = '2.31.77' }
-dynamoDbLocal = { strictly = '2.0.0' }
+dynamoDbLocal = { strictly = '2.6.1' }
 
 [libraries]
 nva-core = { group = "com.github.bibsysdev", name = "core", version.ref = "nva" }
@@ -29,6 +29,7 @@ jackson-datatype-jsr310 = { group = "com.fasterxml.jackson.datatype", name = "ja
 aws-lambda-java-core = { group = "com.amazonaws", name = "aws-lambda-java-core", version.ref = "awsLambdaCore" }
 aws-sdk2-secrets = { group = 'software.amazon.awssdk', name = 'secretsmanager', version.ref = 'awsSdk2' }
 aws-sdk2-dynamo = { group = 'software.amazon.awssdk', name = 'dynamodb', version.ref = 'awsSdk2' }
+aws-sdk2-dynamoenhanced = { group = 'software.amazon.awssdk', name = 'dynamodb-enhanced', version.ref = 'awsSdk2' }
 
 zalando-problem = { group = "org.zalando", name = "problem", version.ref = "problemVersion" }
 zalando-jackson-datatype-problem = { group = "org.zalando", name = "jackson-datatype-problem", version.ref = "problemVersion" }
@@ -48,7 +49,7 @@ log4j-api = { group = 'org.apache.logging.log4j', name = 'log4j-api', version.re
 log4j-slf4j-impl = { group = 'org.apache.logging.log4j', name = 'log4j-slf4j2-impl', version.ref = 'log4j' }
 slf4j-api = { group = 'org.slf4j', name = 'slf4j-api', version.ref = 'slf4j' }
 
-postgres = { group = 'org.postgresql', name = 'postgresql', version.ref = 'postgres'}
+postgres = { group = 'org.postgresql', name = 'postgresql', version.ref = 'postgres' }
 
 
 [bundles]

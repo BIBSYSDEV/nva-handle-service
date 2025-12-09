@@ -1,0 +1,25 @@
+package no.sikt.nva.approvals.persistence;
+
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import com.fasterxml.jackson.annotation.JsonTypeInfo.Id;
+import com.fasterxml.jackson.annotation.JsonTypeName;
+import java.net.URI;
+import no.sikt.nva.approvals.domain.Handle;
+
+@JsonTypeInfo(use = Id.NAME, property = "type")
+@JsonTypeName("Handle")
+public record HandleDao(URI uri) implements DatabaseEntity {
+
+    public static HandleDao fromHandle(Handle handle) {
+        return new HandleDao(handle.getValue());
+    }
+
+    public Handle toHandle() {
+        return Handle.fromUri(uri);
+    }
+
+    @Override
+    public String getDatabaseIdentifier() {
+        return uri.toString();
+    }
+}
