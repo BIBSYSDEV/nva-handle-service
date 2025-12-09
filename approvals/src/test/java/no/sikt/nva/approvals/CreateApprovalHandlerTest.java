@@ -27,7 +27,7 @@ class CreateApprovalHandlerTest {
     }
 
     @Test
-    void shouldReturnCreatedResponse() throws IOException {
+    void shouldReturnAcceptedResponse() throws IOException {
         var request = createRequest();
 
         handler.handleRequest(request, output, context);
