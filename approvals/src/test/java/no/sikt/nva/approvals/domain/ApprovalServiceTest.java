@@ -22,7 +22,7 @@ public class ApprovalServiceTest {
     }
 
     private static Approval randomApproval() {
-        return new Approval(null, randomIdentifiers(), randomUri());
+        return new Approval(null, randomIdentifiers(), randomUri(), null);
     }
 
     private static List<Identifier> randomIdentifiers() {

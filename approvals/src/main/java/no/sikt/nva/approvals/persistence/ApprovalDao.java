@@ -12,7 +12,7 @@ import no.sikt.nva.approvals.domain.Approval;
 public record ApprovalDao(UUID identifier, URI source) implements DatabaseEntity {
 
     public static ApprovalDao fromApproval(Approval approval) {
-        return new ApprovalDao(approval.getIdentifier(), approval.getSource());
+        return new ApprovalDao(approval.identifier(), approval.source());
     }
 
     @Override

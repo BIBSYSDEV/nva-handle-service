@@ -41,7 +41,7 @@ class DynamoDbRepositoryTest {
         var approval = randomApproval();
         repository.save(approval);
 
-        var persistedApproval = repository.getApprovalByIdentifier(approval.getIdentifier());
+        var persistedApproval = repository.getApprovalByIdentifier(approval.identifier());
 
         assertEquals(approval, persistedApproval);
     }

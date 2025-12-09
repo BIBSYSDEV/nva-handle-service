@@ -1,7 +1,6 @@
 package no.sikt.nva.approvals.rest;
 
 import static java.net.HttpURLConnection.HTTP_ACCEPTED;
-import static no.sikt.nva.approvals.utils.ApprovalFactory.newApprovalFromRequest;
 import com.amazonaws.services.lambda.runtime.Context;
 import no.sikt.nva.approvals.domain.ApprovalConflictException;
 import no.sikt.nva.approvals.domain.ApprovalService;
@@ -34,15 +33,18 @@ public class CreateApprovalHandler extends ApiGatewayHandler<CreateApprovalReque
     @Override
     protected void validateRequest(CreateApprovalRequest input, RequestInfo requestInfo, Context context)
         throws ApiGatewayException {
-
+        try {
+            input.validate();
+        } catch (Exception exception) {
+            throw new BadRequestException(exception.getMessage());
+        }
     }
 
     @Override
     protected Void processInput(CreateApprovalRequest request, RequestInfo requestInfo, Context context)
         throws ApiGatewayException {
         try {
-            var approval = newApprovalFromRequest(request);
-            approvalService.create(approval);
+            approvalService.create(request.toNewApproval());
         } catch (Exception e) {
             handleException(e);
         }
