@@ -7,9 +7,6 @@ import static java.net.HttpURLConnection.HTTP_CONFLICT;
 import static no.unit.nva.testutils.RandomDataGenerator.randomString;
 import static no.unit.nva.testutils.RandomDataGenerator.randomUri;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.doThrow;
-import static org.mockito.Mockito.mock;
 import com.amazonaws.services.lambda.runtime.Context;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import java.io.ByteArrayOutputStream;
@@ -17,6 +14,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
 import java.util.List;
+import no.sikt.nva.approvals.domain.Approval;
 import no.sikt.nva.approvals.domain.ApprovalConflictException;
 import no.sikt.nva.approvals.domain.ApprovalService;
 import no.sikt.nva.approvals.domain.ApprovalServiceException;
@@ -33,13 +31,11 @@ class CreateApprovalHandlerTest {
     private static final Context context = new FakeContext();
     private CreateApprovalHandler handler;
     private ByteArrayOutputStream output;
-    private ApprovalService approvalService;
 
     @BeforeEach
     void setUp() {
-        approvalService = mock(ApprovalService.class);
-        handler = new CreateApprovalHandler(approvalService);
         this.output = new ByteArrayOutputStream();
+        handler = new CreateApprovalHandler(new FakeApprovalService());
     }
 
     @Test
@@ -65,11 +61,10 @@ class CreateApprovalHandlerTest {
     }
 
     @Test
-    void shouldReturnConflictWhenApprovalServiceThrowsConflictException()
-        throws IOException, ApprovalServiceException, ApprovalConflictException {
+    void shouldReturnConflictWhenApprovalServiceThrowsConflictException() throws IOException {
+        handler = new CreateApprovalHandler(new FakeApprovalService(new ApprovalConflictException("conflict")));
         var request = createRequest(randomApprovalRequest(randomUri()));
 
-        doThrow(ApprovalConflictException.class).when(approvalService).create(any());
         handler.handleRequest(request, output, context);
 
         var response = GatewayResponse.fromOutputStream(output, Void.class);
@@ -78,11 +73,10 @@ class CreateApprovalHandlerTest {
     }
 
     @Test
-    void shouldReturnBadGatewayOnWhenApprovalServiceThrowsApprovalServiceException()
-        throws IOException, ApprovalServiceException, ApprovalConflictException {
+    void shouldReturnBadGatewayOnWhenApprovalServiceThrowsApprovalServiceException() throws IOException {
+        handler = new CreateApprovalHandler(new FakeApprovalService(new ApprovalServiceException("error")));
         var request = createRequest(randomApprovalRequest(randomUri()));
 
-        doThrow(ApprovalServiceException.class).when(approvalService).create(any());
         handler.handleRequest(request, output, context);
 
         var response = GatewayResponse.fromOutputStream(output, Void.class);
@@ -96,5 +90,28 @@ class CreateApprovalHandlerTest {
 
     private InputStream createRequest(CreateApprovalRequest request) throws JsonProcessingException {
         return new HandlerRequestBuilder<CreateApprovalRequest>(JsonUtils.dtoObjectMapper).withBody(request).build();
+    }
+
+    public static class FakeApprovalService implements ApprovalService {
+
+        private final Exception exception;
+
+        public FakeApprovalService() {
+            this.exception = null;
+        }
+
+        public FakeApprovalService(Exception exception) {
+            this.exception = exception;
+        }
+
+        @Override
+        public void create(Approval approval) throws ApprovalServiceException, ApprovalConflictException {
+            if (exception instanceof ApprovalServiceException) {
+                throw (ApprovalServiceException) exception;
+            }
+            if (exception instanceof ApprovalConflictException) {
+                throw (ApprovalConflictException) exception;
+            }
+        }
     }
 }

@@ -1,4 +1,4 @@
-package no.sikt.nva.approvals.utils;
+package no.sikt.nva.approvals.rest;
 
 import static no.unit.nva.testutils.RandomDataGenerator.randomString;
 import static no.unit.nva.testutils.RandomDataGenerator.randomUri;
@@ -8,15 +8,15 @@ import java.net.URI;
 import java.util.List;
 import no.sikt.nva.approvals.domain.Approval;
 import no.sikt.nva.approvals.domain.Identifier;
-import no.sikt.nva.approvals.rest.CreateApprovalRequest;
 import org.junit.jupiter.api.Test;
 
-class ApprovalFactoryTest {
+class CreateApprovalRequestTest {
+
 
     @Test
     void shouldConvertCreateApprovalRequestToApproval() {
         var request = randomApprovalRequest(randomIdentifiers(), randomUri());
-        var approval = ApprovalFactory.newApprovalFromRequest(request);
+        var approval = request.toNewApproval();
 
         var expected = new Approval(null, request.identifiers(), request.source());
 
@@ -26,8 +26,7 @@ class ApprovalFactoryTest {
     @Test
     void shouldThrowIllegalArgumentExceptionWhenCreatingNewApprovalFromRequestWithoutIdentifier() {
         var request = randomApprovalRequest(List.of(), randomUri());
-        var executable = assertThrows(IllegalArgumentException.class,
-                                      () -> ApprovalFactory.newApprovalFromRequest(request));
+        var executable = assertThrows(IllegalArgumentException.class, request::validate);
 
         assertEquals("At least one identifier is mandatory for approval creation", executable.getMessage());
     }
@@ -35,8 +34,15 @@ class ApprovalFactoryTest {
     @Test
     void shouldThrowIllegalArgumentExceptionWhenCreatingNewApprovalFromRequestWithoutSource() {
         var request = randomApprovalRequest(randomIdentifiers(), null);
-        var executable = assertThrows(IllegalArgumentException.class,
-                                      () -> ApprovalFactory.newApprovalFromRequest(request));
+        var executable = assertThrows(IllegalArgumentException.class, request::validate);
+
+        assertEquals("Source is mandatory for approval creation", executable.getMessage());
+    }
+
+    @Test
+    void shouldThrowNullPointerExceptionWhenCreatingApprovalFromRequestWithoutSource() {
+        var request = randomApprovalRequest(randomIdentifiers(), null);
+        var executable = assertThrows(NullPointerException.class, request::toNewApproval);
 
         assertEquals("Source is mandatory for approval creation", executable.getMessage());
     }
