@@ -1,0 +1,38 @@
+openapi: 3.0.1
+info:
+  title: NVA Approval API
+  version: 1.0.0
+paths:
+  /:
+    post:
+      description: Create approval
+      x-amazon-apigateway-integration:
+        uri:
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${NvaCreateApprovalFunction.Arn}/invocations
+        responses: { }
+        httpMethod: POST
+        type: AWS_PROXY
+      responses:
+        '202':
+          description: Approval accepted
+          headers:
+            Location:
+              description: URI of the created Approval
+              schema:
+                type: string
+                format: uri
+            Retry-After:
+              description: Number of seconds to wait before checking the approval
+              schema:
+                type: integer
+components:
+  securitySchemes:
+    CognitoUserPool:
+      type: apiKey
+      name: Authorization
+      in: header
+      x-amazon-apigateway-authtype: cognito_user_pools
+      x-amazon-apigateway-authorizer:
+        type: cognito_user_pools
+        providerARNs:
+          - Ref: CognitoAuthorizerArn

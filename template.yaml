@@ -19,6 +19,9 @@ Parameters:
     Type: String
     Description: Base path mapping in CustomDomain
     Default: handle
+  ApprovalsDomainBasePath:
+    Type: String
+    Default: approval
   HandleBaseUri:
     Type: String
     Description: The host part of Handle URIs
@@ -83,6 +86,35 @@ Resources:
     Properties:
       AccessLogSetting:
         DestinationArn: !GetAtt ApiAccessLogGroup.Arn
+        Format: !Join
+          - ''
+          - - '{ '
+            - '"apiId": "$context.apiId", '
+            - '"requestId": "$context.requestId", '
+            - '"requestTime": "$context.requestTime", '
+            - '"requestTimeEpoch": "$context.requestTimeEpoch", '
+            - '"httpMethod": "$context.httpMethod", '
+            - '"path": "$context.path", '
+            - '"queryString": "$context.requestQueryString", '
+            - '"status": "$context.status", '
+            - '"error.message": "$context.error.message", '
+            - '"userAgent": "$context.identity.userAgent", '
+            - '"ip": "$context.identity.sourceIp" '
+            - '}'
+      StageName: Prod
+      EndpointConfiguration:
+        Type: REGIONAL
+      DefinitionBody:
+        'Fn::Transform':
+          Name: AWS::Include
+          Parameters:
+            Location: ./docs/handle-openapi.yaml
+
+  NvaApprovalsApi:
+    Type: AWS::Serverless::Api
+    Properties:
+      AccessLogSetting:
+        DestinationArn: !GetAtt ApiAccessLogGroup.Arn
         Format: '{ "apiId": "$context.apiId", "requestId": "$context.requestId", "requestTime": "$context.requestTime", "requestTimeEpoch": "$context.requestTimeEpoch", "httpMethod": "$context.httpMethod", "path": "$context.path", "status": "$context.status",  "error.message": "$context.error.message" }'
       StageName: Prod
       EndpointConfiguration:
@@ -91,7 +123,7 @@ Resources:
         'Fn::Transform':
           Name: AWS::Include
           Parameters:
-            Location: ./docs/openapi.yaml
+            Location: ./docs/approvals-openapi.yaml
 
   NvaCreateHandleFunctionLogGroup:
     Type: AWS::Logs::LogGroup
@@ -163,6 +195,23 @@ Resources:
             Method: put
             RestApiId: !Ref NvaHandleServiceApi
 
+  NvaCreateApprovalFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: approvals
+      Handler: no.sikt.nva.approvals.CreateApprovalHandler::handleRequest
+      Environment:
+        Variables:
+          ALLOWED_ORIGIN: !Ref AllowedOrigins
+          API_HOST: !Ref ApiDomain
+      Events:
+        CreateHandle:
+          Type: Api
+          Properties:
+            Path: /
+            Method: post
+            RestApiId: !Ref NvaApprovalsApi
+
   NvaCreateHandleBasePathMapping:
     Type: AWS::ApiGateway::BasePathMapping
     Properties:
@@ -170,3 +219,11 @@ Resources:
       DomainName: !Ref ApiDomain
       RestApiId: !Ref NvaHandleServiceApi
       Stage: !Ref NvaHandleServiceApi.Stage
+
+  NvaApprovalsApiBasePathMapping:
+    Type: AWS::ApiGateway::BasePathMapping
+    Properties:
+      BasePath: !Sub ${ApprovalsDomainBasePath}
+      DomainName: !Ref ApiDomain
+      RestApiId: !Ref NvaApprovalsApi
+      Stage: !Ref NvaApprovalsApi.Stage
