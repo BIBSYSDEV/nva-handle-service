@@ -181,6 +181,25 @@ Resources:
             Method: put
             RestApiId: !Ref NvaHandleServiceApi
 
+  NvaCreateApprovalFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: approvals
+      Handler: no.sikt.nva.approvals.CreateApprovalHandler::handleRequest
+      Policies:
+        - AWSLambdaBasicExecutionRole
+      Environment:
+        Variables:
+          ALLOWED_ORIGIN: !Ref AllowedOrigins
+          API_HOST: !Ref ApiDomain
+      Events:
+        CreateHandle:
+          Type: Api
+          Properties:
+            Path: /
+            Method: post
+            RestApiId: !Ref NvaApprovalsApi
+
   NvaCreateHandleBasePathMapping:
     Type: AWS::ApiGateway::BasePathMapping
     Properties:

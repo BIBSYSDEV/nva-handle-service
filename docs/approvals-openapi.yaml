@@ -6,9 +6,25 @@ paths:
   /:
     post:
       description: Create approval
+      x-amazon-apigateway-integration:
+        uri:
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${NvaCreateApprovalFunction.Arn}/invocations
+        responses: { }
+        httpMethod: POST
+        type: AWS_PROXY
       responses:
-        '201':
-          description: Approval created
+        '202':
+          description: Approval accepted
+          headers:
+            Location:
+              description: URI of the created Approval
+              schema:
+                type: string
+                format: uri
+            Retry-After:
+              description: Number of seconds to wait before checking the approval
+              schema:
+                type: integer
 components:
   securitySchemes:
     CognitoUserPool:

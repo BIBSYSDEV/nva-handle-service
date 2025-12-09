@@ -1,6 +1,6 @@
 package no.sikt.nva.approvals;
 
-import static java.net.HttpURLConnection.HTTP_CREATED;
+import static java.net.HttpURLConnection.HTTP_ACCEPTED;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import com.amazonaws.services.lambda.runtime.Context;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -34,7 +34,7 @@ class CreateApprovalHandlerTest {
 
         var response = GatewayResponse.fromOutputStream(output, Void.class);
 
-        assertEquals(HTTP_CREATED, response.getStatusCode());
+        assertEquals(HTTP_ACCEPTED, response.getStatusCode());
     }
 
     private InputStream createRequest() throws JsonProcessingException {

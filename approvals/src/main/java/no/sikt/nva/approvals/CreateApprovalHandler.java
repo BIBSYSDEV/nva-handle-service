@@ -1,6 +1,6 @@
 package no.sikt.nva.approvals;
 
-import static java.net.HttpURLConnection.HTTP_CREATED;
+import static java.net.HttpURLConnection.HTTP_ACCEPTED;
 import com.amazonaws.services.lambda.runtime.Context;
 import nva.commons.apigateway.ApiGatewayHandler;
 import nva.commons.apigateway.RequestInfo;
@@ -25,6 +25,6 @@ public class CreateApprovalHandler extends ApiGatewayHandler<Void, Void> {
 
     @Override
     protected Integer getSuccessStatusCode(Void input, Void output) {
-        return HTTP_CREATED;
+        return HTTP_ACCEPTED;
     }
 }
