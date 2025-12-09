@@ -203,7 +203,7 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       CodeUri: approvals
-      Handler: no.sikt.nva.approvals.CreateApprovalHandler::handleRequest
+      Handler: no.sikt.nva.approvals.rest.CreateApprovalHandler::handleRequest
       Environment:
         Variables:
           ALLOWED_ORIGIN: !Ref AllowedOrigins

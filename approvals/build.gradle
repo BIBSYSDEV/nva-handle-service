@@ -4,6 +4,7 @@ dependencies {
     implementation libs.nva.core
     implementation libs.nva.json
 
+    implementation libs.aws.sdk2.dynamo
     implementation libs.bundles.jackson
 
     testImplementation libs.bundles.testing
