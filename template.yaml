@@ -215,17 +215,17 @@ Resources:
             Method: post
             RestApiId: !Ref NvaApprovalsApi
 
-  NvaGetApprovalFunctionLogGroup:
+  NvaFetchApprovalFunctionLogGroup:
     Type: AWS::Logs::LogGroup
     Properties:
-      LogGroupName: !Sub '/aws/lambda/${NvaGetApprovalFunction}'
+      LogGroupName: !Sub '/aws/lambda/${NvaFetchApprovalFunction}'
       RetentionInDays: 90
 
-  NvaGetApprovalFunction:
+  NvaFetchApprovalFunction:
     Type: AWS::Serverless::Function
     Properties:
       CodeUri: approvals
-      Handler: no.sikt.nva.approvals.rest.GetApprovalHandler::handleRequest
+      Handler: no.sikt.nva.approvals.rest.FetchApprovalHandler::handleRequest
       Events:
         GetApproval:
           Type: Api

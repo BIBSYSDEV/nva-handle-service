@@ -4,7 +4,6 @@ import static java.net.HttpURLConnection.HTTP_BAD_GATEWAY;
 import static java.net.HttpURLConnection.HTTP_BAD_REQUEST;
 import static java.net.HttpURLConnection.HTTP_NOT_FOUND;
 import static java.net.HttpURLConnection.HTTP_OK;
-import static no.sikt.nva.approvals.rest.GetApprovalHandler.APPROVAL_ID_PATH_PARAMETER;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import com.amazonaws.services.lambda.runtime.Context;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -24,11 +23,12 @@ import nva.commons.apigateway.GatewayResponse;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-class GetApprovalHandlerTest {
+class FetchApprovalHandlerTest {
 
     private static final Context CONTEXT = new FakeContext();
-    private GetApprovalHandler handler;
+    private FetchApprovalHandler handler;
     private ByteArrayOutputStream output;
+    private static final String APPROVAL_ID_PATH_PARAMETER = "approvalId";
 
     @BeforeEach
     void setUp() {
@@ -38,7 +38,7 @@ class GetApprovalHandlerTest {
     @Test
     void shouldReturnOkResponseWithApprovalOnSuccess() throws IOException {
         var approvalId = UUID.randomUUID();
-        handler = new GetApprovalHandler(new FakeApprovalService());
+        handler = new FetchApprovalHandler(new FakeApprovalService());
         var request = createRequest(approvalId);
 
         handler.handleRequest(request, output, CONTEXT);
@@ -51,7 +51,7 @@ class GetApprovalHandlerTest {
     @Test
     void shouldReturnNotFoundWhenApprovalDoesNotExist() throws IOException {
         var approvalId = UUID.randomUUID();
-        handler = new GetApprovalHandler(new FakeApprovalService(new ApprovalNotFoundException("not found")));
+        handler = new FetchApprovalHandler(new FakeApprovalService(new ApprovalNotFoundException("not found")));
         var request = createRequest(approvalId);
 
         handler.handleRequest(request, output, CONTEXT);
@@ -63,8 +63,8 @@ class GetApprovalHandlerTest {
 
     @Test
     void shouldReturnBadRequestWhenApprovalIdIsInvalid() throws IOException {
-        handler = new GetApprovalHandler(new FakeApprovalService());
-        var request = createRequestWithInvalidId("not-a-uuid");
+        handler = new FetchApprovalHandler(new FakeApprovalService());
+        var request = createRequestWithInvalidId();
 
         handler.handleRequest(request, output, CONTEXT);
 
@@ -76,7 +76,7 @@ class GetApprovalHandlerTest {
     @Test
     void shouldReturnBadGatewayWhenServiceThrowsException() throws IOException {
         var approvalId = UUID.randomUUID();
-        handler = new GetApprovalHandler(new FakeApprovalService(new ApprovalServiceException("error")));
+        handler = new FetchApprovalHandler(new FakeApprovalService(new ApprovalServiceException("error")));
         var request = createRequest(approvalId);
 
         handler.handleRequest(request, output, CONTEXT);
@@ -92,9 +92,9 @@ class GetApprovalHandlerTest {
             .build();
     }
 
-    private InputStream createRequestWithInvalidId(String invalidId) throws JsonProcessingException {
+    private InputStream createRequestWithInvalidId() throws JsonProcessingException {
         return new HandlerRequestBuilder<Void>(JsonUtils.dtoObjectMapper)
-            .withPathParameters(Map.of(APPROVAL_ID_PATH_PARAMETER, invalidId))
+            .withPathParameters(Map.of(APPROVAL_ID_PATH_PARAMETER, "not-a-uuid"))
             .build();
     }
 }

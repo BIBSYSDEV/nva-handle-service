@@ -17,21 +17,21 @@ import nva.commons.apigateway.exceptions.NotFoundException;
 import nva.commons.core.Environment;
 import nva.commons.core.JacocoGenerated;
 
-public class GetApprovalHandler extends ApiGatewayHandler<Void, Approval> {
+public class FetchApprovalHandler extends ApiGatewayHandler<Void, Approval> {
 
-    public static final String APPROVAL_ID_PATH_PARAMETER = "approvalId";
-    public static final String APPROVAL_NOT_FOUND_MESSAGE = "Approval not found";
-    public static final String INVALID_APPROVAL_ID_MESSAGE = "Invalid approval ID format";
-    public static final String BAD_GATEWAY_MESSAGE = "Something went wrong!";
+    private static final String APPROVAL_ID_PATH_PARAMETER = "approvalId";
+    private static final String APPROVAL_NOT_FOUND_MESSAGE = "Approval not found";
+    private static final String INVALID_APPROVAL_ID_MESSAGE = "Invalid approval ID format";
+    private static final String BAD_GATEWAY_MESSAGE = "Something went wrong!";
 
     private final ApprovalService approvalService;
 
     @JacocoGenerated
-    public GetApprovalHandler() {
+    public FetchApprovalHandler() {
         this(new ApprovalServiceImpl());
     }
 
-    public GetApprovalHandler(ApprovalService approvalService) {
+    public FetchApprovalHandler(ApprovalService approvalService) {
         super(Void.class, new Environment());
         this.approvalService = approvalService;
     }

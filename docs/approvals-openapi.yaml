@@ -39,7 +39,7 @@ paths:
             format: uuid
       x-amazon-apigateway-integration:
         uri:
-          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${NvaGetApprovalFunction.Arn}/invocations
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${NvaFetchApprovalFunction.Arn}/invocations
         responses: { }
         httpMethod: POST
         type: AWS_PROXY
@@ -50,6 +50,8 @@ paths:
           description: Invalid approval ID format and request issues
         '404':
           description: Approval not found
+        '502':
+          description: Bad Gateway
 components:
   securitySchemes:
     CognitoUserPool:
