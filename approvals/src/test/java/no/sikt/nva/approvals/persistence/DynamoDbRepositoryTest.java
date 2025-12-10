@@ -23,7 +23,7 @@ class DynamoDbRepositoryTest {
     @BeforeEach
     void setUp() {
         dynamoDbLocal = dynamoDBLocal(database, TABLE_NAME);
-        repository = new DynamoDbRepository(dynamoDbLocal.client());
+        repository = new DynamoDbRepository();
     }
 
     @AfterEach
