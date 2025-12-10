@@ -2,6 +2,11 @@ openapi: 3.0.1
 info:
   title: NVA Approval API
   version: 1.0.0
+x-amazon-apigateway-request-validator: validate_body
+x-amazon-apigateway-request-validators:
+  validate_body:
+    validateRequestBody: true
+    validateRequestParameters: false
 paths:
   /:
     post:
@@ -29,6 +34,7 @@ paths:
                 type: integer
   /{approvalId}:
     get:
+      summary: Get Approval
       description: Get approval by ID
       parameters:
         - name: approvalId
@@ -46,13 +52,87 @@ paths:
       responses:
         '200':
           description: Approval found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Approval'
         '400':
-          description: Invalid approval ID format and request issues
+          description: Bad Request
+          content:
+            "application/json":
+              schema:
+                $ref: '#/components/schemas/Problem'
         '404':
           description: Approval not found
+          content:
+            "application/json":
+              schema:
+                $ref: '#/components/schemas/Problem'
         '502':
-          description: Bad Gateway
+          description: Bad gateway
+          content:
+            "application/json":
+              schema:
+                $ref: '#/components/schemas/Problem'
 components:
+  schemas:
+    Approval:
+      type: object
+      properties:
+        identifier:
+          type: string
+          format: uuid
+        namedIdentifiers:
+          type: array
+          items:
+            $ref: '#/components/schemas/Identifier'
+        source:
+          type: string
+          format: uri
+        handle:
+          $ref: '#/components/schemas/Handle'
+    Identifier:
+      type: object
+      required:
+        - type
+        - name
+        - value
+      properties:
+        type:
+          type: string
+          default: Identifier
+        name:
+          type: string
+          description: Name of identifier
+        value:
+          type: string
+          description: Identifier value
+    Handle:
+      type: object
+      properties:
+        value:
+          type: string
+          format: uri
+    Problem:
+      type: object
+      description: NVA error reporting object
+      required:
+        - title
+        - detail
+        - status
+      properties:
+        title:
+          type: string
+          description: Human-readable description of the error status
+        detail:
+          type: string
+          description: A more detailed error message describing the error and potential mitigations
+        status:
+          type: integer
+          description: The HTTP status code associated with the problem
+        requestId:
+          type: string
+          description: Identifier of the request causing the problem
   securitySchemes:
     CognitoUserPool:
       type: apiKey
