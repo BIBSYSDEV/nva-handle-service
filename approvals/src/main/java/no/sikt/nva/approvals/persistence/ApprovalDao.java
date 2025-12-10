@@ -9,7 +9,7 @@ import no.sikt.nva.approvals.domain.Approval;
 
 @JsonTypeInfo(use = Id.NAME, property = "type")
 @JsonTypeName("Approval")
-public record ApprovalDao(UUID identifier, URI source) implements DatabaseEntity {
+public record ApprovalDao(UUID identifier, URI source) implements DatabaseEntry {
 
     public static ApprovalDao fromApproval(Approval approval) {
         return new ApprovalDao(approval.identifier(), approval.source());
@@ -17,6 +17,6 @@ public record ApprovalDao(UUID identifier, URI source) implements DatabaseEntity
 
     @Override
     public String getDatabaseIdentifier() {
-        return identifier.toString();
+        return "Approval:%s".formatted(identifier.toString());
     }
 }

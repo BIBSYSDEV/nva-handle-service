@@ -12,9 +12,11 @@ import static no.sikt.nva.approvals.persistence.DynamoDbConstants.TABLE_NAME;
 import static nva.commons.core.attempt.Try.attempt;
 import static software.amazon.awssdk.enhanced.dynamodb.AttributeValueType.S;
 import static software.amazon.awssdk.enhanced.dynamodb.TableMetadata.primaryIndexName;
+import static software.amazon.awssdk.enhanced.dynamodb.model.QueryConditional.keyEqualTo;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 import no.sikt.nva.approvals.domain.Approval;
 import no.sikt.nva.approvals.domain.Handle;
@@ -32,7 +34,6 @@ import software.amazon.awssdk.enhanced.dynamodb.TableSchema;
 import software.amazon.awssdk.enhanced.dynamodb.document.DocumentTableSchema;
 import software.amazon.awssdk.enhanced.dynamodb.document.EnhancedDocument;
 import software.amazon.awssdk.enhanced.dynamodb.model.Page;
-import software.amazon.awssdk.enhanced.dynamodb.model.QueryConditional;
 import software.amazon.awssdk.enhanced.dynamodb.model.TransactPutItemEnhancedRequest;
 import software.amazon.awssdk.enhanced.dynamodb.model.TransactWriteItemsEnhancedRequest;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
@@ -55,29 +56,32 @@ public class DynamoDbRepository implements Repository {
             saveApproval(approval);
         } catch (Exception exception) {
             LOGGER.error("Failed to save approval: {}", exception.getMessage());
-            throw new RepositoryException("Could not save approval!");
+            throw new RepositoryException("Could not save approval: " + exception.getMessage());
         }
     }
 
     @Override
-    public Approval getApprovalByIdentifier(UUID identifier) {
+    public Optional<Approval> finalApprovalByIdentifier(UUID identifier) {
         var entities = fetchEntitiesByApprovalIdentifier(identifier);
+        if (entities.isEmpty()) {
+            return Optional.empty();
+        }
         var handle = getHandle(entities);
         var identifiers = getIdentifiers(entities);
-        var approval = getApproval(entities);
-        return new Approval(approval.identifier(), identifiers, approval.source(), handle);
+        var approvalDao = getApproval(entities);
+        return Optional.of(new Approval(approvalDao.identifier(), identifiers, approvalDao.source(), handle));
     }
 
-    private static Handle getHandle(List<DatabaseEntity> entities) {
+    private static Handle getHandle(List<DatabaseEntry> entities) {
         return entities.stream()
                    .filter(HandleDao.class::isInstance)
                    .map(HandleDao.class::cast)
                    .findFirst()
                    .map(HandleDao::toHandle)
-                   .orElseThrow();
+                   .orElseThrow(() -> new IllegalStateException("Handle not found for approval"));
     }
 
-    private static List<Identifier> getIdentifiers(List<DatabaseEntity> entities) {
+    private static List<Identifier> getIdentifiers(List<DatabaseEntry> entities) {
         return entities.stream()
                    .filter(IdentifierDao.class::isInstance)
                    .map(IdentifierDao.class::cast)
@@ -85,12 +89,12 @@ public class DynamoDbRepository implements Repository {
                    .toList();
     }
 
-    private static ApprovalDao getApproval(List<DatabaseEntity> entities) {
+    private static ApprovalDao getApproval(List<DatabaseEntry> entities) {
         return entities.stream()
                    .filter(ApprovalDao.class::isInstance)
                    .map(ApprovalDao.class::cast)
                    .findFirst()
-                   .orElseThrow();
+                   .orElseThrow(() -> new IllegalStateException("Approval not found"));
     }
 
     private static DocumentTableSchema documentTableSchema() {
@@ -113,7 +117,7 @@ public class DynamoDbRepository implements Repository {
     }
 
     private void saveApproval(Approval approval) {
-        var documents = createEntities(approval);
+        var documents = createDocuments(approval);
         var requestbuilder = TransactWriteItemsEnhancedRequest.builder();
         for (EnhancedDocument document : documents) {
             var putRequest = TransactPutItemEnhancedRequest.builder(EnhancedDocument.class)
@@ -125,10 +129,9 @@ public class DynamoDbRepository implements Repository {
         client.transactWriteItems(requestbuilder.build());
     }
 
-    private List<DatabaseEntity> fetchEntitiesByApprovalIdentifier(UUID identifier) {
+    private List<DatabaseEntry> fetchEntitiesByApprovalIdentifier(UUID identifier) {
         return table.index(DynamoDbConstants.GSI1)
-                   .query(
-                       QueryConditional.keyEqualTo(Key.builder().partitionValue(identifier.toString()).build()))
+                   .query(keyEqualTo(Key.builder().partitionValue(identifier.toString()).build()))
                    .stream()
                    .map(Page::items)
                    .flatMap(List::stream)
@@ -137,11 +140,11 @@ public class DynamoDbRepository implements Repository {
                    .toList();
     }
 
-    private DatabaseEntity toDatabaseEntity(String value) {
-        return attempt(() -> JsonUtils.dtoObjectMapper.readValue(value, DatabaseEntity.class)).orElseThrow();
+    private DatabaseEntry toDatabaseEntity(String value) {
+        return attempt(() -> JsonUtils.dtoObjectMapper.readValue(value, DatabaseEntry.class)).orElseThrow();
     }
 
-    private List<EnhancedDocument> createEntities(Approval approval) {
+    private List<EnhancedDocument> createDocuments(Approval approval) {
         var documents = new ArrayList<EnhancedDocument>();
         documents.add(createHandleEntity(approval));
         documents.add(createApprovalEntity(approval));

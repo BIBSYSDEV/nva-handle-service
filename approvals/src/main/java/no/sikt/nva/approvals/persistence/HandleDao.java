@@ -8,7 +8,7 @@ import no.sikt.nva.approvals.domain.Handle;
 
 @JsonTypeInfo(use = Id.NAME, property = "type")
 @JsonTypeName("Handle")
-public record HandleDao(URI uri) implements DatabaseEntity {
+public record HandleDao(URI uri) implements DatabaseEntry {
 
     public static HandleDao fromHandle(Handle handle) {
         return new HandleDao(handle.value());
@@ -20,6 +20,6 @@ public record HandleDao(URI uri) implements DatabaseEntity {
 
     @Override
     public String getDatabaseIdentifier() {
-        return uri.toString();
+        return "Handle:%s".formatted(uri.toString());
     }
 }
