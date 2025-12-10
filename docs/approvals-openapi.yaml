@@ -27,6 +27,29 @@ paths:
               description: Number of seconds to wait before checking the approval
               schema:
                 type: integer
+  /{approvalId}:
+    get:
+      description: Get approval by ID
+      parameters:
+        - name: approvalId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      x-amazon-apigateway-integration:
+        uri:
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${NvaGetApprovalFunction.Arn}/invocations
+        responses: { }
+        httpMethod: POST
+        type: AWS_PROXY
+      responses:
+        '200':
+          description: Approval found
+        '400':
+          description: Invalid approval ID format and request issues
+        '404':
+          description: Approval not found
 components:
   securitySchemes:
     CognitoUserPool:

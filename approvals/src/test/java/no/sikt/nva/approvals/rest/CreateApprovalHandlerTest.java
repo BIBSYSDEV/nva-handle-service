@@ -13,11 +13,10 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
-import java.util.Collection;
 import java.util.List;
 import no.sikt.nva.approvals.domain.ApprovalConflictException;
-import no.sikt.nva.approvals.domain.ApprovalService;
 import no.sikt.nva.approvals.domain.ApprovalServiceException;
+import no.sikt.nva.approvals.domain.FakeApprovalService;
 import no.sikt.nva.approvals.domain.NamedIdentifier;
 import no.unit.nva.commons.json.JsonUtils;
 import no.unit.nva.stubs.FakeContext;
@@ -90,29 +89,5 @@ class CreateApprovalHandlerTest {
 
     private InputStream createRequest(CreateApprovalRequest request) throws JsonProcessingException {
         return new HandlerRequestBuilder<CreateApprovalRequest>(JsonUtils.dtoObjectMapper).withBody(request).build();
-    }
-
-    public static class FakeApprovalService implements ApprovalService {
-
-        private final Exception exception;
-
-        public FakeApprovalService() {
-            this.exception = null;
-        }
-
-        public FakeApprovalService(Exception exception) {
-            this.exception = exception;
-        }
-
-        @Override
-        public void create(Collection<NamedIdentifier> namedIdentifiers, URI source)
-            throws ApprovalServiceException, ApprovalConflictException {
-            if (exception instanceof ApprovalServiceException) {
-                throw (ApprovalServiceException) exception;
-            }
-            if (exception instanceof ApprovalConflictException) {
-                throw (ApprovalConflictException) exception;
-            }
-        }
     }
 }

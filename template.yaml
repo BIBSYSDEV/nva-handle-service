@@ -59,6 +59,7 @@ Globals:
       - arm64
     Environment:
       Variables:
+        ALLOWED_ORIGIN: !Ref AllowedOrigins
         API_HOST: !Ref ApiDomain
         COGNITO_AUTHORIZER_URLS: !Join [ ",", !Ref CognitoAuthorizerUrls ]
   Api:
@@ -146,8 +147,6 @@ Resources:
         - !GetAtt ReadHandleDatabaseSecretsManagedPolicy.PolicyArn
       Environment:
         Variables:
-          ALLOWED_ORIGIN: !Ref AllowedOrigins
-          API_HOST: !Ref ApiDomain
           HANDLE_PREFIX: !Ref HandlePrefix
           HANDLE_BASE_URI: !Ref HandleBaseUri
           HANDLE_DATABASE_SECRET_NAME: !Ref HandleDatabaseSecretName
@@ -181,8 +180,6 @@ Resources:
         - !GetAtt ReadHandleDatabaseSecretsManagedPolicy.PolicyArn
       Environment:
         Variables:
-          ALLOWED_ORIGIN: !Ref AllowedOrigins
-          API_HOST: !Ref ApiDomain
           HANDLE_PREFIX: !Ref HandlePrefix
           HANDLE_BASE_URI: !Ref HandleBaseUri
           HANDLE_DATABASE_SECRET_NAME: !Ref HandleDatabaseSecretName
@@ -199,21 +196,42 @@ Resources:
             Method: put
             RestApiId: !Ref NvaHandleServiceApi
 
+  NvaCreateApprovalFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub '/aws/lambda/${NvaCreateApprovalFunction}'
+      RetentionInDays: 90
+
   NvaCreateApprovalFunction:
     Type: AWS::Serverless::Function
     Properties:
       CodeUri: approvals
       Handler: no.sikt.nva.approvals.rest.CreateApprovalHandler::handleRequest
-      Environment:
-        Variables:
-          ALLOWED_ORIGIN: !Ref AllowedOrigins
-          API_HOST: !Ref ApiDomain
       Events:
-        CreateHandle:
+        CreateApproval:
           Type: Api
           Properties:
             Path: /
             Method: post
+            RestApiId: !Ref NvaApprovalsApi
+
+  NvaGetApprovalFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub '/aws/lambda/${NvaGetApprovalFunction}'
+      RetentionInDays: 90
+
+  NvaGetApprovalFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: approvals
+      Handler: no.sikt.nva.approvals.rest.GetApprovalHandler::handleRequest
+      Events:
+        GetApproval:
+          Type: Api
+          Properties:
+            Path: /{approvalId}
+            Method: get
             RestApiId: !Ref NvaApprovalsApi
 
   NvaCreateHandleBasePathMapping:
