@@ -5,6 +5,6 @@ import java.util.Collection;
 
 public interface ApprovalService {
 
-    void create(Collection<NamedIdentifier> namedIdentifiers, URI source) throws ApprovalServiceException,
+    Approval create(Collection<NamedIdentifier> namedIdentifiers, URI source) throws ApprovalServiceException,
                                                                                  ApprovalConflictException;
 }

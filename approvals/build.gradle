@@ -1,11 +1,14 @@
 
 dependencies {
+    implementation project(":operations")
     implementation libs.nva.apigateway
     implementation libs.nva.core
     implementation libs.nva.json
 
     implementation libs.aws.sdk2.dynamo
     implementation libs.aws.sdk2.dynamoenhanced
+    implementation libs.aws.sdk2.urlconnection
+
     implementation libs.bundles.jackson
 
     testImplementation libs.bundles.testing

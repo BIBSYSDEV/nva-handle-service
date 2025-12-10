@@ -34,7 +34,7 @@ public class TestUtils {
         return new Approval(randomUUID(), List.of(namedIdentifier), randomUri(), randomHandle());
     }
 
-    private static List<NamedIdentifier> randomIdentifiers() {
+    public static List<NamedIdentifier> randomIdentifiers() {
         return List.of(randomIdentifier());
     }
 

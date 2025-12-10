@@ -15,6 +15,7 @@ import java.io.InputStream;
 import java.net.URI;
 import java.util.Collection;
 import java.util.List;
+import no.sikt.nva.approvals.domain.Approval;
 import no.sikt.nva.approvals.domain.ApprovalConflictException;
 import no.sikt.nva.approvals.domain.ApprovalService;
 import no.sikt.nva.approvals.domain.ApprovalServiceException;
@@ -105,7 +106,7 @@ class CreateApprovalHandlerTest {
         }
 
         @Override
-        public void create(Collection<NamedIdentifier> namedIdentifiers, URI source)
+        public Approval create(Collection<NamedIdentifier> namedIdentifiers, URI source)
             throws ApprovalServiceException, ApprovalConflictException {
             if (exception instanceof ApprovalServiceException) {
                 throw (ApprovalServiceException) exception;
@@ -113,6 +114,7 @@ class CreateApprovalHandlerTest {
             if (exception instanceof ApprovalConflictException) {
                 throw (ApprovalConflictException) exception;
             }
+            return null;
         }
     }
 }

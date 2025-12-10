@@ -22,7 +22,7 @@ public class CreateApprovalHandler extends ApiGatewayHandler<CreateApprovalReque
 
     @JacocoGenerated
     public CreateApprovalHandler() {
-        this(new ApprovalServiceImpl());
+        this(ApprovalServiceImpl.defaultInstance(new Environment()));
     }
 
     public CreateApprovalHandler(ApprovalService approvalService) {
