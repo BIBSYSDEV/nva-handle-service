@@ -18,7 +18,7 @@ class CreateApprovalRequestTest {
         var request = randomApprovalRequest(randomIdentifiers(), randomUri());
         var approval = request.toNewApproval();
 
-        var expected = new Approval(null, request.identifiers(), request.source());
+        var expected = new Approval(null, request.identifiers(), request.source(), null);
 
         assertEquals(expected, approval);
     }

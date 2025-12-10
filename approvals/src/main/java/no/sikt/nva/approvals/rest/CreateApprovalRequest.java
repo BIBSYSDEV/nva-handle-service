@@ -9,7 +9,7 @@ import no.sikt.nva.approvals.domain.Identifier;
 public record CreateApprovalRequest(List<Identifier> identifiers, URI source) {
 
     public Approval toNewApproval() {
-        return new Approval(null, identifiers(), source());
+        return new Approval(null, identifiers(), source(), null);
     }
 
     public void validate() {
