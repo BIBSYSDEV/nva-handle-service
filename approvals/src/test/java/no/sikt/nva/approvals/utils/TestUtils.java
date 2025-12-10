@@ -10,6 +10,7 @@ import java.util.UUID;
 import no.sikt.nva.approvals.domain.Approval;
 import no.sikt.nva.approvals.domain.Handle;
 import no.sikt.nva.approvals.domain.Identifier;
+import nva.commons.core.paths.UriWrapper;
 
 public class TestUtils {
 
@@ -34,6 +35,7 @@ public class TestUtils {
     }
 
     private static Handle randomHandle() {
-        return new Handle(URI.create("https://www.handle.net/prefix/suffix"));
+        return new Handle(
+            UriWrapper.fromUri("https://www.handle.net").addChild(randomString()).addChild(randomString()).getUri());
     }
 }

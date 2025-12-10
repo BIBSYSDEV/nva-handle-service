@@ -7,8 +7,8 @@ import nva.commons.core.StringUtils;
 
 public record Handle(URI value) {
 
-    public static final String HANDLE_HOST = "handle.net";
-    public static final String INVALID_HANDLE_EXCEPTION = "Provided uri is not a handle!";
+    private static final String HANDLE_HOST = "handle.net";
+    private static final String INVALID_HANDLE_EXCEPTION = "Provided uri is not a handle!";
 
     public Handle {
         validate(value);
