@@ -16,8 +16,8 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
+import java.util.Collection;
 import java.util.List;
-import no.sikt.nva.approvals.domain.Approval;
 import no.sikt.nva.approvals.domain.ApprovalConflictException;
 import no.sikt.nva.approvals.domain.ApprovalService;
 import no.sikt.nva.approvals.domain.ApprovalServiceException;
@@ -72,7 +72,7 @@ class CreateApprovalHandlerTest {
         handler = new CreateApprovalHandler(new FakeApprovalService(new ApprovalConflictException("conflict")));
         var request = createRequest(randomApprovalRequest(randomUri()));
 
-        doThrow(ApprovalConflictException.class).when(approvalService).create(any());
+        doThrow(ApprovalConflictException.class).when(approvalService).create(any(), any());
         handler.handleRequest(request, output, context);
 
         var response = GatewayResponse.fromOutputStream(output, Void.class);
@@ -86,7 +86,7 @@ class CreateApprovalHandlerTest {
         handler = new CreateApprovalHandler(new FakeApprovalService(new ApprovalServiceException("error")));
         var request = createRequest(randomApprovalRequest(randomUri()));
 
-        doThrow(ApprovalServiceException.class).when(approvalService).create(any());
+        doThrow(ApprovalServiceException.class).when(approvalService).create(any(), any());
         handler.handleRequest(request, output, context);
 
         var response = GatewayResponse.fromOutputStream(output, Void.class);
@@ -115,7 +115,8 @@ class CreateApprovalHandlerTest {
         }
 
         @Override
-        public void create(Approval approval) throws ApprovalServiceException, ApprovalConflictException {
+        public void create(Collection<Identifier> identifiers, URI source) throws ApprovalServiceException,
+                                                                       ApprovalConflictException {
             if (exception instanceof ApprovalServiceException) {
                 throw (ApprovalServiceException) exception;
             }

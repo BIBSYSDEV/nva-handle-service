@@ -8,6 +8,7 @@ dependencies {
     implementation libs.aws.sdk2.dynamoenhanced
     implementation libs.bundles.jackson
 
+    testImplementation libs.dynamodDbLocal
     testImplementation libs.bundles.testing
     testImplementation libs.dynamodDbLocal
 }
