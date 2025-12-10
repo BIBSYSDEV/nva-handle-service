@@ -210,17 +210,8 @@ public class DynamoDbRepository implements Repository {
     }
 
     private EnhancedDocument createApprovalEntity(Approval approval) {
-        var approvalDao = ApprovalDao.fromApproval(approval);
         var handleDao = HandleDao.fromHandle(approval.handle());
-        return EnhancedDocument.builder()
-                   .json(approvalDao.toJsonString())
-                   .put(PK0, approvalDao.getDatabaseIdentifier(), STRING)
-                   .put(SK0, approvalDao.getDatabaseIdentifier(), STRING)
-                   .put(PK1, approvalDao.getDatabaseIdentifier(), STRING)
-                   .put(SK1, approvalDao.getDatabaseIdentifier(), STRING)
-                   .put(PK2, handleDao.getDatabaseIdentifier(), STRING)
-                   .put(SK2, handleDao.getDatabaseIdentifier(), STRING)
-                   .build();
+        return ApprovalDao.fromApproval(approval).toEnhancedDocument(handleDao);
     }
 
     private List<EnhancedDocument> createIdentifiersEntities(Approval approval) {
@@ -231,31 +222,13 @@ public class DynamoDbRepository implements Repository {
     }
 
     private EnhancedDocument createIdentifierDocument(Identifier identifier, Approval approval) {
-        var identifierDao = IdentifierDao.fromIdentifier(identifier);
         var handleDao = HandleDao.fromHandle(approval.handle());
         var approvalDao = ApprovalDao.fromApproval(approval);
-        return EnhancedDocument.builder()
-                   .json(identifierDao.toJsonString())
-                   .put(PK0, identifierDao.getDatabaseIdentifier(), STRING)
-                   .put(SK0, identifierDao.getDatabaseIdentifier(), STRING)
-                   .put(PK1, approvalDao.getDatabaseIdentifier(), STRING)
-                   .put(SK1, approvalDao.getDatabaseIdentifier(), STRING)
-                   .put(PK2, handleDao.getDatabaseIdentifier(), STRING)
-                   .put(SK2, handleDao.getDatabaseIdentifier(), STRING)
-                   .build();
+        return IdentifierDao.fromIdentifier(identifier).toEnhancedDocument(approvalDao, handleDao);
     }
 
     private EnhancedDocument createHandleEntity(Approval approval) {
-        var handleDao = HandleDao.fromHandle(approval.handle());
         var approvalDao = ApprovalDao.fromApproval(approval);
-        return EnhancedDocument.builder()
-                   .json(handleDao.toJsonString())
-                   .put(PK0, handleDao.getDatabaseIdentifier(), STRING)
-                   .put(SK0, handleDao.getDatabaseIdentifier(), STRING)
-                   .put(PK1, approvalDao.getDatabaseIdentifier(), STRING)
-                   .put(SK1, approvalDao.getDatabaseIdentifier(), STRING)
-                   .put(PK2, handleDao.getDatabaseIdentifier(), STRING)
-                   .put(SK2, handleDao.getDatabaseIdentifier(), STRING)
-                   .build();
+        return HandleDao.fromHandle(approval.handle()).toEnhancedDocument(approvalDao);
     }
 }
