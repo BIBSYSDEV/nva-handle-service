@@ -131,7 +131,7 @@ public class DynamoDbRepository implements Repository {
     }
 
     private List<DatabaseEntry> fetchEntitiesByApprovalIdentifier(UUID identifier) {
-        return table.index(DynamoDbConstants.GSI1)
+        return table.index(GSI1)
                    .query(keyEqualTo(Key.builder().partitionValue(identifier.toString()).build()))
                    .stream()
                    .map(Page::items)
