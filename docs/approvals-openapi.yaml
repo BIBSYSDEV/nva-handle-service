@@ -2,12 +2,26 @@ openapi: 3.0.1
 info:
   title: NVA Approval API
   version: 1.0.0
+x-amazon-apigateway-request-validators:
+  validate_body_and_params:
+    validateRequestBody: true
+    validateRequestParameters: true
+  validate_body:
+    validateRequestBody: true
+    validateRequestParameters: false
 paths:
   /:
     post:
       description: Create approval
+      x-amazon-apigateway-request-validator: validate_body
       security:
         - CognitoUserPool: [ 'https://api.nva.unit.no/scopes/third-party/approval-upsert', 'https://api.nva.unit.no/scopes/backend' ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateApprovalRequest'
       x-amazon-apigateway-integration:
         uri:
           Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${NvaCreateApprovalFunction.Arn}/invocations
@@ -28,6 +42,38 @@ paths:
               schema:
                 type: integer
 components:
+  schemas:
+    CreateApprovalRequest:
+      type: object
+      required:
+        - identifiers
+        - source
+      properties:
+        identifiers:
+          type: array
+          items:
+            $ref: '#/components/schemas/Identifier'
+          minItems: 1
+          description: List of identifiers for the approval
+        source:
+          type: string
+          format: uri
+          description: URI of the source approval
+        type:
+          type: string
+          default: Approval
+    Identifier:
+      type: object
+      required:
+        - type
+        - value
+      properties:
+        type:
+          type: string
+          description: Type of identifier
+        value:
+          type: string
+          description: Identifier value
   securitySchemes:
     CognitoUserPool:
       type: apiKey
