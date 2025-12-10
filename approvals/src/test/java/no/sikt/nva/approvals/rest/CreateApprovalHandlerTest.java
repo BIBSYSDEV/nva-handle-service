@@ -18,7 +18,7 @@ import java.util.List;
 import no.sikt.nva.approvals.domain.ApprovalConflictException;
 import no.sikt.nva.approvals.domain.ApprovalService;
 import no.sikt.nva.approvals.domain.ApprovalServiceException;
-import no.sikt.nva.approvals.domain.Identifier;
+import no.sikt.nva.approvals.domain.NamedIdentifier;
 import no.unit.nva.commons.json.JsonUtils;
 import no.unit.nva.stubs.FakeContext;
 import no.unit.nva.testutils.HandlerRequestBuilder;
@@ -85,7 +85,7 @@ class CreateApprovalHandlerTest {
     }
 
     private static CreateApprovalRequest randomApprovalRequest(URI source) {
-        return new CreateApprovalRequest(List.of(new Identifier(randomString(), randomString())), source);
+        return new CreateApprovalRequest(List.of(new NamedIdentifier(randomString(), randomString())), source);
     }
 
     private InputStream createRequest(CreateApprovalRequest request) throws JsonProcessingException {
@@ -105,8 +105,8 @@ class CreateApprovalHandlerTest {
         }
 
         @Override
-        public void create(Collection<Identifier> identifiers, URI source) throws ApprovalServiceException,
-                                                                       ApprovalConflictException {
+        public void create(Collection<NamedIdentifier> namedIdentifiers, URI source)
+            throws ApprovalServiceException, ApprovalConflictException {
             if (exception instanceof ApprovalServiceException) {
                 throw (ApprovalServiceException) exception;
             }

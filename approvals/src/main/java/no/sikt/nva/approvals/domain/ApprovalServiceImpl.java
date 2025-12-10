@@ -6,7 +6,7 @@ import java.util.Collection;
 public class ApprovalServiceImpl implements ApprovalService {
 
     @Override
-    public void create(Collection<Identifier> identifiers, URI source) throws ApprovalServiceException {
+    public void create(Collection<NamedIdentifier> namedIdentifiers, URI source) throws ApprovalServiceException {
         throw new ApprovalServiceException("Service not implemented");
     }
 }

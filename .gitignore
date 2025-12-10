@@ -288,3 +288,5 @@ gradle-app.setting
 /packaged_raw.yaml
 /sampackaged_raw.yaml
 /.aws-sam/build.toml
+
+**/dynamodb-local-metadata.json

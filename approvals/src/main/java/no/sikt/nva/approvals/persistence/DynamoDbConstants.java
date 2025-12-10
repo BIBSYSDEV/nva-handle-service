@@ -1,7 +1,10 @@
 package no.sikt.nva.approvals.persistence;
 
+import software.amazon.awssdk.enhanced.dynamodb.EnhancedType;
+
 public final class DynamoDbConstants {
 
+    public static final EnhancedType<? super String> STRING = EnhancedType.of(String.class);
     public static final String TABLE_NAME = "TABLE";
     public static final String GSI1 = "GSI1";
     public static final String GSI2 = "GSI2";

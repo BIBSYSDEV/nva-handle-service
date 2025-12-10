@@ -6,7 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import java.net.URI;
 import java.util.List;
-import no.sikt.nva.approvals.domain.Identifier;
+import no.sikt.nva.approvals.domain.NamedIdentifier;
 import org.junit.jupiter.api.Test;
 
 class CreateApprovalRequestTest {
@@ -28,15 +28,15 @@ class CreateApprovalRequestTest {
         assertEquals("Source is mandatory for approval creation", executable.getMessage());
     }
 
-    private static List<Identifier> randomIdentifiers() {
+    private static List<NamedIdentifier> randomIdentifiers() {
         return List.of(randomIdentifier(), randomIdentifier());
     }
 
-    private static CreateApprovalRequest randomApprovalRequest(List<Identifier> identifiers, URI source) {
-        return new CreateApprovalRequest(identifiers, source);
+    private static CreateApprovalRequest randomApprovalRequest(List<NamedIdentifier> namedIdentifiers, URI source) {
+        return new CreateApprovalRequest(namedIdentifiers, source);
     }
 
-    private static Identifier randomIdentifier() {
-        return new Identifier(randomString(), randomString());
+    private static NamedIdentifier randomIdentifier() {
+        return new NamedIdentifier(randomString(), randomString());
     }
 }

@@ -9,7 +9,7 @@ import java.util.List;
 import java.util.UUID;
 import no.sikt.nva.approvals.domain.Approval;
 import no.sikt.nva.approvals.domain.Handle;
-import no.sikt.nva.approvals.domain.Identifier;
+import no.sikt.nva.approvals.domain.NamedIdentifier;
 import nva.commons.core.paths.UriWrapper;
 
 public class TestUtils {
@@ -18,23 +18,31 @@ public class TestUtils {
         return new Approval(identifier, randomIdentifiers(), source, randomHandle());
     }
 
-    public static Approval randomApproval(Collection<Identifier> identifiers, UUID identifier) {
-        return new Approval(randomUUID(), identifiers, randomUri(), randomHandle());
+    public static Approval randomApproval(Collection<NamedIdentifier> namedIdentifiers, UUID identifier) {
+        return new Approval(identifier, namedIdentifiers, randomUri(), randomHandle());
     }
 
     public static Approval randomApproval(Handle handle) {
         return new Approval(randomUUID(), randomIdentifiers(), randomUri(), handle);
     }
 
-    private static List<Identifier> randomIdentifiers() {
+    public static Approval randomApproval(Handle handle, NamedIdentifier namedIdentifier) {
+        return new Approval(randomUUID(), List.of(namedIdentifier), randomUri(), handle);
+    }
+
+    public static Approval randomApproval(NamedIdentifier namedIdentifier) {
+        return new Approval(randomUUID(), List.of(namedIdentifier), randomUri(), randomHandle());
+    }
+
+    private static List<NamedIdentifier> randomIdentifiers() {
         return List.of(randomIdentifier());
     }
 
-    private static Identifier randomIdentifier() {
-        return new Identifier(randomString(), randomString());
+    public static NamedIdentifier randomIdentifier() {
+        return new NamedIdentifier(randomString(), randomString());
     }
 
-    private static Handle randomHandle() {
+    public static Handle randomHandle() {
         return new Handle(
             UriWrapper.fromUri("https://www.handle.net").addChild(randomString()).addChild(randomString()).getUri());
     }

@@ -11,7 +11,7 @@ import static no.sikt.nva.approvals.persistence.DynamoDbConstants.SK1;
 import static no.sikt.nva.approvals.persistence.DynamoDbConstants.SK2;
 import static no.sikt.nva.approvals.persistence.DynamoDbConstants.TABLE_NAME;
 import static nva.commons.core.attempt.Try.attempt;
-import com.amazonaws.services.dynamodbv2.local.shared.access.AmazonDynamoDBLocal;
+import com.amazonaws.services.dynamodbv2.local.embedded.DynamoDBEmbedded;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Optional;
@@ -31,9 +31,10 @@ import software.amazon.awssdk.services.dynamodb.model.ScanRequest;
 
 public record DynamoDbLocal(DynamoDbClient client) {
 
-    public static DynamoDbLocal dynamoDBLocal(AmazonDynamoDBLocal database, String tableName) {
+    public static DynamoDbLocal dynamoDBLocal() {
+        var database = DynamoDBEmbedded.create(null, true);
         var client = database.dynamoDbClient();
-        createTableIfNotExists(tableName, client);
+        createTableIfNotExists(client);
         return new DynamoDbLocal(client);
     }
 
@@ -47,13 +48,13 @@ public record DynamoDbLocal(DynamoDbClient client) {
         });
     }
 
-    private static void createTableIfNotExists(String tableName, DynamoDbClient client) {
-        attempt(() -> client.createTable(createTableRequest(tableName)));
+    private static void createTableIfNotExists(DynamoDbClient client) {
+        attempt(() -> client.createTable(createTableRequest()));
     }
 
-    private static CreateTableRequest createTableRequest(String tableName) {
+    private static CreateTableRequest createTableRequest() {
         return CreateTableRequest.builder()
-                   .tableName(tableName)
+                   .tableName(TABLE_NAME)
                    .provisionedThroughput(createProvisionedThroughput())
                    .attributeDefinitions(createAttribute(PK0), createAttribute(SK0), createAttribute(PK1),
                                          createAttribute(SK1), createAttribute(PK2), createAttribute(SK2))

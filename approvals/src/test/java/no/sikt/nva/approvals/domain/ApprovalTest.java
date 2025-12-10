@@ -2,6 +2,7 @@ package no.sikt.nva.approvals.domain;
 
 import static java.util.UUID.randomUUID;
 import static no.sikt.nva.approvals.utils.TestUtils.randomApproval;
+import static no.sikt.nva.approvals.utils.TestUtils.randomIdentifier;
 import static no.unit.nva.testutils.RandomDataGenerator.randomUri;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import java.util.Collections;
@@ -16,7 +17,7 @@ class ApprovalTest {
 
     @Test
     void shouldThrowExceptionWhenApprovalInitiatedWithoutHandle() {
-        assertThrows(NullPointerException.class, () -> randomApproval(null));
+        assertThrows(NullPointerException.class, () -> randomApproval(null, randomIdentifier()));
     }
 
     @Test
