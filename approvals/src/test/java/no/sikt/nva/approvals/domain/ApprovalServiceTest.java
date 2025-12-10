@@ -1,6 +1,5 @@
 package no.sikt.nva.approvals.domain;
 
-import static no.unit.nva.testutils.RandomDataGenerator.randomString;
 import static no.unit.nva.testutils.RandomDataGenerator.randomUri;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import java.util.List;
@@ -18,18 +17,6 @@ public class ApprovalServiceTest {
 
     @Test
     void shouldThrowApprovalServiceException() {
-        assertThrows(ApprovalServiceException.class, () -> approvalService.create(randomApproval()));
-    }
-
-    private static Approval randomApproval() {
-        return new Approval(null, randomIdentifiers(), randomUri());
-    }
-
-    private static List<Identifier> randomIdentifiers() {
-        return List.of(randomIdentifier());
-    }
-
-    private static Identifier randomIdentifier() {
-        return new Identifier(randomString(), randomString());
+        assertThrows(ApprovalServiceException.class, () -> approvalService.create(List.of(), randomUri()));
     }
 }

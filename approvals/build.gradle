@@ -5,9 +5,11 @@ dependencies {
     implementation libs.nva.json
 
     implementation libs.aws.sdk2.dynamo
+    implementation libs.aws.sdk2.dynamoenhanced
     implementation libs.bundles.jackson
 
     testImplementation libs.bundles.testing
+    testImplementation libs.dynamodDbLocal
 }
 
 test {

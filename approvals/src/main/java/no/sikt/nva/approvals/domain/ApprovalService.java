@@ -1,6 +1,10 @@
 package no.sikt.nva.approvals.domain;
 
+import java.net.URI;
+import java.util.Collection;
+
 public interface ApprovalService {
 
-    void create(Approval approval) throws ApprovalServiceException, ApprovalConflictException;
+    void create(Collection<NamedIdentifier> namedIdentifiers, URI source) throws ApprovalServiceException,
+                                                                                 ApprovalConflictException;
 }
