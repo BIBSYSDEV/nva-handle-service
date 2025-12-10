@@ -4,6 +4,7 @@ import static java.util.UUID.randomUUID;
 import static no.sikt.nva.handle.utils.DatabaseConnectionSupplier.getConnectionSupplier;
 import java.net.URI;
 import java.sql.Connection;
+import java.sql.SQLException;
 import java.util.Collection;
 import java.util.function.Supplier;
 import no.sikt.nva.approvals.persistence.ApprovalRepository;
@@ -51,10 +52,20 @@ public class ApprovalServiceImpl implements ApprovalService {
 
     private Handle createHandle(URI source) throws ApprovalServiceException {
         try (var connection = connectionSupplier.get()) {
-            var handle = handleDatabase.createHandle(source, connection);
-            return new Handle(handle);
+            return createHandle(source, connection);
         } catch (Exception e) {
             throw new ApprovalServiceException("Could not create handle for source %s".formatted(source));
+        }
+    }
+
+    private Handle createHandle(URI source, Connection connection) throws SQLException {
+        try {
+            var handle = handleDatabase.createHandle(source, connection);
+            connection.commit();
+            return new Handle(handle);
+        } catch (SQLException e) {
+            connection.rollback();
+            throw new SQLException("Could not persist handle for source %s".formatted(source));
         }
     }
 }
