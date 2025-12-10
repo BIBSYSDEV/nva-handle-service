@@ -10,7 +10,7 @@ import no.sikt.nva.approvals.domain.Identifier;
 public record IdentifierDao(String source, String value) implements DatabaseEntry {
 
     public static IdentifierDao fromIdentifier(Identifier identifier) {
-        return new IdentifierDao(identifier.source(), identifier.value());
+        return new IdentifierDao(identifier.type(), identifier.value());
     }
 
     @Override

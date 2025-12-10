@@ -63,13 +63,14 @@ public class DynamoDbRepository implements Repository {
     @Override
     public Optional<Approval> finalApprovalByIdentifier(UUID identifier) {
         var entities = fetchEntitiesByApprovalIdentifier(identifier);
-        if (entities.isEmpty()) {
-            return Optional.empty();
-        }
+        return entities.isEmpty() ? Optional.empty() : Optional.of(constructApproval(entities));
+    }
+
+    private static Approval constructApproval(List<DatabaseEntry> entities) {
         var handle = getHandle(entities);
         var identifiers = getIdentifiers(entities);
         var approvalDao = getApproval(entities);
-        return Optional.of(new Approval(approvalDao.identifier(), identifiers, approvalDao.source(), handle));
+        return new Approval(approvalDao.identifier(), identifiers, approvalDao.source(), handle);
     }
 
     private static Handle getHandle(List<DatabaseEntry> entities) {
