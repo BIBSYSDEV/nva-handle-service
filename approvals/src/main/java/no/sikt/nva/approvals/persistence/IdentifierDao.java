@@ -11,15 +11,15 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.annotation.JsonTypeInfo.Id;
 import com.fasterxml.jackson.annotation.JsonTypeName;
-import no.sikt.nva.approvals.domain.Identifier;
+import no.sikt.nva.approvals.domain.NamedIdentifier;
 import software.amazon.awssdk.enhanced.dynamodb.document.EnhancedDocument;
 
 @JsonTypeInfo(use = Id.NAME, property = "type")
 @JsonTypeName("Identifier")
 public record IdentifierDao(String name, String value) implements DatabaseEntry {
 
-    public static IdentifierDao fromIdentifier(Identifier identifier) {
-        return new IdentifierDao(identifier.type(), identifier.value());
+    public static IdentifierDao fromIdentifier(NamedIdentifier namedIdentifier) {
+        return new IdentifierDao(namedIdentifier.name(), namedIdentifier.value());
     }
 
     @Override
@@ -28,8 +28,8 @@ public record IdentifierDao(String name, String value) implements DatabaseEntry 
     }
 
     @JsonIgnore
-    public Identifier toIdentifier() {
-        return new Identifier(name, value);
+    public NamedIdentifier toIdentifier() {
+        return new NamedIdentifier(name, value);
     }
 
     public EnhancedDocument toEnhancedDocument(ApprovalDao approvalDao, HandleDao handleDao) {

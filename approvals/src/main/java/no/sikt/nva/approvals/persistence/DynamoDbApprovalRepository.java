@@ -21,14 +21,13 @@ import java.util.Optional;
 import java.util.UUID;
 import no.sikt.nva.approvals.domain.Approval;
 import no.sikt.nva.approvals.domain.Handle;
-import no.sikt.nva.approvals.domain.Identifier;
+import no.sikt.nva.approvals.domain.NamedIdentifier;
 import no.unit.nva.commons.json.JsonUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import software.amazon.awssdk.enhanced.dynamodb.AttributeConverterProvider;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedClient;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbTable;
-import software.amazon.awssdk.enhanced.dynamodb.EnhancedType;
 import software.amazon.awssdk.enhanced.dynamodb.Expression;
 import software.amazon.awssdk.enhanced.dynamodb.Key;
 import software.amazon.awssdk.enhanced.dynamodb.TableSchema;
@@ -39,14 +38,13 @@ import software.amazon.awssdk.enhanced.dynamodb.model.TransactPutItemEnhancedReq
 import software.amazon.awssdk.enhanced.dynamodb.model.TransactWriteItemsEnhancedRequest;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 
-public class DynamoDbRepository implements Repository {
+public class DynamoDbApprovalRepository implements ApprovalRepository {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(DynamoDbRepository.class);
-    private static final EnhancedType<? super String> STRING = EnhancedType.of(String.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(DynamoDbApprovalRepository.class);
     private final DynamoDbTable<EnhancedDocument> table;
     private final DynamoDbEnhancedClient client;
 
-    public DynamoDbRepository(DynamoDbClient client) {
+    public DynamoDbApprovalRepository(DynamoDbClient client) {
         this.client = DynamoDbEnhancedClient.builder().dynamoDbClient(client).build();
         this.table = this.client.table(TABLE_NAME, documentTableSchema());
     }
@@ -62,18 +60,18 @@ public class DynamoDbRepository implements Repository {
     }
 
     @Override
-    public Optional<Approval> findApprovalByIdentifier(UUID identifier) throws RepositoryException {
+    public Optional<Approval> findByApprovalIdentifier(UUID approvalIdentifier) throws RepositoryException {
         try {
-            var entities = fetchEntitiesByApprovalIdentifier(identifier);
+            var entities = fetchEntitiesByApprovalIdentifier(approvalIdentifier);
             return entities.isEmpty() ? Optional.empty() : Optional.of(constructApproval(entities));
         } catch (Exception exception) {
-            LOGGER.error("Failed to find approval by identifier {} {}", identifier, exception.getMessage());
+            LOGGER.error("Failed to find approval by identifier {} {}", approvalIdentifier, exception.getMessage());
             throw new RepositoryException("Could not find approval: " + exception.getMessage());
         }
     }
 
     @Override
-    public Optional<Approval> findApprovalByHandle(Handle handle) throws RepositoryException {
+    public Optional<Approval> findByHandle(Handle handle) throws RepositoryException {
         try {
             var entities = fetchEntitiesByHandle(handle);
             return entities.isEmpty() ? Optional.empty() : Optional.of(constructApproval(entities));
@@ -84,13 +82,13 @@ public class DynamoDbRepository implements Repository {
     }
 
     @Override
-    public Optional<Approval> findApprovalByIdentifier(Identifier identifier) throws RepositoryException {
+    public Optional<Approval> findByIdentifier(NamedIdentifier namedIdentifier) throws RepositoryException {
         try {
-            var entities = fetchEntitiesByIdentifier(identifier);
+            var entities = fetchEntitiesByIdentifier(namedIdentifier);
             return entities.isEmpty() ? Optional.empty() : Optional.of(constructApproval(entities));
         } catch (Exception exception) {
-            LOGGER.error("Failed to find approval by identifier with type {} and value {} {}", identifier.type(),
-                         identifier.value(), exception.getMessage());
+            LOGGER.error("Failed to find approval by identifier with type {} and value {} {}", namedIdentifier.name(),
+                         namedIdentifier.value(), exception.getMessage());
             throw new RepositoryException("Could not find approval by identifier: " + exception.getMessage());
         }
     }
@@ -111,7 +109,7 @@ public class DynamoDbRepository implements Repository {
                    .orElseThrow(() -> new IllegalStateException("Handle not found for approval"));
     }
 
-    private static List<Identifier> getIdentifiers(List<DatabaseEntry> entities) {
+    private static List<NamedIdentifier> getIdentifiers(List<DatabaseEntry> entities) {
         return entities.stream()
                    .filter(IdentifierDao.class::isInstance)
                    .map(IdentifierDao.class::cast)
@@ -190,8 +188,8 @@ public class DynamoDbRepository implements Repository {
                    .toList();
     }
 
-    private List<DatabaseEntry> fetchEntitiesByIdentifier(Identifier identifier) {
-        var databaseIdentifier = IdentifierDao.fromIdentifier(identifier).getDatabaseIdentifier();
+    private List<DatabaseEntry> fetchEntitiesByIdentifier(NamedIdentifier namedIdentifier) {
+        var databaseIdentifier = IdentifierDao.fromIdentifier(namedIdentifier).getDatabaseIdentifier();
         var item = table.getItem(toPrimaryKey(databaseIdentifier));
         var approvalDatabaseIdentifier = item.getString(PK1);
         return fetchEntitiesByApprovalIdentifier(approvalDatabaseIdentifier);
@@ -215,16 +213,16 @@ public class DynamoDbRepository implements Repository {
     }
 
     private List<EnhancedDocument> createIdentifiersEntities(Approval approval) {
-        return approval.identifiers()
+        return approval.namedIdentifiers()
                    .stream()
                    .map(identifier -> createIdentifierDocument(identifier, approval))
                    .toList();
     }
 
-    private EnhancedDocument createIdentifierDocument(Identifier identifier, Approval approval) {
+    private EnhancedDocument createIdentifierDocument(NamedIdentifier namedIdentifier, Approval approval) {
         var handleDao = HandleDao.fromHandle(approval.handle());
         var approvalDao = ApprovalDao.fromApproval(approval);
-        return IdentifierDao.fromIdentifier(identifier).toEnhancedDocument(approvalDao, handleDao);
+        return IdentifierDao.fromIdentifier(namedIdentifier).toEnhancedDocument(approvalDao, handleDao);
     }
 
     private EnhancedDocument createHandleEntity(Approval approval) {

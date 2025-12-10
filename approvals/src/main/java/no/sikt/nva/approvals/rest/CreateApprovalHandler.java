@@ -44,7 +44,7 @@ public class CreateApprovalHandler extends ApiGatewayHandler<CreateApprovalReque
     protected Void processInput(CreateApprovalRequest request, RequestInfo requestInfo, Context context)
         throws ApiGatewayException {
         try {
-            approvalService.create(request.identifiers(), request.source());
+            approvalService.create(request.namedIdentifiers(), request.source());
         } catch (Exception e) {
             handleException(e);
         }

@@ -26,15 +26,15 @@ import org.junit.jupiter.api.Test;
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 import software.amazon.awssdk.services.dynamodb.model.PutItemRequest;
 
-class DynamoDbRepositoryTest {
+class DynamoDbApprovalRepositoryTest {
 
-    private Repository repository;
+    private ApprovalRepository approvalRepository;
     private DynamoDbLocal dynamoDbLocal;
 
     @BeforeEach
     void setUp() {
         dynamoDbLocal = dynamoDBLocal();
-        repository = new DynamoDbRepository(dynamoDbLocal.client());
+        approvalRepository = new DynamoDbApprovalRepository(dynamoDbLocal.client());
     }
 
     @AfterEach
@@ -45,8 +45,8 @@ class DynamoDbRepositoryTest {
     @Test
     void shouldPersistApproval() throws RepositoryException {
         var approval = randomApproval(randomHandle());
-        repository.save(approval);
-        var persistedApproval = repository.findApprovalByIdentifier(approval.identifier());
+        approvalRepository.save(approval);
+        var persistedApproval = approvalRepository.findByApprovalIdentifier(approval.identifier());
 
         assertEquals(approval, persistedApproval.orElseThrow());
     }
@@ -55,18 +55,18 @@ class DynamoDbRepositoryTest {
     void shouldThrowRepositoryExceptionWhenPersistingApprovalWithExistingIdentifier() throws RepositoryException {
         var identifier = randomIdentifier();
         var approval = randomApproval(identifier);
-        repository.save(approval);
+        approvalRepository.save(approval);
 
-        assertThrows(RepositoryException.class, () -> repository.save(randomApproval(identifier)));
+        assertThrows(RepositoryException.class, () -> approvalRepository.save(randomApproval(identifier)));
     }
 
     @Test
     void shouldThrowRepositoryExceptionWhenPersistingApprovalWithExistingHandle() throws RepositoryException {
         var handle = randomHandle();
         var approval = randomApproval(handle);
-        repository.save(approval);
+        approvalRepository.save(approval);
 
-        assertThrows(RepositoryException.class, () -> repository.save(randomApproval(handle)));
+        assertThrows(RepositoryException.class, () -> approvalRepository.save(randomApproval(handle)));
     }
 
     @Test
@@ -74,14 +74,14 @@ class DynamoDbRepositoryTest {
         throws RepositoryException {
         var identifier = randomUUID();
         var approval = randomApproval(identifier, randomUri());
-        repository.save(approval);
+        approvalRepository.save(approval);
 
-        assertThrows(RepositoryException.class, () -> repository.save(randomApproval(identifier, randomUri())));
+        assertThrows(RepositoryException.class, () -> approvalRepository.save(randomApproval(identifier, randomUri())));
     }
 
     @Test
     void shouldReturnEmptyOptionalWhenApprovalNotFound() throws RepositoryException {
-        var result = repository.findApprovalByIdentifier(randomUUID());
+        var result = approvalRepository.findByApprovalIdentifier(randomUUID());
 
         assertTrue(result.isEmpty());
     }
@@ -93,7 +93,7 @@ class DynamoDbRepositoryTest {
 
         insertIdentifierOnly(approvalId, identifierValue);
 
-        assertThrows(RepositoryException.class, () -> repository.findApprovalByIdentifier(approvalId));
+        assertThrows(RepositoryException.class, () -> approvalRepository.findByApprovalIdentifier(approvalId));
     }
 
     @Test
@@ -103,25 +103,25 @@ class DynamoDbRepositoryTest {
         insertIdentifierOnly(approvalId, identifierValue);
         insertHandleOnly(approvalId, randomHandle().value().toString());
 
-        assertThrows(RepositoryException.class, () -> repository.findApprovalByIdentifier(approvalId));
+        assertThrows(RepositoryException.class, () -> approvalRepository.findByApprovalIdentifier(approvalId));
     }
 
     @Test
-    void shouldFindApprovalByHandle() throws RepositoryException {
+    void shouldFindByHandle() throws RepositoryException {
         var handle = randomHandle();
         var approval = randomApproval(handle);
-        repository.save(approval);
-        var persistedApproval = repository.findApprovalByHandle(handle);
+        approvalRepository.save(approval);
+        var persistedApproval = approvalRepository.findByHandle(handle);
 
         assertEquals(approval, persistedApproval.orElseThrow());
     }
 
     @Test
-    void shouldFindApprovalByIdentifier() throws RepositoryException {
+    void shouldFindByApprovalIdentifier() throws RepositoryException {
         var identifier = randomIdentifier();
         var approval = randomApproval(identifier);
-        repository.save(approval);
-        var persistedApproval = repository.findApprovalByIdentifier(identifier);
+        approvalRepository.save(approval);
+        var persistedApproval = approvalRepository.findByIdentifier(identifier);
 
         assertEquals(approval, persistedApproval.orElseThrow());
     }
