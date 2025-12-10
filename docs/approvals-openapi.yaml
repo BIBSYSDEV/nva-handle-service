@@ -2,16 +2,15 @@ openapi: 3.0.1
 info:
   title: NVA Approval API
   version: 1.0.0
+x-amazon-apigateway-request-validator: validate_body
 x-amazon-apigateway-request-validators:
-  validate_body_and_params:
-    validateRequestBody: true
-    validateRequestParameters: true
   validate_body:
     validateRequestBody: true
     validateRequestParameters: false
 paths:
   /:
     post:
+      summary: Create Approval
       description: Create approval
       x-amazon-apigateway-request-validator: validate_body
       security:
@@ -37,10 +36,6 @@ paths:
               schema:
                 type: string
                 format: uri
-            Retry-After:
-              description: Number of seconds to wait before checking the approval
-              schema:
-                type: integer
 components:
   schemas:
     CreateApprovalRequest:
