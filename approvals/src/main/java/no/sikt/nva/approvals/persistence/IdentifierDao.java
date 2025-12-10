@@ -8,7 +8,7 @@ import no.sikt.nva.approvals.domain.Identifier;
 
 @JsonTypeInfo(use = Id.NAME, property = "type")
 @JsonTypeName("Identifier")
-public record IdentifierDao(String source, String value) implements DatabaseEntry {
+public record IdentifierDao(String name, String value) implements DatabaseEntry {
 
     public static IdentifierDao fromIdentifier(Identifier identifier) {
         return new IdentifierDao(identifier.type(), identifier.value());
@@ -16,11 +16,11 @@ public record IdentifierDao(String source, String value) implements DatabaseEntr
 
     @Override
     public String getDatabaseIdentifier() {
-        return "Identifier:%s#%s".formatted(source, value);
+        return "Identifier:%s#%s".formatted(name, value);
     }
 
     @JsonIgnore
     public Identifier toIdentifier() {
-        return new Identifier(source, value);
+        return new Identifier(name, value);
     }
 }

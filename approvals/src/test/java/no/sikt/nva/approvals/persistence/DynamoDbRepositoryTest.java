@@ -129,7 +129,7 @@ class DynamoDbRepositoryTest {
     private void insertIdentifierOnly(UUID approvalId, String identifierValue) {
         var item = createBaseItem(identifierValue, identifierValue, approvalId, identifierValue);
         item.put("type", AttributeValue.builder().s("Identifier").build());
-        item.put("source", AttributeValue.builder().s(randomString()).build());
+        item.put("name", AttributeValue.builder().s(randomString()).build());
         item.put("value", AttributeValue.builder().s(identifierValue).build());
 
         dynamoDbLocal.client().putItem(PutItemRequest.builder().tableName(TABLE_NAME).item(item).build());
