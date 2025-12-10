@@ -44,6 +44,9 @@ components:
         - identifiers
         - source
       properties:
+        type:
+          type: string
+          default: Approval
         identifiers:
           type: array
           items:
@@ -54,9 +57,14 @@ components:
           type: string
           format: uri
           description: URI of the source approval
-        type:
-          type: string
-          default: Approval
+      example:
+        type: Approval
+        identifiers:
+          - type: REK
+            value: "2024/123"
+          - type: DMP
+            value: "dmp-456"
+        source: https://example.com/source/12345
     Identifier:
       type: object
       required:
