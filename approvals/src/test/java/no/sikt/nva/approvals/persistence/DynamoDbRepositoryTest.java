@@ -46,7 +46,7 @@ class DynamoDbRepositoryTest {
     void shouldPersistApproval() throws RepositoryException {
         var approval = randomApproval(randomHandle());
         repository.save(approval);
-        var persistedApproval = repository.finalApprovalByIdentifier(approval.identifier());
+        var persistedApproval = repository.findApprovalByIdentifier(approval.identifier());
 
         assertEquals(approval, persistedApproval.orElseThrow());
     }
@@ -80,8 +80,8 @@ class DynamoDbRepositoryTest {
     }
 
     @Test
-    void shouldReturnEmptyOptionalWhenApprovalNotFound() {
-        var result = repository.finalApprovalByIdentifier(randomUUID());
+    void shouldReturnEmptyOptionalWhenApprovalNotFound() throws RepositoryException {
+        var result = repository.findApprovalByIdentifier(randomUUID());
 
         assertTrue(result.isEmpty());
     }
@@ -93,7 +93,7 @@ class DynamoDbRepositoryTest {
 
         insertIdentifierOnly(approvalId, identifierValue);
 
-        assertThrows(IllegalStateException.class, () -> repository.finalApprovalByIdentifier(approvalId));
+        assertThrows(RepositoryException.class, () -> repository.findApprovalByIdentifier(approvalId));
     }
 
     @Test
@@ -103,7 +103,27 @@ class DynamoDbRepositoryTest {
         insertIdentifierOnly(approvalId, identifierValue);
         insertHandleOnly(approvalId, randomHandle().value().toString());
 
-        assertThrows(IllegalStateException.class, () -> repository.finalApprovalByIdentifier(approvalId));
+        assertThrows(RepositoryException.class, () -> repository.findApprovalByIdentifier(approvalId));
+    }
+
+    @Test
+    void shouldFindApprovalByHandle() throws RepositoryException {
+        var handle = randomHandle();
+        var approval = randomApproval(handle);
+        repository.save(approval);
+        var persistedApproval = repository.findApprovalByHandle(handle);
+
+        assertEquals(approval, persistedApproval.orElseThrow());
+    }
+
+    @Test
+    void shouldFindApprovalByIdentifier() throws RepositoryException {
+        var identifier = randomIdentifier();
+        var approval = randomApproval(identifier);
+        repository.save(approval);
+        var persistedApproval = repository.findApprovalByIdentifier(identifier);
+
+        assertEquals(approval, persistedApproval.orElseThrow());
     }
 
     private void insertIdentifierOnly(UUID approvalId, String identifierValue) {
@@ -127,8 +147,8 @@ class DynamoDbRepositoryTest {
         var item = new HashMap<String, AttributeValue>();
         item.put(PK0, AttributeValue.builder().s(pk0).build());
         item.put(SK0, AttributeValue.builder().s(sk0).build());
-        item.put(PK1, AttributeValue.builder().s(approvalId.toString()).build());
-        item.put(SK1, AttributeValue.builder().s(approvalId.toString()).build());
+        item.put(PK1, AttributeValue.builder().s(ApprovalDao.toDatabaseIdentifier(approvalId)).build());
+        item.put(SK1, AttributeValue.builder().s(ApprovalDao.toDatabaseIdentifier(approvalId)).build());
         item.put(PK2, AttributeValue.builder().s(pk2Sk2).build());
         item.put(SK2, AttributeValue.builder().s(pk2Sk2).build());
         return item;

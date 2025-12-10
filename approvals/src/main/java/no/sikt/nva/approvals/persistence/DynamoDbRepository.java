@@ -1,5 +1,6 @@
 package no.sikt.nva.approvals.persistence;
 
+import static no.sikt.nva.approvals.persistence.ApprovalDao.toDatabaseIdentifier;
 import static no.sikt.nva.approvals.persistence.DynamoDbConstants.GSI1;
 import static no.sikt.nva.approvals.persistence.DynamoDbConstants.GSI2;
 import static no.sikt.nva.approvals.persistence.DynamoDbConstants.PK0;
@@ -61,9 +62,37 @@ public class DynamoDbRepository implements Repository {
     }
 
     @Override
-    public Optional<Approval> finalApprovalByIdentifier(UUID identifier) {
-        var entities = fetchEntitiesByApprovalIdentifier(identifier);
-        return entities.isEmpty() ? Optional.empty() : Optional.of(constructApproval(entities));
+    public Optional<Approval> findApprovalByIdentifier(UUID identifier) throws RepositoryException {
+        try {
+            var entities = fetchEntitiesByApprovalIdentifier(identifier);
+            return entities.isEmpty() ? Optional.empty() : Optional.of(constructApproval(entities));
+        } catch (Exception exception) {
+            LOGGER.error("Failed to find approval by identifier {} {}", identifier, exception.getMessage());
+            throw new RepositoryException("Could not find approval: " + exception.getMessage());
+        }
+    }
+
+    @Override
+    public Optional<Approval> findApprovalByHandle(Handle handle) throws RepositoryException {
+        try {
+            var entities = fetchEntitiesByHandle(handle);
+            return entities.isEmpty() ? Optional.empty() : Optional.of(constructApproval(entities));
+        } catch (Exception exception) {
+            LOGGER.error("Failed to find approval by handle: {} {}", handle.value(), exception.getMessage());
+            throw new RepositoryException("Could not find approval by handle: " + exception.getMessage());
+        }
+    }
+
+    @Override
+    public Optional<Approval> findApprovalByIdentifier(Identifier identifier) throws RepositoryException {
+        try {
+            var entities = fetchEntitiesByIdentifier(identifier);
+            return entities.isEmpty() ? Optional.empty() : Optional.of(constructApproval(entities));
+        } catch (Exception exception) {
+            LOGGER.error("Failed to find approval by identifier with type {} and value {} {}", identifier.type(),
+                         identifier.value(), exception.getMessage());
+            throw new RepositoryException("Could not find approval by identifier: " + exception.getMessage());
+        }
     }
 
     private static Approval constructApproval(List<DatabaseEntry> entities) {
@@ -117,6 +146,10 @@ public class DynamoDbRepository implements Repository {
                    .build();
     }
 
+    private static Key toPrimaryKey(String databaseIdentifier) {
+        return Key.builder().partitionValue(databaseIdentifier).sortValue(databaseIdentifier).build();
+    }
+
     private void saveApproval(Approval approval) {
         var documents = createDocuments(approval);
         var requestbuilder = TransactWriteItemsEnhancedRequest.builder();
@@ -132,13 +165,32 @@ public class DynamoDbRepository implements Repository {
 
     private List<DatabaseEntry> fetchEntitiesByApprovalIdentifier(UUID identifier) {
         return table.index(GSI1)
-                   .query(keyEqualTo(Key.builder().partitionValue(identifier.toString()).build()))
+                   .query(keyEqualTo(Key.builder().partitionValue(toDatabaseIdentifier(identifier)).build()))
                    .stream()
                    .map(Page::items)
                    .flatMap(List::stream)
                    .map(EnhancedDocument::toJson)
                    .map(this::toDatabaseEntity)
                    .toList();
+    }
+
+    private List<DatabaseEntry> fetchEntitiesByHandle(Handle handle) {
+        var databaseIdentifier = HandleDao.fromHandle(handle).getDatabaseIdentifier();
+        return table.index(GSI2)
+                   .query(keyEqualTo(Key.builder().partitionValue(databaseIdentifier).build()))
+                   .stream()
+                   .map(Page::items)
+                   .flatMap(List::stream)
+                   .map(EnhancedDocument::toJson)
+                   .map(this::toDatabaseEntity)
+                   .toList();
+    }
+
+    private List<DatabaseEntry> fetchEntitiesByIdentifier(Identifier identifier) {
+        var databaseIdentifier = IdentifierDao.fromIdentifier(identifier).getDatabaseIdentifier();
+        var item = table.getItem(toPrimaryKey(databaseIdentifier));
+        var approvalIdentifier = ApprovalDao.fromDatabaseIdentifier(item.getString(PK1));
+        return fetchEntitiesByApprovalIdentifier(approvalIdentifier);
     }
 
     private DatabaseEntry toDatabaseEntity(String value) {
@@ -160,26 +212,30 @@ public class DynamoDbRepository implements Repository {
                    .json(approvalDao.toJsonString())
                    .put(PK0, approvalDao.getDatabaseIdentifier(), STRING)
                    .put(SK0, approvalDao.getDatabaseIdentifier(), STRING)
-                   .put(PK1, approval.identifier().toString(), STRING)
-                   .put(SK1, approval.identifier().toString(), STRING)
+                   .put(PK1, approvalDao.getDatabaseIdentifier(), STRING)
+                   .put(SK1, approvalDao.getDatabaseIdentifier(), STRING)
                    .put(PK2, handleDao.getDatabaseIdentifier(), STRING)
                    .put(SK2, handleDao.getDatabaseIdentifier(), STRING)
                    .build();
     }
 
     private List<EnhancedDocument> createIdentifiersEntities(Approval approval) {
-        return approval.identifiers().stream().map(identifier -> createDocument(identifier, approval)).toList();
+        return approval.identifiers()
+                   .stream()
+                   .map(identifier -> createIdentifierDocument(identifier, approval))
+                   .toList();
     }
 
-    private EnhancedDocument createDocument(Identifier identifier, Approval approval) {
+    private EnhancedDocument createIdentifierDocument(Identifier identifier, Approval approval) {
         var identifierDao = IdentifierDao.fromIdentifier(identifier);
         var handleDao = HandleDao.fromHandle(approval.handle());
+        var approvalDao = ApprovalDao.fromApproval(approval);
         return EnhancedDocument.builder()
                    .json(identifierDao.toJsonString())
                    .put(PK0, identifierDao.getDatabaseIdentifier(), STRING)
                    .put(SK0, identifierDao.getDatabaseIdentifier(), STRING)
-                   .put(PK1, approval.identifier().toString(), STRING)
-                   .put(SK1, approval.identifier().toString(), STRING)
+                   .put(PK1, approvalDao.getDatabaseIdentifier(), STRING)
+                   .put(SK1, approvalDao.getDatabaseIdentifier(), STRING)
                    .put(PK2, handleDao.getDatabaseIdentifier(), STRING)
                    .put(SK2, handleDao.getDatabaseIdentifier(), STRING)
                    .build();
@@ -187,12 +243,13 @@ public class DynamoDbRepository implements Repository {
 
     private EnhancedDocument createHandleEntity(Approval approval) {
         var handleDao = HandleDao.fromHandle(approval.handle());
+        var approvalDao = ApprovalDao.fromApproval(approval);
         return EnhancedDocument.builder()
                    .json(handleDao.toJsonString())
                    .put(PK0, handleDao.getDatabaseIdentifier(), STRING)
                    .put(SK0, handleDao.getDatabaseIdentifier(), STRING)
-                   .put(PK1, approval.identifier().toString(), STRING)
-                   .put(SK1, approval.identifier().toString(), STRING)
+                   .put(PK1, approvalDao.getDatabaseIdentifier(), STRING)
+                   .put(SK1, approvalDao.getDatabaseIdentifier(), STRING)
                    .put(PK2, handleDao.getDatabaseIdentifier(), STRING)
                    .put(SK2, handleDao.getDatabaseIdentifier(), STRING)
                    .build();

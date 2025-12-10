@@ -1,5 +1,6 @@
 package no.sikt.nva.approvals.persistence;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.annotation.JsonTypeInfo.Id;
 import com.fasterxml.jackson.annotation.JsonTypeName;
@@ -18,6 +19,7 @@ public record IdentifierDao(String source, String value) implements DatabaseEntr
         return "Identifier:%s#%s".formatted(source, value);
     }
 
+    @JsonIgnore
     public Identifier toIdentifier() {
         return new Identifier(source, value);
     }
