@@ -164,8 +164,12 @@ public class DynamoDbRepository implements Repository {
     }
 
     private List<DatabaseEntry> fetchEntitiesByApprovalIdentifier(UUID identifier) {
+        return fetchEntitiesByApprovalIdentifier(toDatabaseIdentifier(identifier));
+    }
+
+    private List<DatabaseEntry> fetchEntitiesByApprovalIdentifier(String databaseIdentifier) {
         return table.index(GSI1)
-                   .query(keyEqualTo(Key.builder().partitionValue(toDatabaseIdentifier(identifier)).build()))
+                   .query(keyEqualTo(Key.builder().partitionValue(databaseIdentifier).build()))
                    .stream()
                    .map(Page::items)
                    .flatMap(List::stream)
@@ -189,8 +193,8 @@ public class DynamoDbRepository implements Repository {
     private List<DatabaseEntry> fetchEntitiesByIdentifier(Identifier identifier) {
         var databaseIdentifier = IdentifierDao.fromIdentifier(identifier).getDatabaseIdentifier();
         var item = table.getItem(toPrimaryKey(databaseIdentifier));
-        var approvalIdentifier = ApprovalDao.fromDatabaseIdentifier(item.getString(PK1));
-        return fetchEntitiesByApprovalIdentifier(approvalIdentifier);
+        var approvalDatabaseIdentifier = item.getString(PK1);
+        return fetchEntitiesByApprovalIdentifier(approvalDatabaseIdentifier);
     }
 
     private DatabaseEntry toDatabaseEntity(String value) {

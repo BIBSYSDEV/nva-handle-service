@@ -23,8 +23,4 @@ public record ApprovalDao(UUID identifier, URI source) implements DatabaseEntry 
     public static String toDatabaseIdentifier(UUID identifier) {
         return "Approval:%s".formatted(identifier.toString());
     }
-
-    public static UUID fromDatabaseIdentifier(String databaseIdentifier) {
-        return UUID.fromString(databaseIdentifier.replace("Approval:", ""));
-    }
 }
