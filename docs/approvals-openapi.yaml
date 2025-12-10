@@ -18,8 +18,7 @@ paths:
           required: true
           schema:
             type: string
-            enum:
-              - application/json
+            default: application/json
       x-amazon-apigateway-request-validator: validate_body
       requestBody:
         required: true
@@ -44,6 +43,10 @@ paths:
               schema:
                 type: string
                 format: uri
+            Retry-After:
+              description: Number of seconds to wait before checking the approval
+              schema:
+                type: integer
         '400':
           description: Bad Request
           content:
@@ -86,20 +89,26 @@ components:
       example:
         type: Approval
         identifiers:
-          - type: REK
+          - type: Identifier
+            name: REK
             value: "2024/123"
-          - type: DMP
+          - type: Identifier
+            name: DMP
             value: "dmp-456"
         source: https://example.com/source/12345
     Identifier:
       type: object
       required:
         - type
+        - name
         - value
       properties:
         type:
           type: string
-          description: Type of identifier
+          default: Approval
+        name:
+          type: string
+          description: Name of identifier
         value:
           type: string
           description: Identifier value
