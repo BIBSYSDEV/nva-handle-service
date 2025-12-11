@@ -18,7 +18,7 @@ public record Handle(URI value) {
         if (isNull(uri) || StringUtils.isBlank(uri.toString())) {
             throw new IllegalArgumentException(INVALID_HANDLE_EXCEPTION);
         }
-        if (isNull(uri.getHost()) || !uri.getHost().equals(HANDLE_HOST)) {
+        if (isNull(uri.getHost()) || !HANDLE_HOST.equals(uri.getHost())) {
             throw new IllegalArgumentException(INVALID_HANDLE_EXCEPTION);
         }
         if (!hasPrefixAndSuffix(uri)) {
