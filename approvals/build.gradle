@@ -18,4 +18,5 @@ dependencies {
 test {
     environment("COGNITO_AUTHORIZER_URLS", "urls")
     environment("ALLOWED_ORIGIN", "*")
+    environment("HANDLE_PREFIX", "prefix")
 }

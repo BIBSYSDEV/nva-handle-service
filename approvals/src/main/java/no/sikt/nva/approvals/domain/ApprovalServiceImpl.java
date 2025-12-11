@@ -17,22 +17,25 @@ import nva.commons.core.JacocoGenerated;
 
 public class ApprovalServiceImpl implements ApprovalService {
 
+    private static final String HANDLE_PREFIX = "HANDLE_PREFIX";
     private final HandleDatabase handleDatabase;
     private final ApprovalRepository approvalRepository;
     private final Supplier<Connection> connectionSupplier;
+    private final Environment environment;
 
     public ApprovalServiceImpl(HandleDatabase handleDatabase, ApprovalRepository approvalRepository,
-                               Supplier<Connection> connectionSupplier) {
+                               Supplier<Connection> connectionSupplier, Environment environment) {
         this.handleDatabase = handleDatabase;
         this.approvalRepository = approvalRepository;
         this.connectionSupplier = connectionSupplier;
+        this.environment = environment;
     }
 
     @JacocoGenerated
     public static ApprovalService defaultInstance(Environment environment) {
         return new ApprovalServiceImpl(new HandleDatabase(environment),
                                        DynamoDbApprovalRepository.defaultInstance(environment),
-                                       getConnectionSupplier());
+                                       getConnectionSupplier(), environment);
     }
 
     @Override
@@ -61,7 +64,7 @@ public class ApprovalServiceImpl implements ApprovalService {
 
     private Handle createHandle(URI source, Connection connection) throws SQLException {
         try {
-            var handle = handleDatabase.createHandle(source, connection);
+            var handle = handleDatabase.createHandle(environment.readEnv(HANDLE_PREFIX), source, connection);
             connection.commit();
             return new Handle(handle);
         } catch (SQLException e) {
