@@ -12,7 +12,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.Map;
 import java.util.UUID;
-import no.sikt.nva.approvals.domain.Approval;
 import no.sikt.nva.approvals.domain.ApprovalNotFoundException;
 import no.sikt.nva.approvals.domain.ApprovalServiceException;
 import no.sikt.nva.approvals.domain.FakeApprovalService;
@@ -192,10 +191,10 @@ class FetchApprovalHandlerTest {
         assertEquals(HTTP_BAD_REQUEST, response.getStatusCode());
     }
 
-    private GatewayResponse<Approval> handleRequest(InputStream request) {
+    private GatewayResponse<ApprovalResponse> handleRequest(InputStream request) {
         try {
             handler.handleRequest(request, output, CONTEXT);
-            return GatewayResponse.fromOutputStream(output, Approval.class);
+            return GatewayResponse.fromOutputStream(output, ApprovalResponse.class);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
