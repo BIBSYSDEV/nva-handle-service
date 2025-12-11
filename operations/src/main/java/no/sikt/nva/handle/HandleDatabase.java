@@ -1,6 +1,11 @@
 package no.sikt.nva.handle;
 
 import static java.util.Objects.isNull;
+import java.net.URI;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.Optional;
 import no.sikt.nva.handle.exceptions.HandleAlreadyExistException;
 import nva.commons.core.Environment;
@@ -8,12 +13,6 @@ import nva.commons.core.JacocoGenerated;
 import nva.commons.core.paths.UriWrapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.net.URI;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
 
 @JacocoGenerated
 public class HandleDatabase {
@@ -50,6 +49,16 @@ public class HandleDatabase {
             return existingHandle.get();
         } else {
             return createNewHandle(uri, connection);
+        }
+    }
+
+    public URI createHandle(String prefix, URI uri, Connection connection) throws SQLException {
+        var existingHandle = fetchExistingHandleByValue(prefix, uri, connection);
+        if (existingHandle.isPresent()) {
+            logger.info(String.format(REUSED_EXISTING_HANDLE_FOR_URI, existingHandle.get(), uri));
+            return existingHandle.get();
+        } else {
+            return createNewHandle(prefix, uri, connection);
         }
     }
 
@@ -120,6 +129,23 @@ public class HandleDatabase {
                 URI handle = convertShortHandleToFull(localHandle);
                 logger.info(String.format(CREATED_HANDLE_FOR_URI, handle, uri));
                 return handle;
+            } else {
+                throw new RuntimeException(String.format(ERROR_CREATING_HANDLE_FOR_URI, uri));
+            }
+        }
+    }
+
+    private URI createNewHandle(String prefix, URI uri, Connection connection) throws SQLException {
+
+        try (var preparedStatementCreate = connection.prepareStatement(CREATE_ID_SQL);
+
+            var createResult = preparedStatementCreate.executeQuery()) {
+            if (createResult.next()) {
+                var handleId = createResult.getInt(1);
+                var suffix = Integer.toString(handleId);
+                var localHandle = convertPrefixAndSuffixToShortHandle(prefix, suffix);
+                executeUpdateHandleById(localHandle, uri, handleId, connection);
+                return convertShortHandleToFull(localHandle);
             } else {
                 throw new RuntimeException(String.format(ERROR_CREATING_HANDLE_FOR_URI, uri));
             }

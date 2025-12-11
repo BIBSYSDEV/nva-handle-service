@@ -1,27 +1,110 @@
 package no.sikt.nva.approvals.domain;
 
+import static no.sikt.nva.approvals.utils.TestUtils.randomHandle;
+import static no.sikt.nva.approvals.utils.TestUtils.randomIdentifier;
+import static no.sikt.nva.approvals.utils.TestUtils.randomIdentifiers;
 import static no.unit.nva.testutils.RandomDataGenerator.randomString;
 import static no.unit.nva.testutils.RandomDataGenerator.randomUri;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 import java.net.URI;
+import java.sql.Connection;
+import java.sql.SQLException;
 import java.util.List;
 import java.util.UUID;
+import java.util.function.Supplier;
+import no.sikt.nva.approvals.persistence.ApprovalRepository;
+import no.sikt.nva.approvals.persistence.RepositoryException;
+import no.sikt.nva.handle.HandleDatabase;
+import nva.commons.core.Environment;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 class ApprovalServiceTest {
 
     private static final URI VALID_HANDLE_URI = URI.create("https://hdl.handle.net/11250.1/12345");
-    public ApprovalService approvalService;
+    private static final String HANDLE_PREFIX = new Environment().readEnv("HANDLE_PREFIX");
+    private ApprovalService approvalService;
+    private ApprovalRepository approvalRepository;
+    private HandleDatabase handleDatabase;
+    private Connection connection;
 
     @BeforeEach
     void setup() {
-        this.approvalService = new ApprovalServiceImpl();
+        this.handleDatabase = mock(HandleDatabase.class);
+        this.approvalRepository = mock(ApprovalRepository.class);
+        this.connection = mock(Connection.class);
+        this.approvalService = new ApprovalServiceImpl(handleDatabase, approvalRepository, () -> connection,
+                                                       new Environment());
     }
 
     @Test
-    void shouldThrowApprovalServiceExceptionOnCreate() {
-        assertThrows(ApprovalServiceException.class, () -> approvalService.create(List.of(), randomUri()));
+    void shouldThrowApprovalServiceExceptionWhenCreatingHandleFails() throws SQLException {
+        doThrow(RuntimeException.class).when(handleDatabase).createHandle(randomUri(), connection);
+
+        assertThrows(ApprovalServiceException.class, () -> approvalService.create(randomIdentifiers(), randomUri()));
+    }
+
+    @Test
+    void shouldThrowApprovalServiceExceptionWhenSavingApprovalFails() throws RepositoryException {
+        doThrow(RepositoryException.class).when(approvalRepository).save(any());
+
+        assertThrows(ApprovalServiceException.class, () -> approvalService.create(randomIdentifiers(), randomUri()));
+    }
+
+    @Test
+    void shouldThrowApprovalServiceExceptionWhenNotAbleToConnectToHandleDatabase() {
+        @SuppressWarnings("unchecked") Supplier<Connection> connectionSupplier = mock(Supplier.class);
+        when(connectionSupplier.get()).thenThrow(new RuntimeException(new SQLException(randomString())));
+        var serviceWithFailingConnection = new ApprovalServiceImpl(handleDatabase, approvalRepository,
+                                                                   connectionSupplier, new Environment());
+
+        assertThrows(ApprovalServiceException.class,
+                     () -> serviceWithFailingConnection.create(randomIdentifiers(), randomUri()));
+    }
+
+    @Test
+    void shouldCreateApprovalWithHandleCreatedByHandleDatabase()
+        throws RepositoryException, SQLException, ApprovalServiceException, ApprovalConflictException {
+        var source = randomUri();
+        var handle = randomHandle().value();
+        when(handleDatabase.createHandle(eq(HANDLE_PREFIX), eq(source), eq(connection))).thenReturn(handle);
+        doNothing().when(approvalRepository).save(any());
+
+        var approval = approvalService.create(randomIdentifiers(), source);
+
+        assertEquals(handle, approval.handle().value());
+    }
+
+    @Test
+    void shouldCreateApprovalWithSourceProvidedInInput()
+        throws RepositoryException, SQLException, ApprovalServiceException, ApprovalConflictException {
+        var source = randomUri();
+        when(handleDatabase.createHandle(eq(HANDLE_PREFIX), eq(source), eq(connection))).thenReturn(
+            randomHandle().value());
+        doNothing().when(approvalRepository).save(any());
+
+        var approval = approvalService.create(randomIdentifiers(), source);
+
+        assertEquals(source, approval.source());
+    }
+
+    @Test
+    void shouldCreateApprovalWithIdentifiersProvidedInInput()
+        throws RepositoryException, SQLException, ApprovalServiceException, ApprovalConflictException {
+        when(handleDatabase.createHandle(any(), any(), any())).thenReturn(randomHandle().value());
+        doNothing().when(approvalRepository).save(any());
+
+        var identifiers = randomIdentifiers();
+        var approval = approvalService.create(identifiers, randomUri());
+
+        assertEquals(identifiers, approval.namedIdentifiers());
     }
 
     @Test
@@ -40,5 +123,36 @@ class ApprovalServiceTest {
         var namedIdentifier = new NamedIdentifier(randomString(), randomString());
         assertThrows(ApprovalServiceException.class,
             () -> approvalService.getApprovalByNamedIdentifier(namedIdentifier));
+    }
+
+    @Test
+    void shouldThrowApprovalConflictExceptionWhenIdentifiersAlreadyExist() throws RepositoryException {
+        var existingIdentifiers = List.of(randomIdentifier(), randomIdentifier());
+
+        when(approvalRepository.findIdentifiers(existingIdentifiers)).thenReturn(existingIdentifiers);
+
+        assertThrows(ApprovalConflictException.class, () -> approvalService.create(existingIdentifiers, randomUri()));
+    }
+
+    @Test
+    void shouldIncludeExistingIdentifiersInExceptionMessage() throws RepositoryException {
+        var existingIdentifier = randomIdentifier();
+        var identifiers = List.of(existingIdentifier, randomIdentifier());
+
+        when(approvalRepository.findIdentifiers(identifiers)).thenReturn(List.of(existingIdentifier));
+
+        var exception = assertThrows(ApprovalConflictException.class,
+                                     () -> approvalService.create(identifiers, randomUri()));
+        assertEquals("Following identifiers already exist: [%s: %s]".formatted(existingIdentifier.name(),
+                                                                               existingIdentifier.value()),
+                     exception.getMessage());
+    }
+
+    @Test
+    void shouldThrowApprovalServiceExceptionWhenRepositoryFailsToCheckExistingIdentifiers() throws RepositoryException {
+        var identifiers = randomIdentifiers();
+        when(approvalRepository.findIdentifiers(identifiers)).thenThrow(new RepositoryException("Database error"));
+
+        assertThrows(ApprovalServiceException.class, () -> approvalService.create(identifiers, randomUri()));
     }
 }

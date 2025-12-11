@@ -43,7 +43,7 @@ public class FetchApprovalHandler extends ApiGatewayHandler<Void, Approval> {
 
     @JacocoGenerated
     public FetchApprovalHandler() {
-        this(new ApprovalServiceImpl());
+        this(ApprovalServiceImpl.defaultInstance(new Environment()));
     }
 
     public FetchApprovalHandler(ApprovalService approvalService) {

@@ -7,6 +7,7 @@ import java.net.URI;
 import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.IntStream;
 import no.sikt.nva.approvals.domain.Approval;
 import no.sikt.nva.approvals.domain.Handle;
 import no.sikt.nva.approvals.domain.NamedIdentifier;
@@ -34,8 +35,12 @@ public class TestUtils {
         return new Approval(randomUUID(), List.of(namedIdentifier), randomUri(), randomHandle());
     }
 
-    private static List<NamedIdentifier> randomIdentifiers() {
+    public static List<NamedIdentifier> randomIdentifiers() {
         return List.of(randomIdentifier());
+    }
+
+    public static List<NamedIdentifier> randomIdentifiers(int count) {
+        return IntStream.range(0, count).mapToObj(i -> randomIdentifier()).toList();
     }
 
     public static NamedIdentifier randomIdentifier() {

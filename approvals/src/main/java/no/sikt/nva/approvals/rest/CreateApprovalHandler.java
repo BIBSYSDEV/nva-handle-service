@@ -16,13 +16,12 @@ import nva.commons.core.JacocoGenerated;
 
 public class CreateApprovalHandler extends ApiGatewayHandler<CreateApprovalRequest, Void> {
 
-    public static final String APPROVAL_WITH_ID_EXISTS = "Approval with one of provided identifiers already exists!";
     public static final String BAD_GATEWAY_EXCEPTION_MESSAGE = "Something went wrong!";
     private final ApprovalService approvalService;
 
     @JacocoGenerated
     public CreateApprovalHandler() {
-        this(new ApprovalServiceImpl());
+        this(ApprovalServiceImpl.defaultInstance(new Environment()));
     }
 
     public CreateApprovalHandler(ApprovalService approvalService) {
@@ -59,7 +58,7 @@ public class CreateApprovalHandler extends ApiGatewayHandler<CreateApprovalReque
     private void handleException(Exception exception)
         throws BadGatewayException, BadRequestException, ConflictException {
         switch (exception) {
-            case ApprovalConflictException e -> throw new ConflictException(APPROVAL_WITH_ID_EXISTS);
+            case ApprovalConflictException e -> throw new ConflictException(e.getMessage());
             case IllegalArgumentException e -> throw new BadRequestException(e.getMessage());
             default -> throw new BadGatewayException(BAD_GATEWAY_EXCEPTION_MESSAGE);
         }

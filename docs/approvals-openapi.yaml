@@ -10,7 +10,22 @@ x-amazon-apigateway-request-validators:
 paths:
   /:
     post:
+      summary: Create Approval
       description: Create approval
+      parameters:
+        - name: Content-Type
+          in: header
+          required: true
+          schema:
+            type: string
+            default: application/json
+      x-amazon-apigateway-request-validator: validate_body
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateApprovalRequest'
       security:
         - CognitoUserPool: [ 'https://api.nva.unit.no/scopes/third-party/approval-upsert', 'https://api.nva.unit.no/scopes/backend' ]
       x-amazon-apigateway-integration:
@@ -32,6 +47,24 @@ paths:
               description: Number of seconds to wait before checking the approval
               schema:
                 type: integer
+        '400':
+          description: Bad Request
+          content:
+            "application/json":
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '409':
+          description: Conflict
+          content:
+            "application/json":
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '502':
+          description: Bad gateway
+          content:
+            "application/json":
+              schema:
+                $ref: '#/components/schemas/Problem'
     get:
       summary: Get Approval by query
       description: Get approval by handle value or named identifier (name+value)
@@ -127,6 +160,55 @@ paths:
                 $ref: '#/components/schemas/Problem'
 components:
   schemas:
+    CreateApprovalRequest:
+      type: object
+      required:
+        - identifiers
+        - source
+      properties:
+        type:
+          type: string
+          default: Approval
+        identifiers:
+          type: array
+          items:
+            $ref: '#/components/schemas/Identifier'
+          minItems: 1
+          description: List of identifiers for the approval
+        source:
+          type: string
+          format: uri
+          description: URI of the source approval
+      example:
+        type: Approval
+        identifiers:
+          - type: Identifier
+            name: REK
+            value: "2024/123"
+          - type: Identifier
+            name: DMP
+            value: "dmp-456"
+        source: https://example.com/source/12345
+    Problem:
+      type: object
+      description: NVA error reporting object
+      required:
+        - title
+        - detail
+        - status
+      properties:
+        title:
+          type: string
+          description: Human-readable description of the error status
+        detail:
+          type: string
+          description: A more detailed error message describing the error and potential mitigations
+        status:
+          type: integer
+          description: The HTTP status code associated with the problem
+        requestId:
+          type: string
+          description: Identifier of the request causing the problem
     Approval:
       type: object
       description: An approval for associating a persistent handle identifier with a source URI
@@ -172,26 +254,6 @@ components:
           type: string
           format: uri
           description: The full handle URI (e.g., https://hdl.handle.net/11250.1/12345)
-    Problem:
-      type: object
-      description: NVA error reporting object
-      required:
-        - title
-        - detail
-        - status
-      properties:
-        title:
-          type: string
-          description: Human-readable description of the error status
-        detail:
-          type: string
-          description: A more detailed error message describing the error and potential mitigations
-        status:
-          type: integer
-          description: The HTTP status code associated with the problem
-        requestId:
-          type: string
-          description: Identifier of the request causing the problem
   securitySchemes:
     CognitoUserPool:
       type: apiKey
