@@ -10,6 +10,9 @@ x-amazon-apigateway-request-validators:
 paths:
   /:
     post:
+      tags:
+        - Approval
+      operationId: createApproval
       summary: Create Approval
       description: Create approval
       parameters:
@@ -66,6 +69,9 @@ paths:
               schema:
                 $ref: '#/components/schemas/Problem'
     get:
+      tags:
+        - Approval
+      operationId: getApprovalByQuery
       summary: Get Approval by query
       description: Get approval by handle value or named identifier (name+value)
       parameters:
@@ -118,6 +124,9 @@ paths:
                 $ref: '#/components/schemas/Problem'
   /{approvalId}:
     get:
+      tags:
+        - Approval
+      operationId: getApprovalById
       summary: Get Approval
       description: Get approval by ID
       parameters:
