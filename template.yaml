@@ -292,6 +292,11 @@ Resources:
           HANDLE_BASE_URI: !Ref HandleBaseUri
           HANDLE_DATABASE_SECRET_NAME: !Ref HandleDatabaseSecretName
           TABLE: !Ref ApprovalsTable
+      VpcConfig:
+        SecurityGroupIds:
+          - !Ref EIPSecurityGroupId
+        SubnetIds:
+          - !Ref EIPPrivateSubnet
       Events:
         CreateApproval:
           Type: Api
