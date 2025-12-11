@@ -81,7 +81,7 @@ paths:
       tags:
         - Approval
       operationId: getApprovalByQuery
-      summary: Get Approval by query
+      summary: Get Approval by handle or named identifier
       description: Get approval by handle value or named identifier (name+value)
       parameters:
         - name: handle
