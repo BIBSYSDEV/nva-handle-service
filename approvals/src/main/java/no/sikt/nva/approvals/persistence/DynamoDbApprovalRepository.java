@@ -107,9 +107,9 @@ public class DynamoDbApprovalRepository implements ApprovalRepository {
     }
 
     private static <T> List<List<T>> splitToChunks(List<T> list) {
-        return IntStream.range(0, (list.size() + TRANSACT_WRITE_ITEM_LIMIT - 1) / TRANSACT_WRITE_ITEM_LIMIT)
-                   .mapToObj(i -> list.subList(i * TRANSACT_WRITE_ITEM_LIMIT,
-                                               Math.min((i + 1) * TRANSACT_WRITE_ITEM_LIMIT, list.size())))
+        return IntStream.range(0, (list.size() + BATCH_GET_ITEM_LIMIT - 1) / BATCH_GET_ITEM_LIMIT)
+                   .mapToObj(i -> list.subList(i * BATCH_GET_ITEM_LIMIT,
+                                               Math.min((i + 1) * BATCH_GET_ITEM_LIMIT, list.size())))
                    .collect(Collectors.toList());
     }
 
