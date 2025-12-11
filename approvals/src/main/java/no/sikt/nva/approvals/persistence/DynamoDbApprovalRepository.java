@@ -16,10 +16,13 @@ import static software.amazon.awssdk.enhanced.dynamodb.AttributeValueType.S;
 import static software.amazon.awssdk.enhanced.dynamodb.TableMetadata.primaryIndexName;
 import static software.amazon.awssdk.enhanced.dynamodb.model.QueryConditional.keyEqualTo;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 import no.sikt.nva.approvals.domain.Approval;
 import no.sikt.nva.approvals.domain.Handle;
 import no.sikt.nva.approvals.domain.NamedIdentifier;
@@ -36,7 +39,9 @@ import software.amazon.awssdk.enhanced.dynamodb.Key;
 import software.amazon.awssdk.enhanced.dynamodb.TableSchema;
 import software.amazon.awssdk.enhanced.dynamodb.document.DocumentTableSchema;
 import software.amazon.awssdk.enhanced.dynamodb.document.EnhancedDocument;
+import software.amazon.awssdk.enhanced.dynamodb.model.BatchGetItemEnhancedRequest;
 import software.amazon.awssdk.enhanced.dynamodb.model.Page;
+import software.amazon.awssdk.enhanced.dynamodb.model.ReadBatch;
 import software.amazon.awssdk.enhanced.dynamodb.model.TransactPutItemEnhancedRequest;
 import software.amazon.awssdk.enhanced.dynamodb.model.TransactWriteItemsEnhancedRequest;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
@@ -44,6 +49,8 @@ import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 public class DynamoDbApprovalRepository implements ApprovalRepository {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(DynamoDbApprovalRepository.class);
+    private static final int BATCH_GET_ITEM_LIMIT = 80;
+    private static final int TRANSACT_WRITE_ITEM_LIMIT = 80;
     private final DynamoDbTable<EnhancedDocument> table;
     private final DynamoDbEnhancedClient client;
 
@@ -101,6 +108,19 @@ public class DynamoDbApprovalRepository implements ApprovalRepository {
         }
     }
 
+    @Override
+    public List<NamedIdentifier> findIdentifiers(Collection<NamedIdentifier> namedIdentifiers)
+        throws RepositoryException {
+        return namedIdentifiers.isEmpty() ? List.of() : fetchIdentifiers(namedIdentifiers);
+    }
+
+    private static <T> List<List<T>> splitToChunks(List<T> list) {
+        return IntStream.range(0, (list.size() + BATCH_GET_ITEM_LIMIT - 1) / BATCH_GET_ITEM_LIMIT)
+                   .mapToObj(i -> list.subList(i * BATCH_GET_ITEM_LIMIT,
+                                               Math.min((i + 1) * BATCH_GET_ITEM_LIMIT, list.size())))
+                   .collect(Collectors.toList());
+    }
+
     private static Approval constructApproval(List<DatabaseEntry> entities) {
         var handle = getHandle(entities);
         var identifiers = getIdentifiers(entities);
@@ -156,17 +176,65 @@ public class DynamoDbApprovalRepository implements ApprovalRepository {
         return Key.builder().partitionValue(databaseIdentifier).sortValue(databaseIdentifier).build();
     }
 
+    private List<NamedIdentifier> fetchIdentifiers(Collection<NamedIdentifier> namedIdentifiers)
+        throws RepositoryException {
+        try {
+            var keys = namedIdentifiers.stream()
+                           .map(IdentifierDao::fromIdentifier)
+                           .map(IdentifierDao::getDatabaseIdentifier)
+                           .map(DynamoDbApprovalRepository::toPrimaryKey)
+                           .toList();
+
+            return splitToChunks(keys).stream()
+                       .flatMap(keyBatch -> fetchIdentifiersBatch(keyBatch).stream())
+                       .distinct()
+                       .toList();
+        } catch (Exception exception) {
+            LOGGER.error("Failed to find identifiers {}", exception.getMessage());
+            throw new RepositoryException("Could not find identifiers %s".formatted(exception.getMessage()));
+        }
+    }
+
+    private List<NamedIdentifier> fetchIdentifiersBatch(List<Key> keys) {
+        var readBatchBuilder = ReadBatch.builder(EnhancedDocument.class).mappedTableResource(table);
+
+        keys.forEach(readBatchBuilder::addGetItem);
+
+        var batchRequest = BatchGetItemEnhancedRequest.builder().addReadBatch(readBatchBuilder.build()).build();
+
+        var batchResults = client.batchGetItem(batchRequest);
+
+        return batchResults.resultsForTable(table)
+                   .stream()
+                   .map(EnhancedDocument::toJson)
+                   .map(this::toDatabaseEntity)
+                   .filter(IdentifierDao.class::isInstance)
+                   .map(IdentifierDao.class::cast)
+                   .map(IdentifierDao::toIdentifier)
+                   .toList();
+    }
+
     private void saveApproval(Approval approval) {
-        var documents = createDocuments(approval);
-        var requestbuilder = TransactWriteItemsEnhancedRequest.builder();
-        for (EnhancedDocument document : documents) {
+        var allDocuments = createDocuments(approval);
+        if (allDocuments.size() <= TRANSACT_WRITE_ITEM_LIMIT) {
+            saveDocumentsInTransaction(allDocuments);
+        } else {
+            splitToChunks(allDocuments).forEach(this::saveDocumentsInTransaction);
+        }
+    }
+
+    private void saveDocumentsInTransaction(List<EnhancedDocument> documents) {
+        var requestBuilder = TransactWriteItemsEnhancedRequest.builder();
+
+        documents.forEach(document -> {
             var putRequest = TransactPutItemEnhancedRequest.builder(EnhancedDocument.class)
                                  .item(document)
                                  .conditionExpression(newDaoCondition())
                                  .build();
-            requestbuilder.addPutItem(table, putRequest);
-        }
-        client.transactWriteItems(requestbuilder.build());
+            requestBuilder.addPutItem(table, putRequest);
+        });
+
+        client.transactWriteItems(requestBuilder.build());
     }
 
     private List<DatabaseEntry> fetchEntitiesByApprovalIdentifier(UUID identifier) {

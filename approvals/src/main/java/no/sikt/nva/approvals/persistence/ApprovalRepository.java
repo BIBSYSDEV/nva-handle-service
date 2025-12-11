@@ -1,5 +1,7 @@
 package no.sikt.nva.approvals.persistence;
 
+import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import no.sikt.nva.approvals.domain.Approval;
@@ -15,4 +17,6 @@ public interface ApprovalRepository {
     Optional<Approval> findByHandle(Handle handle) throws RepositoryException;
 
     Optional<Approval> findByIdentifier(NamedIdentifier namedIdentifier) throws RepositoryException;
+
+    List<NamedIdentifier> findIdentifiers(Collection<NamedIdentifier> namedIdentifiers) throws RepositoryException;
 }
