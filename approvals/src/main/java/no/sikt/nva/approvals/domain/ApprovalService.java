@@ -6,7 +6,7 @@ import java.util.UUID;
 
 public interface ApprovalService {
 
-    void create(Collection<NamedIdentifier> namedIdentifiers, URI source) throws ApprovalServiceException,
+    Approval create(Collection<NamedIdentifier> namedIdentifiers, URI source) throws ApprovalServiceException,
                                                                                  ApprovalConflictException;
 
     Approval getApprovalByIdentifier(UUID approvalId) throws ApprovalNotFoundException, ApprovalServiceException;

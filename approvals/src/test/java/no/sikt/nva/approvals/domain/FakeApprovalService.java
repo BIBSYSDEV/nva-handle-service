@@ -17,7 +17,7 @@ public class FakeApprovalService implements ApprovalService {
     }
 
     @Override
-    public void create(Collection<NamedIdentifier> namedIdentifiers, URI source)
+    public Approval create(Collection<NamedIdentifier> namedIdentifiers, URI source)
         throws ApprovalServiceException, ApprovalConflictException {
         if (exception instanceof ApprovalServiceException) {
             throw (ApprovalServiceException) exception;
@@ -25,6 +25,7 @@ public class FakeApprovalService implements ApprovalService {
         if (exception instanceof ApprovalConflictException) {
             throw (ApprovalConflictException) exception;
         }
+        return null;
     }
 
     @Override
