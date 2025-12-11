@@ -6,17 +6,20 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import com.fasterxml.jackson.core.JsonProcessingException;
+import java.net.URI;
 import no.unit.nva.commons.json.JsonUtils;
 import org.junit.jupiter.api.Test;
 
 class ApprovalResponseTest {
+
+    private static final URI BASE_URI = URI.create("https://api.unittest.nva.unit.no/approval");
 
     @Test
     void shouldConvertApprovalToResponse() {
         var handle = randomHandle();
         var approval = randomApproval(handle);
 
-        var response = ApprovalResponse.fromApproval(approval);
+        var response = ApprovalResponse.fromApproval(approval, BASE_URI);
 
         assertEquals(approval.identifier(), response.identifier());
         assertEquals(approval.namedIdentifiers(), response.identifiers());
@@ -25,10 +28,21 @@ class ApprovalResponseTest {
     }
 
     @Test
+    void shouldGenerateIdFromBaseUriAndIdentifier() {
+        var handle = randomHandle();
+        var approval = randomApproval(handle);
+
+        var response = ApprovalResponse.fromApproval(approval, BASE_URI);
+
+        var expectedId = URI.create(BASE_URI + "/" + approval.identifier().toString());
+        assertEquals(expectedId, response.id());
+    }
+
+    @Test
     void shouldSerializeHandleAsString() throws JsonProcessingException {
         var handle = randomHandle();
         var approval = randomApproval(handle);
-        var response = ApprovalResponse.fromApproval(approval);
+        var response = ApprovalResponse.fromApproval(approval, BASE_URI);
 
         var json = JsonUtils.dtoObjectMapper.writeValueAsString(response);
         var jsonNode = JsonUtils.dtoObjectMapper.readTree(json);
@@ -42,7 +56,7 @@ class ApprovalResponseTest {
     void shouldRoundTripThroughJson() throws JsonProcessingException {
         var handle = randomHandle();
         var approval = randomApproval(handle);
-        var response = ApprovalResponse.fromApproval(approval);
+        var response = ApprovalResponse.fromApproval(approval, BASE_URI);
 
         var json = JsonUtils.dtoObjectMapper.writeValueAsString(response);
         var deserialized = JsonUtils.dtoObjectMapper.readValue(json, ApprovalResponse.class);

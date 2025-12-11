@@ -15,6 +15,7 @@ import java.util.UUID;
 import no.sikt.nva.approvals.domain.ApprovalNotFoundException;
 import no.sikt.nva.approvals.domain.ApprovalServiceException;
 import no.sikt.nva.approvals.domain.FakeApprovalService;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import no.unit.nva.commons.json.JsonUtils;
 import no.unit.nva.stubs.FakeContext;
 import no.unit.nva.testutils.HandlerRequestBuilder;
@@ -30,6 +31,7 @@ class FetchApprovalHandlerTest {
     private static final String NAME_QUERY_PARAMETER = "name";
     private static final String VALUE_QUERY_PARAMETER = "value";
     private static final String VALID_HANDLE = "https://hdl.handle.net/11250.1/12345";
+    private static final String DOMAIN_NAME = "api.unittest.nva.unit.no";
     private FetchApprovalHandler handler;
     private ByteArrayOutputStream output;
 
@@ -204,6 +206,7 @@ class FetchApprovalHandlerTest {
         try {
             return new HandlerRequestBuilder<Void>(JsonUtils.dtoObjectMapper)
                 .withPathParameters(Map.of(APPROVAL_ID_PATH_PARAMETER, approvalId.toString()))
+                .withRequestContext(createRequestContext())
                 .build();
         } catch (JsonProcessingException e) {
             throw new RuntimeException(e);
@@ -214,6 +217,7 @@ class FetchApprovalHandlerTest {
         try {
             return new HandlerRequestBuilder<Void>(JsonUtils.dtoObjectMapper)
                 .withPathParameters(Map.of(APPROVAL_ID_PATH_PARAMETER, "not-a-uuid"))
+                .withRequestContext(createRequestContext())
                 .build();
         } catch (JsonProcessingException e) {
             throw new RuntimeException(e);
@@ -232,6 +236,7 @@ class FetchApprovalHandlerTest {
         try {
             return new HandlerRequestBuilder<Void>(JsonUtils.dtoObjectMapper)
                 .withQueryParameters(queryParameters)
+                .withRequestContext(createRequestContext())
                 .build();
         } catch (JsonProcessingException e) {
             throw new RuntimeException(e);
@@ -243,9 +248,17 @@ class FetchApprovalHandlerTest {
             return new HandlerRequestBuilder<Void>(JsonUtils.dtoObjectMapper)
                 .withPathParameters(Map.of(APPROVAL_ID_PATH_PARAMETER, approvalId.toString()))
                 .withQueryParameters(Map.of(HANDLE_QUERY_PARAMETER, handle))
+                .withRequestContext(createRequestContext())
                 .build();
         } catch (JsonProcessingException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    private ObjectNode createRequestContext() {
+        var requestContext = JsonUtils.dtoObjectMapper.createObjectNode();
+        requestContext.put("domainName", DOMAIN_NAME);
+        requestContext.put("path", "/approval");
+        return requestContext;
     }
 }

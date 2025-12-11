@@ -7,6 +7,7 @@ import static nva.commons.core.StringUtils.isNotBlank;
 import com.amazonaws.services.lambda.runtime.Context;
 import java.net.URI;
 import java.util.UUID;
+import no.sikt.nva.approvals.domain.Approval;
 import no.sikt.nva.approvals.domain.ApprovalNotFoundException;
 import no.sikt.nva.approvals.domain.ApprovalService;
 import no.sikt.nva.approvals.domain.ApprovalServiceException;
@@ -61,10 +62,10 @@ public class FetchApprovalHandler extends ApiGatewayHandler<Void, ApprovalRespon
     @Override
     protected ApprovalResponse processInput(Void input, RequestInfo requestInfo, Context context)
         throws ApiGatewayException {
-        if (hasPathParameter(requestInfo)) {
-            return fetchByApprovalId(requestInfo);
-        }
-        return fetchByQueryParameters(requestInfo);
+        var approval = hasPathParameter(requestInfo)
+            ? fetchByApprovalId(requestInfo)
+            : fetchByQueryParameters(requestInfo);
+        return ApprovalResponse.fromApproval(approval, requestInfo.getRequestUri());
     }
 
     @Override
@@ -87,12 +88,12 @@ public class FetchApprovalHandler extends ApiGatewayHandler<Void, ApprovalRespon
                || isNotBlank(queryParameters.get(VALUE_QUERY_PARAMETER));
     }
 
-    private ApprovalResponse fetchByApprovalId(RequestInfo requestInfo) throws ApiGatewayException {
+    private Approval fetchByApprovalId(RequestInfo requestInfo) throws ApiGatewayException {
         var approvalId = extractApprovalId(requestInfo);
         return fetchApprovalByIdentifier(approvalId);
     }
 
-    private ApprovalResponse fetchByQueryParameters(RequestInfo requestInfo) throws ApiGatewayException {
+    private Approval fetchByQueryParameters(RequestInfo requestInfo) throws ApiGatewayException {
         var handleParam = getQueryParameter(requestInfo, HANDLE_QUERY_PARAMETER);
         if (isNotBlank(handleParam)) {
             return fetchApprovalByHandle(handleParam);
@@ -119,9 +120,9 @@ public class FetchApprovalHandler extends ApiGatewayHandler<Void, ApprovalRespon
         }
     }
 
-    private ApprovalResponse fetchApprovalByIdentifier(UUID approvalId) throws NotFoundException, BadGatewayException {
+    private Approval fetchApprovalByIdentifier(UUID approvalId) throws NotFoundException, BadGatewayException {
         try {
-            return ApprovalResponse.fromApproval(approvalService.getApprovalByIdentifier(approvalId));
+            return approvalService.getApprovalByIdentifier(approvalId);
         } catch (ApprovalNotFoundException exception) {
             throw new NotFoundException(APPROVAL_NOT_FOUND_MESSAGE);
         } catch (ApprovalServiceException exception) {
@@ -129,10 +130,10 @@ public class FetchApprovalHandler extends ApiGatewayHandler<Void, ApprovalRespon
         }
     }
 
-    private ApprovalResponse fetchApprovalByHandle(String handleParam) throws ApiGatewayException {
+    private Approval fetchApprovalByHandle(String handleParam) throws ApiGatewayException {
         var handle = parseHandle(handleParam);
         try {
-            return ApprovalResponse.fromApproval(approvalService.getApprovalByHandle(handle));
+            return approvalService.getApprovalByHandle(handle);
         } catch (ApprovalNotFoundException exception) {
             throw new NotFoundException(APPROVAL_NOT_FOUND_MESSAGE);
         } catch (ApprovalServiceException exception) {
@@ -149,13 +150,13 @@ public class FetchApprovalHandler extends ApiGatewayHandler<Void, ApprovalRespon
         }
     }
 
-    private ApprovalResponse fetchApprovalByNamedIdentifier(String name, String value) throws ApiGatewayException {
+    private Approval fetchApprovalByNamedIdentifier(String name, String value) throws ApiGatewayException {
         if (StringUtils.isBlank(name) || StringUtils.isBlank(value)) {
             throw new BadRequestException(MISSING_NAME_OR_VALUE_MESSAGE);
         }
         try {
             var namedIdentifier = new NamedIdentifier(name, value);
-            return ApprovalResponse.fromApproval(approvalService.getApprovalByNamedIdentifier(namedIdentifier));
+            return approvalService.getApprovalByNamedIdentifier(namedIdentifier);
         } catch (ApprovalNotFoundException exception) {
             throw new NotFoundException(APPROVAL_NOT_FOUND_MESSAGE);
         } catch (ApprovalServiceException exception) {

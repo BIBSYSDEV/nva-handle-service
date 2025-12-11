@@ -12,14 +12,17 @@ import no.sikt.nva.approvals.domain.NamedIdentifier;
 @JsonTypeInfo(use = Id.NAME, property = "type")
 @JsonTypeName("Approval")
 public record ApprovalResponse(
+    URI id,
     UUID identifier,
     Collection<NamedIdentifier> identifiers,
     URI source,
     String handle
 ) {
 
-    public static ApprovalResponse fromApproval(Approval approval) {
+    public static ApprovalResponse fromApproval(Approval approval, URI baseUri) {
+        var id = URI.create(baseUri.toString() + "/" + approval.identifier().toString());
         return new ApprovalResponse(
+            id,
             approval.identifier(),
             approval.namedIdentifiers(),
             approval.source(),
