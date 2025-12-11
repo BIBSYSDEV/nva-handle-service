@@ -82,7 +82,12 @@ paths:
         - Approval
       operationId: getApprovalByQuery
       summary: Get Approval by handle or named identifier
-      description: Get approval by handle value or named identifier (name+value)
+      description: |
+        Get approval by handle or named identifier (name+value)
+
+        **Example queries:**
+        - By handle: `/approval?handle=https://hdl.handle.net/11250.1/12345`
+        - By identifier: `/approval?name=REK&value=2024/123`
       parameters:
         - name: handle
           in: query
@@ -260,7 +265,7 @@ components:
         type: Approval
         id: https://api.nva.unit.no/approval/6ff5f1b5-97c1-40f0-86ad-2cbd9006eee2
         identifier: 6ff5f1b5-97c1-40f0-86ad-2cbd9006eee2
-        namedIdentifiers:
+        identifiers:
           - type: Identifier
             name: REK
             value: "2024/123"

@@ -320,7 +320,10 @@ Resources:
         - !Ref DynamoDbTableAccessPolicy
       Environment:
         Variables:
+          HANDLE_PREFIX: !If [IsProd, !Ref HandlePrefixForApprovals, !Ref HandlePrefix]
           TABLE: !Ref ApprovalsTable
+          HANDLE_BASE_URI: !Ref HandleBaseUri
+          HANDLE_DATABASE_SECRET_NAME: !Ref HandleDatabaseSecretName
       Events:
         GetApproval:
           Type: Api
