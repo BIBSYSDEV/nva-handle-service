@@ -95,7 +95,7 @@ paths:
         - By handle: `/approval?handle=https%3A%2F%2Fhdl.handle.net%2F11250.1%2F12345`
         - By identifier: `/approval?name=REK&value=2024%2F123`
 
-        **Note:** You must provide either `handle` OR both `name` and `value`. Providing both search methods or incomplete identifier parameters will return 400 Bad Request.
+        **Note:** You must provide either `handle` OR both `name` and `value`. Providing both or incomplete identifier parameters will return 400 Bad Request.
       parameters:
         - name: handle
           in: query
