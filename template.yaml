@@ -34,6 +34,10 @@ Parameters:
     Type: String
     Description: Reference to Handle Prefix to use
     Default: 11250.1
+  HandlePrefixForApprovals:
+    Type: String
+    Description: Reference to Handle Prefix to use when creating approvals
+    Default: 20.500.14886
   HandleDatabaseSecretName:
     Type: String
     Default: HandleDatabase
@@ -49,6 +53,9 @@ Parameters:
     Type: String
     Description: comma separated list of external clients that are allowed to contact the HTTP APIs, "*" indicates that all origins are allowed
     Default: '*'
+
+Conditions:
+  IsProd: !Equals [!Ref ApiDomain, 'api.nva.unit.no']
 
 Globals:
   Function:
@@ -70,6 +77,54 @@ Globals:
       AllowOrigin: "'*'"
 
 Resources:
+  ApprovalsTable:
+    Type: AWS::DynamoDB::Table
+    UpdateReplacePolicy: Retain
+    DeletionPolicy: Delete
+    Properties:
+      TableName: !Sub nva-approvals-${AWS::StackName}
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: PK0
+          AttributeType: S
+        - AttributeName: SK0
+          AttributeType: S
+        - AttributeName: PK1
+          AttributeType: S
+        - AttributeName: SK1
+          AttributeType: S
+        - AttributeName: PK2
+          AttributeType: S
+        - AttributeName: SK2
+          AttributeType: S
+      KeySchema:
+        - AttributeName: PK0
+          KeyType: HASH
+        - AttributeName: SK0
+          KeyType: RANGE
+      GlobalSecondaryIndexes:
+        - IndexName: GSI1
+          KeySchema:
+            - AttributeName: PK1
+              KeyType: HASH
+            - AttributeName: SK1
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+        - IndexName: GSI2
+          KeySchema:
+            - AttributeName: PK2
+              KeyType: HASH
+            - AttributeName: SK2
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: true
+      Tags:
+        - Key: IncludedInBackup
+          Value: 'true'
+
   ReadHandleDatabaseSecretsManagedPolicy:
     Type: AWS::IAM::ManagedPolicy
     Properties:
@@ -81,6 +136,26 @@ Resources:
               - secretsmanager:GetSecretValue
             Resource:
               - !Sub "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:HandleDatabase-*"
+
+  DynamoDbTableAccessPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Action:
+              - dynamodb:GetItem
+              - dynamodb:PutItem
+              - dynamodb:UpdateItem
+              - dynamodb:DeleteItem
+              - dynamodb:Query
+              - dynamodb:Scan
+              - dynamodb:BatchGetItem
+              - dynamodb:BatchWriteItem
+            Resource:
+              - !GetAtt ApprovalsTable.Arn
+              - !Sub '${ApprovalsTable.Arn}/index/*'
   ApiAccessLogGroup:
     Type: AWS::Logs::LogGroup
     Properties:
@@ -144,7 +219,7 @@ Resources:
       Policies:
         - AWSLambdaBasicExecutionRole
         - AWSLambdaVPCAccessExecutionRole
-        - !GetAtt ReadHandleDatabaseSecretsManagedPolicy.PolicyArn
+        - !Ref ReadHandleDatabaseSecretsManagedPolicy
       Environment:
         Variables:
           HANDLE_PREFIX: !Ref HandlePrefix
@@ -177,7 +252,7 @@ Resources:
       Policies:
         - AWSLambdaBasicExecutionRole
         - AWSLambdaVPCAccessExecutionRole
-        - !GetAtt ReadHandleDatabaseSecretsManagedPolicy.PolicyArn
+        - !Ref ReadHandleDatabaseSecretsManagedPolicy
       Environment:
         Variables:
           HANDLE_PREFIX: !Ref HandlePrefix
@@ -207,6 +282,21 @@ Resources:
     Properties:
       CodeUri: approvals
       Handler: no.sikt.nva.approvals.rest.CreateApprovalHandler::handleRequest
+      Policies:
+        - AWSLambdaVPCAccessExecutionRole
+        - !Ref ReadHandleDatabaseSecretsManagedPolicy
+        - !Ref DynamoDbTableAccessPolicy
+      Environment:
+        Variables:
+          HANDLE_PREFIX: !If [IsProd, !Ref HandlePrefixForApprovals, !Ref HandlePrefix]
+          HANDLE_BASE_URI: !Ref HandleBaseUri
+          HANDLE_DATABASE_SECRET_NAME: !Ref HandleDatabaseSecretName
+          TABLE: !Ref ApprovalsTable
+      VpcConfig:
+        SecurityGroupIds:
+          - !Ref EIPSecurityGroupId
+        SubnetIds:
+          - !Ref EIPPrivateSubnet
       Events:
         CreateApproval:
           Type: Api
@@ -226,6 +316,14 @@ Resources:
     Properties:
       CodeUri: approvals
       Handler: no.sikt.nva.approvals.rest.FetchApprovalHandler::handleRequest
+      Policies:
+        - !Ref DynamoDbTableAccessPolicy
+      Environment:
+        Variables:
+          HANDLE_PREFIX: !If [IsProd, !Ref HandlePrefixForApprovals, !Ref HandlePrefix]
+          TABLE: !Ref ApprovalsTable
+          HANDLE_BASE_URI: !Ref HandleBaseUri
+          HANDLE_DATABASE_SECRET_NAME: !Ref HandleDatabaseSecretName
       Events:
         GetApproval:
           Type: Api

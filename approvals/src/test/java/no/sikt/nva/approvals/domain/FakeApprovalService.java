@@ -1,20 +1,26 @@
 package no.sikt.nva.approvals.domain;
 
 import static no.sikt.nva.approvals.utils.TestUtils.randomApproval;
+import static no.sikt.nva.approvals.utils.TestUtils.randomHandle;
 import java.net.URI;
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.List;
 import java.util.UUID;
 
 public class FakeApprovalService implements ApprovalService {
 
     private final Exception exception;
+    private final List<Approval> approvals;
 
     public FakeApprovalService() {
         this.exception = null;
+        this.approvals = new ArrayList<>();
     }
 
     public FakeApprovalService(Exception exception) {
         this.exception = exception;
+        this.approvals = new ArrayList<>();
     }
 
     @Override
@@ -26,7 +32,9 @@ public class FakeApprovalService implements ApprovalService {
         if (exception instanceof ApprovalConflictException) {
             throw (ApprovalConflictException) exception;
         }
-        return randomApproval(namedIdentifiers, UUID.randomUUID());
+        var approval = randomApproval(randomHandle());
+        approvals.add(approval);
+        return approval;
     }
 
     @Override
@@ -57,5 +65,9 @@ public class FakeApprovalService implements ApprovalService {
         if (exception instanceof ApprovalServiceException) {
             throw (ApprovalServiceException) exception;
         }
+    }
+
+    public Approval getPersistedApproval() {
+        return approvals.getFirst();
     }
 }
