@@ -1,7 +1,16 @@
 openapi: 3.0.1
 info:
   title: NVA Approval API
+  description: API for managing approval records with persistent handle identifiers
   version: 1.0.0
+  contact:
+    email: kontakt@sikt.no
+    url: https://nva.sikt.no
+servers:
+  - url: https://api.nva.unit.no/approval
+tags:
+  - name: Approval
+    description: Operations for managing approvals
 x-amazon-apigateway-request-validator: validate_body
 x-amazon-apigateway-request-validators:
   validate_body:

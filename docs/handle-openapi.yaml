@@ -1,12 +1,23 @@
 openapi: 3.0.1
 info:
   title: NVA Handle API
+  description: API for creating and updating persistent handle identifiers
   version: '1.0'
   license:
     name: MIT
+  contact:
+    email: kontakt@sikt.no
+    url: https://nva.sikt.no
+servers:
+  - url: https://api.nva.unit.no/handle
+tags:
+  - name: Handle
+    description: Operations for managing handles
 paths:
   /:
     post:
+      tags:
+        - Handle
       description: Create handle for a URI
       summary: Create handle for a URI. Include prefix and suffix in the body for imported handle or use only uri field for default handle.
       operationId: createHandle
@@ -45,6 +56,8 @@ paths:
                 $ref: '#/components/schemas/Problem'
   /{prefix}/{suffix}:
     put:
+      tags:
+        - Handle
       description: Update uri for a handle
       summary: Update uri for a handle
       operationId: updateHandle
