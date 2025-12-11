@@ -23,8 +23,8 @@ public record ApprovalResponse(
 
     private static final String APPROVAL_PATH = "approval";
 
-    public static ApprovalResponse fromApproval(Approval approval, URI requestUri) {
-        var id = buildId(requestUri, approval.identifier());
+    public static ApprovalResponse fromApproval(Approval approval, String apiHost) {
+        var id = buildId(apiHost, approval.identifier());
         return new ApprovalResponse(
             id,
             approval.identifier(),
@@ -38,8 +38,8 @@ public record ApprovalResponse(
         return nonNull(approval.handle()) ? approval.handle().value().toString() : null;
     }
 
-    private static URI buildId(URI requestUri, UUID identifier) {
-        return UriWrapper.fromHost(requestUri.getHost())
+    private static URI buildId(String apiHost, UUID identifier) {
+        return UriWrapper.fromHost(apiHost)
             .addChild(APPROVAL_PATH)
             .addChild(identifier.toString())
             .getUri();

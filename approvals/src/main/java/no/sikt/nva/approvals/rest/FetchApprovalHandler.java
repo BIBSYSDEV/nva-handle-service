@@ -39,17 +39,20 @@ public class FetchApprovalHandler extends ApiGatewayHandler<Void, ApprovalRespon
     private static final String BAD_GATEWAY_MESSAGE = "Something went wrong!";
     private static final String CONFLICTING_PARAMETERS_MESSAGE =
         "Cannot use both path parameter and query parameters. Use either approvalId path or query parameters";
+    private static final String API_HOST_ENV = "API_HOST";
 
     private final ApprovalService approvalService;
+    private final String apiHost;
 
     @JacocoGenerated
     public FetchApprovalHandler() {
-        this(ApprovalServiceImpl.defaultInstance(new Environment()));
+        this(ApprovalServiceImpl.defaultInstance(new Environment()), new Environment());
     }
 
-    public FetchApprovalHandler(ApprovalService approvalService) {
-        super(Void.class, new Environment());
+    public FetchApprovalHandler(ApprovalService approvalService, Environment environment) {
+        super(Void.class, environment);
         this.approvalService = approvalService;
+        this.apiHost = environment.readEnv(API_HOST_ENV);
     }
 
     @Override
@@ -65,7 +68,7 @@ public class FetchApprovalHandler extends ApiGatewayHandler<Void, ApprovalRespon
         var approval = hasPathParameter(requestInfo)
             ? fetchByApprovalId(requestInfo)
             : fetchByQueryParameters(requestInfo);
-        return ApprovalResponse.fromApproval(approval, requestInfo.getRequestUri());
+        return ApprovalResponse.fromApproval(approval, apiHost);
     }
 
     @Override

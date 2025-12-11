@@ -12,14 +12,14 @@ import org.junit.jupiter.api.Test;
 
 class ApprovalResponseTest {
 
-    private static final URI BASE_URI = URI.create("https://api.unittest.nva.unit.no/approval");
+    private static final String API_HOST = "api.unittest.nva.unit.no";
 
     @Test
     void shouldConvertApprovalToResponse() {
         var handle = randomHandle();
         var approval = randomApproval(handle);
 
-        var response = ApprovalResponse.fromApproval(approval, BASE_URI);
+        var response = ApprovalResponse.fromApproval(approval, API_HOST);
 
         assertEquals(approval.identifier(), response.identifier());
         assertEquals(approval.namedIdentifiers(), response.identifiers());
@@ -28,13 +28,13 @@ class ApprovalResponseTest {
     }
 
     @Test
-    void shouldGenerateIdFromRequestUriHostAndIdentifier() {
+    void shouldGenerateIdFromApiHostAndIdentifier() {
         var handle = randomHandle();
         var approval = randomApproval(handle);
 
-        var response = ApprovalResponse.fromApproval(approval, BASE_URI);
+        var response = ApprovalResponse.fromApproval(approval, API_HOST);
 
-        var expectedId = URI.create("https://" + BASE_URI.getHost() + "/approval/" + approval.identifier());
+        var expectedId = URI.create("https://" + API_HOST + "/approval/" + approval.identifier());
         assertEquals(expectedId, response.id());
     }
 
@@ -42,7 +42,7 @@ class ApprovalResponseTest {
     void shouldSerializeHandleAsString() throws JsonProcessingException {
         var handle = randomHandle();
         var approval = randomApproval(handle);
-        var response = ApprovalResponse.fromApproval(approval, BASE_URI);
+        var response = ApprovalResponse.fromApproval(approval, API_HOST);
 
         var json = JsonUtils.dtoObjectMapper.writeValueAsString(response);
         var jsonNode = JsonUtils.dtoObjectMapper.readTree(json);
@@ -56,7 +56,7 @@ class ApprovalResponseTest {
     void shouldRoundTripThroughJson() throws JsonProcessingException {
         var handle = randomHandle();
         var approval = randomApproval(handle);
-        var response = ApprovalResponse.fromApproval(approval, BASE_URI);
+        var response = ApprovalResponse.fromApproval(approval, API_HOST);
 
         var json = JsonUtils.dtoObjectMapper.writeValueAsString(response);
         var deserialized = JsonUtils.dtoObjectMapper.readValue(json, ApprovalResponse.class);
