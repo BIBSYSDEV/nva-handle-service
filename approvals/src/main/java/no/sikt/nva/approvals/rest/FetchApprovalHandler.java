@@ -79,12 +79,11 @@ public class FetchApprovalHandler extends ApiGatewayHandler<Void, Approval> {
 
     private Approval fetchByQueryParameters(RequestInfo requestInfo) throws ApiGatewayException {
         var handleParam = getQueryParameter(requestInfo, HANDLE_QUERY_PARAMETER);
-        var nameParam = getQueryParameter(requestInfo, NAME_QUERY_PARAMETER);
-        var valueParam = getQueryParameter(requestInfo, VALUE_QUERY_PARAMETER);
-
         if (StringUtils.isNotBlank(handleParam)) {
             return fetchApprovalByHandle(handleParam);
         }
+        var nameParam = getQueryParameter(requestInfo, NAME_QUERY_PARAMETER);
+        var valueParam = getQueryParameter(requestInfo, VALUE_QUERY_PARAMETER);
         if (StringUtils.isNotBlank(nameParam) || StringUtils.isNotBlank(valueParam)) {
             return fetchApprovalByNamedIdentifier(nameParam, valueParam);
         }
@@ -116,15 +115,22 @@ public class FetchApprovalHandler extends ApiGatewayHandler<Void, Approval> {
     }
 
     private Approval fetchApprovalByHandle(String handleParam) throws ApiGatewayException {
+        var handle = parseHandle(handleParam);
         try {
-            var handle = new Handle(URI.create(handleParam));
             return approvalService.getApprovalByHandle(handle);
-        } catch (IllegalArgumentException | NullPointerException exception) {
-            throw new BadRequestException(INVALID_HANDLE_MESSAGE);
         } catch (ApprovalNotFoundException exception) {
             throw new NotFoundException(APPROVAL_NOT_FOUND_MESSAGE);
         } catch (ApprovalServiceException exception) {
             throw new BadGatewayException(BAD_GATEWAY_MESSAGE);
+        }
+    }
+
+    private Handle parseHandle(String handleParam) throws BadRequestException {
+        try {
+            var uri = URI.create(handleParam);
+            return new Handle(uri);
+        } catch (IllegalArgumentException exception) {
+            throw new BadRequestException(INVALID_HANDLE_MESSAGE);
         }
     }
 

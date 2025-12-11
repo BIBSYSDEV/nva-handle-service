@@ -26,17 +26,17 @@ class HandleTest {
 
     @Test
     void shouldThrowIllegalArgumentExceptionWhenCreatingHandleFromUriWithoutPrefix() {
-        assertThrows(IllegalArgumentException.class, () -> new Handle(URI.create("https://www.handle.net/")));
+        assertThrows(IllegalArgumentException.class, () -> new Handle(URI.create("https://hdl.handle.net/")));
     }
 
     @Test
     void shouldThrowIllegalArgumentExceptionWhenCreatingHandleFromUriWithoutSuffix() {
-        assertThrows(IllegalArgumentException.class, () -> new Handle(URI.create("https://www.handle.net/prefix")));
+        assertThrows(IllegalArgumentException.class, () -> new Handle(URI.create("https://hdl.handle.net/prefix")));
     }
 
     @Test
     void shouldCreateHandleFromUriWhichMeetsHandleUriRequirements() {
-        var uri = URI.create("https://www.handle.net/prefix/suffix");
+        var uri = URI.create("https://hdl.handle.net/prefix/suffix");
         var handle = new Handle(uri);
 
         assertEquals(uri, handle.value());
