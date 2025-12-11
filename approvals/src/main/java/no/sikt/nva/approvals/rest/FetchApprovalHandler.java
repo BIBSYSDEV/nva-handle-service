@@ -3,6 +3,7 @@ package no.sikt.nva.approvals.rest;
 import static java.net.HttpURLConnection.HTTP_OK;
 import static java.util.Objects.isNull;
 import static java.util.Objects.nonNull;
+import static nva.commons.core.StringUtils.isNotBlank;
 import com.amazonaws.services.lambda.runtime.Context;
 import java.net.URI;
 import java.util.UUID;
@@ -74,7 +75,7 @@ public class FetchApprovalHandler extends ApiGatewayHandler<Void, Approval> {
 
     private boolean hasPathParameter(RequestInfo requestInfo) {
         var approvalId = requestInfo.getPathParameters().get(APPROVAL_ID_PATH_PARAMETER);
-        return StringUtils.isNotBlank(approvalId);
+        return isNotBlank(approvalId);
     }
 
     private boolean hasQueryParameters(RequestInfo requestInfo) {
@@ -82,9 +83,9 @@ public class FetchApprovalHandler extends ApiGatewayHandler<Void, Approval> {
         if (isNull(queryParameters)) {
             return false;
         }
-        return StringUtils.isNotBlank(queryParameters.get(HANDLE_QUERY_PARAMETER))
-               || StringUtils.isNotBlank(queryParameters.get(NAME_QUERY_PARAMETER))
-               || StringUtils.isNotBlank(queryParameters.get(VALUE_QUERY_PARAMETER));
+        return isNotBlank(queryParameters.get(HANDLE_QUERY_PARAMETER))
+               || isNotBlank(queryParameters.get(NAME_QUERY_PARAMETER))
+               || isNotBlank(queryParameters.get(VALUE_QUERY_PARAMETER));
     }
 
     private Approval fetchByApprovalId(RequestInfo requestInfo) throws ApiGatewayException {
@@ -94,12 +95,12 @@ public class FetchApprovalHandler extends ApiGatewayHandler<Void, Approval> {
 
     private Approval fetchByQueryParameters(RequestInfo requestInfo) throws ApiGatewayException {
         var handleParam = getQueryParameter(requestInfo, HANDLE_QUERY_PARAMETER);
-        if (StringUtils.isNotBlank(handleParam)) {
+        if (isNotBlank(handleParam)) {
             return fetchApprovalByHandle(handleParam);
         }
         var nameParam = getQueryParameter(requestInfo, NAME_QUERY_PARAMETER);
         var valueParam = getQueryParameter(requestInfo, VALUE_QUERY_PARAMETER);
-        if (StringUtils.isNotBlank(nameParam) || StringUtils.isNotBlank(valueParam)) {
+        if (isNotBlank(nameParam) || isNotBlank(valueParam)) {
             return fetchApprovalByNamedIdentifier(nameParam, valueParam);
         }
         throw new BadRequestException(MISSING_QUERY_PARAMETERS_MESSAGE);
