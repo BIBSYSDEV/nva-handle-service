@@ -12,6 +12,7 @@ import static no.sikt.nva.approvals.persistence.DynamoDbLocal.dynamoDBLocal;
 import static no.sikt.nva.approvals.utils.TestUtils.randomApproval;
 import static no.sikt.nva.approvals.utils.TestUtils.randomHandle;
 import static no.sikt.nva.approvals.utils.TestUtils.randomIdentifier;
+import static no.sikt.nva.approvals.utils.TestUtils.randomIdentifiers;
 import static no.unit.nva.testutils.RandomDataGenerator.randomString;
 import static no.unit.nva.testutils.RandomDataGenerator.randomUri;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -124,6 +125,26 @@ class DynamoDbApprovalRepositoryTest {
         var persistedApproval = approvalRepository.findByIdentifier(identifier);
 
         assertEquals(approval, persistedApproval.orElseThrow());
+    }
+
+    @Test
+    void shouldFindIdentifiers() throws RepositoryException {
+        var identifiers = randomIdentifiers();
+        var approval = randomApproval(identifiers, randomUUID());
+        approvalRepository.save(approval);
+        var persistedIdentifiers = approvalRepository.findIdentifiers(identifiers);
+
+        assertEquals(identifiers, persistedIdentifiers);
+    }
+
+    @Test
+    void shouldSaveAndFindIdentifiersWhenMoreThan100Provided() throws RepositoryException {
+        var identifiers = randomIdentifiers(110);
+        var approval = randomApproval(identifiers, randomUUID());
+        approvalRepository.save(approval);
+        var persistedIdentifiers = approvalRepository.findIdentifiers(identifiers);
+
+        assertEquals(identifiers.size(), persistedIdentifiers.size());
     }
 
     private void insertIdentifierOnly(UUID approvalId, String identifierValue) {
