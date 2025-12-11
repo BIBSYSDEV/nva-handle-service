@@ -7,7 +7,7 @@ import nva.commons.core.StringUtils;
 
 public record Handle(URI value) {
 
-    private static final String HANDLE_HOST = "handle.net";
+    private static final String HANDLE_HOST = "hdl.handle.net";
     private static final String INVALID_HANDLE_EXCEPTION = "Provided uri is not a handle!";
 
     public Handle {
@@ -18,7 +18,7 @@ public record Handle(URI value) {
         if (isNull(uri) || StringUtils.isBlank(uri.toString())) {
             throw new IllegalArgumentException(INVALID_HANDLE_EXCEPTION);
         }
-        if (!uri.getHost().contains(HANDLE_HOST)) {
+        if (isNull(uri.getHost()) || !HANDLE_HOST.equals(uri.getHost())) {
             throw new IllegalArgumentException(INVALID_HANDLE_EXCEPTION);
         }
         if (!hasPrefixAndSuffix(uri)) {

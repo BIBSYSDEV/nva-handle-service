@@ -97,7 +97,40 @@ public class ApprovalServiceImpl implements ApprovalService {
     }
 
     @Override
-    public Approval getApprovalByIdentifier(UUID approvalId) throws ApprovalServiceException {
-        throw new ApprovalServiceException("Service not implemented");
+    public Approval getApprovalByIdentifier(UUID approvalId)
+        throws ApprovalNotFoundException, ApprovalServiceException {
+        try {
+            return approvalRepository.findByApprovalIdentifier(approvalId)
+                       .orElseThrow(() -> new ApprovalNotFoundException(
+                           "Approval not found for identifier %s".formatted(approvalId)));
+        } catch (RepositoryException e) {
+            throw new ApprovalServiceException("Could not fetch approval by identifier %s".formatted(approvalId));
+        }
+    }
+
+    @Override
+    public Approval getApprovalByHandle(Handle handle) throws ApprovalNotFoundException, ApprovalServiceException {
+        try {
+            return approvalRepository.findByHandle(handle)
+                       .orElseThrow(() -> new ApprovalNotFoundException(
+                           "Approval not found for handle %s".formatted(handle.value())));
+        } catch (RepositoryException e) {
+            throw new ApprovalServiceException("Could not fetch approval by handle %s".formatted(handle.value()));
+        }
+    }
+
+    @Override
+    public Approval getApprovalByNamedIdentifier(NamedIdentifier namedIdentifier)
+        throws ApprovalNotFoundException, ApprovalServiceException {
+        try {
+            return approvalRepository.findByIdentifier(namedIdentifier)
+                       .orElseThrow(() -> new ApprovalNotFoundException(
+                           "Approval not found for identifier %s:%s".formatted(namedIdentifier.name(),
+                                                                               namedIdentifier.value())));
+        } catch (RepositoryException e) {
+            throw new ApprovalServiceException(
+                "Could not fetch approval by identifier %s:%s".formatted(namedIdentifier.name(),
+                                                                         namedIdentifier.value()));
+        }
     }
 }

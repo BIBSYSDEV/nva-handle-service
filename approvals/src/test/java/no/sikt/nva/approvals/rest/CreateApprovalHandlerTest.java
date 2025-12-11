@@ -14,7 +14,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
 import java.util.List;
-import no.sikt.nva.approvals.domain.Approval;
 import no.sikt.nva.approvals.domain.ApprovalConflictException;
 import no.sikt.nva.approvals.domain.ApprovalServiceException;
 import no.sikt.nva.approvals.domain.FakeApprovalService;

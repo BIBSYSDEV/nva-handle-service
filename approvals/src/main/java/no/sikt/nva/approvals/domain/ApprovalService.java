@@ -10,4 +10,9 @@ public interface ApprovalService {
                                                                                  ApprovalConflictException;
 
     Approval getApprovalByIdentifier(UUID approvalId) throws ApprovalNotFoundException, ApprovalServiceException;
+
+    Approval getApprovalByHandle(Handle handle) throws ApprovalNotFoundException, ApprovalServiceException;
+
+    Approval getApprovalByNamedIdentifier(NamedIdentifier namedIdentifier)
+        throws ApprovalNotFoundException, ApprovalServiceException;
 }

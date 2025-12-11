@@ -49,6 +49,6 @@ public class TestUtils {
 
     public static Handle randomHandle() {
         return new Handle(
-            UriWrapper.fromUri("https://www.handle.net").addChild(randomString()).addChild(randomString()).getUri());
+            UriWrapper.fromUri("https://hdl.handle.net").addChild(randomString()).addChild(randomString()).getUri());
     }
 }

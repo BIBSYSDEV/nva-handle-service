@@ -27,6 +27,10 @@ class FetchApprovalHandlerTest {
 
     private static final Context CONTEXT = new FakeContext();
     private static final String APPROVAL_ID_PATH_PARAMETER = "approvalId";
+    private static final String HANDLE_QUERY_PARAMETER = "handle";
+    private static final String NAME_QUERY_PARAMETER = "name";
+    private static final String VALUE_QUERY_PARAMETER = "value";
+    private static final String VALID_HANDLE = "https://hdl.handle.net/11250.1/12345";
     private FetchApprovalHandler handler;
     private ByteArrayOutputStream output;
 
@@ -39,7 +43,7 @@ class FetchApprovalHandlerTest {
     void shouldReturnOkResponseWithApprovalOnSuccess() {
         var approvalId = UUID.randomUUID();
         handler = new FetchApprovalHandler(new FakeApprovalService());
-        var request = createRequest(approvalId);
+        var request = createRequestWithPathParameter(approvalId);
 
         var response = handleRequest(request);
 
@@ -50,7 +54,7 @@ class FetchApprovalHandlerTest {
     void shouldReturnNotFoundWhenApprovalDoesNotExist() {
         var approvalId = UUID.randomUUID();
         handler = new FetchApprovalHandler(new FakeApprovalService(new ApprovalNotFoundException("not found")));
-        var request = createRequest(approvalId);
+        var request = createRequestWithPathParameter(approvalId);
 
         var response = handleRequest(request);
 
@@ -71,11 +75,121 @@ class FetchApprovalHandlerTest {
     void shouldReturnBadGatewayWhenServiceThrowsException() {
         var approvalId = UUID.randomUUID();
         handler = new FetchApprovalHandler(new FakeApprovalService(new ApprovalServiceException("error")));
-        var request = createRequest(approvalId);
+        var request = createRequestWithPathParameter(approvalId);
 
         var response = handleRequest(request);
 
         assertEquals(HTTP_BAD_GATEWAY, response.getStatusCode());
+    }
+
+    @Test
+    void shouldReturnOkWhenLookingUpByHandle() {
+        handler = new FetchApprovalHandler(new FakeApprovalService());
+        var request = createRequestWithHandleQuery(VALID_HANDLE);
+
+        var response = handleRequest(request);
+
+        assertEquals(HTTP_OK, response.getStatusCode());
+    }
+
+    @Test
+    void shouldReturnNotFoundWhenHandleLookupFindsNothing() {
+        handler = new FetchApprovalHandler(new FakeApprovalService(new ApprovalNotFoundException("not found")));
+        var request = createRequestWithHandleQuery(VALID_HANDLE);
+
+        var response = handleRequest(request);
+
+        assertEquals(HTTP_NOT_FOUND, response.getStatusCode());
+    }
+
+    @Test
+    void shouldReturnBadRequestWhenHandleIsInvalid() {
+        handler = new FetchApprovalHandler(new FakeApprovalService());
+        var request = createRequestWithHandleQuery("not-a-valid-handle");
+
+        var response = handleRequest(request);
+
+        assertEquals(HTTP_BAD_REQUEST, response.getStatusCode());
+    }
+
+    @Test
+    void shouldReturnOkWhenLookingUpByNamedIdentifier() {
+        handler = new FetchApprovalHandler(new FakeApprovalService());
+        var request = createRequestWithNamedIdentifierQuery("doi", "10.1234/5678");
+
+        var response = handleRequest(request);
+
+        assertEquals(HTTP_OK, response.getStatusCode());
+    }
+
+    @Test
+    void shouldReturnNotFoundWhenNamedIdentifierLookupFindsNothing() {
+        handler = new FetchApprovalHandler(new FakeApprovalService(new ApprovalNotFoundException("not found")));
+        var request = createRequestWithNamedIdentifierQuery("doi", "10.1234/5678");
+
+        var response = handleRequest(request);
+
+        assertEquals(HTTP_NOT_FOUND, response.getStatusCode());
+    }
+
+    @Test
+    void shouldReturnBadRequestWhenOnlyNameIsProvided() {
+        handler = new FetchApprovalHandler(new FakeApprovalService());
+        var request = createRequestWithQueryParameters(Map.of(NAME_QUERY_PARAMETER, "doi"));
+
+        var response = handleRequest(request);
+
+        assertEquals(HTTP_BAD_REQUEST, response.getStatusCode());
+    }
+
+    @Test
+    void shouldReturnBadRequestWhenOnlyValueIsProvided() {
+        handler = new FetchApprovalHandler(new FakeApprovalService());
+        var request = createRequestWithQueryParameters(Map.of(VALUE_QUERY_PARAMETER, "10.1234/5678"));
+
+        var response = handleRequest(request);
+
+        assertEquals(HTTP_BAD_REQUEST, response.getStatusCode());
+    }
+
+    @Test
+    void shouldReturnBadRequestWhenNoQueryParametersProvided() {
+        handler = new FetchApprovalHandler(new FakeApprovalService());
+        var request = createRequestWithQueryParameters(Map.of());
+
+        var response = handleRequest(request);
+
+        assertEquals(HTTP_BAD_REQUEST, response.getStatusCode());
+    }
+
+    @Test
+    void shouldReturnBadGatewayWhenServiceThrowsExceptionOnHandleLookup() {
+        handler = new FetchApprovalHandler(new FakeApprovalService(new ApprovalServiceException("error")));
+        var request = createRequestWithHandleQuery(VALID_HANDLE);
+
+        var response = handleRequest(request);
+
+        assertEquals(HTTP_BAD_GATEWAY, response.getStatusCode());
+    }
+
+    @Test
+    void shouldReturnBadGatewayWhenServiceThrowsExceptionOnNamedIdentifierLookup() {
+        handler = new FetchApprovalHandler(new FakeApprovalService(new ApprovalServiceException("error")));
+        var request = createRequestWithNamedIdentifierQuery("doi", "10.1234/5678");
+
+        var response = handleRequest(request);
+
+        assertEquals(HTTP_BAD_GATEWAY, response.getStatusCode());
+    }
+
+    @Test
+    void shouldReturnBadRequestWhenBothPathParameterAndQueryParametersProvided() {
+        handler = new FetchApprovalHandler(new FakeApprovalService());
+        var request = createRequestWithPathAndQueryParameters(UUID.randomUUID(), VALID_HANDLE);
+
+        var response = handleRequest(request);
+
+        assertEquals(HTTP_BAD_REQUEST, response.getStatusCode());
     }
 
     private GatewayResponse<Approval> handleRequest(InputStream request) {
@@ -87,7 +201,7 @@ class FetchApprovalHandlerTest {
         }
     }
 
-    private InputStream createRequest(UUID approvalId) {
+    private InputStream createRequestWithPathParameter(UUID approvalId) {
         try {
             return new HandlerRequestBuilder<Void>(JsonUtils.dtoObjectMapper)
                 .withPathParameters(Map.of(APPROVAL_ID_PATH_PARAMETER, approvalId.toString()))
@@ -101,6 +215,35 @@ class FetchApprovalHandlerTest {
         try {
             return new HandlerRequestBuilder<Void>(JsonUtils.dtoObjectMapper)
                 .withPathParameters(Map.of(APPROVAL_ID_PATH_PARAMETER, "not-a-uuid"))
+                .build();
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    private InputStream createRequestWithHandleQuery(String handle) {
+        return createRequestWithQueryParameters(Map.of(HANDLE_QUERY_PARAMETER, handle));
+    }
+
+    private InputStream createRequestWithNamedIdentifierQuery(String name, String value) {
+        return createRequestWithQueryParameters(Map.of(NAME_QUERY_PARAMETER, name, VALUE_QUERY_PARAMETER, value));
+    }
+
+    private InputStream createRequestWithQueryParameters(Map<String, String> queryParameters) {
+        try {
+            return new HandlerRequestBuilder<Void>(JsonUtils.dtoObjectMapper)
+                .withQueryParameters(queryParameters)
+                .build();
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    private InputStream createRequestWithPathAndQueryParameters(UUID approvalId, String handle) {
+        try {
+            return new HandlerRequestBuilder<Void>(JsonUtils.dtoObjectMapper)
+                .withPathParameters(Map.of(APPROVAL_ID_PATH_PARAMETER, approvalId.toString()))
+                .withQueryParameters(Map.of(HANDLE_QUERY_PARAMETER, handle))
                 .build();
         } catch (JsonProcessingException e) {
             throw new RuntimeException(e);
