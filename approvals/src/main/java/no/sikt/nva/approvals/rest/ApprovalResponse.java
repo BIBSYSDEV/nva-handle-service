@@ -1,5 +1,6 @@
 package no.sikt.nva.approvals.rest;
 
+import static java.util.Objects.nonNull;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.annotation.JsonTypeInfo.Id;
 import com.fasterxml.jackson.annotation.JsonTypeName;
@@ -29,8 +30,12 @@ public record ApprovalResponse(
             approval.identifier(),
             approval.namedIdentifiers(),
             approval.source(),
-            approval.handle().value().toString()
+            extractHandle(approval)
         );
+    }
+
+    private static String extractHandle(Approval approval) {
+        return nonNull(approval.handle()) ? approval.handle().value().toString() : null;
     }
 
     private static URI buildId(URI requestUri, UUID identifier) {
