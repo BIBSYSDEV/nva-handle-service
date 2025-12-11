@@ -248,7 +248,7 @@ components:
           type: string
           format: uuid
           description: Unique identifier for this approval
-        namedIdentifiers:
+        identifiers:
           type: array
           description: List of identifiers associated with this approval. Each identifier needs to be unique across all approvals.
           items:
