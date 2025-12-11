@@ -243,7 +243,7 @@ components:
           type: string
           format: uuid
           description: Unique identifier for this approval
-        namedIdentifiers:
+        identifiers:
           type: array
           description: List of identifiers associated with this approval. Each identifier needs to be unique across all approvals.
           items:
@@ -260,7 +260,7 @@ components:
         type: Approval
         id: https://api.nva.unit.no/approval/6ff5f1b5-97c1-40f0-86ad-2cbd9006eee2
         identifier: 6ff5f1b5-97c1-40f0-86ad-2cbd9006eee2
-        namedIdentifiers:
+        identifiers:
           - type: Identifier
             name: REK
             value: "2024/123"
