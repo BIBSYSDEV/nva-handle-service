@@ -231,6 +231,14 @@ components:
       type: object
       description: An approval for associating a persistent handle identifier with a source URI
       properties:
+        type:
+          type: string
+          default: Approval
+          description: The type discriminator for this object
+        id:
+          type: string
+          format: uri
+          description: The full URI of this approval resource
         identifier:
           type: string
           format: uuid
@@ -245,7 +253,19 @@ components:
           format: uri
           description: The source URI that the handle originates from
         handle:
-          $ref: '#/components/schemas/Handle'
+          type: string
+          format: uri
+          description: The full handle URI (e.g., https://hdl.handle.net/11250.1/12345)
+      example:
+        type: Approval
+        id: https://api.nva.unit.no/approval/6ff5f1b5-97c1-40f0-86ad-2cbd9006eee2
+        identifier: 6ff5f1b5-97c1-40f0-86ad-2cbd9006eee2
+        namedIdentifiers:
+          - type: Identifier
+            name: REK
+            value: "2024/123"
+        source: https://example.com/source/12345
+        handle: https://hdl.handle.net/11250.1/98765
     Identifier:
       type: object
       description: A named identifier that can be used to look up or reference an approval
@@ -264,14 +284,6 @@ components:
         value:
           type: string
           description: The actual identifier value
-    Handle:
-      type: object
-      description: A persistent identifier (handle.net) that resolves to a resource URI
-      properties:
-        value:
-          type: string
-          format: uri
-          description: The full handle URI (e.g., https://hdl.handle.net/11250.1/12345)
   securitySchemes:
     CognitoUserPool:
       type: apiKey
