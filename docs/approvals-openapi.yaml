@@ -11,6 +11,8 @@ servers:
 tags:
   - name: Approval
     description: Operations for managing approvals
+  - name: external
+    description: Endpoints exposed in external API documentation
 x-amazon-apigateway-request-validator: validate_body
 x-amazon-apigateway-request-validators:
   validate_body:
@@ -21,6 +23,7 @@ paths:
     post:
       tags:
         - Approval
+        - external
       operationId: createApproval
       summary: Create Approval
       description: Create approval
@@ -80,6 +83,7 @@ paths:
     get:
       tags:
         - Approval
+        - external
       operationId: getApprovalByQuery
       summary: Get Approval by handle or named identifier
       description: |
@@ -148,6 +152,7 @@ paths:
     get:
       tags:
         - Approval
+        - external
       operationId: getApprovalById
       summary: Get Approval
       description: Get approval by ID
