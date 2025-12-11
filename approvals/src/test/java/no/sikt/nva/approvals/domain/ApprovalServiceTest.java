@@ -18,10 +18,12 @@ import java.util.function.Supplier;
 import no.sikt.nva.approvals.persistence.ApprovalRepository;
 import no.sikt.nva.approvals.persistence.RepositoryException;
 import no.sikt.nva.handle.HandleDatabase;
+import java.util.List;
+import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-public class ApprovalServiceTest {
+class ApprovalServiceTest {
 
     private ApprovalService approvalService;
     private ApprovalRepository approvalRepository;
@@ -95,5 +97,10 @@ public class ApprovalServiceTest {
         var approval = approvalService.create(identifiers, randomUri());
 
         assertEquals(identifiers, approval.namedIdentifiers());
+    }
+
+    @Test
+    void shouldThrowApprovalServiceExceptionOnGetApprovalByIdentifier() {
+        assertThrows(ApprovalServiceException.class, () -> approvalService.getApprovalByIdentifier(UUID.randomUUID()));
     }
 }

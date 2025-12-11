@@ -6,6 +6,7 @@ import java.net.URI;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.Collection;
+import java.util.UUID;
 import java.util.function.Supplier;
 import no.sikt.nva.approvals.persistence.ApprovalRepository;
 import no.sikt.nva.approvals.persistence.DynamoDbApprovalRepository;
@@ -67,5 +68,10 @@ public class ApprovalServiceImpl implements ApprovalService {
             connection.rollback();
             throw new SQLException("Could not persist handle for source %s".formatted(source));
         }
+    }
+
+    @Override
+    public Approval getApprovalByIdentifier(UUID approvalId) throws ApprovalServiceException {
+        throw new ApprovalServiceException("Service not implemented");
     }
 }
