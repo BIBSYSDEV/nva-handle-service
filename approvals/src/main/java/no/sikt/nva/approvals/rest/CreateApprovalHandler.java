@@ -59,7 +59,7 @@ public class CreateApprovalHandler extends ApiGatewayHandler<CreateApprovalReque
     private void handleException(Exception exception)
         throws BadGatewayException, BadRequestException, ConflictException {
         switch (exception) {
-            case ApprovalConflictException e -> throw new ConflictException(APPROVAL_WITH_ID_EXISTS);
+            case ApprovalConflictException e -> throw new ConflictException(e.getMessage());
             case IllegalArgumentException e -> throw new BadRequestException(e.getMessage());
             default -> throw new BadGatewayException(BAD_GATEWAY_EXCEPTION_MESSAGE);
         }

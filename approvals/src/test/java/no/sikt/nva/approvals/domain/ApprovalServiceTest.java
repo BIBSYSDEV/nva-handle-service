@@ -1,6 +1,7 @@
 package no.sikt.nva.approvals.domain;
 
 import static no.sikt.nva.approvals.utils.TestUtils.randomHandle;
+import static no.sikt.nva.approvals.utils.TestUtils.randomIdentifier;
 import static no.sikt.nva.approvals.utils.TestUtils.randomIdentifiers;
 import static no.unit.nva.testutils.RandomDataGenerator.randomString;
 import static no.unit.nva.testutils.RandomDataGenerator.randomUri;
@@ -14,11 +15,12 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import java.sql.Connection;
 import java.sql.SQLException;
+import java.util.List;
+import java.util.UUID;
 import java.util.function.Supplier;
 import no.sikt.nva.approvals.persistence.ApprovalRepository;
 import no.sikt.nva.approvals.persistence.RepositoryException;
 import no.sikt.nva.handle.HandleDatabase;
-import java.util.UUID;
 import nva.commons.core.Environment;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -56,13 +58,13 @@ class ApprovalServiceTest {
 
     @Test
     void shouldThrowApprovalServiceExceptionWhenNotAbleToConnectToHandleDatabase() {
-        @SuppressWarnings("unchecked")
-        Supplier<Connection> connectionSupplier = mock(Supplier.class);
+        @SuppressWarnings("unchecked") Supplier<Connection> connectionSupplier = mock(Supplier.class);
         when(connectionSupplier.get()).thenThrow(new RuntimeException(new SQLException(randomString())));
-        var serviceWithFailingConnection = new ApprovalServiceImpl(handleDatabase, approvalRepository, connectionSupplier,
-                                                                   new Environment());
+        var serviceWithFailingConnection = new ApprovalServiceImpl(handleDatabase, approvalRepository,
+                                                                   connectionSupplier, new Environment());
 
-        assertThrows(ApprovalServiceException.class, () -> serviceWithFailingConnection.create(randomIdentifiers(), randomUri()));
+        assertThrows(ApprovalServiceException.class,
+                     () -> serviceWithFailingConnection.create(randomIdentifiers(), randomUri()));
     }
 
     @Test
@@ -82,7 +84,8 @@ class ApprovalServiceTest {
     void shouldCreateApprovalWithSourceProvidedInInput()
         throws RepositoryException, SQLException, ApprovalServiceException, ApprovalConflictException {
         var source = randomUri();
-        when(handleDatabase.createHandle(eq(HANDLE_PREFIX), eq(source), eq(connection))).thenReturn(randomHandle().value());
+        when(handleDatabase.createHandle(eq(HANDLE_PREFIX), eq(source), eq(connection))).thenReturn(
+            randomHandle().value());
         doNothing().when(approvalRepository).save(any());
 
         var approval = approvalService.create(randomIdentifiers(), source);
@@ -105,5 +108,36 @@ class ApprovalServiceTest {
     @Test
     void shouldThrowApprovalServiceExceptionOnGetApprovalByIdentifier() {
         assertThrows(ApprovalServiceException.class, () -> approvalService.getApprovalByIdentifier(UUID.randomUUID()));
+    }
+
+    @Test
+    void shouldThrowApprovalConflictExceptionWhenIdentifiersAlreadyExist() throws RepositoryException {
+        var existingIdentifiers = List.of(randomIdentifier(), randomIdentifier());
+
+        when(approvalRepository.findIdentifiers(existingIdentifiers)).thenReturn(existingIdentifiers);
+
+        assertThrows(ApprovalConflictException.class, () -> approvalService.create(existingIdentifiers, randomUri()));
+    }
+
+    @Test
+    void shouldIncludeExistingIdentifiersInExceptionMessage() throws RepositoryException {
+        var existingIdentifier = randomIdentifier();
+        var identifiers = List.of(existingIdentifier, randomIdentifier());
+
+        when(approvalRepository.findIdentifiers(identifiers)).thenReturn(List.of(existingIdentifier));
+
+        var exception = assertThrows(ApprovalConflictException.class,
+                                     () -> approvalService.create(identifiers, randomUri()));
+        assertEquals("Following identifiers already exist: [%s: %s]".formatted(existingIdentifier.name(),
+                                                                               existingIdentifier.value()),
+                     exception.getMessage());
+    }
+
+    @Test
+    void shouldThrowApprovalServiceExceptionWhenRepositoryFailsToCheckExistingIdentifiers() throws RepositoryException {
+        var identifiers = randomIdentifiers();
+        when(approvalRepository.findIdentifiers(identifiers)).thenThrow(new RepositoryException("Database error"));
+
+        assertThrows(ApprovalServiceException.class, () -> approvalService.create(identifiers, randomUri()));
     }
 }

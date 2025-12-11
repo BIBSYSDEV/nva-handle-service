@@ -39,11 +39,34 @@ public class ApprovalServiceImpl implements ApprovalService {
     }
 
     @Override
-    public Approval create(Collection<NamedIdentifier> namedIdentifiers, URI source) throws ApprovalServiceException {
+    public Approval create(Collection<NamedIdentifier> namedIdentifiers, URI source)
+        throws ApprovalServiceException, ApprovalConflictException {
+        ensureIdentifiersDoesNotExist(namedIdentifiers);
         var handle = createHandle(source);
         var approval = new Approval(randomUUID(), namedIdentifiers, source, handle);
         save(approval);
         return approval;
+    }
+
+    private void ensureIdentifiersDoesNotExist(Collection<NamedIdentifier> namedIdentifiers)
+        throws ApprovalServiceException, ApprovalConflictException {
+        try {
+            var identifiers = approvalRepository.findIdentifiers(namedIdentifiers);
+            if (!identifiers.isEmpty()) {
+                var message = formatConflictMessage(identifiers);
+                throw new ApprovalConflictException(message);
+            }
+        } catch (RepositoryException e) {
+            throw new ApprovalServiceException("Could not verify if identifiers are new");
+        }
+    }
+
+    private String formatConflictMessage(Collection<NamedIdentifier> existingIdentifiers) {
+        var identifierList = existingIdentifiers.stream()
+                                 .map(identifier -> "%s: %s".formatted(identifier.name(), identifier.value()))
+                                 .toList();
+
+        return "Following identifiers already exist: [%s]".formatted(String.join(", ", identifierList));
     }
 
     private void save(Approval approval) throws ApprovalServiceException {
