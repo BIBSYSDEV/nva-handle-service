@@ -182,6 +182,16 @@ class FetchApprovalHandlerTest {
         assertEquals(HTTP_BAD_GATEWAY, response.getStatusCode());
     }
 
+    @Test
+    void shouldReturnBadRequestWhenBothPathParameterAndQueryParametersProvided() {
+        handler = new FetchApprovalHandler(new FakeApprovalService());
+        var request = createRequestWithPathAndQueryParameters(UUID.randomUUID(), VALID_HANDLE);
+
+        var response = handleRequest(request);
+
+        assertEquals(HTTP_BAD_REQUEST, response.getStatusCode());
+    }
+
     private GatewayResponse<Approval> handleRequest(InputStream request) {
         try {
             handler.handleRequest(request, output, CONTEXT);
@@ -223,6 +233,17 @@ class FetchApprovalHandlerTest {
         try {
             return new HandlerRequestBuilder<Void>(JsonUtils.dtoObjectMapper)
                 .withQueryParameters(queryParameters)
+                .build();
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    private InputStream createRequestWithPathAndQueryParameters(UUID approvalId, String handle) {
+        try {
+            return new HandlerRequestBuilder<Void>(JsonUtils.dtoObjectMapper)
+                .withPathParameters(Map.of(APPROVAL_ID_PATH_PARAMETER, approvalId.toString()))
+                .withQueryParameters(Map.of(HANDLE_QUERY_PARAMETER, handle))
                 .build();
         } catch (JsonProcessingException e) {
             throw new RuntimeException(e);

@@ -1,6 +1,7 @@
 package no.sikt.nva.approvals.rest;
 
 import static java.net.HttpURLConnection.HTTP_OK;
+import static java.util.Objects.isNull;
 import static java.util.Objects.nonNull;
 import com.amazonaws.services.lambda.runtime.Context;
 import java.net.URI;
@@ -35,6 +36,8 @@ public class FetchApprovalHandler extends ApiGatewayHandler<Void, Approval> {
     private static final String MISSING_QUERY_PARAMETERS_MESSAGE =
         "Missing query parameters. Use 'handle' or 'name' and 'value'";
     private static final String BAD_GATEWAY_MESSAGE = "Something went wrong!";
+    private static final String CONFLICTING_PARAMETERS_MESSAGE =
+        "Cannot use both path parameter and query parameters. Use either approvalId path or query parameters";
 
     private final ApprovalService approvalService;
 
@@ -50,7 +53,9 @@ public class FetchApprovalHandler extends ApiGatewayHandler<Void, Approval> {
 
     @Override
     protected void validateRequest(Void input, RequestInfo requestInfo, Context context) throws ApiGatewayException {
-        //noop
+        if (hasPathParameter(requestInfo) && hasQueryParameters(requestInfo)) {
+            throw new BadRequestException(CONFLICTING_PARAMETERS_MESSAGE);
+        }
     }
 
     @Override
@@ -70,6 +75,16 @@ public class FetchApprovalHandler extends ApiGatewayHandler<Void, Approval> {
     private boolean hasPathParameter(RequestInfo requestInfo) {
         var approvalId = requestInfo.getPathParameters().get(APPROVAL_ID_PATH_PARAMETER);
         return StringUtils.isNotBlank(approvalId);
+    }
+
+    private boolean hasQueryParameters(RequestInfo requestInfo) {
+        var queryParameters = requestInfo.getQueryParameters();
+        if (isNull(queryParameters)) {
+            return false;
+        }
+        return StringUtils.isNotBlank(queryParameters.get(HANDLE_QUERY_PARAMETER))
+               || StringUtils.isNotBlank(queryParameters.get(NAME_QUERY_PARAMETER))
+               || StringUtils.isNotBlank(queryParameters.get(VALUE_QUERY_PARAMETER));
     }
 
     private Approval fetchByApprovalId(RequestInfo requestInfo) throws ApiGatewayException {
