@@ -2,6 +2,7 @@ package no.sikt.nva.approvals.domain;
 
 import static java.util.UUID.randomUUID;
 import static no.unit.nva.testutils.RandomDataGenerator.randomUri;
+import static no.sikt.nva.approvals.utils.TestUtils.randomApproval;
 import java.net.URI;
 import java.util.Collection;
 import java.util.UUID;
@@ -36,21 +37,21 @@ public class FakeApprovalService implements ApprovalService {
     public Approval getApprovalByIdentifier(UUID approvalId)
         throws ApprovalNotFoundException, ApprovalServiceException {
         throwExceptionIfConfigured();
-        return null;
+        return randomApproval(approvalId, URI.create("https://example.com/source"));
     }
 
     @Override
     public Approval getApprovalByHandle(Handle handle)
         throws ApprovalNotFoundException, ApprovalServiceException {
         throwExceptionIfConfigured();
-        return null;
+        return randomApproval(handle);
     }
 
     @Override
     public Approval getApprovalByNamedIdentifier(NamedIdentifier namedIdentifier)
         throws ApprovalNotFoundException, ApprovalServiceException {
         throwExceptionIfConfigured();
-        return null;
+        return randomApproval(namedIdentifier);
     }
 
     private void throwExceptionIfConfigured() throws ApprovalNotFoundException, ApprovalServiceException {

@@ -24,7 +24,7 @@ import nva.commons.core.Environment;
 import nva.commons.core.JacocoGenerated;
 import nva.commons.core.StringUtils;
 
-public class FetchApprovalHandler extends ApiGatewayHandler<Void, Approval> {
+public class FetchApprovalHandler extends ApiGatewayHandler<Void, ApprovalResponse> {
 
     private static final String APPROVAL_ID_PATH_PARAMETER = "approvalId";
     private static final String HANDLE_QUERY_PARAMETER = "handle";
@@ -39,17 +39,20 @@ public class FetchApprovalHandler extends ApiGatewayHandler<Void, Approval> {
     private static final String BAD_GATEWAY_MESSAGE = "Something went wrong!";
     private static final String CONFLICTING_PARAMETERS_MESSAGE =
         "Cannot use both path parameter and query parameters. Use either approvalId path or query parameters";
+    private static final String API_HOST_ENV = "API_HOST";
 
     private final ApprovalService approvalService;
+    private final String apiHost;
 
     @JacocoGenerated
     public FetchApprovalHandler() {
-        this(ApprovalServiceImpl.defaultInstance(new Environment()));
+        this(ApprovalServiceImpl.defaultInstance(new Environment()), new Environment());
     }
 
-    public FetchApprovalHandler(ApprovalService approvalService) {
-        super(Void.class, new Environment());
+    public FetchApprovalHandler(ApprovalService approvalService, Environment environment) {
+        super(Void.class, environment);
         this.approvalService = approvalService;
+        this.apiHost = environment.readEnv(API_HOST_ENV);
     }
 
     @Override
@@ -60,16 +63,16 @@ public class FetchApprovalHandler extends ApiGatewayHandler<Void, Approval> {
     }
 
     @Override
-    protected Approval processInput(Void input, RequestInfo requestInfo, Context context)
+    protected ApprovalResponse processInput(Void input, RequestInfo requestInfo, Context context)
         throws ApiGatewayException {
-        if (hasPathParameter(requestInfo)) {
-            return fetchByApprovalId(requestInfo);
-        }
-        return fetchByQueryParameters(requestInfo);
+        var approval = hasPathParameter(requestInfo)
+            ? fetchByApprovalId(requestInfo)
+            : fetchByQueryParameters(requestInfo);
+        return ApprovalResponse.fromApproval(approval, apiHost);
     }
 
     @Override
-    protected Integer getSuccessStatusCode(Void input, Approval output) {
+    protected Integer getSuccessStatusCode(Void input, ApprovalResponse output) {
         return HTTP_OK;
     }
 
