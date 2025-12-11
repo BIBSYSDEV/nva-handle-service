@@ -78,21 +78,26 @@ components:
   schemas:
     Approval:
       type: object
+      description: An approval for associating a persistent handle identifier with a source URI
       properties:
         identifier:
           type: string
           format: uuid
+          description: Unique identifier for this approval
         namedIdentifiers:
           type: array
+          description: List of identifiers associated with this approval. Each identifier needs to be unique across all approvals.
           items:
             $ref: '#/components/schemas/Identifier'
         source:
           type: string
           format: uri
+          description: The source URI that the handle originates from
         handle:
           $ref: '#/components/schemas/Handle'
     Identifier:
       type: object
+      description: A named identifier that can be used to look up or reference an approval
       required:
         - type
         - name
@@ -101,18 +106,21 @@ components:
         type:
           type: string
           default: Identifier
+          description: The type discriminator for this object
         name:
           type: string
-          description: Name of identifier
+          description: The name or category of the identifier (e.g., 'doi', 'isbn')
         value:
           type: string
-          description: Identifier value
+          description: The actual identifier value
     Handle:
       type: object
+      description: A persistent identifier (handle.net) that resolves to a resource URI
       properties:
         value:
           type: string
           format: uri
+          description: The full handle URI (e.g., https://hdl.handle.net/11250.1/12345)
     Problem:
       type: object
       description: NVA error reporting object
