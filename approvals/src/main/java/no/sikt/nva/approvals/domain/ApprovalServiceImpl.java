@@ -15,4 +15,14 @@ public class ApprovalServiceImpl implements ApprovalService {
     public Approval getApprovalByIdentifier(UUID approvalId) throws ApprovalServiceException {
         throw new ApprovalServiceException("Service not implemented");
     }
+
+    @Override
+    public Approval getApprovalByHandle(Handle handle) throws ApprovalServiceException {
+        throw new ApprovalServiceException("Service not implemented");
+    }
+
+    @Override
+    public Approval getApprovalByNamedIdentifier(NamedIdentifier namedIdentifier) throws ApprovalServiceException {
+        throw new ApprovalServiceException("Service not implemented");
+    }
 }

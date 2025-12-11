@@ -32,6 +32,57 @@ paths:
               description: Number of seconds to wait before checking the approval
               schema:
                 type: integer
+    get:
+      summary: Get Approval by query
+      description: Get approval by handle value or named identifier (name+value)
+      parameters:
+        - name: handle
+          in: query
+          description: Handle value to look up
+          schema:
+            type: string
+            format: uri
+        - name: name
+          in: query
+          description: Identifier name (required when using value parameter)
+          schema:
+            type: string
+        - name: value
+          in: query
+          description: Identifier value (required when using name parameter)
+          schema:
+            type: string
+      x-amazon-apigateway-integration:
+        uri:
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${NvaFetchApprovalFunction.Arn}/invocations
+        responses: { }
+        httpMethod: POST
+        type: AWS_PROXY
+      responses:
+        '200':
+          description: Approval found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Approval'
+        '400':
+          description: Bad Request - invalid query parameters or missing required parameters
+          content:
+            "application/json":
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '404':
+          description: Approval not found
+          content:
+            "application/json":
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '502':
+          description: Bad gateway
+          content:
+            "application/json":
+              schema:
+                $ref: '#/components/schemas/Problem'
   /{approvalId}:
     get:
       summary: Get Approval
