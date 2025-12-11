@@ -28,13 +28,13 @@ class ApprovalResponseTest {
     }
 
     @Test
-    void shouldGenerateIdFromBaseUriAndIdentifier() {
+    void shouldGenerateIdFromRequestUriHostAndIdentifier() {
         var handle = randomHandle();
         var approval = randomApproval(handle);
 
         var response = ApprovalResponse.fromApproval(approval, BASE_URI);
 
-        var expectedId = URI.create(BASE_URI + "/" + approval.identifier().toString());
+        var expectedId = URI.create("https://" + BASE_URI.getHost() + "/approval/" + approval.identifier());
         assertEquals(expectedId, response.id());
     }
 

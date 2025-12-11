@@ -8,6 +8,7 @@ import java.util.Collection;
 import java.util.UUID;
 import no.sikt.nva.approvals.domain.Approval;
 import no.sikt.nva.approvals.domain.NamedIdentifier;
+import nva.commons.core.paths.UriWrapper;
 
 @JsonTypeInfo(use = Id.NAME, property = "type")
 @JsonTypeName("Approval")
@@ -19,8 +20,10 @@ public record ApprovalResponse(
     String handle
 ) {
 
-    public static ApprovalResponse fromApproval(Approval approval, URI baseUri) {
-        var id = URI.create(baseUri.toString() + "/" + approval.identifier().toString());
+    private static final String APPROVAL_PATH = "approval";
+
+    public static ApprovalResponse fromApproval(Approval approval, URI requestUri) {
+        var id = buildId(requestUri, approval.identifier());
         return new ApprovalResponse(
             id,
             approval.identifier(),
@@ -28,5 +31,12 @@ public record ApprovalResponse(
             approval.source(),
             approval.handle().value().toString()
         );
+    }
+
+    private static URI buildId(URI requestUri, UUID identifier) {
+        return UriWrapper.fromHost(requestUri.getHost())
+            .addChild(APPROVAL_PATH)
+            .addChild(identifier.toString())
+            .getUri();
     }
 }
