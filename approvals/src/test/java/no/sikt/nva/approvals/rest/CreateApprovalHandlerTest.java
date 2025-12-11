@@ -14,7 +14,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
 import java.util.List;
-import no.sikt.nva.approvals.domain.Approval;
 import no.sikt.nva.approvals.domain.ApprovalConflictException;
 import no.sikt.nva.approvals.domain.ApprovalServiceException;
 import no.sikt.nva.approvals.domain.FakeApprovalService;
@@ -23,6 +22,8 @@ import no.unit.nva.commons.json.JsonUtils;
 import no.unit.nva.stubs.FakeContext;
 import no.unit.nva.testutils.HandlerRequestBuilder;
 import nva.commons.apigateway.GatewayResponse;
+import nva.commons.core.Environment;
+import nva.commons.core.paths.UriWrapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -31,11 +32,13 @@ class CreateApprovalHandlerTest {
     private static final Context context = new FakeContext();
     private CreateApprovalHandler handler;
     private ByteArrayOutputStream output;
+    private FakeApprovalService approvalService;
 
     @BeforeEach
     void setUp() {
         this.output = new ByteArrayOutputStream();
-        handler = new CreateApprovalHandler(new FakeApprovalService());
+        approvalService = new FakeApprovalService();
+        handler = new CreateApprovalHandler(approvalService);
     }
 
     @Test
@@ -47,6 +50,40 @@ class CreateApprovalHandlerTest {
         var response = GatewayResponse.fromOutputStream(output, Void.class);
 
         assertEquals(HTTP_ACCEPTED, response.getStatusCode());
+    }
+
+    @Test
+    void shouldSetLocationHeaderOnSuccess() throws IOException {
+        var request = createRequest(randomApprovalRequest(randomUri()));
+
+        handler.handleRequest(request, output, context);
+
+        var response = GatewayResponse.fromOutputStream(output, Void.class);
+
+        var locationHeader = response.getHeaders().get("Location");
+        var expectedLocation = createExpectedLocationHeader();
+
+        assertEquals(expectedLocation, locationHeader);
+    }
+
+    @Test
+    void shouldSetRetryAfterHeaderOnSuccessWith5SecondsValue() throws IOException {
+        var request = createRequest(randomApprovalRequest(randomUri()));
+
+        handler.handleRequest(request, output, context);
+
+        var response = GatewayResponse.fromOutputStream(output, Void.class);
+
+        var retryAfterHeader = response.getHeaders().get("Retry-After");
+
+        assertEquals("5", retryAfterHeader);
+    }
+
+    private String createExpectedLocationHeader() {
+        return UriWrapper.fromHost(new Environment().readEnv("API_HOST"))
+                   .addChild("approval")
+                   .addChild(approvalService.getPersistedApproval().identifier().toString())
+                   .toString();
     }
 
     @Test
