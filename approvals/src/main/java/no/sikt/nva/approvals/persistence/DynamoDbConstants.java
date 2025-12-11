@@ -11,7 +11,7 @@ import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 public final class DynamoDbConstants {
 
     public static final EnhancedType<? super String> STRING = EnhancedType.of(String.class);
-    public static final String TABLE_NAME = "TABLE";
+    public static final String TABLE = "TABLE";
     public static final String GSI1 = "GSI1";
     public static final String GSI2 = "GSI2";
     public static final String PK0 = "PK0";

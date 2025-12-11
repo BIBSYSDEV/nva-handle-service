@@ -9,7 +9,7 @@ import static no.sikt.nva.approvals.persistence.DynamoDbConstants.PK2;
 import static no.sikt.nva.approvals.persistence.DynamoDbConstants.SK0;
 import static no.sikt.nva.approvals.persistence.DynamoDbConstants.SK1;
 import static no.sikt.nva.approvals.persistence.DynamoDbConstants.SK2;
-import static no.sikt.nva.approvals.persistence.DynamoDbConstants.TABLE_NAME;
+import static no.sikt.nva.approvals.persistence.DynamoDbConstants.TABLE;
 import static no.sikt.nva.approvals.persistence.DynamoDbConstants.defaultDynamoClient;
 import static nva.commons.core.attempt.Try.attempt;
 import static software.amazon.awssdk.enhanced.dynamodb.AttributeValueType.S;
@@ -54,14 +54,14 @@ public class DynamoDbApprovalRepository implements ApprovalRepository {
     private final DynamoDbTable<EnhancedDocument> table;
     private final DynamoDbEnhancedClient client;
 
-    public DynamoDbApprovalRepository(DynamoDbClient client) {
+    public DynamoDbApprovalRepository(DynamoDbClient client, Environment environment) {
         this.client = DynamoDbEnhancedClient.builder().dynamoDbClient(client).build();
-        this.table = this.client.table(TABLE_NAME, documentTableSchema());
+        this.table = this.client.table(environment.readEnv(TABLE), documentTableSchema());
     }
 
     @JacocoGenerated
     public static ApprovalRepository defaultInstance(Environment environment) {
-        return new DynamoDbApprovalRepository(defaultDynamoClient(environment));
+        return new DynamoDbApprovalRepository(defaultDynamoClient(environment), environment);
     }
 
     @Override

@@ -9,7 +9,6 @@ import static no.sikt.nva.approvals.persistence.DynamoDbConstants.PK2;
 import static no.sikt.nva.approvals.persistence.DynamoDbConstants.SK0;
 import static no.sikt.nva.approvals.persistence.DynamoDbConstants.SK1;
 import static no.sikt.nva.approvals.persistence.DynamoDbConstants.SK2;
-import static no.sikt.nva.approvals.persistence.DynamoDbConstants.TABLE_NAME;
 import static nva.commons.core.attempt.Try.attempt;
 import com.amazonaws.services.dynamodbv2.local.embedded.DynamoDBEmbedded;
 import java.util.ArrayList;
@@ -31,30 +30,30 @@ import software.amazon.awssdk.services.dynamodb.model.ScanRequest;
 
 public record DynamoDbLocal(DynamoDbClient client) {
 
-    public static DynamoDbLocal dynamoDBLocal() {
+    public static DynamoDbLocal dynamoDBLocal(String table) {
         var database = DynamoDBEmbedded.create(null, true);
         var client = database.dynamoDbClient();
-        createTableIfNotExists(client);
+        createTableIfNotExists(client, table);
         return new DynamoDbLocal(client);
     }
 
-    public void cleanTable() {
-        var scanResponse = client.scan(ScanRequest.builder().tableName(TABLE_NAME).build());
+    public void cleanTable(String table) {
+        var scanResponse = client.scan(ScanRequest.builder().tableName(table).build());
         scanResponse.items().forEach(item -> {
             var key = new HashMap<String, AttributeValue>();
             key.put(PK0, item.get(PK0));
             key.put(SK0, item.get(SK0));
-            client.deleteItem(DeleteItemRequest.builder().tableName(TABLE_NAME).key(key).build());
+            client.deleteItem(DeleteItemRequest.builder().tableName(table).key(key).build());
         });
     }
 
-    private static void createTableIfNotExists(DynamoDbClient client) {
-        attempt(() -> client.createTable(createTableRequest()));
+    private static void createTableIfNotExists(DynamoDbClient client, String table) {
+        attempt(() -> client.createTable(createTableRequest(table)));
     }
 
-    private static CreateTableRequest createTableRequest() {
+    private static CreateTableRequest createTableRequest(String table) {
         return CreateTableRequest.builder()
-                   .tableName(TABLE_NAME)
+                   .tableName(table)
                    .provisionedThroughput(createProvisionedThroughput())
                    .attributeDefinitions(createAttribute(PK0), createAttribute(SK0), createAttribute(PK1),
                                          createAttribute(SK1), createAttribute(PK2), createAttribute(SK2))

@@ -7,7 +7,6 @@ import static no.sikt.nva.approvals.persistence.DynamoDbConstants.PK2;
 import static no.sikt.nva.approvals.persistence.DynamoDbConstants.SK0;
 import static no.sikt.nva.approvals.persistence.DynamoDbConstants.SK1;
 import static no.sikt.nva.approvals.persistence.DynamoDbConstants.SK2;
-import static no.sikt.nva.approvals.persistence.DynamoDbConstants.TABLE_NAME;
 import static no.sikt.nva.approvals.persistence.DynamoDbLocal.dynamoDBLocal;
 import static no.sikt.nva.approvals.utils.TestUtils.randomApproval;
 import static no.sikt.nva.approvals.utils.TestUtils.randomHandle;
@@ -21,6 +20,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
+import nva.commons.core.Environment;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -29,18 +29,20 @@ import software.amazon.awssdk.services.dynamodb.model.PutItemRequest;
 
 class DynamoDbApprovalRepositoryTest {
 
+    private static final Environment ENVIRONMENT = new Environment();
+    private static final String TABLE = ENVIRONMENT.readEnv(DynamoDbConstants.TABLE);
     private ApprovalRepository approvalRepository;
     private DynamoDbLocal dynamoDbLocal;
 
     @BeforeEach
     void setUp() {
-        dynamoDbLocal = dynamoDBLocal();
-        approvalRepository = new DynamoDbApprovalRepository(dynamoDbLocal.client());
+        dynamoDbLocal = dynamoDBLocal(TABLE);
+        approvalRepository = new DynamoDbApprovalRepository(dynamoDbLocal.client(), ENVIRONMENT);
     }
 
     @AfterEach
     void tearDown() {
-        dynamoDbLocal.cleanTable();
+        dynamoDbLocal.cleanTable(TABLE);
     }
 
     @Test
@@ -88,7 +90,7 @@ class DynamoDbApprovalRepositoryTest {
     }
 
     @Test
-    void shouldThrowIllegalStateExceptionWhenHandleNotFoundInDatabase() {
+    void shouldThrowRepositoryExceptionWhenHandleNotFoundInDatabase() {
         var approvalId = randomUUID();
         var identifierValue = randomString();
 
@@ -98,7 +100,7 @@ class DynamoDbApprovalRepositoryTest {
     }
 
     @Test
-    void shouldThrowIllegalStateExceptionWhenApprovalNotFoundInDatabase() {
+    void shouldThrowRepositoryExceptionWhenApprovalNotFoundInDatabase() {
         var approvalId = randomUUID();
         var identifierValue = randomString();
         insertIdentifierOnly(approvalId, identifierValue);
@@ -153,7 +155,7 @@ class DynamoDbApprovalRepositoryTest {
         item.put("name", AttributeValue.builder().s(randomString()).build());
         item.put("value", AttributeValue.builder().s(identifierValue).build());
 
-        dynamoDbLocal.client().putItem(PutItemRequest.builder().tableName(TABLE_NAME).item(item).build());
+        dynamoDbLocal.client().putItem(PutItemRequest.builder().tableName(TABLE).item(item).build());
     }
 
     private void insertHandleOnly(UUID approvalId, String handleUri) {
@@ -161,7 +163,7 @@ class DynamoDbApprovalRepositoryTest {
         item.put("type", AttributeValue.builder().s("Handle").build());
         item.put("uri", AttributeValue.builder().s(handleUri).build());
 
-        dynamoDbLocal.client().putItem(PutItemRequest.builder().tableName(TABLE_NAME).item(item).build());
+        dynamoDbLocal.client().putItem(PutItemRequest.builder().tableName(TABLE).item(item).build());
     }
 
     private Map<String, AttributeValue> createBaseItem(String pk0, String sk0, UUID approvalId, String pk2Sk2) {
