@@ -17,6 +17,7 @@ import java.net.URI;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Supplier;
 import no.sikt.nva.approvals.persistence.ApprovalRepository;
@@ -108,21 +109,89 @@ class ApprovalServiceTest {
     }
 
     @Test
-    void shouldThrowApprovalServiceExceptionOnGetApprovalByIdentifier() {
-        assertThrows(ApprovalServiceException.class, () -> approvalService.getApprovalByIdentifier(UUID.randomUUID()));
+    void shouldReturnApprovalWhenFoundByIdentifier()
+        throws RepositoryException, ApprovalNotFoundException, ApprovalServiceException {
+        var approvalId = UUID.randomUUID();
+        var expectedApproval = new Approval(approvalId, randomIdentifiers(), randomUri(), randomHandle());
+        when(approvalRepository.findByApprovalIdentifier(approvalId)).thenReturn(Optional.of(expectedApproval));
+
+        var result = approvalService.getApprovalByIdentifier(approvalId);
+
+        assertEquals(expectedApproval, result);
     }
 
     @Test
-    void shouldThrowApprovalServiceExceptionOnGetApprovalByHandle() {
+    void shouldThrowApprovalNotFoundExceptionWhenApprovalNotFoundByIdentifier() throws RepositoryException {
+        var approvalId = UUID.randomUUID();
+        when(approvalRepository.findByApprovalIdentifier(approvalId)).thenReturn(Optional.empty());
+
+        assertThrows(ApprovalNotFoundException.class, () -> approvalService.getApprovalByIdentifier(approvalId));
+    }
+
+    @Test
+    void shouldThrowApprovalServiceExceptionWhenRepositoryFailsOnGetByIdentifier() throws RepositoryException {
+        var approvalId = UUID.randomUUID();
+        when(approvalRepository.findByApprovalIdentifier(approvalId)).thenThrow(new RepositoryException("error"));
+
+        assertThrows(ApprovalServiceException.class, () -> approvalService.getApprovalByIdentifier(approvalId));
+    }
+
+    @Test
+    void shouldReturnApprovalWhenFoundByHandle()
+        throws RepositoryException, ApprovalNotFoundException, ApprovalServiceException {
         var handle = new Handle(VALID_HANDLE_URI);
+        var expectedApproval = new Approval(UUID.randomUUID(), randomIdentifiers(), randomUri(), handle);
+        when(approvalRepository.findByHandle(handle)).thenReturn(Optional.of(expectedApproval));
+
+        var result = approvalService.getApprovalByHandle(handle);
+
+        assertEquals(expectedApproval, result);
+    }
+
+    @Test
+    void shouldThrowApprovalNotFoundExceptionWhenApprovalNotFoundByHandle() throws RepositoryException {
+        var handle = new Handle(VALID_HANDLE_URI);
+        when(approvalRepository.findByHandle(handle)).thenReturn(Optional.empty());
+
+        assertThrows(ApprovalNotFoundException.class, () -> approvalService.getApprovalByHandle(handle));
+    }
+
+    @Test
+    void shouldThrowApprovalServiceExceptionWhenRepositoryFailsOnGetByHandle() throws RepositoryException {
+        var handle = new Handle(VALID_HANDLE_URI);
+        when(approvalRepository.findByHandle(handle)).thenThrow(new RepositoryException("error"));
+
         assertThrows(ApprovalServiceException.class, () -> approvalService.getApprovalByHandle(handle));
     }
 
     @Test
-    void shouldThrowApprovalServiceExceptionOnGetApprovalByNamedIdentifier() {
+    void shouldReturnApprovalWhenFoundByNamedIdentifier()
+        throws RepositoryException, ApprovalNotFoundException, ApprovalServiceException {
         var namedIdentifier = new NamedIdentifier(randomString(), randomString());
+        var expectedApproval = new Approval(UUID.randomUUID(), List.of(namedIdentifier), randomUri(), randomHandle());
+        when(approvalRepository.findByIdentifier(namedIdentifier)).thenReturn(Optional.of(expectedApproval));
+
+        var result = approvalService.getApprovalByNamedIdentifier(namedIdentifier);
+
+        assertEquals(expectedApproval, result);
+    }
+
+    @Test
+    void shouldThrowApprovalNotFoundExceptionWhenApprovalNotFoundByNamedIdentifier() throws RepositoryException {
+        var namedIdentifier = new NamedIdentifier(randomString(), randomString());
+        when(approvalRepository.findByIdentifier(namedIdentifier)).thenReturn(Optional.empty());
+
+        assertThrows(ApprovalNotFoundException.class,
+                     () -> approvalService.getApprovalByNamedIdentifier(namedIdentifier));
+    }
+
+    @Test
+    void shouldThrowApprovalServiceExceptionWhenRepositoryFailsOnGetByNamedIdentifier() throws RepositoryException {
+        var namedIdentifier = new NamedIdentifier(randomString(), randomString());
+        when(approvalRepository.findByIdentifier(namedIdentifier)).thenThrow(new RepositoryException("error"));
+
         assertThrows(ApprovalServiceException.class,
-            () -> approvalService.getApprovalByNamedIdentifier(namedIdentifier));
+                     () -> approvalService.getApprovalByNamedIdentifier(namedIdentifier));
     }
 
     @Test
