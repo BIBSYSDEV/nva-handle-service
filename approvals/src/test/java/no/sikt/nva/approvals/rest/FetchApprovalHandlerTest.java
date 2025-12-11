@@ -4,8 +4,8 @@ import static java.net.HttpURLConnection.HTTP_BAD_GATEWAY;
 import static java.net.HttpURLConnection.HTTP_BAD_REQUEST;
 import static java.net.HttpURLConnection.HTTP_NOT_FOUND;
 import static java.net.HttpURLConnection.HTTP_OK;
+import static nva.commons.apigateway.ApiGatewayHandler.ALLOWED_ORIGIN_ENV;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
 import com.amazonaws.services.lambda.runtime.Context;
@@ -35,6 +35,8 @@ class FetchApprovalHandlerTest {
     private static final String VALUE_QUERY_PARAMETER = "value";
     private static final String VALID_HANDLE = "https://hdl.handle.net/11250.1/12345";
     private static final String API_HOST = "api.unittest.nva.unit.no";
+    private static final String COGNITO_AUTHORIZER_URLS_ENV = "COGNITO_AUTHORIZER_URLS";
+    private static final String API_HOST_ENV = "API_HOST";
     private FetchApprovalHandler handler;
     private ByteArrayOutputStream output;
     private Environment environment;
@@ -43,8 +45,9 @@ class FetchApprovalHandlerTest {
     void setUp() {
         output = new ByteArrayOutputStream();
         environment = mock(Environment.class);
-        lenient().when(environment.readEnv(anyString())).thenReturn("*");
-        lenient().when(environment.readEnv("API_HOST")).thenReturn(API_HOST);
+        lenient().when(environment.readEnv(ALLOWED_ORIGIN_ENV)).thenReturn("*");
+        lenient().when(environment.readEnv(COGNITO_AUTHORIZER_URLS_ENV)).thenReturn("http://localhost:3000");
+        lenient().when(environment.readEnv(API_HOST_ENV)).thenReturn(API_HOST);
     }
 
     @Test
