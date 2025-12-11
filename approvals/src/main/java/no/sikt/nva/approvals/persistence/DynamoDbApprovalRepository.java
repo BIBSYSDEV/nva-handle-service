@@ -21,7 +21,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
-import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import no.sikt.nva.approvals.domain.Approval;
 import no.sikt.nva.approvals.domain.Handle;
@@ -118,7 +117,7 @@ public class DynamoDbApprovalRepository implements ApprovalRepository {
         return IntStream.range(0, (list.size() + BATCH_GET_ITEM_LIMIT - 1) / BATCH_GET_ITEM_LIMIT)
                    .mapToObj(i -> list.subList(i * BATCH_GET_ITEM_LIMIT,
                                                Math.min((i + 1) * BATCH_GET_ITEM_LIMIT, list.size())))
-                   .collect(Collectors.toList());
+                   .toList();
     }
 
     private static Approval constructApproval(List<DatabaseEntry> entities) {

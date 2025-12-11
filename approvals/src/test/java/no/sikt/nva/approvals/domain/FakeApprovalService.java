@@ -35,13 +35,31 @@ public class FakeApprovalService implements ApprovalService {
     @Override
     public Approval getApprovalByIdentifier(UUID approvalId)
         throws ApprovalNotFoundException, ApprovalServiceException {
+        throwExceptionIfConfigured();
+        return null;
+    }
+
+    @Override
+    public Approval getApprovalByHandle(Handle handle)
+        throws ApprovalNotFoundException, ApprovalServiceException {
+        throwExceptionIfConfigured();
+        return null;
+    }
+
+    @Override
+    public Approval getApprovalByNamedIdentifier(NamedIdentifier namedIdentifier)
+        throws ApprovalNotFoundException, ApprovalServiceException {
+        throwExceptionIfConfigured();
+        return null;
+    }
+
+    private void throwExceptionIfConfigured() throws ApprovalNotFoundException, ApprovalServiceException {
         if (exception instanceof ApprovalNotFoundException) {
             throw (ApprovalNotFoundException) exception;
         }
         if (exception instanceof ApprovalServiceException) {
             throw (ApprovalServiceException) exception;
         }
-        return null;
     }
 
     public Approval getPersistedApproval() {

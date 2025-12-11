@@ -1,7 +1,16 @@
 openapi: 3.0.1
 info:
   title: NVA Approval API
+  description: API for managing approval records with persistent handle identifiers
   version: 1.0.0
+  contact:
+    email: kontakt@sikt.no
+    url: https://nva.sikt.no
+servers:
+  - url: https://api.nva.unit.no/approval
+tags:
+  - name: Approval
+    description: Operations for managing approvals
 x-amazon-apigateway-request-validator: validate_body
 x-amazon-apigateway-request-validators:
   validate_body:
@@ -10,6 +19,9 @@ x-amazon-apigateway-request-validators:
 paths:
   /:
     post:
+      tags:
+        - Approval
+      operationId: createApproval
       summary: Create Approval
       description: Create approval
       parameters:
@@ -65,8 +77,65 @@ paths:
             "application/json":
               schema:
                 $ref: '#/components/schemas/Problem'
+    get:
+      tags:
+        - Approval
+      operationId: getApprovalByQuery
+      summary: Get Approval by handle or named identifier
+      description: Get approval by handle value or named identifier (name+value)
+      parameters:
+        - name: handle
+          in: query
+          description: Handle URI to look up (e.g., https://hdl.handle.net/11250.1/12345)
+          schema:
+            type: string
+            format: uri
+        - name: name
+          in: query
+          description: Identifier name (required when using value parameter)
+          schema:
+            type: string
+        - name: value
+          in: query
+          description: Identifier value (required when using name parameter)
+          schema:
+            type: string
+      x-amazon-apigateway-integration:
+        uri:
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${NvaFetchApprovalFunction.Arn}/invocations
+        responses: { }
+        httpMethod: POST
+        type: AWS_PROXY
+      responses:
+        '200':
+          description: Approval found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Approval'
+        '400':
+          description: Bad Request - invalid query parameters or missing required parameters
+          content:
+            "application/json":
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '404':
+          description: Approval not found
+          content:
+            "application/json":
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '502':
+          description: Bad gateway
+          content:
+            "application/json":
+              schema:
+                $ref: '#/components/schemas/Problem'
   /{approvalId}:
     get:
+      tags:
+        - Approval
+      operationId: getApprovalById
       summary: Get Approval
       description: Get approval by ID
       parameters:
@@ -162,6 +231,14 @@ components:
       type: object
       description: An approval for associating a persistent handle identifier with a source URI
       properties:
+        type:
+          type: string
+          default: Approval
+          description: The type discriminator for this object
+        id:
+          type: string
+          format: uri
+          description: The full URI of this approval resource
         identifier:
           type: string
           format: uuid
@@ -176,7 +253,19 @@ components:
           format: uri
           description: The source URI that the handle originates from
         handle:
-          $ref: '#/components/schemas/Handle'
+          type: string
+          format: uri
+          description: The full handle URI (e.g., https://hdl.handle.net/11250.1/12345)
+      example:
+        type: Approval
+        id: https://api.nva.unit.no/approval/6ff5f1b5-97c1-40f0-86ad-2cbd9006eee2
+        identifier: 6ff5f1b5-97c1-40f0-86ad-2cbd9006eee2
+        namedIdentifiers:
+          - type: Identifier
+            name: REK
+            value: "2024/123"
+        source: https://example.com/source/12345
+        handle: https://hdl.handle.net/11250.1/98765
     Identifier:
       type: object
       description: A named identifier that can be used to look up or reference an approval
@@ -195,14 +284,6 @@ components:
         value:
           type: string
           description: The actual identifier value
-    Handle:
-      type: object
-      description: A persistent identifier (handle.net) that resolves to a resource URI
-      properties:
-        value:
-          type: string
-          format: uri
-          description: The full handle URI (e.g., https://hdl.handle.net/11250.1/12345)
   securitySchemes:
     CognitoUserPool:
       type: apiKey
