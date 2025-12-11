@@ -86,7 +86,7 @@ paths:
       parameters:
         - name: handle
           in: query
-          description: Handle value to look up
+          description: Handle URI to look up (e.g., https://hdl.handle.net/11250.1/12345)
           schema:
             type: string
             format: uri
