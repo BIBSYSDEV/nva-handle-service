@@ -1,6 +1,8 @@
 package no.sikt.nva.approvals.persistence;
 
 import static no.sikt.nva.approvals.persistence.ApprovalDao.toDatabaseIdentifier;
+import static no.sikt.nva.approvals.persistence.DynamoDbApprovalRepository.Operation.DatabaseOperation.CREATE;
+import static no.sikt.nva.approvals.persistence.DynamoDbApprovalRepository.Operation.DatabaseOperation.DELETE;
 import static no.sikt.nva.approvals.persistence.DynamoDbConstants.GSI1;
 import static no.sikt.nva.approvals.persistence.DynamoDbConstants.GSI2;
 import static no.sikt.nva.approvals.persistence.DynamoDbConstants.PK0;
@@ -17,6 +19,7 @@ import static software.amazon.awssdk.enhanced.dynamodb.TableMetadata.primaryInde
 import static software.amazon.awssdk.enhanced.dynamodb.model.QueryConditional.keyEqualTo;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -25,6 +28,7 @@ import java.util.stream.IntStream;
 import no.sikt.nva.approvals.domain.Approval;
 import no.sikt.nva.approvals.domain.Handle;
 import no.sikt.nva.approvals.domain.NamedIdentifier;
+import no.sikt.nva.approvals.persistence.DynamoDbApprovalRepository.Operation.DatabaseOperation;
 import no.unit.nva.commons.json.JsonUtils;
 import nva.commons.core.Environment;
 import nva.commons.core.JacocoGenerated;
@@ -125,7 +129,8 @@ public class DynamoDbApprovalRepository implements ApprovalRepository {
 
     private static <T> List<List<T>> splitToChunks(List<T> list) {
         return IntStream.range(0, (list.size() + BATCH_GET_ITEM_LIMIT - 1) / BATCH_GET_ITEM_LIMIT)
-                   .mapToObj(i -> list.subList(i * BATCH_GET_ITEM_LIMIT, Math.min((i + 1) * BATCH_GET_ITEM_LIMIT, list.size())))
+                   .mapToObj(i -> list.subList(i * BATCH_GET_ITEM_LIMIT,
+                                               Math.min((i + 1) * BATCH_GET_ITEM_LIMIT, list.size())))
                    .toList();
     }
 
@@ -178,6 +183,15 @@ public class DynamoDbApprovalRepository implements ApprovalRepository {
                    .expression("attribute_not_exists(#pk) AND attribute_not_exists(#sk)")
                    .expressionNames(Map.of("#pk", PK0, "#sk", SK0))
                    .build();
+    }
+
+    private static List<Operation> getOperations(Approval approval, Approval existingApproval,
+                                                 DatabaseOperation operation) {
+        return approval.namedIdentifiers()
+                   .stream()
+                   .filter(id -> !existingApproval.namedIdentifiers().contains(id))
+                   .map(identifier -> new Operation(operation, IdentifierDao.fromIdentifier(identifier)))
+                   .toList();
     }
 
     private List<NamedIdentifier> fetchIdentifiers(Collection<NamedIdentifier> namedIdentifiers)
@@ -241,44 +255,41 @@ public class DynamoDbApprovalRepository implements ApprovalRepository {
     }
 
     private void updateIdentifiers(Approval approval) throws RepositoryException {
-        var existingApproval = fetchExistingApproval(approval);
-        var identifiersToDelete = existingApproval.namedIdentifiers().stream()
-                                      .filter(id -> !approval.namedIdentifiers().contains(id))
-                                      .toList();
-        var identifiersToCreate = approval.namedIdentifiers().stream()
-                                      .filter(id -> !existingApproval.namedIdentifiers().contains(id))
-                                      .toList();
-
-        updateIdentifiersForApproval(approval, identifiersToDelete, identifiersToCreate);
+        var databaseVersion = fetchExistingApproval(approval);
+        var operations = new ArrayList<Operation>();
+        operations.addAll(getOperations(databaseVersion, approval, DELETE));
+        operations.addAll(getOperations(approval, databaseVersion, CREATE));
+        updateIdentifiersForApproval(approval, operations);
     }
 
-    private void updateIdentifiersForApproval(Approval approval, List<NamedIdentifier> identifiersToDelete,
-                                              List<NamedIdentifier> identifiersToCreate) {
-        var deleteIterator = identifiersToDelete.iterator();
-        var createIterator = identifiersToCreate.iterator();
-        while (deleteIterator.hasNext() || createIterator.hasNext()) {
-            var requestBuilder = TransactWriteItemsEnhancedRequest.builder();
-            var count = 0;
-            while (count < TRANSACT_WRITE_ITEM_LIMIT && deleteIterator.hasNext()) {
-                var identifier = deleteIterator.next();
-                requestBuilder.addDeleteItem(table, IdentifierDao.fromIdentifier(identifier).getPrimaryKey());
-                count++;
-            }
-            var approvalDao = ApprovalDao.fromApproval(approval);
-            var handleDao = HandleDao.fromHandle(approval.handle());
-            while (count < TRANSACT_WRITE_ITEM_LIMIT && createIterator.hasNext()) {
-                var identifier = createIterator.next();
-                var document = IdentifierDao.fromIdentifier(identifier).toEnhancedDocument(approvalDao, handleDao);
-                requestBuilder.addPutItem(table, document);
-                count++;
-            }
-            client.transactWriteItems(requestBuilder.build());
+    private void updateIdentifiersForApproval(Approval approval, List<Operation> operations) {
+        var iterator = operations.iterator();
+        while (iterator.hasNext()) {
+            sendTransaction(approval, iterator);
         }
     }
 
+    private void sendTransaction(Approval approval, Iterator<Operation> iterator) {
+        var count = 0;
+        var requestBuilder = TransactWriteItemsEnhancedRequest.builder();
+        while (count < TRANSACT_WRITE_ITEM_LIMIT && iterator.hasNext()) {
+            var approvalDao = ApprovalDao.fromApproval(approval);
+            var handleDao = HandleDao.fromHandle(approval.handle());
+            var operation = iterator.next();
+            if (DELETE.equals(operation.operation)) {
+                requestBuilder.addDeleteItem(table, operation.entry().getPrimaryKey());
+            } else {
+                var document = operation.entry().toEnhancedDocument(approvalDao, handleDao);
+                requestBuilder.addPutItem(table, document);
+            }
+            count++;
+        }
+        client.transactWriteItems(requestBuilder.build());
+    }
+
     private Approval fetchExistingApproval(Approval approval) throws RepositoryException {
-        return findByApprovalIdentifier(approval.identifier())
-                   .orElseThrow(() -> new RepositoryException("Approval not found: %s".formatted(approval.identifier())));
+        return findByApprovalIdentifier(approval.identifier()).orElseThrow(
+            () -> new RepositoryException("Approval not found: %s".formatted(approval.identifier())));
     }
 
     private List<DatabaseEntry> fetchEntitiesByApprovalIdentifier(UUID identifier) {
@@ -348,5 +359,12 @@ public class DynamoDbApprovalRepository implements ApprovalRepository {
     private EnhancedDocument createHandleEntity(Approval approval) {
         var approvalDao = ApprovalDao.fromApproval(approval);
         return HandleDao.fromHandle(approval.handle()).toEnhancedDocument(approvalDao);
+    }
+
+    public record Operation(DatabaseOperation operation, IdentifierDao entry) {
+
+        public enum DatabaseOperation {
+            CREATE, DELETE
+        }
     }
 }
