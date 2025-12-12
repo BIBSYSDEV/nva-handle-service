@@ -204,7 +204,7 @@ class DynamoDbApprovalRepositoryTest {
     }
 
     @Test
-    void shouldUpdateApprovalIdentifiersWhenApprovalHasMoreThan80Identifiers() throws RepositoryException {
+    void shouldUpdateApprovalIdentifiersWhenMoreThen80ItemsToModifyInTransaction() throws RepositoryException {
         var initialIdentifiers = randomIdentifiers(50);
         var approval = randomApproval(initialIdentifiers, randomUUID());
         approvalRepository.save(approval);
