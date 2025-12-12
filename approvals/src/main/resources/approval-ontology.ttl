@@ -1,0 +1,92 @@
+@prefix : <https://nva.unit.no/approval#> .
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+@prefix nva: <https://nva.unit.no/ontology#> .
+
+<https://nva.unit.no/approval#> rdf:type owl:Ontology ;
+    rdfs:label "NVA Approval Ontology" ;
+    rdfs:comment "Ontology for managing approval records with persistent handle identifiers" .
+
+#################################################################
+#    Classes
+#################################################################
+
+:Approval rdf:type owl:Class ;
+    rdfs:label "Approval" ;
+    rdfs:comment "An approval record that associates a persistent handle identifier with a source URI and named identifiers" .
+
+:Identifier rdf:type owl:Class ;
+    rdfs:label "Identifier" ;
+    rdfs:comment "A named identifier consisting of a name-value pair used to reference an approval" .
+
+:ApprovalStatus rdf:type owl:Class ;
+    rdfs:label "Approval Status" ;
+    rdfs:comment "The processing status of an approval record" .
+
+#################################################################
+#    Individuals (Status values)
+#################################################################
+
+:Pending rdf:type owl:NamedIndividual, :ApprovalStatus ;
+    rdfs:label "Pending" ;
+    rdfs:comment "The approval is pending processing" .
+
+:Approved rdf:type owl:NamedIndividual, :ApprovalStatus ;
+    rdfs:label "Approved" ;
+    rdfs:comment "The approval has been processed and a handle has been assigned" .
+
+:Rejected rdf:type owl:NamedIndividual, :ApprovalStatus ;
+    rdfs:label "Rejected" ;
+    rdfs:comment "The approval has been rejected" .
+
+#################################################################
+#    Object Properties
+#################################################################
+
+:hasIdentifier rdf:type owl:ObjectProperty ;
+    rdfs:label "has identifier" ;
+    rdfs:comment "Links an approval to its named identifiers" ;
+    rdfs:domain :Approval ;
+    rdfs:range :Identifier .
+
+:hasStatus rdf:type owl:ObjectProperty ;
+    rdfs:label "has status" ;
+    rdfs:comment "Links an approval to its processing status" ;
+    rdfs:domain :Approval ;
+    rdfs:range :ApprovalStatus .
+
+#################################################################
+#    Data Properties
+#################################################################
+
+:source rdf:type owl:DatatypeProperty ;
+    rdfs:label "source" ;
+    rdfs:comment "The source URI that the approval originates from" ;
+    rdfs:domain :Approval ;
+    rdfs:range xsd:anyURI .
+
+:handle rdf:type owl:DatatypeProperty ;
+    rdfs:label "handle" ;
+    rdfs:comment "The persistent handle URI assigned to the approval" ;
+    rdfs:domain :Approval ;
+    rdfs:range xsd:anyURI .
+
+:name rdf:type owl:DatatypeProperty ;
+    rdfs:label "name" ;
+    rdfs:comment "The name or category of the identifier (e.g., REK, DMP)" ;
+    rdfs:domain :Identifier ;
+    rdfs:range xsd:string .
+
+:value rdf:type owl:DatatypeProperty ;
+    rdfs:label "value" ;
+    rdfs:comment "The actual identifier value" ;
+    rdfs:domain :Identifier ;
+    rdfs:range xsd:string .
+
+:identifier rdf:type owl:DatatypeProperty ;
+    rdfs:label "identifier" ;
+    rdfs:comment "The unique UUID identifier of the approval" ;
+    rdfs:domain :Approval ;
+    rdfs:range xsd:string .

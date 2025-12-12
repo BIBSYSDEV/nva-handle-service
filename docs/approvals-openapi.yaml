@@ -151,6 +151,49 @@ paths:
             "application/json":
               schema:
                 $ref: '#/components/schemas/Problem'
+  /context:
+    get:
+      tags:
+        - Approval
+      operationId: getContext
+      summary: Get JSON-LD Context
+      description: Returns the JSON-LD context for the Approval API
+      x-amazon-apigateway-integration:
+        uri:
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${NvaFetchContextFunction.Arn}/invocations
+        responses: { }
+        httpMethod: POST
+        type: AWS_PROXY
+      responses:
+        '200':
+          description: JSON-LD context
+          content:
+            application/ld+json:
+              schema:
+                type: object
+            application/json:
+              schema:
+                type: object
+  /ontology:
+    get:
+      tags:
+        - Approval
+      operationId: getOntology
+      summary: Get RDF Ontology
+      description: Returns the RDF ontology (Turtle format) for the Approval API
+      x-amazon-apigateway-integration:
+        uri:
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${NvaFetchOntologyFunction.Arn}/invocations
+        responses: { }
+        httpMethod: POST
+        type: AWS_PROXY
+      responses:
+        '200':
+          description: RDF ontology in Turtle format
+          content:
+            text/turtle:
+              schema:
+                type: string
   /{approvalId}:
     get:
       tags:
@@ -257,6 +300,10 @@ components:
       type: object
       description: An approval for associating a persistent handle identifier with a source URI
       properties:
+        '@context':
+          type: string
+          format: uri
+          description: JSON-LD context URI for this resource
         type:
           type: string
           default: Approval
@@ -283,6 +330,7 @@ components:
           format: uri
           description: The full handle URI (e.g., https://hdl.handle.net/11250.1/12345)
       example:
+        '@context': https://api.nva.unit.no/approval/context
         type: Approval
         id: https://api.nva.unit.no/approval/6ff5f1b5-97c1-40f0-86ad-2cbd9006eee2
         identifier: 6ff5f1b5-97c1-40f0-86ad-2cbd9006eee2

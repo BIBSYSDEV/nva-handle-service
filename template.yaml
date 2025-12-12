@@ -332,6 +332,44 @@ Resources:
             Method: get
             RestApiId: !Ref NvaApprovalsApi
 
+  NvaFetchContextFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub '/aws/lambda/${NvaFetchContextFunction}'
+      RetentionInDays: 90
+
+  NvaFetchContextFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: approvals
+      Handler: no.sikt.nva.approvals.rest.FetchContextHandler::handleRequest
+      Events:
+        GetContext:
+          Type: Api
+          Properties:
+            Path: /context
+            Method: get
+            RestApiId: !Ref NvaApprovalsApi
+
+  NvaFetchOntologyFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub '/aws/lambda/${NvaFetchOntologyFunction}'
+      RetentionInDays: 90
+
+  NvaFetchOntologyFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: approvals
+      Handler: no.sikt.nva.approvals.rest.FetchOntologyHandler::handleRequest
+      Events:
+        GetOntology:
+          Type: Api
+          Properties:
+            Path: /ontology
+            Method: get
+            RestApiId: !Ref NvaApprovalsApi
+
   NvaCreateHandleBasePathMapping:
     Type: AWS::ApiGateway::BasePathMapping
     Properties:

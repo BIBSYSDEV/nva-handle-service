@@ -1,0 +1,45 @@
+{
+  "@context": {
+    "@vocab": "https://nva.unit.no/approval#",
+    "xsd": "http://www.w3.org/2001/XMLSchema#",
+    "nva": "https://nva.unit.no/ontology#",
+    "type": "@type",
+    "id": "@id",
+    "identifier": {
+      "@id": "nva:identifier",
+      "@type": "xsd:string"
+    },
+    "identifiers": {
+      "@id": "identifier",
+      "@container": "@set"
+    },
+    "source": {
+      "@id": "nva:source",
+      "@type": "@id"
+    },
+    "handle": {
+      "@id": "nva:handle",
+      "@type": "@id"
+    },
+    "name": {
+      "@id": "nva:name",
+      "@type": "xsd:string"
+    },
+    "value": {
+      "@id": "nva:value",
+      "@type": "xsd:string"
+    },
+    "createdDate": {
+      "@id": "nva:created",
+      "@type": "xsd:dateTime"
+    },
+    "modifiedDate": {
+      "@id": "nva:modified",
+      "@type": "xsd:dateTime"
+    },
+    "status": {
+      "@id": "approvalStatus",
+      "@type": "ApprovalStatus"
+    }
+  }
+}
