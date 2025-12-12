@@ -8,6 +8,7 @@ import java.sql.SQLException;
 import java.util.Collection;
 import java.util.UUID;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
 import no.sikt.nva.approvals.persistence.ApprovalRepository;
 import no.sikt.nva.approvals.persistence.DynamoDbApprovalRepository;
 import no.sikt.nva.approvals.persistence.RepositoryException;
@@ -54,7 +55,9 @@ public class ApprovalServiceImpl implements ApprovalService {
             var identifiers = approvalRepository.findIdentifiers(namedIdentifiers);
             if (!identifiers.isEmpty()) {
                 var message = formatConflictMessage(identifiers);
-                throw new ApprovalConflictException(message);
+                var conflictingKeys = identifiers.stream()
+                                          .collect(Collectors.toMap(NamedIdentifier::name, NamedIdentifier::value));
+                throw new ApprovalConflictException(message, conflictingKeys);
             }
         } catch (RepositoryException e) {
             throw new ApprovalServiceException("Could not verify if identifiers are new");

@@ -14,6 +14,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
 import java.util.List;
+import java.util.Map;
 import no.sikt.nva.approvals.domain.ApprovalConflictException;
 import no.sikt.nva.approvals.domain.ApprovalServiceException;
 import no.sikt.nva.approvals.domain.FakeApprovalService;
@@ -26,6 +27,7 @@ import nva.commons.core.Environment;
 import nva.commons.core.paths.UriWrapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.zalando.problem.Problem;
 
 class CreateApprovalHandlerTest {
 
@@ -99,14 +101,19 @@ class CreateApprovalHandlerTest {
 
     @Test
     void shouldReturnConflictWhenApprovalServiceThrowsConflictException() throws IOException {
-        handler = new CreateApprovalHandler(new FakeApprovalService(new ApprovalConflictException("conflict")));
+        var key = "key";
+        var value = "value";
+        handler = new CreateApprovalHandler(
+            new FakeApprovalService(new ApprovalConflictException("conflict", Map.of(key, value))));
         var request = createRequest(randomApprovalRequest(randomUri()));
 
         handler.handleRequest(request, output, context);
 
-        var response = GatewayResponse.fromOutputStream(output, Void.class);
+        var response = GatewayResponse.fromOutputStream(output, Problem.class);
+        var problem = response.getBodyObject(Problem.class);
 
         assertEquals(HTTP_CONFLICT, response.getStatusCode());
+        assertEquals(value, ((Map<String, String>) problem.getParameters().get("conflictingKeys")).get(key));
     }
 
     @Test
