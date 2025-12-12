@@ -35,8 +35,8 @@ public class ApprovalServiceImpl implements ApprovalService {
     @JacocoGenerated
     public static ApprovalService defaultInstance(Environment environment) {
         return new ApprovalServiceImpl(new HandleDatabase(environment),
-                                       DynamoDbApprovalRepository.defaultInstance(environment),
-                                       getConnectionSupplier(), environment);
+                                       DynamoDbApprovalRepository.defaultInstance(environment), getConnectionSupplier(),
+                                       environment);
     }
 
     @Override
@@ -47,6 +47,51 @@ public class ApprovalServiceImpl implements ApprovalService {
         var approval = new Approval(randomUUID(), namedIdentifiers, source, handle);
         save(approval);
         return approval;
+    }
+
+    @Override
+    public Approval getApprovalByIdentifier(UUID approvalId)
+        throws ApprovalNotFoundException, ApprovalServiceException {
+        try {
+            return approvalRepository.findByApprovalIdentifier(approvalId)
+                       .orElseThrow(() -> new ApprovalNotFoundException(
+                           "Approval not found for identifier %s".formatted(approvalId)));
+        } catch (RepositoryException e) {
+            throw new ApprovalServiceException("Could not fetch approval by identifier %s".formatted(approvalId));
+        }
+    }
+
+    @Override
+    public Approval getApprovalByHandle(Handle handle) throws ApprovalNotFoundException, ApprovalServiceException {
+        try {
+            return approvalRepository.findByHandle(handle)
+                       .orElseThrow(() -> new ApprovalNotFoundException(
+                           "Approval not found for handle %s".formatted(handle.value())));
+        } catch (RepositoryException e) {
+            throw new ApprovalServiceException("Could not fetch approval by handle %s".formatted(handle.value()));
+        }
+    }
+
+    @Override
+    public Approval getApprovalByNamedIdentifier(NamedIdentifier namedIdentifier)
+        throws ApprovalNotFoundException, ApprovalServiceException {
+        try {
+            return approvalRepository.findByIdentifier(namedIdentifier)
+                       .orElseThrow(() -> new ApprovalNotFoundException(
+                           "Approval not found for identifier %s:%s".formatted(namedIdentifier.name(),
+                                                                               namedIdentifier.value())));
+        } catch (RepositoryException e) {
+            throw new ApprovalServiceException(
+                "Could not fetch approval by identifier %s:%s".formatted(namedIdentifier.name(),
+                                                                         namedIdentifier.value()));
+        }
+    }
+
+    @JacocoGenerated
+    @Override
+    public Approval updateApproval(Approval approval)
+        throws ApprovalNotFoundException, ApprovalServiceException, ApprovalConflictException {
+        return null;
     }
 
     private void ensureIdentifiersDoesNotExist(Collection<NamedIdentifier> namedIdentifiers)
@@ -96,44 +141,6 @@ public class ApprovalServiceImpl implements ApprovalService {
         } catch (SQLException e) {
             connection.rollback();
             throw new SQLException("Could not persist handle for source %s".formatted(source));
-        }
-    }
-
-    @Override
-    public Approval getApprovalByIdentifier(UUID approvalId)
-        throws ApprovalNotFoundException, ApprovalServiceException {
-        try {
-            return approvalRepository.findByApprovalIdentifier(approvalId)
-                       .orElseThrow(() -> new ApprovalNotFoundException(
-                           "Approval not found for identifier %s".formatted(approvalId)));
-        } catch (RepositoryException e) {
-            throw new ApprovalServiceException("Could not fetch approval by identifier %s".formatted(approvalId));
-        }
-    }
-
-    @Override
-    public Approval getApprovalByHandle(Handle handle) throws ApprovalNotFoundException, ApprovalServiceException {
-        try {
-            return approvalRepository.findByHandle(handle)
-                       .orElseThrow(() -> new ApprovalNotFoundException(
-                           "Approval not found for handle %s".formatted(handle.value())));
-        } catch (RepositoryException e) {
-            throw new ApprovalServiceException("Could not fetch approval by handle %s".formatted(handle.value()));
-        }
-    }
-
-    @Override
-    public Approval getApprovalByNamedIdentifier(NamedIdentifier namedIdentifier)
-        throws ApprovalNotFoundException, ApprovalServiceException {
-        try {
-            return approvalRepository.findByIdentifier(namedIdentifier)
-                       .orElseThrow(() -> new ApprovalNotFoundException(
-                           "Approval not found for identifier %s:%s".formatted(namedIdentifier.name(),
-                                                                               namedIdentifier.value())));
-        } catch (RepositoryException e) {
-            throw new ApprovalServiceException(
-                "Could not fetch approval by identifier %s:%s".formatted(namedIdentifier.name(),
-                                                                         namedIdentifier.value()));
         }
     }
 }

@@ -311,6 +311,40 @@ Resources:
       LogGroupName: !Sub '/aws/lambda/${NvaFetchApprovalFunction}'
       RetentionInDays: 90
 
+  NvaUpdateApprovalFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: approvals
+      Handler: no.sikt.nva.approvals.rest.UpdateApprovalHandler::handleRequest
+      Policies:
+        - AWSLambdaVPCAccessExecutionRole
+        - !Ref ReadHandleDatabaseSecretsManagedPolicy
+        - !Ref DynamoDbTableAccessPolicy
+      Environment:
+        Variables:
+          HANDLE_PREFIX: !If [ IsProd, !Ref HandlePrefixForApprovals, !Ref HandlePrefix ]
+          HANDLE_BASE_URI: !Ref HandleBaseUri
+          HANDLE_DATABASE_SECRET_NAME: !Ref HandleDatabaseSecretName
+          TABLE: !Ref ApprovalsTable
+      VpcConfig:
+        SecurityGroupIds:
+          - !Ref EIPSecurityGroupId
+        SubnetIds:
+          - !Ref EIPPrivateSubnet
+      Events:
+        CreateApproval:
+          Type: Api
+          Properties:
+            Path: /{approvalId}
+            Method: put
+            RestApiId: !Ref NvaApprovalsApi
+
+  NvaUpdateApprovalFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub '/aws/lambda/${NvaUpdateApprovalFunction}'
+      RetentionInDays: 90
+
   NvaFetchApprovalFunction:
     Type: AWS::Serverless::Function
     Properties:

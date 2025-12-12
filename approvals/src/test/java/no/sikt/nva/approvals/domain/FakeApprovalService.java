@@ -45,8 +45,7 @@ public class FakeApprovalService implements ApprovalService {
     }
 
     @Override
-    public Approval getApprovalByHandle(Handle handle)
-        throws ApprovalNotFoundException, ApprovalServiceException {
+    public Approval getApprovalByHandle(Handle handle) throws ApprovalNotFoundException, ApprovalServiceException {
         throwExceptionIfConfigured();
         return randomApproval(handle);
     }
@@ -58,6 +57,23 @@ public class FakeApprovalService implements ApprovalService {
         return randomApproval(namedIdentifier);
     }
 
+    @Override
+    public Approval updateApproval(Approval approval) throws ApprovalServiceException, ApprovalNotFoundException {
+        if (exception instanceof ApprovalNotFoundException) {
+            throw (ApprovalNotFoundException) exception;
+        }
+        if (exception instanceof ApprovalServiceException) {
+            throw (ApprovalServiceException) exception;
+        }
+
+        approvals.add(approval);
+        return approval;
+    }
+
+    public Approval getPersistedApproval() {
+        return approvals.getFirst();
+    }
+
     private void throwExceptionIfConfigured() throws ApprovalNotFoundException, ApprovalServiceException {
         if (exception instanceof ApprovalNotFoundException) {
             throw (ApprovalNotFoundException) exception;
@@ -65,9 +81,5 @@ public class FakeApprovalService implements ApprovalService {
         if (exception instanceof ApprovalServiceException) {
             throw (ApprovalServiceException) exception;
         }
-    }
-
-    public Approval getPersistedApproval() {
-        return approvals.getFirst();
     }
 }
