@@ -1,6 +1,7 @@
 package no.sikt.nva.approvals.rest;
 
 import static java.util.Objects.nonNull;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.annotation.JsonTypeInfo.Id;
 import com.fasterxml.jackson.annotation.JsonTypeName;
@@ -14,6 +15,7 @@ import nva.commons.core.paths.UriWrapper;
 @JsonTypeInfo(use = Id.NAME, property = "type")
 @JsonTypeName("Approval")
 public record ApprovalResponse(
+    @JsonProperty("@context") URI context,
     URI id,
     UUID identifier,
     Collection<NamedIdentifier> identifiers,
@@ -22,10 +24,13 @@ public record ApprovalResponse(
 ) {
 
     private static final String APPROVAL_PATH = "approval";
+    private static final String CONTEXT_PATH = "context";
 
     public static ApprovalResponse fromApproval(Approval approval, String apiHost) {
         var id = buildId(apiHost, approval.identifier());
+        var contextUri = buildContextUri(apiHost);
         return new ApprovalResponse(
+            contextUri,
             id,
             approval.identifier(),
             approval.namedIdentifiers(),
@@ -42,6 +47,13 @@ public record ApprovalResponse(
         return UriWrapper.fromHost(apiHost)
             .addChild(APPROVAL_PATH)
             .addChild(identifier.toString())
+            .getUri();
+    }
+
+    private static URI buildContextUri(String apiHost) {
+        return UriWrapper.fromHost(apiHost)
+            .addChild(APPROVAL_PATH)
+            .addChild(CONTEXT_PATH)
             .getUri();
     }
 }
