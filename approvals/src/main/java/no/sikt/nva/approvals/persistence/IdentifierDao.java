@@ -12,6 +12,7 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.annotation.JsonTypeInfo.Id;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import no.sikt.nva.approvals.domain.NamedIdentifier;
+import software.amazon.awssdk.enhanced.dynamodb.Key;
 import software.amazon.awssdk.enhanced.dynamodb.document.EnhancedDocument;
 
 @JsonTypeInfo(use = Id.NAME, property = "type")
@@ -25,6 +26,10 @@ public record IdentifierDao(String name, String value) implements DatabaseEntry 
     @Override
     public String getDatabaseIdentifier() {
         return "Identifier:%s#%s".formatted(name, value);
+    }
+
+    public Key getPrimaryKey() {
+        return Key.builder().partitionValue(getDatabaseIdentifier()).sortValue(getDatabaseIdentifier()).build();
     }
 
     @JsonIgnore
