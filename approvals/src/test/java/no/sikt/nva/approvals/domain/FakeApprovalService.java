@@ -2,6 +2,7 @@ package no.sikt.nva.approvals.domain;
 
 import static no.sikt.nva.approvals.utils.TestUtils.randomApproval;
 import static no.sikt.nva.approvals.utils.TestUtils.randomHandle;
+import static no.unit.nva.testutils.RandomDataGenerator.randomUri;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -45,8 +46,7 @@ public class FakeApprovalService implements ApprovalService {
     }
 
     @Override
-    public Approval getApprovalByHandle(Handle handle)
-        throws ApprovalNotFoundException, ApprovalServiceException {
+    public Approval getApprovalByHandle(Handle handle) throws ApprovalNotFoundException, ApprovalServiceException {
         throwExceptionIfConfigured();
         return randomApproval(handle);
     }
@@ -58,6 +58,22 @@ public class FakeApprovalService implements ApprovalService {
         return randomApproval(namedIdentifier);
     }
 
+    @Override
+    public Approval updateApprovalIdentifiers(UUID approvalId, Collection<NamedIdentifier> identifiers)
+        throws ApprovalServiceException, ApprovalNotFoundException {
+        if (exception instanceof ApprovalNotFoundException) {
+            throw (ApprovalNotFoundException) exception;
+        }
+        if (exception instanceof ApprovalServiceException) {
+            throw (ApprovalServiceException) exception;
+        }
+        return new Approval(approvalId, identifiers, randomUri(), randomHandle());
+    }
+
+    public Approval getPersistedApproval() {
+        return approvals.getFirst();
+    }
+
     private void throwExceptionIfConfigured() throws ApprovalNotFoundException, ApprovalServiceException {
         if (exception instanceof ApprovalNotFoundException) {
             throw (ApprovalNotFoundException) exception;
@@ -65,9 +81,5 @@ public class FakeApprovalService implements ApprovalService {
         if (exception instanceof ApprovalServiceException) {
             throw (ApprovalServiceException) exception;
         }
-    }
-
-    public Approval getPersistedApproval() {
-        return approvals.getFirst();
     }
 }

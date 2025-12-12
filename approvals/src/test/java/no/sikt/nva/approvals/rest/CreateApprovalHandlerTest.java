@@ -40,7 +40,7 @@ class CreateApprovalHandlerTest {
     void setUp() {
         this.output = new ByteArrayOutputStream();
         approvalService = new FakeApprovalService();
-        handler = new CreateApprovalHandler(approvalService);
+        handler = new CreateApprovalHandler(approvalService, new Environment());
     }
 
     @Test
@@ -104,7 +104,7 @@ class CreateApprovalHandlerTest {
         var key = "key";
         var value = "value";
         handler = new CreateApprovalHandler(
-            new FakeApprovalService(new ApprovalConflictException("conflict", Map.of(key, value))));
+            new FakeApprovalService(new ApprovalConflictException("conflict", Map.of(key, value))), new Environment());
         var request = createRequest(randomApprovalRequest(randomUri()));
 
         handler.handleRequest(request, output, context);
@@ -118,7 +118,8 @@ class CreateApprovalHandlerTest {
 
     @Test
     void shouldReturnBadGatewayOnWhenApprovalServiceThrowsApprovalServiceException() throws IOException {
-        handler = new CreateApprovalHandler(new FakeApprovalService(new ApprovalServiceException("error")));
+        handler = new CreateApprovalHandler(new FakeApprovalService(new ApprovalServiceException("error")),
+                                            new Environment());
         var request = createRequest(randomApprovalRequest(randomUri()));
 
         handler.handleRequest(request, output, context);

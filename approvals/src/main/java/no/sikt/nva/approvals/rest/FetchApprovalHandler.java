@@ -3,6 +3,8 @@ package no.sikt.nva.approvals.rest;
 import static java.net.HttpURLConnection.HTTP_OK;
 import static java.util.Objects.isNull;
 import static java.util.Objects.nonNull;
+import static no.sikt.nva.approvals.utils.RequestUtils.getApiHost;
+import static no.sikt.nva.approvals.utils.RequestUtils.getApprovalIdentifier;
 import static nva.commons.core.StringUtils.isNotBlank;
 import com.amazonaws.services.lambda.runtime.Context;
 import java.net.URI;
@@ -31,7 +33,6 @@ public class FetchApprovalHandler extends ApiGatewayHandler<Void, ApprovalRespon
     private static final String NAME_QUERY_PARAMETER = "name";
     private static final String VALUE_QUERY_PARAMETER = "value";
     private static final String APPROVAL_NOT_FOUND_MESSAGE = "Approval not found";
-    private static final String INVALID_APPROVAL_ID_MESSAGE = "Invalid approval ID format";
     private static final String INVALID_HANDLE_MESSAGE = "Invalid handle format";
     private static final String MISSING_NAME_OR_VALUE_MESSAGE = "Both 'name' and 'value' query parameters are required";
     private static final String MISSING_QUERY_PARAMETERS_MESSAGE =
@@ -39,7 +40,6 @@ public class FetchApprovalHandler extends ApiGatewayHandler<Void, ApprovalRespon
     private static final String BAD_GATEWAY_MESSAGE = "Something went wrong!";
     private static final String CONFLICTING_PARAMETERS_MESSAGE =
         "Cannot use both path parameter and query parameters. Use either approvalId path or query parameters";
-    private static final String API_HOST_ENV = "API_HOST";
 
     private final ApprovalService approvalService;
     private final String apiHost;
@@ -52,7 +52,7 @@ public class FetchApprovalHandler extends ApiGatewayHandler<Void, ApprovalRespon
     public FetchApprovalHandler(ApprovalService approvalService, Environment environment) {
         super(Void.class, environment);
         this.approvalService = approvalService;
-        this.apiHost = environment.readEnv(API_HOST_ENV);
+        this.apiHost = getApiHost(environment);
     }
 
     @Override
@@ -92,7 +92,7 @@ public class FetchApprovalHandler extends ApiGatewayHandler<Void, ApprovalRespon
     }
 
     private Approval fetchByApprovalId(RequestInfo requestInfo) throws ApiGatewayException {
-        var approvalId = extractApprovalId(requestInfo);
+        var approvalId = getApprovalIdentifier(requestInfo);
         return fetchApprovalByIdentifier(approvalId);
     }
 
@@ -112,15 +112,6 @@ public class FetchApprovalHandler extends ApiGatewayHandler<Void, ApprovalRespon
     private String getQueryParameter(RequestInfo requestInfo, String parameterName) {
         var queryParameters = requestInfo.getQueryParameters();
         return nonNull(queryParameters) ? queryParameters.get(parameterName) : null;
-    }
-
-    private UUID extractApprovalId(RequestInfo requestInfo) throws BadRequestException {
-        var approvalIdString = requestInfo.getPathParameter(APPROVAL_ID_PATH_PARAMETER);
-        try {
-            return UUID.fromString(approvalIdString);
-        } catch (IllegalArgumentException exception) {
-            throw new BadRequestException(INVALID_APPROVAL_ID_MESSAGE);
-        }
     }
 
     private Approval fetchApprovalByIdentifier(UUID approvalId) throws NotFoundException, BadGatewayException {
