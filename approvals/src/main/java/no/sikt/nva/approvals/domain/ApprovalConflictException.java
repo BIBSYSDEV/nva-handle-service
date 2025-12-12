@@ -1,9 +1,7 @@
 package no.sikt.nva.approvals.domain;
 
 import java.util.Map;
-import nva.commons.core.JacocoGenerated;
 
-@JacocoGenerated
 public class ApprovalConflictException extends Exception {
 
     private final Map<String, String> conflictingKeys;
