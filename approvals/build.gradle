@@ -1,18 +1,21 @@
 
 dependencies {
     implementation project(":operations")
-    implementation libs.nva.apigateway
-    implementation libs.nva.core
-    implementation libs.nva.json
+    implementation nvaLibs.apigateway
+    implementation nvaLibs.core
+    implementation nvaLibs.json
 
-    implementation libs.aws.sdk2.dynamo
-    implementation libs.aws.sdk2.dynamoenhanced
-    implementation libs.aws.sdk2.urlconnection
+    implementation nvaCatalog.aws.sdk2.dynamo
+    implementation nvaCatalog.aws.sdk2.dynamodbenhanced
+    implementation nvaCatalog.aws.sdk2.urlconnection
 
-    implementation libs.bundles.jackson
+    implementation nvaCatalog.bundles.jackson
 
-    testImplementation libs.bundles.testing
-    testImplementation libs.dynamodDbLocal
+    testImplementation nvaLibs.testutils
+    testImplementation nvaCatalog.bundles.testing.junit
+    testImplementation nvaCatalog.bundles.testing.hamcrest
+    testImplementation nvaCatalog.bundles.testing.mockito
+    testImplementation nvaCatalog.aws.dynamodb.local
 }
 
 test {

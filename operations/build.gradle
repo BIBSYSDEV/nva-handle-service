@@ -3,20 +3,22 @@ dependencies {
 
     implementation libs.postgres
 
-    implementation libs.nva.json
-    implementation libs.nva.core
-    implementation libs.nva.apigateway
-    implementation libs.nva.secrets
+    implementation nvaLibs.json
+    implementation nvaLibs.core
+    implementation nvaLibs.apigateway
+    implementation nvaLibs.secrets
 
-    implementation libs.aws.lambda.java.core
-    implementation libs.aws.sdk2.secrets
+    implementation nvaCatalog.aws.sdk2.secrets
 
-    implementation libs.bundles.logging
-    implementation libs.bundles.jackson
+    implementation nvaCatalog.bundles.logging
+    implementation nvaCatalog.bundles.jackson
 
-    testImplementation libs.nva.testutils
-    testImplementation libs.nva.json
+    testImplementation nvaLibs.testutils
+    testImplementation nvaLibs.logutils
+    testImplementation nvaLibs.json
 
-    testImplementation libs.bundles.testing
+    testImplementation nvaCatalog.bundles.testing.junit
+    testImplementation nvaCatalog.bundles.testing.hamcrest
+    testImplementation nvaCatalog.bundles.testing.mockito
 
 }

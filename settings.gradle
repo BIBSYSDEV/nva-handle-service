@@ -1,3 +1,26 @@
 rootProject.name = 'nva-handle-service'
 include 'operations'
 include 'approvals'
+
+def nvaCommonsVersion = '2.4.5'
+
+dependencyResolutionManagement {
+    repositories {
+        mavenCentral()
+        maven { url 'https://jitpack.io' }
+    }
+    versionCatalogs {
+        nvaCatalog {
+            from("com.github.bibsysdev:versions:${nvaCommonsVersion}")
+        }
+        nvaLibs {
+            version('nva', nvaCommonsVersion)
+            library('apigateway', 'com.github.bibsysdev', 'apigateway').versionRef('nva')
+            library('core', 'com.github.bibsysdev', 'core').versionRef('nva')
+            library('json', 'com.github.bibsysdev', 'json').versionRef('nva')
+            library('logutils', 'com.github.bibsysdev', 'logutils').versionRef('nva')
+            library('secrets', 'com.github.bibsysdev', 'secrets').versionRef('nva')
+            library('testutils', 'com.github.bibsysdev', 'nvatestutils').versionRef('nva')
+        }
+    }
+}

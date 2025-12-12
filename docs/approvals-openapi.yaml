@@ -248,6 +248,11 @@ components:
         requestId:
           type: string
           description: Identifier of the request causing the problem
+        conflictingKeys:
+          type: object
+          additionalProperties:
+            type: string
+          description: Map of conflicting identifier keys and their values (only present on 409 Conflict responses)
     Approval:
       type: object
       description: An approval for associating a persistent handle identifier with a source URI
