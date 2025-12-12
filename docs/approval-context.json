@@ -10,7 +10,7 @@
       "@type": "xsd:string"
     },
     "identifiers": {
-      "@id": "identifier",
+      "@id": "hasIdentifier",
       "@container": "@set"
     },
     "source": {
@@ -28,18 +28,6 @@
     "value": {
       "@id": "nva:value",
       "@type": "xsd:string"
-    },
-    "createdDate": {
-      "@id": "nva:created",
-      "@type": "xsd:dateTime"
-    },
-    "modifiedDate": {
-      "@id": "nva:modified",
-      "@type": "xsd:dateTime"
-    },
-    "status": {
-      "@id": "approvalStatus",
-      "@type": "ApprovalStatus"
     }
   }
 }
