@@ -40,7 +40,7 @@ public class UpdateApprovalHandler extends ApiGatewayHandler<UpdateApprovalReque
         throws ApiGatewayException {
         try {
             var identifier = getApprovalIdentifier(requestInfo);
-            var approval = approvalService.updateApproval(request.toApproval(identifier));
+            var approval = approvalService.updateApprovalIdentifiers(identifier, request.identifiers());
             addHeaders(approval);
         } catch (Exception exception) {
             handleException(exception);

@@ -162,15 +162,13 @@ class UpdateApprovalHandlerTest {
                   "name": "test",
                   "value": "123"
                 }
-              ],
-              "source": "%s"
+              ]
             }
             """.formatted(source);
     }
 
     private static UpdateApprovalRequest randomUpdateApprovalRequest() {
-        return new UpdateApprovalRequest(List.of(new NamedIdentifier(randomString(), randomString())), randomUri(),
-                                         URI.create("https://hdl.handle.net/1234/5678"));
+        return new UpdateApprovalRequest(List.of(new NamedIdentifier(randomString(), randomString())));
     }
 
     private String createExpectedLocationHeader(UUID identifier) {

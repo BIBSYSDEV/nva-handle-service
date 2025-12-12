@@ -16,6 +16,6 @@ public interface ApprovalService {
     Approval getApprovalByNamedIdentifier(NamedIdentifier namedIdentifier)
         throws ApprovalNotFoundException, ApprovalServiceException;
 
-    Approval updateApproval(Approval approval)
+    Approval updateApprovalIdentifiers(UUID approvalId,  Collection<NamedIdentifier> namedIdentifiers)
         throws ApprovalNotFoundException, ApprovalConflictException, ApprovalServiceException;
 }

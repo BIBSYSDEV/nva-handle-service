@@ -89,7 +89,7 @@ public class ApprovalServiceImpl implements ApprovalService {
 
     @JacocoGenerated
     @Override
-    public Approval updateApproval(Approval approval)
+    public Approval updateApprovalIdentifiers(UUID approvalId, Collection<NamedIdentifier> namedIdentifiers)
         throws ApprovalNotFoundException, ApprovalServiceException, ApprovalConflictException {
         return null;
     }
