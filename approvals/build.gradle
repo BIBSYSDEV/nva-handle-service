@@ -10,7 +10,6 @@ dependencies {
     implementation nvaCatalog.aws.sdk2.urlconnection
 
     implementation nvaCatalog.bundles.jackson
-    implementation nvaCatalog.guava
 
     testImplementation nvaLibs.testutils
     testImplementation nvaCatalog.bundles.testing.junit
