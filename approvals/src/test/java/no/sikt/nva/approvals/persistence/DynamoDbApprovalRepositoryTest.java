@@ -17,9 +17,11 @@ import static no.unit.nva.testutils.RandomDataGenerator.randomUri;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
+import no.sikt.nva.approvals.domain.Approval;
 import nva.commons.core.Environment;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -147,6 +149,89 @@ class DynamoDbApprovalRepositoryTest {
         var persistedIdentifiers = approvalRepository.findIdentifiers(identifiers);
 
         assertEquals(identifiers.size(), persistedIdentifiers.size());
+    }
+
+    @Test
+    void shouldUpdateApprovalIdentifiersByAddingNewIdentifiers() throws RepositoryException {
+        var initialIdentifiers = randomIdentifiers(2);
+        var approval = randomApproval(initialIdentifiers, randomUUID());
+        approvalRepository.save(approval);
+
+        var newIdentifiers = randomIdentifiers(3);
+        var allIdentifiers = new java.util.ArrayList<>(initialIdentifiers);
+        allIdentifiers.addAll(newIdentifiers);
+        var updatedApproval = new Approval(approval.identifier(), allIdentifiers, approval.source(), approval.handle());
+
+        approvalRepository.updateApprovalIdentifiers(updatedApproval);
+        var persistedApproval = approvalRepository.findByApprovalIdentifier(approval.identifier());
+
+        assertTrue(persistedApproval.orElseThrow().namedIdentifiers().containsAll(allIdentifiers));
+    }
+
+    @Test
+    void shouldUpdateApprovalIdentifiersByRemovingIdentifiers() throws RepositoryException {
+        var initialIdentifiers = randomIdentifiers(5);
+        var approval = randomApproval(initialIdentifiers, randomUUID());
+        approvalRepository.save(approval);
+
+        var remainingIdentifiers = initialIdentifiers.stream().limit(2).toList();
+        var updatedApproval = new Approval(approval.identifier(), remainingIdentifiers, approval.source(),
+            approval.handle());
+
+        approvalRepository.updateApprovalIdentifiers(updatedApproval);
+        var persistedApproval = approvalRepository.findByApprovalIdentifier(approval.identifier());
+
+        assertTrue(persistedApproval.orElseThrow().namedIdentifiers().containsAll(remainingIdentifiers));
+    }
+
+    @Test
+    void shouldUpdateApprovalIdentifiersByAddingAndRemovingIdentifiers() throws RepositoryException {
+        var initialIdentifiers = randomIdentifiers(3);
+        var approval = randomApproval(initialIdentifiers, randomUUID());
+        approvalRepository.save(approval);
+
+        var keptIdentifiers = initialIdentifiers.stream().limit(1).toList();
+        var newIdentifiers = randomIdentifiers(2);
+        var finalIdentifiers = new ArrayList<>(keptIdentifiers);
+        finalIdentifiers.addAll(newIdentifiers);
+
+        var updatedApproval = new Approval(approval.identifier(), finalIdentifiers, approval.source(), approval.handle());
+
+        approvalRepository.updateApprovalIdentifiers(updatedApproval);
+        var persistedApproval = approvalRepository.findByApprovalIdentifier(approval.identifier());
+
+        assertTrue(persistedApproval.orElseThrow().namedIdentifiers().containsAll(finalIdentifiers));
+    }
+
+    @Test
+    void shouldUpdateApprovalIdentifiersWhenApprovalHasMoreThan80Identifiers() throws RepositoryException {
+        var initialIdentifiers = randomIdentifiers(50);
+        var approval = randomApproval(initialIdentifiers, randomUUID());
+        approvalRepository.save(approval);
+
+        var keptIdentifiers = initialIdentifiers.stream().limit(10).toList();
+        var newIdentifiers = randomIdentifiers(60);
+        var finalIdentifiers = new ArrayList<>(keptIdentifiers);
+        finalIdentifiers.addAll(newIdentifiers);
+
+        var updatedApproval = new Approval(
+            approval.identifier(),
+            finalIdentifiers,
+            approval.source(),
+            approval.handle()
+        );
+
+        approvalRepository.updateApprovalIdentifiers(updatedApproval);
+        var persistedApproval = approvalRepository.findByApprovalIdentifier(approval.identifier());
+
+        assertTrue(persistedApproval.orElseThrow().namedIdentifiers().containsAll(finalIdentifiers));
+    }
+
+    @Test
+    void shouldThrowRepositoryExceptionWhenUpdatingNonExistentApproval() {
+        var approval = randomApproval(randomHandle());
+
+        assertThrows(RepositoryException.class, () -> approvalRepository.updateApprovalIdentifiers(approval));
     }
 
     private void insertIdentifierOnly(UUID approvalId, String identifierValue) {

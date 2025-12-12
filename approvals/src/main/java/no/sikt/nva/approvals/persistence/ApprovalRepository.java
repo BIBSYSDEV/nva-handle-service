@@ -12,6 +12,8 @@ public interface ApprovalRepository {
 
     void save(Approval approval) throws RepositoryException;
 
+    void updateApprovalIdentifiers(Approval approval) throws RepositoryException;
+
     Optional<Approval> findByApprovalIdentifier(UUID approvalIdentifier) throws RepositoryException;
 
     Optional<Approval> findByHandle(Handle handle) throws RepositoryException;
