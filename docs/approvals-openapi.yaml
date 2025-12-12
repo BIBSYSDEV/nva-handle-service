@@ -8,6 +8,9 @@ info:
     url: https://nva.sikt.no
 servers:
   - url: https://api.nva.unit.no/approval
+  - url: https://api.test.nva.aws.unit.no/approval
+  - url: https://api.sandbox.nva.aws.unit.no/approval
+  - url: https://api.dev.nva.aws.unit.no/approval
 tags:
   - name: Approval
     description: Operations for managing approvals
