@@ -25,8 +25,8 @@
 #    Object Properties
 #################################################################
 
-:hasIdentifier rdf:type owl:ObjectProperty ;
-    rdfs:label "has identifier" ;
+:identifier rdf:type owl:ObjectProperty ;
+    rdfs:label "identifier" ;
     rdfs:comment "Links an approval to its named identifiers" ;
     rdfs:domain :Approval ;
     rdfs:range :Identifier .
