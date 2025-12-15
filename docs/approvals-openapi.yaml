@@ -155,6 +155,7 @@ paths:
     get:
       tags:
         - Approval
+        - external
       operationId: getContext
       summary: Get JSON-LD Context
       description: Returns the JSON-LD context for the Approval API
@@ -191,6 +192,7 @@ paths:
     get:
       tags:
         - Approval
+        - external
       operationId: getOntology
       summary: Get RDF Ontology
       description: Returns the RDF ontology (Turtle format) for the Approval API
