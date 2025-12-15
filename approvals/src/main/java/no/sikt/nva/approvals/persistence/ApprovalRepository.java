@@ -20,5 +20,5 @@ public interface ApprovalRepository {
 
     Optional<Approval> findByIdentifier(NamedIdentifier namedIdentifier) throws RepositoryException;
 
-    List<NamedIdentifier> findIdentifiers(Collection<NamedIdentifier> namedIdentifiers) throws RepositoryException;
+    List<NamedIdentifierQueryObject> findIdentifiers(Collection<NamedIdentifier> namedIdentifiers) throws RepositoryException;
 }

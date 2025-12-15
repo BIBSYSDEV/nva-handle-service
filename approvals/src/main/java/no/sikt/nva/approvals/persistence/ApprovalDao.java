@@ -13,6 +13,7 @@ import com.fasterxml.jackson.annotation.JsonTypeName;
 import java.net.URI;
 import java.util.UUID;
 import no.sikt.nva.approvals.domain.Approval;
+import nva.commons.core.StringUtils;
 import software.amazon.awssdk.enhanced.dynamodb.document.EnhancedDocument;
 
 @JsonTypeInfo(use = Id.NAME, property = "type")
@@ -30,6 +31,10 @@ public record ApprovalDao(UUID identifier, URI source) implements DatabaseEntry 
 
     public static String toDatabaseIdentifier(UUID identifier) {
         return "Approval:%s".formatted(identifier.toString());
+    }
+
+    public static UUID identifierFromDatabaseIdentifier(String identifier) {
+        return UUID.fromString(identifier.replace("Approval:", StringUtils.EMPTY_STRING));
     }
 
     public EnhancedDocument toEnhancedDocument(HandleDao handleDao) {

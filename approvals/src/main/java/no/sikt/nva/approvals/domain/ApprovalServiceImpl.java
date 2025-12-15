@@ -11,6 +11,7 @@ import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import no.sikt.nva.approvals.persistence.ApprovalRepository;
 import no.sikt.nva.approvals.persistence.DynamoDbApprovalRepository;
+import no.sikt.nva.approvals.persistence.NamedIdentifierQueryObject;
 import no.sikt.nva.approvals.persistence.RepositoryException;
 import no.sikt.nva.handle.HandleDatabase;
 import nva.commons.core.Environment;
@@ -90,8 +91,31 @@ public class ApprovalServiceImpl implements ApprovalService {
     @JacocoGenerated
     @Override
     public Approval updateApprovalIdentifiers(UUID approvalId, Collection<NamedIdentifier> namedIdentifiers)
-        throws ApprovalNotFoundException, ApprovalServiceException, ApprovalConflictException {
-        return null;
+        throws ApprovalNotFoundException, ApprovalServiceException, ApprovalConflictException, RepositoryException {
+        var identifiers = approvalRepository.findIdentifiers(namedIdentifiers);
+        var approval = getApprovalByIdentifier(approvalId);
+
+        ensureIdentifiersAreNotUsedByOtherApproval(identifiers, approval);
+        var updatedApproval = new Approval(approval.identifier(), namedIdentifiers, approval.source(), approval.handle());
+        approvalRepository.updateApprovalIdentifiers(updatedApproval);
+
+        return updatedApproval;
+    }
+
+    @JacocoGenerated
+    private void ensureIdentifiersAreNotUsedByOtherApproval(Collection<NamedIdentifierQueryObject> identifiers, Approval approval)
+        throws ApprovalConflictException {
+        var conflictingIdentifiers = identifiers.stream()
+                                         .filter(id -> !id.approvalIdentifier().equals(approval.identifier()))
+                                         .toList();
+
+        if (!conflictingIdentifiers.isEmpty()) {
+            var message = formatConflictMessage(conflictingIdentifiers);
+            var conflictingKeys = conflictingIdentifiers.stream()
+                                      .collect(Collectors.toMap(NamedIdentifierQueryObject::name,
+                                                                NamedIdentifierQueryObject::value));
+            throw new ApprovalConflictException(message, conflictingKeys);
+        }
     }
 
     private void ensureIdentifiersDoesNotExist(Collection<NamedIdentifier> namedIdentifiers)
@@ -101,7 +125,8 @@ public class ApprovalServiceImpl implements ApprovalService {
             if (!identifiers.isEmpty()) {
                 var message = formatConflictMessage(identifiers);
                 var conflictingKeys = identifiers.stream()
-                                          .collect(Collectors.toMap(NamedIdentifier::name, NamedIdentifier::value));
+                                          .collect(Collectors.toMap(NamedIdentifierQueryObject::name,
+                                                                    NamedIdentifierQueryObject::value));
                 throw new ApprovalConflictException(message, conflictingKeys);
             }
         } catch (RepositoryException e) {
@@ -109,7 +134,7 @@ public class ApprovalServiceImpl implements ApprovalService {
         }
     }
 
-    private String formatConflictMessage(Collection<NamedIdentifier> existingIdentifiers) {
+    private String formatConflictMessage(Collection<NamedIdentifierQueryObject> existingIdentifiers) {
         var identifierList = existingIdentifiers.stream()
                                  .map(identifier -> "%s: %s".formatted(identifier.name(), identifier.value()))
                                  .toList();

@@ -122,7 +122,7 @@ public class DynamoDbApprovalRepository implements ApprovalRepository {
     }
 
     @Override
-    public List<NamedIdentifier> findIdentifiers(Collection<NamedIdentifier> namedIdentifiers)
+    public List<NamedIdentifierQueryObject> findIdentifiers(Collection<NamedIdentifier> namedIdentifiers)
         throws RepositoryException {
         return namedIdentifiers.isEmpty() ? List.of() : fetchIdentifiers(namedIdentifiers);
     }
@@ -190,11 +190,12 @@ public class DynamoDbApprovalRepository implements ApprovalRepository {
         return approval.namedIdentifiers()
                    .stream()
                    .filter(id -> !existingApproval.namedIdentifiers().contains(id))
-                   .map(identifier -> new Operation(operation, IdentifierDao.fromIdentifier(identifier)))
+                   .map(identifier -> new Operation(operation,
+                                                    IdentifierDao.fromIdentifier(identifier)))
                    .toList();
     }
 
-    private List<NamedIdentifier> fetchIdentifiers(Collection<NamedIdentifier> namedIdentifiers)
+    private List<NamedIdentifierQueryObject> fetchIdentifiers(Collection<NamedIdentifier> namedIdentifiers)
         throws RepositoryException {
         try {
             var keys = namedIdentifiers.stream()
@@ -212,7 +213,7 @@ public class DynamoDbApprovalRepository implements ApprovalRepository {
         }
     }
 
-    private List<NamedIdentifier> fetchIdentifiersBatch(List<Key> keys) {
+    private List<NamedIdentifierQueryObject> fetchIdentifiersBatch(List<Key> keys) {
         var readBatchBuilder = ReadBatch.builder(EnhancedDocument.class).mappedTableResource(table);
 
         keys.forEach(readBatchBuilder::addGetItem);
@@ -224,10 +225,7 @@ public class DynamoDbApprovalRepository implements ApprovalRepository {
         return batchResults.resultsForTable(table)
                    .stream()
                    .map(EnhancedDocument::toJson)
-                   .map(this::toDatabaseEntity)
-                   .filter(IdentifierDao.class::isInstance)
-                   .map(IdentifierDao.class::cast)
-                   .map(IdentifierDao::toIdentifier)
+                   .map(NamedIdentifierQueryObject::fromJson)
                    .toList();
     }
 
@@ -353,7 +351,8 @@ public class DynamoDbApprovalRepository implements ApprovalRepository {
     private EnhancedDocument createIdentifierDocument(NamedIdentifier namedIdentifier, Approval approval) {
         var handleDao = HandleDao.fromHandle(approval.handle());
         var approvalDao = ApprovalDao.fromApproval(approval);
-        return IdentifierDao.fromIdentifier(namedIdentifier).toEnhancedDocument(approvalDao, handleDao);
+        return IdentifierDao.fromIdentifier(namedIdentifier)
+                   .toEnhancedDocument(approvalDao, handleDao);
     }
 
     private EnhancedDocument createHandleEntity(Approval approval) {

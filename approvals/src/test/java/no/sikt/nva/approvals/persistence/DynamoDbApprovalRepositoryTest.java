@@ -138,7 +138,7 @@ class DynamoDbApprovalRepositoryTest {
         approvalRepository.save(approval);
         var persistedIdentifiers = approvalRepository.findIdentifiers(identifiers);
 
-        assertEquals(identifiers, persistedIdentifiers);
+        assertEquals(identifiers, persistedIdentifiers.stream().map(NamedIdentifierQueryObject::toNamedIdentifier).toList());
     }
 
     @Test

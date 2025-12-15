@@ -3,6 +3,7 @@ package no.sikt.nva.approvals.domain;
 import java.net.URI;
 import java.util.Collection;
 import java.util.UUID;
+import no.sikt.nva.approvals.persistence.RepositoryException;
 
 public interface ApprovalService {
 
@@ -17,5 +18,5 @@ public interface ApprovalService {
         throws ApprovalNotFoundException, ApprovalServiceException;
 
     Approval updateApprovalIdentifiers(UUID approvalId,  Collection<NamedIdentifier> namedIdentifiers)
-        throws ApprovalNotFoundException, ApprovalConflictException, ApprovalServiceException;
+        throws ApprovalNotFoundException, ApprovalConflictException, ApprovalServiceException, RepositoryException;
 }
