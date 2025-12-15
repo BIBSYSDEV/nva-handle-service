@@ -4,7 +4,6 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.annotation.JsonTypeInfo.Id;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import java.util.Objects;
-import java.util.UUID;
 
 @JsonTypeInfo(use = Id.NAME, property = "type")
 @JsonTypeName("Identifier")
