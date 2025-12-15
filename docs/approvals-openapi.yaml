@@ -160,27 +160,14 @@ paths:
       summary: Get JSON-LD Context
       description: Returns the JSON-LD context for the Approval API
       x-amazon-apigateway-integration:
-        type: mock
-        requestTemplates:
-          application/json: '{"statusCode": 200}'
-        responses:
-          default:
-            statusCode: "200"
-            responseParameters:
-              method.response.header.Content-Type: "'application/ld+json'"
-            responseTemplates:
-              application/json:
-                Fn::Transform:
-                  Name: AWS::Include
-                  Parameters:
-                    Location: ./docs/approval-context.json
+        uri:
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${NvaFetchContextFunction.Arn}/invocations
+        responses: { }
+        httpMethod: POST
+        type: AWS_PROXY
       responses:
         '200':
           description: JSON-LD context
-          headers:
-            Content-Type:
-              schema:
-                type: string
           content:
             application/ld+json:
               schema:
@@ -197,27 +184,14 @@ paths:
       summary: Get RDF Ontology
       description: Returns the RDF ontology (Turtle format) for the Approval API
       x-amazon-apigateway-integration:
-        type: mock
-        requestTemplates:
-          application/json: '{"statusCode": 200}'
-        responses:
-          default:
-            statusCode: "200"
-            responseParameters:
-              method.response.header.Content-Type: "'text/turtle'"
-            responseTemplates:
-              text/turtle:
-                Fn::Transform:
-                  Name: AWS::Include
-                  Parameters:
-                    Location: ./docs/approval-ontology.ttl
+        uri:
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${NvaFetchOntologyFunction.Arn}/invocations
+        responses: { }
+        httpMethod: POST
+        type: AWS_PROXY
       responses:
         '200':
           description: RDF ontology in Turtle format
-          headers:
-            Content-Type:
-              schema:
-                type: string
           content:
             text/turtle:
               schema:
