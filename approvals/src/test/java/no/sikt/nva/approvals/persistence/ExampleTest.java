@@ -243,11 +243,13 @@ public class ExampleTest {
     @Test
     void shouldPersistBothTypesAndShowPersistedStructure() {
         var approvalId = UUID.randomUUID();
-        var approval = createApprovalDao(approvalId, URI.create("https://example.org/source/123"));
+        var handleUri = URI.create("https://hdl.handle.net/11250/999");
+        var sourceUri = URI.create("https://example.org/source/123");
+
+        var approval = ApprovalDaoV2.create(approvalId, handleUri, sourceUri);
         approvalTable.putItem(approval);
 
-        var handleId = UUID.randomUUID().toString();
-        var handle = createHandleDao(handleId, URI.create("https://hdl.handle.net/11250/999"));
+        var handle = HandleDaoV2.create(approvalId, handleUri);
         handleTable.putItem(handle);
 
         var scanResponse = dynamoDbLocal.client().scan(builder -> builder.tableName(TABLE));
