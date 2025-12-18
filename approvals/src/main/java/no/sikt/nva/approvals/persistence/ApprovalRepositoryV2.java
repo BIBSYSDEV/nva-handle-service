@@ -4,9 +4,6 @@ import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedClient;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbTable;
 import software.amazon.awssdk.enhanced.dynamodb.TableSchema;
 
-import static no.sikt.nva.approvals.persistence.DynamoDbConstants.GSI1;
-import static no.sikt.nva.approvals.persistence.DynamoDbConstants.GSI2;
-
 public class ApprovalRepositoryV2 {
 
     private final DynamoDbTable<ApprovalDaoV2> approvalTable;
