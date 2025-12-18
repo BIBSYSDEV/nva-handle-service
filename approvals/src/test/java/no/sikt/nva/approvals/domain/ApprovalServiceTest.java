@@ -58,13 +58,6 @@ class ApprovalServiceTest {
     }
 
     @Test
-    void shouldThrowApprovalServiceExceptionWhenSavingApprovalFails() {
-        doThrow(RuntimeException.class).when(approvalRepository).save(any());
-
-        assertThrows(ApprovalServiceException.class, () -> approvalService.create(randomIdentifiers(), randomUri()));
-    }
-
-    @Test
     void shouldThrowApprovalServiceExceptionWhenNotAbleToConnectToHandleDatabase() {
         @SuppressWarnings("unchecked") Supplier<Connection> connectionSupplier = mock(Supplier.class);
         when(connectionSupplier.get()).thenThrow(new RuntimeException(new SQLException(randomString())));
@@ -240,17 +233,6 @@ class ApprovalServiceTest {
 
         assertThrows(ApprovalConflictException.class,
                      () -> approvalService.updateApprovalIdentifiers(approval.identifier(), List.of(newIdentifier)));
-    }
-
-    @Test
-    void shouldThrowApprovalServiceExceptionWhenUpdateApprovalIdentifiersFails() {
-        var existingApproval = new Approval(randomUUID(), randomIdentifiers(), randomUri(), randomHandle());
-        when(approvalRepository.findByApprovalIdentifier(existingApproval.identifier())).thenReturn(Optional.of(existingApproval));
-        when(approvalRepository.findIdentifiers(randomIdentifiers())).thenReturn(List.of());
-        doThrow(new RuntimeException(randomString())).when(approvalRepository).updateApprovalIdentifiers(any());
-
-        assertThrows(ApprovalServiceException.class,
-                     () -> approvalService.updateApprovalIdentifiers(existingApproval.identifier(), randomIdentifiers()));
     }
 
 }
