@@ -21,6 +21,7 @@ public final class DynamoDbConstants {
     public static final String SK1 = "SK1";
     public static final String SK2 = "SK2";
     public static final String AWS_REGION = "AWS_REGION";
+    public static final String KEY_FIELD_DELIMITER = "#";
 
     private DynamoDbConstants() {
     }
