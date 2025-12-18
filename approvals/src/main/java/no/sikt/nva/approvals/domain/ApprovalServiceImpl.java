@@ -64,7 +64,6 @@ public class ApprovalServiceImpl implements ApprovalService {
         return approvalRepository.findByIdentifier(namedIdentifier);
     }
 
-    @JacocoGenerated
     @Override
     public Approval updateApprovalIdentifiers(UUID approvalId, Collection<NamedIdentifier> namedIdentifiers)
         throws ApprovalServiceException, ApprovalConflictException {
@@ -81,7 +80,6 @@ public class ApprovalServiceImpl implements ApprovalService {
         return updatedApproval;
     }
 
-    @JacocoGenerated
     private void ensureIdentifiersAreNotUsedByOtherApproval(Collection<NamedIdentifierQueryObject> identifiers, Approval approval)
         throws ApprovalConflictException {
         var conflictingIdentifiers = identifiers.stream()
