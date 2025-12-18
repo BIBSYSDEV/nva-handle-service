@@ -28,6 +28,7 @@ public class ExampleTest {
     private DynamoDbEnhancedClient enhancedClient;
     private DynamoDbTable<ApprovalDaoV2> approvalTable;
     private DynamoDbTable<HandleDaoV2> handleTable;
+    private DynamoDbTable<NamedIdentifierDaoV2> identifierTable;
 
     @BeforeEach
     void setUp() {
@@ -40,6 +41,7 @@ public class ExampleTest {
             .build();
         approvalTable = enhancedClient.table(TABLE, TableSchema.fromBean(ApprovalDaoV2.class));
         handleTable = enhancedClient.table(TABLE, TableSchema.fromBean(HandleDaoV2.class));
+        identifierTable = enhancedClient.table(TABLE, TableSchema.fromBean(NamedIdentifierDaoV2.class));
     }
 
     @Test
@@ -208,6 +210,34 @@ public class ExampleTest {
 
         assertThat(items).hasSize(2);
         assertThat(items).extracting(Dao::getType).containsExactlyInAnyOrder("Approval", "Handle");
+    }
+
+    @Test
+    void shouldQueryFullAggregateByApprovalIdentifier() {
+        var approvalId = UUID.randomUUID();
+        var handleUri = URI.create("https://hdl.handle.net/11250/99999");
+        var sourceUri = URI.create("https://example.org/source/xyz");
+
+        var approval = ApprovalDaoV2.create(approvalId, handleUri, sourceUri);
+        approvalTable.putItem(approval);
+
+        var handle = HandleDaoV2.create(approvalId, handleUri);
+        handleTable.putItem(handle);
+
+        var identifier = NamedIdentifierDaoV2.create("doi", "10.1234/example", approvalId, handleUri);
+        identifierTable.putItem(identifier);
+
+        var gsi1Index = approvalTable.index(DynamoDbConstants.GSI1);
+        var queryResult = gsi1Index.query(r -> r.queryConditional(
+            QueryConditional.keyEqualTo(k -> k.partitionValue(ApprovalDaoV2.createPartitionKey(approvalId.toString())))
+        ));
+
+        var items = queryResult.stream()
+            .flatMap(page -> page.items().stream())
+            .toList();
+
+        assertThat(items).hasSize(3);
+        assertThat(items).extracting(Dao::getType).containsExactlyInAnyOrder("Approval", "Handle", "Identifier");
     }
 
     @Test
