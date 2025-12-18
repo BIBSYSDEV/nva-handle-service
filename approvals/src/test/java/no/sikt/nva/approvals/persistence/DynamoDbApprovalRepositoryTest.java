@@ -48,7 +48,7 @@ class DynamoDbApprovalRepositoryTest {
     }
 
     @Test
-    void shouldPersistApproval() throws RepositoryException {
+    void shouldPersistApproval() {
         var approval = randomApproval(randomHandle());
         approvalRepository.save(approval);
         var persistedApproval = approvalRepository.findByApprovalIdentifier(approval.identifier());
@@ -57,62 +57,61 @@ class DynamoDbApprovalRepositoryTest {
     }
 
     @Test
-    void shouldThrowRepositoryExceptionWhenPersistingApprovalWithExistingIdentifier() throws RepositoryException {
+    void shouldThrowExceptionWhenPersistingApprovalWithExistingIdentifier() {
         var identifier = randomIdentifier();
         var approval = randomApproval(identifier);
         approvalRepository.save(approval);
 
-        assertThrows(RepositoryException.class, () -> approvalRepository.save(randomApproval(identifier)));
+        assertThrows(Exception.class, () -> approvalRepository.save(randomApproval(identifier)));
     }
 
     @Test
-    void shouldThrowRepositoryExceptionWhenPersistingApprovalWithExistingHandle() throws RepositoryException {
+    void shouldThrowExceptionWhenPersistingApprovalWithExistingHandle() {
         var handle = randomHandle();
         var approval = randomApproval(handle);
         approvalRepository.save(approval);
 
-        assertThrows(RepositoryException.class, () -> approvalRepository.save(randomApproval(handle)));
+        assertThrows(Exception.class, () -> approvalRepository.save(randomApproval(handle)));
     }
 
     @Test
-    void shouldThrowRepositoryExceptionWhenPersistingApprovalWithExistingApprovalIdentifier()
-        throws RepositoryException {
+    void shouldThrowExceptionWhenPersistingApprovalWithExistingApprovalIdentifier() {
         var identifier = randomUUID();
         var approval = randomApproval(identifier, randomUri());
         approvalRepository.save(approval);
 
-        assertThrows(RepositoryException.class, () -> approvalRepository.save(randomApproval(identifier, randomUri())));
+        assertThrows(Exception.class, () -> approvalRepository.save(randomApproval(identifier, randomUri())));
     }
 
     @Test
-    void shouldReturnEmptyOptionalWhenApprovalNotFound() throws RepositoryException {
+    void shouldReturnEmptyOptionalWhenApprovalNotFound() {
         var result = approvalRepository.findByApprovalIdentifier(randomUUID());
 
         assertTrue(result.isEmpty());
     }
 
     @Test
-    void shouldThrowRepositoryExceptionWhenHandleNotFoundInDatabase() {
+    void shouldThrowExceptionWhenHandleNotFoundInDatabase() {
         var approvalId = randomUUID();
         var identifierValue = randomString();
 
         insertIdentifierOnly(approvalId, identifierValue);
 
-        assertThrows(RepositoryException.class, () -> approvalRepository.findByApprovalIdentifier(approvalId));
+        assertThrows(IllegalStateException.class, () -> approvalRepository.findByApprovalIdentifier(approvalId));
     }
 
     @Test
-    void shouldThrowRepositoryExceptionWhenApprovalNotFoundInDatabase() {
+    void shouldThrowExceptionWhenApprovalNotFoundInDatabase() {
         var approvalId = randomUUID();
         var identifierValue = randomString();
         insertIdentifierOnly(approvalId, identifierValue);
         insertHandleOnly(approvalId, randomHandle().value().toString());
 
-        assertThrows(RepositoryException.class, () -> approvalRepository.findByApprovalIdentifier(approvalId));
+        assertThrows(IllegalStateException.class, () -> approvalRepository.findByApprovalIdentifier(approvalId));
     }
 
     @Test
-    void shouldFindByHandle() throws RepositoryException {
+    void shouldFindByHandle() {
         var handle = randomHandle();
         var approval = randomApproval(handle);
         approvalRepository.save(approval);
@@ -122,7 +121,7 @@ class DynamoDbApprovalRepositoryTest {
     }
 
     @Test
-    void shouldFindByApprovalIdentifier() throws RepositoryException {
+    void shouldFindByApprovalIdentifier() {
         var identifier = randomIdentifier();
         var approval = randomApproval(identifier);
         approvalRepository.save(approval);
@@ -132,7 +131,7 @@ class DynamoDbApprovalRepositoryTest {
     }
 
     @Test
-    void shouldFindIdentifiers() throws RepositoryException {
+    void shouldFindIdentifiers() {
         var identifiers = randomIdentifiers();
         var approval = randomApproval(identifiers, randomUUID());
         approvalRepository.save(approval);
@@ -142,7 +141,7 @@ class DynamoDbApprovalRepositoryTest {
     }
 
     @Test
-    void shouldSaveAndFindIdentifiersWhenMoreThan100Provided() throws RepositoryException {
+    void shouldSaveAndFindIdentifiersWhenMoreThan100Provided() {
         var identifiers = randomIdentifiers(110);
         var approval = randomApproval(identifiers, randomUUID());
         approvalRepository.save(approval);
@@ -152,7 +151,7 @@ class DynamoDbApprovalRepositoryTest {
     }
 
     @Test
-    void shouldUpdateApprovalIdentifiersByAddingNewIdentifiers() throws RepositoryException {
+    void shouldUpdateApprovalIdentifiersByAddingNewIdentifiers() {
         var initialIdentifiers = randomIdentifiers(2);
         var approval = randomApproval(initialIdentifiers, randomUUID());
         approvalRepository.save(approval);
@@ -169,7 +168,7 @@ class DynamoDbApprovalRepositoryTest {
     }
 
     @Test
-    void shouldUpdateApprovalIdentifiersByRemovingIdentifiers() throws RepositoryException {
+    void shouldUpdateApprovalIdentifiersByRemovingIdentifiers() {
         var initialIdentifiers = randomIdentifiers(5);
         var approval = randomApproval(initialIdentifiers, randomUUID());
         approvalRepository.save(approval);
@@ -185,7 +184,7 @@ class DynamoDbApprovalRepositoryTest {
     }
 
     @Test
-    void shouldUpdateApprovalIdentifiersByAddingAndRemovingIdentifiers() throws RepositoryException {
+    void shouldUpdateApprovalIdentifiersByAddingAndRemovingIdentifiers() {
         var initialIdentifiers = randomIdentifiers(3);
         var approval = randomApproval(initialIdentifiers, randomUUID());
         approvalRepository.save(approval);
@@ -204,7 +203,7 @@ class DynamoDbApprovalRepositoryTest {
     }
 
     @Test
-    void shouldUpdateApprovalIdentifiersWhenMoreThen80ItemsToModifyInTransaction() throws RepositoryException {
+    void shouldUpdateApprovalIdentifiersWhenMoreThen80ItemsToModifyInTransaction() {
         var initialIdentifiers = randomIdentifiers(50);
         var approval = randomApproval(initialIdentifiers, randomUUID());
         approvalRepository.save(approval);
@@ -228,10 +227,10 @@ class DynamoDbApprovalRepositoryTest {
     }
 
     @Test
-    void shouldThrowRepositoryExceptionWhenUpdatingNonExistentApproval() {
+    void shouldThrowExceptionWhenUpdatingNonExistentApproval() {
         var approval = randomApproval(randomHandle());
 
-        assertThrows(RepositoryException.class, () -> approvalRepository.updateApprovalIdentifiers(approval));
+        assertThrows(IllegalStateException.class, () -> approvalRepository.updateApprovalIdentifiers(approval));
     }
 
     private void insertIdentifierOnly(UUID approvalId, String identifierValue) {

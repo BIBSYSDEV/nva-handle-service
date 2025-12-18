@@ -7,79 +7,75 @@ import java.net.URI;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 public class FakeApprovalService implements ApprovalService {
 
-    private final Exception exception;
     private final List<Approval> approvals;
+    private final Exception exception;
 
     public FakeApprovalService() {
+        this(new ArrayList<>());
+    }
+
+    public FakeApprovalService(List<Approval> approvals) {
+        this.approvals = approvals;
         this.exception = null;
-        this.approvals = new ArrayList<>();
     }
 
     public FakeApprovalService(Exception exception) {
-        this.exception = exception;
         this.approvals = new ArrayList<>();
+        this.exception = exception;
     }
 
     @Override
     public Approval create(Collection<NamedIdentifier> namedIdentifiers, URI source)
         throws ApprovalServiceException, ApprovalConflictException {
-        if (exception instanceof ApprovalServiceException) {
-            throw (ApprovalServiceException) exception;
-        }
-        if (exception instanceof ApprovalConflictException) {
-            throw (ApprovalConflictException) exception;
-        }
+        throwExceptionIfConfigured();
         var approval = randomApproval(randomHandle());
         approvals.add(approval);
         return approval;
     }
 
     @Override
-    public Approval getApprovalByIdentifier(UUID approvalId)
-        throws ApprovalNotFoundException, ApprovalServiceException {
-        throwExceptionIfConfigured();
-        return randomApproval(approvalId, URI.create("https://example.com/source"));
+    public Optional<Approval> getApprovalByIdentifier(UUID approvalId) {
+        return approvals.stream()
+                   .filter(approval -> approval.identifier().equals(approvalId))
+                   .findFirst();
     }
 
     @Override
-    public Approval getApprovalByHandle(Handle handle) throws ApprovalNotFoundException, ApprovalServiceException {
-        throwExceptionIfConfigured();
-        return randomApproval(handle);
+    public Optional<Approval> getApprovalByHandle(Handle handle) {
+        return approvals.stream()
+                   .filter(approval -> approval.handle().equals(handle))
+                   .findFirst();
     }
 
     @Override
-    public Approval getApprovalByNamedIdentifier(NamedIdentifier namedIdentifier)
-        throws ApprovalNotFoundException, ApprovalServiceException {
-        throwExceptionIfConfigured();
-        return randomApproval(namedIdentifier);
+    public Optional<Approval> getApprovalByNamedIdentifier(NamedIdentifier namedIdentifier) {
+        return approvals.stream()
+                   .filter(approval -> approval.namedIdentifiers().contains(namedIdentifier))
+                   .findFirst();
     }
 
     @Override
     public Approval updateApprovalIdentifiers(UUID approvalId, Collection<NamedIdentifier> identifiers)
-        throws ApprovalServiceException, ApprovalNotFoundException {
-        if (exception instanceof ApprovalNotFoundException) {
-            throw (ApprovalNotFoundException) exception;
-        }
-        if (exception instanceof ApprovalServiceException) {
-            throw (ApprovalServiceException) exception;
-        }
+        throws ApprovalServiceException, ApprovalConflictException {
+        throwExceptionIfConfigured();
         return new Approval(approvalId, identifiers, randomUri(), randomHandle());
     }
 
     public Approval getPersistedApproval() {
-        return approvals.getFirst();
+        return approvals.stream().findFirst().orElseThrow();
     }
 
-    private void throwExceptionIfConfigured() throws ApprovalNotFoundException, ApprovalServiceException {
-        if (exception instanceof ApprovalNotFoundException) {
-            throw (ApprovalNotFoundException) exception;
+    private void throwExceptionIfConfigured() throws ApprovalServiceException, ApprovalConflictException {
+        if (exception instanceof ApprovalServiceException approvalServiceException) {
+            throw approvalServiceException;
         }
-        if (exception instanceof ApprovalServiceException) {
-            throw (ApprovalServiceException) exception;
+        if (exception instanceof ApprovalConflictException approvalConflictException) {
+            throw approvalConflictException;
         }
     }
 }

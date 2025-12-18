@@ -10,15 +10,15 @@ import no.sikt.nva.approvals.domain.NamedIdentifier;
 
 public interface ApprovalRepository {
 
-    void save(Approval approval) throws RepositoryException;
+    void save(Approval approval);
 
-    void updateApprovalIdentifiers(Approval approval) throws RepositoryException;
+    void updateApprovalIdentifiers(Approval approval);
 
-    Optional<Approval> findByApprovalIdentifier(UUID approvalIdentifier) throws RepositoryException;
+    Optional<Approval> findByApprovalIdentifier(UUID approvalIdentifier);
 
-    Optional<Approval> findByHandle(Handle handle) throws RepositoryException;
+    Optional<Approval> findByHandle(Handle handle);
 
-    Optional<Approval> findByIdentifier(NamedIdentifier namedIdentifier) throws RepositoryException;
+    Optional<Approval> findByIdentifier(NamedIdentifier namedIdentifier);
 
-    List<NamedIdentifierQueryObject> findIdentifiers(Collection<NamedIdentifier> namedIdentifiers) throws RepositoryException;
+    List<NamedIdentifierQueryObject> findIdentifiers(Collection<NamedIdentifier> namedIdentifiers);
 }

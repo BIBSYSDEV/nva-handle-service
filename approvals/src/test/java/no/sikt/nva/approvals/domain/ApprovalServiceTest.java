@@ -10,6 +10,7 @@ import static no.unit.nva.testutils.RandomDataGenerator.randomString;
 import static no.unit.nva.testutils.RandomDataGenerator.randomUri;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doNothing;
@@ -26,7 +27,6 @@ import no.sikt.nva.approvals.persistence.ApprovalDao;
 import no.sikt.nva.approvals.persistence.ApprovalRepository;
 import no.sikt.nva.approvals.persistence.HandleDao;
 import no.sikt.nva.approvals.persistence.NamedIdentifierQueryObject;
-import no.sikt.nva.approvals.persistence.RepositoryException;
 import no.sikt.nva.handle.HandleDatabase;
 import nva.commons.core.Environment;
 import org.junit.jupiter.api.BeforeEach;
@@ -58,8 +58,8 @@ class ApprovalServiceTest {
     }
 
     @Test
-    void shouldThrowApprovalServiceExceptionWhenSavingApprovalFails() throws RepositoryException {
-        doThrow(RepositoryException.class).when(approvalRepository).save(any());
+    void shouldThrowApprovalServiceExceptionWhenSavingApprovalFails() {
+        doThrow(RuntimeException.class).when(approvalRepository).save(any());
 
         assertThrows(ApprovalServiceException.class, () -> approvalService.create(randomIdentifiers(), randomUri()));
     }
@@ -77,7 +77,7 @@ class ApprovalServiceTest {
 
     @Test
     void shouldCreateApprovalWithHandleCreatedByHandleDatabase()
-        throws RepositoryException, SQLException, ApprovalServiceException, ApprovalConflictException {
+        throws SQLException, ApprovalServiceException, ApprovalConflictException {
         var source = randomUri();
         var handle = randomHandle().value();
         when(handleDatabase.createHandle(eq(HANDLE_PREFIX), eq(source), eq(connection))).thenReturn(handle);
@@ -90,7 +90,7 @@ class ApprovalServiceTest {
 
     @Test
     void shouldCreateApprovalWithSourceProvidedInInput()
-        throws RepositoryException, SQLException, ApprovalServiceException, ApprovalConflictException {
+        throws SQLException, ApprovalServiceException, ApprovalConflictException {
         var source = randomUri();
         when(handleDatabase.createHandle(eq(HANDLE_PREFIX), eq(source), eq(connection))).thenReturn(
             randomHandle().value());
@@ -103,7 +103,7 @@ class ApprovalServiceTest {
 
     @Test
     void shouldCreateApprovalWithIdentifiersProvidedInInput()
-        throws RepositoryException, SQLException, ApprovalServiceException, ApprovalConflictException {
+        throws SQLException, ApprovalServiceException, ApprovalConflictException {
         when(handleDatabase.createHandle(any(), any(), any())).thenReturn(randomHandle().value());
         doNothing().when(approvalRepository).save(any());
 
@@ -114,93 +114,73 @@ class ApprovalServiceTest {
     }
 
     @Test
-    void shouldReturnApprovalWhenFoundByIdentifier()
-        throws RepositoryException, ApprovalNotFoundException, ApprovalServiceException {
+    void shouldReturnApprovalWhenFoundByIdentifier() {
         var approvalId = randomUUID();
         var expectedApproval = new Approval(approvalId, randomIdentifiers(), randomUri(), randomHandle());
         when(approvalRepository.findByApprovalIdentifier(approvalId)).thenReturn(Optional.of(expectedApproval));
 
         var result = approvalService.getApprovalByIdentifier(approvalId);
 
-        assertEquals(expectedApproval, result);
+        assertTrue(result.isPresent());
+        assertEquals(expectedApproval, result.get());
     }
 
     @Test
-    void shouldThrowApprovalNotFoundExceptionWhenApprovalNotFoundByIdentifier() throws RepositoryException {
+    void shouldReturnEmptyWhenApprovalNotFoundByIdentifier() {
         var approvalId = randomUUID();
         when(approvalRepository.findByApprovalIdentifier(approvalId)).thenReturn(Optional.empty());
 
-        assertThrows(ApprovalNotFoundException.class, () -> approvalService.getApprovalByIdentifier(approvalId));
+        var result = approvalService.getApprovalByIdentifier(approvalId);
+
+        assertTrue(result.isEmpty());
     }
 
     @Test
-    void shouldThrowApprovalServiceExceptionWhenRepositoryFailsOnGetByIdentifier() throws RepositoryException {
-        var approvalId = randomUUID();
-        when(approvalRepository.findByApprovalIdentifier(approvalId)).thenThrow(new RepositoryException("error"));
-
-        assertThrows(ApprovalServiceException.class, () -> approvalService.getApprovalByIdentifier(approvalId));
-    }
-
-    @Test
-    void shouldReturnApprovalWhenFoundByHandle()
-        throws RepositoryException, ApprovalNotFoundException, ApprovalServiceException {
+    void shouldReturnApprovalWhenFoundByHandle() {
         var handle = new Handle(VALID_HANDLE_URI);
         var expectedApproval = new Approval(randomUUID(), randomIdentifiers(), randomUri(), handle);
         when(approvalRepository.findByHandle(handle)).thenReturn(Optional.of(expectedApproval));
 
         var result = approvalService.getApprovalByHandle(handle);
 
-        assertEquals(expectedApproval, result);
+        assertTrue(result.isPresent());
+        assertEquals(expectedApproval, result.get());
     }
 
     @Test
-    void shouldThrowApprovalNotFoundExceptionWhenApprovalNotFoundByHandle() throws RepositoryException {
+    void shouldReturnEmptyWhenApprovalNotFoundByHandle() {
         var handle = new Handle(VALID_HANDLE_URI);
         when(approvalRepository.findByHandle(handle)).thenReturn(Optional.empty());
 
-        assertThrows(ApprovalNotFoundException.class, () -> approvalService.getApprovalByHandle(handle));
+        var result = approvalService.getApprovalByHandle(handle);
+
+        assertTrue(result.isEmpty());
     }
 
     @Test
-    void shouldThrowApprovalServiceExceptionWhenRepositoryFailsOnGetByHandle() throws RepositoryException {
-        var handle = new Handle(VALID_HANDLE_URI);
-        when(approvalRepository.findByHandle(handle)).thenThrow(new RepositoryException("error"));
-
-        assertThrows(ApprovalServiceException.class, () -> approvalService.getApprovalByHandle(handle));
-    }
-
-    @Test
-    void shouldReturnApprovalWhenFoundByNamedIdentifier()
-        throws RepositoryException, ApprovalNotFoundException, ApprovalServiceException {
+    void shouldReturnApprovalWhenFoundByNamedIdentifier() {
         var namedIdentifier = new NamedIdentifier(randomString(), randomString());
         var expectedApproval = new Approval(randomUUID(), List.of(namedIdentifier), randomUri(), randomHandle());
         when(approvalRepository.findByIdentifier(namedIdentifier)).thenReturn(Optional.of(expectedApproval));
 
         var result = approvalService.getApprovalByNamedIdentifier(namedIdentifier);
 
-        assertEquals(expectedApproval, result);
+        assertTrue(result.isPresent());
+        assertEquals(expectedApproval, result.get());
     }
 
     @Test
-    void shouldThrowApprovalNotFoundExceptionWhenApprovalNotFoundByNamedIdentifier() throws RepositoryException {
+    void shouldReturnEmptyWhenApprovalNotFoundByNamedIdentifier() {
         var namedIdentifier = new NamedIdentifier(randomString(), randomString());
         when(approvalRepository.findByIdentifier(namedIdentifier)).thenReturn(Optional.empty());
 
-        assertThrows(ApprovalNotFoundException.class,
-                     () -> approvalService.getApprovalByNamedIdentifier(namedIdentifier));
+        var result = approvalService.getApprovalByNamedIdentifier(namedIdentifier);
+
+        assertTrue(result.isEmpty());
     }
 
     @Test
-    void shouldThrowApprovalServiceExceptionWhenRepositoryFailsOnGetByNamedIdentifier() throws RepositoryException {
-        var namedIdentifier = new NamedIdentifier(randomString(), randomString());
-        when(approvalRepository.findByIdentifier(namedIdentifier)).thenThrow(new RepositoryException("error"));
-
-        assertThrows(ApprovalServiceException.class,
-                     () -> approvalService.getApprovalByNamedIdentifier(namedIdentifier));
-    }
-
-    @Test
-    void shouldThrowApprovalConflictExceptionWhenIdentifiersAlreadyExist() throws RepositoryException {
+    void shouldThrowApprovalConflictExceptionWhenIdentifiersAlreadyExist() {
         var existingIdentifiers = List.of(randomIdentifier(), randomIdentifier());
 
         when(approvalRepository.findIdentifiers(existingIdentifiers)).thenReturn(List.of(randomIdentifierQueryObject()));
@@ -209,7 +189,7 @@ class ApprovalServiceTest {
     }
 
     @Test
-    void shouldIncludeExistingIdentifiersInExceptionMessage() throws RepositoryException {
+    void shouldIncludeExistingIdentifiersInExceptionMessage() {
         var existingIdentifier = randomIdentifier();
         var identifiers = List.of(existingIdentifier, randomIdentifier());
 
@@ -222,17 +202,10 @@ class ApprovalServiceTest {
                      exception.getMessage());
     }
 
-    @Test
-    void shouldThrowApprovalServiceExceptionWhenRepositoryFailsToCheckExistingIdentifiers() throws RepositoryException {
-        var identifiers = randomIdentifiers();
-        when(approvalRepository.findIdentifiers(identifiers)).thenThrow(new RepositoryException("Database error"));
-
-        assertThrows(ApprovalServiceException.class, () -> approvalService.create(identifiers, randomUri()));
-    }
 
     @Test
     void shouldUpdateApprovalIdentifiersSuccessfully()
-        throws RepositoryException, ApprovalNotFoundException, ApprovalServiceException, ApprovalConflictException {
+        throws ApprovalServiceException, ApprovalConflictException {
         var approval = new Approval(randomUUID(), randomIdentifiers(), randomUri(), randomHandle());
         var newIdentifiers = randomIdentifiers(2);
         when(approvalRepository.findByApprovalIdentifier(approval.identifier())).thenReturn(Optional.of(approval));
@@ -245,16 +218,16 @@ class ApprovalServiceTest {
     }
 
     @Test
-    void shouldThrowApprovalNotFoundExceptionWhenApprovalDoesNotExistDuringUpdate() throws RepositoryException {
+    void shouldThrowApprovalServiceExceptionWhenApprovalDoesNotExistDuringUpdate() {
         var approvalId = randomUUID();
         when(approvalRepository.findByApprovalIdentifier(approvalId)).thenReturn(Optional.empty());
 
-        assertThrows(ApprovalNotFoundException.class,
+        assertThrows(ApprovalServiceException.class,
                      () -> approvalService.updateApprovalIdentifiers(approvalId, randomIdentifiers()));
     }
 
     @Test
-    void shouldThrowApprovalConflictExceptionWhenIdentifiersAreUsedByOtherApproval() throws RepositoryException {
+    void shouldThrowApprovalConflictExceptionWhenIdentifiersAreUsedByOtherApproval() {
         var approval = new Approval(randomUUID(), randomIdentifiers(), randomUri(), randomHandle());
         var newIdentifier = randomIdentifier();
         var conflictingIdentifier = new NamedIdentifierQueryObject(newIdentifier.name(), newIdentifier.value(),
@@ -270,21 +243,14 @@ class ApprovalServiceTest {
     }
 
     @Test
-    void shouldThrowRepositoryExceptionWhenUpdateApprovalIdentifiersFails() throws RepositoryException {
+    void shouldThrowApprovalServiceExceptionWhenUpdateApprovalIdentifiersFails() {
         var existingApproval = new Approval(randomUUID(), randomIdentifiers(), randomUri(), randomHandle());
         when(approvalRepository.findByApprovalIdentifier(existingApproval.identifier())).thenReturn(Optional.of(existingApproval));
         when(approvalRepository.findIdentifiers(randomIdentifiers())).thenReturn(List.of());
-        doThrow(new RepositoryException(randomString())).when(approvalRepository).updateApprovalIdentifiers(any());
+        doThrow(new RuntimeException(randomString())).when(approvalRepository).updateApprovalIdentifiers(any());
 
-        assertThrows(RepositoryException.class,
+        assertThrows(ApprovalServiceException.class,
                      () -> approvalService.updateApprovalIdentifiers(existingApproval.identifier(), randomIdentifiers()));
     }
 
-    @Test
-    void shouldThrowRepositoryExceptionWhenFailingWhenFetchingIdentifiers() throws RepositoryException {
-        when(approvalRepository.findIdentifiers(any())).thenThrow(new RepositoryException(randomString()));
-
-        assertThrows(RepositoryException.class,
-                     () -> approvalService.updateApprovalIdentifiers(randomUUID(), randomIdentifiers()));
-    }
 }

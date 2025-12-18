@@ -6,13 +6,13 @@ import java.net.URI;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.Collection;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import no.sikt.nva.approvals.persistence.ApprovalRepository;
 import no.sikt.nva.approvals.persistence.DynamoDbApprovalRepository;
 import no.sikt.nva.approvals.persistence.NamedIdentifierQueryObject;
-import no.sikt.nva.approvals.persistence.RepositoryException;
 import no.sikt.nva.handle.HandleDatabase;
 import nva.commons.core.Environment;
 import nva.commons.core.JacocoGenerated;
@@ -51,55 +51,44 @@ public class ApprovalServiceImpl implements ApprovalService {
     }
 
     @Override
-    public Approval getApprovalByIdentifier(UUID approvalId)
-        throws ApprovalNotFoundException, ApprovalServiceException {
-        try {
-            return approvalRepository.findByApprovalIdentifier(approvalId)
-                       .orElseThrow(() -> new ApprovalNotFoundException(
-                           "Approval not found for identifier %s".formatted(approvalId)));
-        } catch (RepositoryException e) {
-            throw new ApprovalServiceException("Could not fetch approval by identifier %s".formatted(approvalId));
-        }
+    public Optional<Approval> getApprovalByIdentifier(UUID approvalId) {
+        return approvalRepository.findByApprovalIdentifier(approvalId);
     }
 
     @Override
-    public Approval getApprovalByHandle(Handle handle) throws ApprovalNotFoundException, ApprovalServiceException {
-        try {
-            return approvalRepository.findByHandle(handle)
-                       .orElseThrow(() -> new ApprovalNotFoundException(
-                           "Approval not found for handle %s".formatted(handle.value())));
-        } catch (RepositoryException e) {
-            throw new ApprovalServiceException("Could not fetch approval by handle %s".formatted(handle.value()));
-        }
+    public Optional<Approval> getApprovalByHandle(Handle handle) {
+        return approvalRepository.findByHandle(handle);
     }
 
     @Override
-    public Approval getApprovalByNamedIdentifier(NamedIdentifier namedIdentifier)
-        throws ApprovalNotFoundException, ApprovalServiceException {
-        try {
-            return approvalRepository.findByIdentifier(namedIdentifier)
-                       .orElseThrow(() -> new ApprovalNotFoundException(
-                           "Approval not found for identifier %s:%s".formatted(namedIdentifier.name(),
-                                                                               namedIdentifier.value())));
-        } catch (RepositoryException e) {
-            throw new ApprovalServiceException(
-                "Could not fetch approval by identifier %s:%s".formatted(namedIdentifier.name(),
-                                                                         namedIdentifier.value()));
-        }
+    public Optional<Approval> getApprovalByNamedIdentifier(NamedIdentifier namedIdentifier) {
+        return approvalRepository.findByIdentifier(namedIdentifier);
     }
 
     @JacocoGenerated
     @Override
     public Approval updateApprovalIdentifiers(UUID approvalId, Collection<NamedIdentifier> namedIdentifiers)
-        throws ApprovalNotFoundException, ApprovalServiceException, ApprovalConflictException, RepositoryException {
+        throws ApprovalServiceException, ApprovalConflictException {
         var identifiers = approvalRepository.findIdentifiers(namedIdentifiers);
-        var approval = getApprovalByIdentifier(approvalId);
+        var approval = getApprovalByIdentifier(approvalId)
+                           .orElseThrow(() -> new ApprovalServiceException(
+                               "Approval not found for identifier %s".formatted(approvalId)));
 
         ensureIdentifiersAreNotUsedByOtherApproval(identifiers, approval);
-        var updatedApproval = new Approval(approval.identifier(), namedIdentifiers, approval.source(), approval.handle());
-        approvalRepository.updateApprovalIdentifiers(updatedApproval);
+        var updatedApproval = new Approval(approval.identifier(), namedIdentifiers, approval.source(),
+                                           approval.handle());
+        updateApproval(approvalId, updatedApproval);
 
         return updatedApproval;
+    }
+
+    private void updateApproval(UUID approvalId, Approval updatedApproval) throws ApprovalServiceException {
+        try {
+            approvalRepository.updateApprovalIdentifiers(updatedApproval);
+        } catch (Exception exception) {
+            throw new ApprovalServiceException(
+                "Could not update approval identifiers for %s".formatted(approvalId), exception);
+        }
     }
 
     @JacocoGenerated
@@ -119,18 +108,14 @@ public class ApprovalServiceImpl implements ApprovalService {
     }
 
     private void ensureIdentifiersDoesNotExist(Collection<NamedIdentifier> namedIdentifiers)
-        throws ApprovalServiceException, ApprovalConflictException {
-        try {
-            var identifiers = approvalRepository.findIdentifiers(namedIdentifiers);
-            if (!identifiers.isEmpty()) {
-                var message = formatConflictMessage(identifiers);
-                var conflictingKeys = identifiers.stream()
-                                          .collect(Collectors.toMap(NamedIdentifierQueryObject::name,
-                                                                    NamedIdentifierQueryObject::value));
-                throw new ApprovalConflictException(message, conflictingKeys);
-            }
-        } catch (RepositoryException e) {
-            throw new ApprovalServiceException("Could not verify if identifiers are new");
+        throws ApprovalConflictException {
+        var identifiers = approvalRepository.findIdentifiers(namedIdentifiers);
+        if (!identifiers.isEmpty()) {
+            var message = formatConflictMessage(identifiers);
+            var conflictingKeys = identifiers.stream()
+                                      .collect(Collectors.toMap(NamedIdentifierQueryObject::name,
+                                                                NamedIdentifierQueryObject::value));
+            throw new ApprovalConflictException(message, conflictingKeys);
         }
     }
 
@@ -145,8 +130,9 @@ public class ApprovalServiceImpl implements ApprovalService {
     private void save(Approval approval) throws ApprovalServiceException {
         try {
             approvalRepository.save(approval);
-        } catch (RepositoryException e) {
-            throw new ApprovalServiceException("Could not save approval with source %s".formatted(approval.source()));
+        } catch (Exception exception) {
+            throw new ApprovalServiceException(
+                "Could not save approval with source %s".formatted(approval.source()), exception);
         }
     }
 

@@ -8,18 +8,16 @@ import static no.sikt.nva.approvals.utils.RequestUtils.getApprovalIdentifier;
 import static nva.commons.core.StringUtils.isNotBlank;
 import com.amazonaws.services.lambda.runtime.Context;
 import java.net.URI;
+import java.util.Optional;
 import java.util.UUID;
 import no.sikt.nva.approvals.domain.Approval;
-import no.sikt.nva.approvals.domain.ApprovalNotFoundException;
 import no.sikt.nva.approvals.domain.ApprovalService;
-import no.sikt.nva.approvals.domain.ApprovalServiceException;
 import no.sikt.nva.approvals.domain.ApprovalServiceImpl;
 import no.sikt.nva.approvals.domain.Handle;
 import no.sikt.nva.approvals.domain.NamedIdentifier;
 import nva.commons.apigateway.ApiGatewayHandler;
 import nva.commons.apigateway.RequestInfo;
 import nva.commons.apigateway.exceptions.ApiGatewayException;
-import nva.commons.apigateway.exceptions.BadGatewayException;
 import nva.commons.apigateway.exceptions.BadRequestException;
 import nva.commons.apigateway.exceptions.NotFoundException;
 import nva.commons.core.Environment;
@@ -37,7 +35,6 @@ public class FetchApprovalHandler extends ApiGatewayHandler<Void, ApprovalRespon
     private static final String MISSING_NAME_OR_VALUE_MESSAGE = "Both 'name' and 'value' query parameters are required";
     private static final String MISSING_QUERY_PARAMETERS_MESSAGE =
         "Missing query parameters. Use 'handle' or 'name' and 'value'";
-    private static final String BAD_GATEWAY_MESSAGE = "Something went wrong!";
     private static final String CONFLICTING_PARAMETERS_MESSAGE =
         "Cannot use both path parameter and query parameters. Use either approvalId path or query parameters";
 
@@ -68,7 +65,8 @@ public class FetchApprovalHandler extends ApiGatewayHandler<Void, ApprovalRespon
         var approval = hasPathParameter(requestInfo)
             ? fetchByApprovalId(requestInfo)
             : fetchByQueryParameters(requestInfo);
-        return ApprovalResponse.fromApproval(approval, apiHost);
+        return ApprovalResponse.fromApproval(
+            approval.orElseThrow(() -> new NotFoundException(APPROVAL_NOT_FOUND_MESSAGE)), apiHost);
     }
 
     @Override
@@ -91,12 +89,12 @@ public class FetchApprovalHandler extends ApiGatewayHandler<Void, ApprovalRespon
                || isNotBlank(queryParameters.get(VALUE_QUERY_PARAMETER));
     }
 
-    private Approval fetchByApprovalId(RequestInfo requestInfo) throws ApiGatewayException {
+    private Optional<Approval> fetchByApprovalId(RequestInfo requestInfo) throws ApiGatewayException {
         var approvalId = getApprovalIdentifier(requestInfo);
         return fetchApprovalByIdentifier(approvalId);
     }
 
-    private Approval fetchByQueryParameters(RequestInfo requestInfo) throws ApiGatewayException {
+    private Optional<Approval> fetchByQueryParameters(RequestInfo requestInfo) throws ApiGatewayException {
         var handleParam = getQueryParameter(requestInfo, HANDLE_QUERY_PARAMETER);
         if (isNotBlank(handleParam)) {
             return fetchApprovalByHandle(handleParam);
@@ -114,25 +112,13 @@ public class FetchApprovalHandler extends ApiGatewayHandler<Void, ApprovalRespon
         return nonNull(queryParameters) ? queryParameters.get(parameterName) : null;
     }
 
-    private Approval fetchApprovalByIdentifier(UUID approvalId) throws NotFoundException, BadGatewayException {
-        try {
-            return approvalService.getApprovalByIdentifier(approvalId);
-        } catch (ApprovalNotFoundException exception) {
-            throw new NotFoundException(APPROVAL_NOT_FOUND_MESSAGE);
-        } catch (ApprovalServiceException exception) {
-            throw new BadGatewayException(BAD_GATEWAY_MESSAGE);
-        }
+    private Optional<Approval> fetchApprovalByIdentifier(UUID approvalId) {
+        return approvalService.getApprovalByIdentifier(approvalId);
     }
 
-    private Approval fetchApprovalByHandle(String handleParam) throws ApiGatewayException {
+    private Optional<Approval> fetchApprovalByHandle(String handleParam) throws BadRequestException {
         var handle = parseHandle(handleParam);
-        try {
-            return approvalService.getApprovalByHandle(handle);
-        } catch (ApprovalNotFoundException exception) {
-            throw new NotFoundException(APPROVAL_NOT_FOUND_MESSAGE);
-        } catch (ApprovalServiceException exception) {
-            throw new BadGatewayException(BAD_GATEWAY_MESSAGE);
-        }
+        return approvalService.getApprovalByHandle(handle);
     }
 
     private Handle parseHandle(String handleParam) throws BadRequestException {
@@ -144,17 +130,11 @@ public class FetchApprovalHandler extends ApiGatewayHandler<Void, ApprovalRespon
         }
     }
 
-    private Approval fetchApprovalByNamedIdentifier(String name, String value) throws ApiGatewayException {
+    private Optional<Approval> fetchApprovalByNamedIdentifier(String name, String value) throws BadRequestException {
         if (StringUtils.isBlank(name) || StringUtils.isBlank(value)) {
             throw new BadRequestException(MISSING_NAME_OR_VALUE_MESSAGE);
         }
-        try {
-            var namedIdentifier = new NamedIdentifier(name, value);
-            return approvalService.getApprovalByNamedIdentifier(namedIdentifier);
-        } catch (ApprovalNotFoundException exception) {
-            throw new NotFoundException(APPROVAL_NOT_FOUND_MESSAGE);
-        } catch (ApprovalServiceException exception) {
-            throw new BadGatewayException(BAD_GATEWAY_MESSAGE);
-        }
+        var namedIdentifier = new NamedIdentifier(name, value);
+        return approvalService.getApprovalByNamedIdentifier(namedIdentifier);
     }
 }
