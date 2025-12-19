@@ -2,6 +2,7 @@ package no.sikt.nva.approvals.domain;
 
 import java.net.URI;
 import java.util.Collection;
+import java.util.Optional;
 import java.util.UUID;
 
 public interface ApprovalService {
@@ -9,13 +10,12 @@ public interface ApprovalService {
     Approval create(Collection<NamedIdentifier> namedIdentifiers, URI source)
         throws ApprovalServiceException, ApprovalConflictException;
 
-    Approval getApprovalByIdentifier(UUID approvalId) throws ApprovalNotFoundException, ApprovalServiceException;
+    Optional<Approval> getApprovalByIdentifier(UUID approvalId);
 
-    Approval getApprovalByHandle(Handle handle) throws ApprovalNotFoundException, ApprovalServiceException;
+    Optional<Approval> getApprovalByHandle(Handle handle);
 
-    Approval getApprovalByNamedIdentifier(NamedIdentifier namedIdentifier)
-        throws ApprovalNotFoundException, ApprovalServiceException;
+    Optional<Approval> getApprovalByNamedIdentifier(NamedIdentifier namedIdentifier);
 
-    Approval updateApprovalIdentifiers(UUID approvalId,  Collection<NamedIdentifier> namedIdentifiers)
-        throws ApprovalNotFoundException, ApprovalConflictException, ApprovalServiceException;
+    Approval updateApprovalIdentifiers(UUID approvalId, Collection<NamedIdentifier> namedIdentifiers)
+        throws ApprovalServiceException, ApprovalConflictException;
 }

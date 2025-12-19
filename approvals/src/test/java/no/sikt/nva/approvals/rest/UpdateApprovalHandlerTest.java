@@ -3,7 +3,6 @@ package no.sikt.nva.approvals.rest;
 import static java.net.HttpURLConnection.HTTP_ACCEPTED;
 import static java.net.HttpURLConnection.HTTP_BAD_GATEWAY;
 import static java.net.HttpURLConnection.HTTP_BAD_REQUEST;
-import static java.net.HttpURLConnection.HTTP_NOT_FOUND;
 import static no.unit.nva.testutils.RandomDataGenerator.randomString;
 import static no.unit.nva.testutils.RandomDataGenerator.randomUri;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -16,7 +15,6 @@ import java.net.URI;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import no.sikt.nva.approvals.domain.ApprovalNotFoundException;
 import no.sikt.nva.approvals.domain.ApprovalServiceException;
 import no.sikt.nva.approvals.domain.FakeApprovalService;
 import no.sikt.nva.approvals.domain.NamedIdentifier;
@@ -41,8 +39,7 @@ class UpdateApprovalHandlerTest {
     void setUp() {
         this.output = new ByteArrayOutputStream();
         this.approvalId = UUID.randomUUID();
-        FakeApprovalService approvalService = new FakeApprovalService();
-        handler = new UpdateApprovalHandler(approvalService);
+        handler = new UpdateApprovalHandler(new FakeApprovalService());
     }
 
     @Test
@@ -108,18 +105,6 @@ class UpdateApprovalHandlerTest {
     }
 
     @Test
-    void shouldReturnBadRequestWhenRequestBodyIsInvalidDueToMissingHandle() throws IOException {
-        var invalidJson = invalidRequestBody(randomUri());
-        var request = createRawJsonRequest(invalidJson, approvalId);
-
-        handler.handleRequest(request, output, context);
-
-        var response = GatewayResponse.fromOutputStream(output, Void.class);
-
-        assertEquals(HTTP_BAD_REQUEST, response.getStatusCode());
-    }
-
-    @Test
     void shouldReturnBadRequestWhenApprovalIdIsInvalid() throws IOException {
         var request = createRequestWithInvalidApprovalId(randomUpdateApprovalRequest());
 
@@ -131,15 +116,15 @@ class UpdateApprovalHandlerTest {
     }
 
     @Test
-    void shouldReturnNotFoundWhenApprovalServiceThrowsNotFoundException() throws IOException {
-        handler = new UpdateApprovalHandler(new FakeApprovalService(new ApprovalNotFoundException("not found")));
+    void shouldReturnBadGatewayWhenApprovalNotFoundDuringUpdate() throws IOException {
+        handler = new UpdateApprovalHandler(new FakeApprovalService(new ApprovalServiceException("not found")));
         var request = createRequest(randomUpdateApprovalRequest(), approvalId);
 
         handler.handleRequest(request, output, context);
 
         var response = GatewayResponse.fromOutputStream(output, Void.class);
 
-        assertEquals(HTTP_NOT_FOUND, response.getStatusCode());
+        assertEquals(HTTP_BAD_GATEWAY, response.getStatusCode());
     }
 
     @Test
@@ -162,7 +147,8 @@ class UpdateApprovalHandlerTest {
                   "name": "test",
                   "value": "123"
                 }
-              ]
+              ],
+              "source": "%s"
             }
             """.formatted(source);
     }

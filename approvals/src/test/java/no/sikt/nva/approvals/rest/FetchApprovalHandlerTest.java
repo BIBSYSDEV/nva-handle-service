@@ -1,6 +1,5 @@
 package no.sikt.nva.approvals.rest;
 
-import static java.net.HttpURLConnection.HTTP_BAD_GATEWAY;
 import static java.net.HttpURLConnection.HTTP_BAD_REQUEST;
 import static java.net.HttpURLConnection.HTTP_NOT_FOUND;
 import static java.net.HttpURLConnection.HTTP_OK;
@@ -13,11 +12,16 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import static no.sikt.nva.approvals.utils.TestUtils.randomApproval;
+import static no.sikt.nva.approvals.utils.TestUtils.randomHandle;
+import static no.unit.nva.testutils.RandomDataGenerator.randomUri;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import no.sikt.nva.approvals.domain.ApprovalNotFoundException;
-import no.sikt.nva.approvals.domain.ApprovalServiceException;
+import no.sikt.nva.approvals.domain.Approval;
 import no.sikt.nva.approvals.domain.FakeApprovalService;
+import no.sikt.nva.approvals.domain.Handle;
+import no.sikt.nva.approvals.domain.NamedIdentifier;
 import no.unit.nva.commons.json.JsonUtils;
 import no.unit.nva.stubs.FakeContext;
 import no.unit.nva.testutils.HandlerRequestBuilder;
@@ -53,7 +57,8 @@ class FetchApprovalHandlerTest {
     @Test
     void shouldReturnOkResponseWithApprovalOnSuccess() {
         var approvalId = UUID.randomUUID();
-        handler = new FetchApprovalHandler(new FakeApprovalService(), environment);
+        var approval = new Approval(approvalId, List.of(new NamedIdentifier("test", "value")), randomUri(), randomHandle());
+        handler = new FetchApprovalHandler(new FakeApprovalService(List.of(approval)), environment);
         var request = createRequestWithPathParameter(approvalId);
 
         var response = handleRequest(request);
@@ -64,8 +69,7 @@ class FetchApprovalHandlerTest {
     @Test
     void shouldReturnNotFoundWhenApprovalDoesNotExist() {
         var approvalId = UUID.randomUUID();
-        var fakeService = new FakeApprovalService(new ApprovalNotFoundException("not found"));
-        handler = new FetchApprovalHandler(fakeService, environment);
+        handler = new FetchApprovalHandler(new FakeApprovalService(), environment);
         var request = createRequestWithPathParameter(approvalId);
 
         var response = handleRequest(request);
@@ -84,19 +88,10 @@ class FetchApprovalHandlerTest {
     }
 
     @Test
-    void shouldReturnBadGatewayWhenServiceThrowsException() {
-        var approvalId = UUID.randomUUID();
-        handler = new FetchApprovalHandler(new FakeApprovalService(new ApprovalServiceException("error")), environment);
-        var request = createRequestWithPathParameter(approvalId);
-
-        var response = handleRequest(request);
-
-        assertEquals(HTTP_BAD_GATEWAY, response.getStatusCode());
-    }
-
-    @Test
     void shouldReturnOkWhenLookingUpByHandle() {
-        handler = new FetchApprovalHandler(new FakeApprovalService(), environment);
+        var handle = new Handle(java.net.URI.create(VALID_HANDLE));
+        var approval = randomApproval(handle);
+        handler = new FetchApprovalHandler(new FakeApprovalService(List.of(approval)), environment);
         var request = createRequestWithHandleQuery(VALID_HANDLE);
 
         var response = handleRequest(request);
@@ -106,8 +101,7 @@ class FetchApprovalHandlerTest {
 
     @Test
     void shouldReturnNotFoundWhenHandleLookupFindsNothing() {
-        var fakeService = new FakeApprovalService(new ApprovalNotFoundException("not found"));
-        handler = new FetchApprovalHandler(fakeService, environment);
+        handler = new FetchApprovalHandler(new FakeApprovalService(), environment);
         var request = createRequestWithHandleQuery(VALID_HANDLE);
 
         var response = handleRequest(request);
@@ -127,7 +121,9 @@ class FetchApprovalHandlerTest {
 
     @Test
     void shouldReturnOkWhenLookingUpByNamedIdentifier() {
-        handler = new FetchApprovalHandler(new FakeApprovalService(), environment);
+        var namedIdentifier = new NamedIdentifier("doi", "10.1234/5678");
+        var approval = randomApproval(namedIdentifier);
+        handler = new FetchApprovalHandler(new FakeApprovalService(List.of(approval)), environment);
         var request = createRequestWithNamedIdentifierQuery("doi", "10.1234/5678");
 
         var response = handleRequest(request);
@@ -137,8 +133,7 @@ class FetchApprovalHandlerTest {
 
     @Test
     void shouldReturnNotFoundWhenNamedIdentifierLookupFindsNothing() {
-        var fakeService = new FakeApprovalService(new ApprovalNotFoundException("not found"));
-        handler = new FetchApprovalHandler(fakeService, environment);
+        handler = new FetchApprovalHandler(new FakeApprovalService(), environment);
         var request = createRequestWithNamedIdentifierQuery("doi", "10.1234/5678");
 
         var response = handleRequest(request);
@@ -174,26 +169,6 @@ class FetchApprovalHandlerTest {
         var response = handleRequest(request);
 
         assertEquals(HTTP_BAD_REQUEST, response.getStatusCode());
-    }
-
-    @Test
-    void shouldReturnBadGatewayWhenServiceThrowsExceptionOnHandleLookup() {
-        handler = new FetchApprovalHandler(new FakeApprovalService(new ApprovalServiceException("error")), environment);
-        var request = createRequestWithHandleQuery(VALID_HANDLE);
-
-        var response = handleRequest(request);
-
-        assertEquals(HTTP_BAD_GATEWAY, response.getStatusCode());
-    }
-
-    @Test
-    void shouldReturnBadGatewayWhenServiceThrowsExceptionOnNamedIdentifierLookup() {
-        handler = new FetchApprovalHandler(new FakeApprovalService(new ApprovalServiceException("error")), environment);
-        var request = createRequestWithNamedIdentifierQuery("doi", "10.1234/5678");
-
-        var response = handleRequest(request);
-
-        assertEquals(HTTP_BAD_GATEWAY, response.getStatusCode());
     }
 
     @Test

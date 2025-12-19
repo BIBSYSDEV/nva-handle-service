@@ -11,6 +11,9 @@ import java.util.stream.IntStream;
 import no.sikt.nva.approvals.domain.Approval;
 import no.sikt.nva.approvals.domain.Handle;
 import no.sikt.nva.approvals.domain.NamedIdentifier;
+import no.sikt.nva.approvals.persistence.ApprovalDao;
+import no.sikt.nva.approvals.persistence.HandleDao;
+import no.sikt.nva.approvals.persistence.NamedIdentifierQueryObject;
 import nva.commons.core.paths.UriWrapper;
 
 public class TestUtils {
@@ -45,6 +48,18 @@ public class TestUtils {
 
     public static NamedIdentifier randomIdentifier() {
         return new NamedIdentifier(randomString(), randomString());
+    }
+
+    public static NamedIdentifierQueryObject randomIdentifierQueryObject() {
+        return new NamedIdentifierQueryObject(randomString(), randomString(),
+                                              ApprovalDao.toDatabaseIdentifier(randomUUID()),
+                                              HandleDao.fromHandle(randomHandle()).getDatabaseIdentifier());
+    }
+
+    public static NamedIdentifierQueryObject toIdentifierQueryObject(NamedIdentifier identifier) {
+        return new NamedIdentifierQueryObject(identifier.name(), identifier.value(),
+                                              ApprovalDao.toDatabaseIdentifier(randomUUID()),
+                                              HandleDao.fromHandle(randomHandle()).getDatabaseIdentifier());
     }
 
     public static Handle randomHandle() {

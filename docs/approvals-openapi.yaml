@@ -242,6 +242,69 @@ paths:
             "application/json":
               schema:
                 $ref: '#/components/schemas/Problem'
+    put:
+      tags:
+        - Approval
+        - external
+      operationId: updateApproval
+      summary: Update Approval
+      description: Update approval
+      parameters:
+        - name: approvalId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateApprovalRequest'
+      x-amazon-apigateway-integration:
+        uri:
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${NvaUpdateApprovalFunction.Arn}/invocations
+        responses: { }
+        httpMethod: POST
+        type: AWS_PROXY
+      responses:
+        '202':
+          description: Approval accepted
+          headers:
+            Location:
+              description: URI of the updated Approval
+              schema:
+                type: string
+                format: uri
+            Retry-After:
+              description: Number of seconds to wait before checking the approval
+              schema:
+                type: integer
+        '400':
+          description: Bad Request
+          content:
+            "application/json":
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '404':
+          description: Approval not found
+          content:
+            "application/json":
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '409':
+          description: Conflict
+          content:
+            "application/json":
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '502':
+          description: Bad gateway
+          content:
+            "application/json":
+              schema:
+                $ref: '#/components/schemas/Problem'
 components:
   schemas:
     CreateApprovalRequest:
@@ -273,6 +336,17 @@ components:
             name: DMP
             value: "dmp-456"
         source: https://example.com/source/12345
+    UpdateApprovalRequest:
+      type: object
+      required:
+        - identifiers
+      properties:
+        identifiers:
+          type: array
+          items:
+            $ref: '#/components/schemas/Identifier'
+          minItems: 1
+          description: List of identifiers for the approval
     Problem:
       type: object
       description: NVA error reporting object
