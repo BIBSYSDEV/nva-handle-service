@@ -16,6 +16,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import java.net.URI;
 import java.sql.Connection;
@@ -29,6 +30,7 @@ import no.sikt.nva.approvals.persistence.HandleDao;
 import no.sikt.nva.approvals.persistence.NamedIdentifierQueryObject;
 import no.sikt.nva.handle.HandleDatabase;
 import nva.commons.core.Environment;
+import nva.commons.core.paths.UriWrapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -36,6 +38,8 @@ class ApprovalServiceTest {
 
     private static final URI VALID_HANDLE_URI = URI.create("https://hdl.handle.net/11250.1/12345");
     private static final String HANDLE_PREFIX = new Environment().readEnv("HANDLE_PREFIX");
+    private static final String API_HOST = new Environment().readEnv("API_HOST");
+    private static final String APPROVAL_PATH = "approval";
     private ApprovalService approvalService;
     private ApprovalRepository approvalRepository;
     private HandleDatabase handleDatabase;
@@ -71,12 +75,11 @@ class ApprovalServiceTest {
     @Test
     void shouldCreateApprovalWithHandleCreatedByHandleDatabase()
         throws SQLException, ApprovalServiceException, ApprovalConflictException {
-        var source = randomUri();
         var handle = randomHandle().value();
-        when(handleDatabase.createHandle(eq(HANDLE_PREFIX), eq(source), eq(connection))).thenReturn(handle);
+        when(handleDatabase.createHandle(eq(HANDLE_PREFIX), any(URI.class), eq(connection))).thenReturn(handle);
         doNothing().when(approvalRepository).save(any());
 
-        var approval = approvalService.create(randomIdentifiers(), source);
+        var approval = approvalService.create(randomIdentifiers(), randomUri());
 
         assertEquals(handle, approval.handle().value());
     }
@@ -85,13 +88,29 @@ class ApprovalServiceTest {
     void shouldCreateApprovalWithSourceProvidedInInput()
         throws SQLException, ApprovalServiceException, ApprovalConflictException {
         var source = randomUri();
-        when(handleDatabase.createHandle(eq(HANDLE_PREFIX), eq(source), eq(connection))).thenReturn(
+        when(handleDatabase.createHandle(eq(HANDLE_PREFIX), any(URI.class), eq(connection))).thenReturn(
             randomHandle().value());
         doNothing().when(approvalRepository).save(any());
 
         var approval = approvalService.create(randomIdentifiers(), source);
 
         assertEquals(source, approval.source());
+    }
+
+    @Test
+    void shouldCreateHandleWithApprovalUriAsLandingPage()
+        throws SQLException, ApprovalServiceException, ApprovalConflictException {
+        when(handleDatabase.createHandle(eq(HANDLE_PREFIX), any(URI.class), eq(connection))).thenReturn(
+            randomHandle().value());
+        doNothing().when(approvalRepository).save(any());
+
+        var approval = approvalService.create(randomIdentifiers(), randomUri());
+
+        var expectedApprovalUri = UriWrapper.fromHost(API_HOST)
+                                      .addChild(APPROVAL_PATH)
+                                      .addChild(approval.identifier().toString())
+                                      .getUri();
+        verify(handleDatabase).createHandle(eq(HANDLE_PREFIX), eq(expectedApprovalUri), eq(connection));
     }
 
     @Test
