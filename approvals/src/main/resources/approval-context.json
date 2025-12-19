@@ -5,10 +5,11 @@
     "type": "@type",
     "id": "@id",
     "identifier": {
+      "@id": "https://nva.unit.no/approval#approvalId",
       "@type": "xsd:string"
     },
     "identifiers": {
-      "@id": "identifier",
+      "@id": "https://nva.unit.no/approval#identifier",
       "@container": "@set"
     },
     "source": {

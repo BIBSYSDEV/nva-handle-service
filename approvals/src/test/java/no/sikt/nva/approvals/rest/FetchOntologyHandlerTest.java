@@ -42,7 +42,7 @@ class FetchOntologyHandlerTest {
         var response = GatewayResponse.fromOutputStream(outputStream, String.class);
         assertThat(response.getStatusCode(), is(HttpURLConnection.HTTP_OK));
         assertThat(response.getBody(), containsString("@prefix"));
-        assertThat(response.getBody(), containsString("owl:Ontology"));
+        assertThat(response.getBody(), containsString("rdfs:label"));
         assertThat(response.getBody(), containsString("https://nva.unit.no/approval#"));
     }
 
@@ -63,7 +63,7 @@ class FetchOntologyHandlerTest {
         handler.handleRequest(inputStream, outputStream, CONTEXT);
 
         var response = GatewayResponse.fromOutputStream(outputStream, String.class);
-        assertThat(response.getBody(), containsString(":Approval rdf:type owl:Class"));
+        assertThat(response.getBody(), containsString(":Approval a rdfs:Class"));
     }
 
     @Test
@@ -73,7 +73,7 @@ class FetchOntologyHandlerTest {
         handler.handleRequest(inputStream, outputStream, CONTEXT);
 
         var response = GatewayResponse.fromOutputStream(outputStream, String.class);
-        assertThat(response.getBody(), containsString(":Identifier rdf:type owl:Class"));
+        assertThat(response.getBody(), containsString(":Identifier a rdfs:Class"));
     }
 
     private InputStream createRequest() throws JsonProcessingException {
