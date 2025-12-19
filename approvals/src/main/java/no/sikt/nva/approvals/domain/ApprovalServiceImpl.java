@@ -15,10 +15,13 @@ import no.sikt.nva.approvals.persistence.NamedIdentifierQueryObject;
 import no.sikt.nva.handle.HandleDatabase;
 import nva.commons.core.Environment;
 import nva.commons.core.JacocoGenerated;
+import nva.commons.core.paths.UriWrapper;
 
 public class ApprovalServiceImpl implements ApprovalService {
 
     private static final String HANDLE_PREFIX = "HANDLE_PREFIX";
+    private static final String API_HOST = "API_HOST";
+    private static final String APPROVAL_PATH = "approval";
     private final HandleDatabase handleDatabase;
     private final ApprovalRepository approvalRepository;
     private final Supplier<Connection> connectionSupplier;
@@ -43,8 +46,10 @@ public class ApprovalServiceImpl implements ApprovalService {
     public Approval create(Collection<NamedIdentifier> namedIdentifiers, URI source)
         throws ApprovalServiceException, ApprovalConflictException {
         ensureIdentifiersDoesNotExist(namedIdentifiers);
-        var handle = createHandle(source);
-        var approval = new Approval(randomUUID(), namedIdentifiers, source, handle);
+        var approvalId = randomUUID();
+        var approvalUri = createApprovalUri(approvalId);
+        var handle = createHandle(approvalUri);
+        var approval = new Approval(approvalId, namedIdentifiers, source, handle);
         approvalRepository.save(approval);
         return approval;
     }
@@ -115,13 +120,18 @@ public class ApprovalServiceImpl implements ApprovalService {
         return "Following identifiers already exist: [%s]".formatted(String.join(", ", identifierList));
     }
 
-    private Handle createHandle(URI source) throws ApprovalServiceException {
+    private URI createApprovalUri(UUID approvalId) {
+        var apiHost = environment.readEnv(API_HOST);
+        return UriWrapper.fromHost(apiHost).addChild(APPROVAL_PATH).addChild(approvalId.toString()).getUri();
+    }
+
+    private Handle createHandle(URI approvalUri) throws ApprovalServiceException {
         try (var connection = connectionSupplier.get()) {
-            var handle = handleDatabase.createHandle(environment.readEnv(HANDLE_PREFIX), source, connection);
+            var handle = handleDatabase.createHandle(environment.readEnv(HANDLE_PREFIX), approvalUri, connection);
             connection.commit();
             return new Handle(handle);
         } catch (Exception e) {
-            throw new ApprovalServiceException("Could not create handle for source %s".formatted(source), e);
+            throw new ApprovalServiceException("Could not create handle for approval %s".formatted(approvalUri), e);
         }
     }
 }
