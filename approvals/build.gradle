@@ -13,6 +13,7 @@ dependencies {
     implementation nvaCatalog.guava
 
     testImplementation nvaLibs.testutils
+    testImplementation nvaCatalog.assertj.core
     testImplementation nvaCatalog.bundles.testing.junit
     testImplementation nvaCatalog.bundles.testing.hamcrest
     testImplementation nvaCatalog.bundles.testing.mockito
