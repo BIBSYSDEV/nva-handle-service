@@ -12,6 +12,8 @@ dependencies {
     implementation nvaCatalog.bundles.jackson
     implementation nvaCatalog.guava
 
+    implementation libs.jte
+
     testImplementation nvaLibs.testutils
     testImplementation nvaCatalog.bundles.testing.junit
     testImplementation nvaCatalog.bundles.testing.hamcrest
