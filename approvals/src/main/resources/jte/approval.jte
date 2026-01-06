@@ -4,7 +4,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Godkjenning ${model.publicTitle()}</title>
+  <title>Godkjenning ${model.displayTitle()}</title>
   <style>
       body { margin: 0; padding: 0;
           background-color: #f1f1f1;
@@ -74,28 +74,32 @@
     <div class="content">
       <div class="header">
         <h3>Godkjenning</h3>
-        <h1>${model.publicTitle()}</h1>
+        <h1>${model.displayTitle()}</h1>
       </div>
       <div class="content-body">
         <div class="metadata">
+          @if(model.hasStudyPeriod())
           <div class="metadata-field">
             <p class="metadata-label">STUDIEPERIODE</p>
             <p class="metadata-text">${model.studyPeriodStart()} - ${model.studyPeriodEnd()}</p>
           </div>
+          @endif
+          @for(var namedIdentifier : model.namedIdentifiers())
           <div class="metadata-field">
-            <p class="metadata-label">CTIS-ID</p>
-            <p class="metadata-text">${model.ctisId()}</p>
+            <p class="metadata-label">${namedIdentifier.getKey()}</p>
+            <p class="metadata-text">${namedIdentifier.getValue()}</p>
           </div>
+          @endfor
           <div class="metadata-field">
             <p class="metadata-label">HANDLE</p>
             <p class="metadata-text">${model.handle()}</p>
           </div>
-          @if(!model.sponsors().isEmpty())
+          @for(var sponsor : model.sponsors())
           <div class="metadata-field">
             <p class="metadata-label">SPONSOR</p>
-            <p class="metadata-text">${model.sponsors().iterator().next().name()}</p>
+            <p class="metadata-text">${sponsor.name()}</p>
           </div>
-          @endif
+          @endfor
         </div>
         @if(!model.trialSites().isEmpty())
         <hr>
