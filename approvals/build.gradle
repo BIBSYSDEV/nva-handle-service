@@ -1,3 +1,6 @@
+plugins {
+    alias(libs.plugins.jte)
+}
 
 dependencies {
     implementation project(":operations")
@@ -12,11 +15,56 @@ dependencies {
     implementation nvaCatalog.bundles.jackson
     implementation nvaCatalog.guava
 
+    implementation libs.jte
+
     testImplementation nvaLibs.testutils
     testImplementation nvaCatalog.bundles.testing.junit
     testImplementation nvaCatalog.bundles.testing.hamcrest
     testImplementation nvaCatalog.bundles.testing.mockito
     testImplementation nvaCatalog.aws.dynamodb.local
+}
+
+jte {
+    sourceDirectory = sourceSets.main.resources.srcDirs.first().toPath().resolve('jte')
+    targetDirectory = layout.buildDirectory.dir('jte-classes').get().asFile.toPath()
+    contentType = gg.jte.ContentType.Html
+    generate()
+}
+
+tasks.named('classes') {
+    dependsOn 'generateJte'
+}
+
+sourceSets {
+    main {
+        java {
+            srcDir(layout.buildDirectory.dir('jte-classes'))
+        }
+    }
+}
+
+jacocoTestReport {
+    afterEvaluate {
+        classDirectories.setFrom(files(classDirectories.files.collect {
+            fileTree(dir: it, exclude: ['gg/jte/generated/**'])
+        }))
+    }
+}
+
+jacocoTestCoverageVerification {
+    afterEvaluate {
+        classDirectories.setFrom(files(classDirectories.files.collect {
+            fileTree(dir: it, exclude: ['gg/jte/generated/**'])
+        }))
+    }
+}
+
+tasks.withType(Checkstyle).configureEach {
+    exclude 'gg/jte/generated/**'
+}
+
+tasks.withType(Pmd).configureEach {
+    exclude 'gg/jte/generated/**'
 }
 
 test {

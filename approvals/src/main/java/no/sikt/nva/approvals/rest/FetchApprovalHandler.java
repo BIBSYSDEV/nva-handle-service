@@ -5,9 +5,14 @@ import static java.util.Objects.isNull;
 import static java.util.Objects.nonNull;
 import static no.sikt.nva.approvals.utils.RequestUtils.getApiHost;
 import static no.sikt.nva.approvals.utils.RequestUtils.getApprovalIdentifier;
+import static nva.commons.apigateway.MediaTypes.APPLICATION_JSON_LD;
 import static nva.commons.core.StringUtils.isNotBlank;
 import com.amazonaws.services.lambda.runtime.Context;
+import com.google.common.net.MediaType;
+import gg.jte.TemplateEngine;
+import gg.jte.output.StringOutput;
 import java.net.URI;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import no.sikt.nva.approvals.domain.Approval;
@@ -20,11 +25,12 @@ import nva.commons.apigateway.RequestInfo;
 import nva.commons.apigateway.exceptions.ApiGatewayException;
 import nva.commons.apigateway.exceptions.BadRequestException;
 import nva.commons.apigateway.exceptions.NotFoundException;
+import nva.commons.apigateway.exceptions.UnsupportedAcceptHeaderException;
 import nva.commons.core.Environment;
 import nva.commons.core.JacocoGenerated;
 import nva.commons.core.StringUtils;
 
-public class FetchApprovalHandler extends ApiGatewayHandler<Void, ApprovalResponse> {
+public class FetchApprovalHandler extends ApiGatewayHandler<Void, Object> {
 
     private static final String APPROVAL_ID_PATH_PARAMETER = "approvalId";
     private static final String HANDLE_QUERY_PARAMETER = "handle";
@@ -37,19 +43,33 @@ public class FetchApprovalHandler extends ApiGatewayHandler<Void, ApprovalRespon
         "Missing query parameters. Use 'handle' or 'name' and 'value'";
     private static final String CONFLICTING_PARAMETERS_MESSAGE =
         "Cannot use both path parameter and query parameters. Use either approvalId path or query parameters";
+    private static final String TEMPLATE_NAME = "approval.jte";
 
     private final ApprovalService approvalService;
     private final String apiHost;
+    private final TemplateEngine templateEngine;
 
     @JacocoGenerated
     public FetchApprovalHandler() {
-        this(ApprovalServiceImpl.defaultInstance(new Environment()), new Environment());
+        this(ApprovalServiceImpl.defaultInstance(new Environment()), new Environment(), createTemplateEngine());
     }
 
-    public FetchApprovalHandler(ApprovalService approvalService, Environment environment) {
+    public FetchApprovalHandler(ApprovalService approvalService, Environment environment,
+                                TemplateEngine templateEngine) {
         super(Void.class, environment);
         this.approvalService = approvalService;
         this.apiHost = getApiHost(environment);
+        this.templateEngine = templateEngine;
+    }
+
+    @JacocoGenerated
+    private static TemplateEngine createTemplateEngine() {
+        return TemplateEngine.createPrecompiled(gg.jte.ContentType.Html);
+    }
+
+    @Override
+    protected List<MediaType> listSupportedMediaTypes() {
+        return List.of(MediaType.HTML_UTF_8, APPLICATION_JSON_LD, MediaType.JSON_UTF_8);
     }
 
     @Override
@@ -60,17 +80,21 @@ public class FetchApprovalHandler extends ApiGatewayHandler<Void, ApprovalRespon
     }
 
     @Override
-    protected ApprovalResponse processInput(Void input, RequestInfo requestInfo, Context context)
+    protected Object processInput(Void input, RequestInfo requestInfo, Context context)
         throws ApiGatewayException {
         var approval = hasPathParameter(requestInfo)
             ? fetchByApprovalId(requestInfo)
             : fetchByQueryParameters(requestInfo);
-        return ApprovalResponse.fromApproval(
-            approval.orElseThrow(() -> new NotFoundException(APPROVAL_NOT_FOUND_MESSAGE)), apiHost);
+        var foundApproval = approval.orElseThrow(() -> new NotFoundException(APPROVAL_NOT_FOUND_MESSAGE));
+
+        if (isJsonRequest(requestInfo)) {
+            return ApprovalResponse.fromApproval(foundApproval, apiHost);
+        }
+        return renderHtml(foundApproval);
     }
 
     @Override
-    protected Integer getSuccessStatusCode(Void input, ApprovalResponse output) {
+    protected Integer getSuccessStatusCode(Void input, Object output) {
         return HTTP_OK;
     }
 
@@ -136,5 +160,21 @@ public class FetchApprovalHandler extends ApiGatewayHandler<Void, ApprovalRespon
         }
         var namedIdentifier = new NamedIdentifier(name, value);
         return approvalService.getApprovalByNamedIdentifier(namedIdentifier);
+    }
+
+    private boolean isJsonRequest(RequestInfo requestInfo) {
+        try {
+            var mediaType = getDefaultResponseContentTypeHeaderValue(requestInfo).withoutParameters();
+            return mediaType.is(MediaType.JSON_UTF_8.withoutParameters()) || mediaType.is(MediaType.create("application", "ld+json"));
+        } catch (UnsupportedAcceptHeaderException e) {
+            return false;
+        }
+    }
+
+    private String renderHtml(Approval approval) {
+        var model = ApprovalHtmlModel.fromApproval(approval);
+        var output = new StringOutput();
+        templateEngine.render(TEMPLATE_NAME, model, output);
+        return output.toString();
     }
 }

@@ -1,5 +1,10 @@
 [versions]
 postgres = { strictly = '42.7.5' }
+jte = '3.2.1'
 
 [libraries]
 postgres = { group = 'org.postgresql', name = 'postgresql', version.ref = 'postgres' }
+jte = { group = 'gg.jte', name = 'jte', version.ref = 'jte' }
+
+[plugins]
+jte = { id = 'gg.jte.gradle', version.ref = 'jte' }

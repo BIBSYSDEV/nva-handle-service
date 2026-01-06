@@ -290,3 +290,6 @@ gradle-app.setting
 /.aws-sam/build.toml
 
 **/dynamodb-local-metadata.json
+
+### JTE (Java Template Engine) ###
+**/jte-classes/
