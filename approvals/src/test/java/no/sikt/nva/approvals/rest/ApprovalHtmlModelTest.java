@@ -74,7 +74,7 @@ class ApprovalHtmlModelTest {
     }
 
     @Test
-    void shouldHavePlaceholderTitle() {
+    void shouldHaveNullPublicTitle() {
         var approval = new Approval(
             UUID.randomUUID(),
             List.of(new NamedIdentifier("test", "value")),
@@ -84,7 +84,7 @@ class ApprovalHtmlModelTest {
 
         var model = ApprovalHtmlModel.fromApproval(approval);
 
-        assertEquals("Godkjenning", model.publicTitle());
+        assertNull(model.publicTitle());
     }
 
     @Test

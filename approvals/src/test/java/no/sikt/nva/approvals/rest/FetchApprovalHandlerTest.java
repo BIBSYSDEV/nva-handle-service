@@ -202,7 +202,7 @@ class FetchApprovalHandlerTest {
         assertEquals(HTTP_OK, response.getStatusCode());
         assertThat(response.getHeaders().get(HttpHeaders.CONTENT_TYPE), containsString("text/html"));
         assertThat(response.getBody(), containsString("<!DOCTYPE html>"));
-        assertThat(response.getBody(), containsString("Godkjenning"));
+        assertThat(response.getBody(), containsString("Approval"));
     }
 
     @Test

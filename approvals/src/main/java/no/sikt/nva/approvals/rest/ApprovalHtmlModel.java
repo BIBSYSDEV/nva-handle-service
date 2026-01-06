@@ -20,8 +20,6 @@ public record ApprovalHtmlModel(
     Collection<TrialSite> trialSites
 ) {
 
-    private static final String PLACEHOLDER_TITLE = "Godkjenning";
-
     public static ApprovalHtmlModel fromApproval(Approval approval) {
         var namedIdentifiers = approval.namedIdentifiers().stream()
                                    .map(a -> Map.entry(a.name(), a.value()))
@@ -30,7 +28,7 @@ public record ApprovalHtmlModel(
 
         return new ApprovalHtmlModel(
             approval.identifier(),
-            PLACEHOLDER_TITLE,
+            null,
             handleValue,
             null,
             null,

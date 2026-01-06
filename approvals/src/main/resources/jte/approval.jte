@@ -4,7 +4,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Godkjenning ${model.displayTitle()}</title>
+  <title>Approval - ${model.displayTitle()}</title>
   <style>
       body { margin: 0; padding: 0;
           background-color: #f1f1f1;
@@ -73,14 +73,14 @@
   <div class="main">
     <div class="content">
       <div class="header">
-        <h3>Godkjenning</h3>
+        <h3>Approval</h3>
         <h1>${model.displayTitle()}</h1>
       </div>
       <div class="content-body">
         <div class="metadata">
           @if(model.hasStudyPeriod())
           <div class="metadata-field">
-            <p class="metadata-label">STUDIEPERIODE</p>
+            <p class="metadata-label">STUDY PERIOD</p>
             <p class="metadata-text">${model.studyPeriodStart()} - ${model.studyPeriodEnd()}</p>
           </div>
           @endif
@@ -103,7 +103,7 @@
         </div>
         @if(!model.trialSites().isEmpty())
         <hr>
-        <h2>Medlemmer</h2>
+        <h2>Members</h2>
         @for(var site : model.trialSites())
         <div class="member-field">
           <a href="${site.investigator().nvaPersonId()}">${site.investigator().title()} ${site.investigator().firstname()} ${site.investigator().lastname()}</a>
