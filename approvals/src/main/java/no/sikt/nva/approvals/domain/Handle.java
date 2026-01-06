@@ -29,4 +29,9 @@ public record Handle(URI value) {
     private static boolean hasPrefixAndSuffix(URI uri) {
         return Arrays.stream(uri.getPath().split("/")).filter(StringUtils::isNotBlank).toList().size() == 2;
     }
+
+    @Override
+    public String toString() {
+        return value().toString();
+    }
 }

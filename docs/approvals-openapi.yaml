@@ -130,9 +130,15 @@ paths:
         '200':
           description: Approval found
           content:
+            application/ld+json:
+              schema:
+                $ref: '#/components/schemas/Approval'
             application/json:
               schema:
                 $ref: '#/components/schemas/Approval'
+            text/html:
+              schema:
+                type: string
         '400':
           description: Bad Request - invalid query parameters or missing required parameters
           content:
@@ -221,9 +227,15 @@ paths:
         '200':
           description: Approval found
           content:
+            application/ld+json:
+              schema:
+                $ref: '#/components/schemas/Approval'
             application/json:
               schema:
                 $ref: '#/components/schemas/Approval'
+            text/html:
+              schema:
+                type: string
         '400':
           description: Bad Request
           content:

@@ -168,7 +168,7 @@ public class FetchApprovalHandler extends ApiGatewayHandler<Void, Object> {
     private boolean isHtmlRequest(RequestInfo requestInfo) {
         try {
             var mediaType = getDefaultResponseContentTypeHeaderValue(requestInfo);
-            return mediaType.is(MediaType.HTML_UTF_8.withoutParameters());
+            return mediaType.is(MediaType.ANY_TEXT_TYPE);
         } catch (UnsupportedAcceptHeaderException e) {
             return false;
         }

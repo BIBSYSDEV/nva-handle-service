@@ -1,13 +1,15 @@
 package no.sikt.nva.approvals.rest;
 
+import static java.util.Collections.emptyList;
+import static java.util.Objects.nonNull;
 import static nva.commons.core.StringUtils.isNotBlank;
 
 import java.util.Collection;
-import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.UUID;
+import java.util.stream.Collectors;
 import no.sikt.nva.approvals.domain.Approval;
+import no.sikt.nva.approvals.domain.NamedIdentifier;
 
 public record ApprovalHtmlModel(
     UUID identifier,
@@ -15,16 +17,16 @@ public record ApprovalHtmlModel(
     String handle,
     String studyPeriodStart,
     String studyPeriodEnd,
-    Collection<Entry<String, String>> namedIdentifiers,
+    Map<String, String> namedIdentifiers,
     Collection<Sponsor> sponsors,
     Collection<TrialSite> trialSites
 ) {
 
+    private static final String EMPTY_STRING = "";
+
     public static ApprovalHtmlModel fromApproval(Approval approval) {
-        var namedIdentifiers = approval.namedIdentifiers().stream()
-                                   .map(a -> Map.entry(a.name(), a.value()))
-                                   .toList();
-        var handleValue = approval.handle() != null ? approval.handle().value().toString() : "";
+        var namedIdentifiers = getNamedIdentifiers(approval);
+        var handleValue = nonNull(approval.handle()) ? approval.handle().toString() : EMPTY_STRING;
 
         return new ApprovalHtmlModel(
             approval.identifier(),
@@ -33,9 +35,14 @@ public record ApprovalHtmlModel(
             null,
             null,
             namedIdentifiers,
-            List.of(),
-            List.of()
+            emptyList(),
+            emptyList()
         );
+    }
+
+    private static Map<String, String> getNamedIdentifiers(Approval approval) {
+        return approval.namedIdentifiers().stream()
+                   .collect(Collectors.toMap(NamedIdentifier::name, NamedIdentifier::value));
     }
 
     public boolean hasStudyPeriod() {

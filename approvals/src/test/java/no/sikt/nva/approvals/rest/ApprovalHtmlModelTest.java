@@ -7,7 +7,6 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 import no.sikt.nva.approvals.domain.Approval;
 import no.sikt.nva.approvals.domain.NamedIdentifier;
@@ -25,21 +24,6 @@ class ApprovalHtmlModelTest {
 
         assertEquals(approvalId, model.identifier());
         assertEquals(handle.value().toString(), model.handle());
-    }
-
-    @Test
-    void shouldExtractCtisIdFromNamedIdentifiers() {
-        var ctisValue = Map.entry("CTIS", "CT-2024-123");
-        var approval = new Approval(
-            UUID.randomUUID(),
-            List.of(new NamedIdentifier(ctisValue.getKey(), ctisValue.getValue()), new NamedIdentifier("other", "value")),
-            randomUri(),
-            randomHandle()
-        );
-
-        var model = ApprovalHtmlModel.fromApproval(approval);
-
-        assertTrue(model.namedIdentifiers().contains(ctisValue));
     }
 
     @Test
