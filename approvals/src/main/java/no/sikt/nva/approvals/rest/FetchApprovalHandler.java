@@ -9,10 +9,8 @@ import static nva.commons.apigateway.MediaTypes.APPLICATION_JSON_LD;
 import static nva.commons.core.StringUtils.isNotBlank;
 import com.amazonaws.services.lambda.runtime.Context;
 import com.google.common.net.MediaType;
-import gg.jte.ContentType;
 import gg.jte.TemplateEngine;
 import gg.jte.output.StringOutput;
-import gg.jte.resolve.ResourceCodeResolver;
 import java.net.URI;
 import java.util.List;
 import java.util.Optional;
@@ -66,8 +64,7 @@ public class FetchApprovalHandler extends ApiGatewayHandler<Void, Object> {
 
     @JacocoGenerated
     private static TemplateEngine createTemplateEngine() {
-        var codeResolver = new ResourceCodeResolver("jte");
-        return TemplateEngine.create(codeResolver, ContentType.Html);
+        return TemplateEngine.createPrecompiled(gg.jte.ContentType.Html);
     }
 
     @Override
