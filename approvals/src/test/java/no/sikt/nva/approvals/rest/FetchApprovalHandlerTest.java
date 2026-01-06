@@ -219,7 +219,7 @@ class FetchApprovalHandlerTest {
     }
 
     @Test
-    void shouldReturnJsonLdWhenNoAcceptHeaderProvided() {
+    void shouldReturnHtmlWhenNoAcceptHeaderProvided() {
         var approvalId = UUID.randomUUID();
         var approval = new Approval(approvalId, List.of(new NamedIdentifier("test", "value")), randomUri(), randomHandle());
         handler = new FetchApprovalHandler(new FakeApprovalService(List.of(approval)), environment, templateEngine);
@@ -228,7 +228,7 @@ class FetchApprovalHandlerTest {
         var response = handleRequest(request);
 
         assertEquals(HTTP_OK, response.getStatusCode());
-        assertThat(response.getHeaders().get(HttpHeaders.CONTENT_TYPE), containsString("application/ld+json"));
+        assertThat(response.getHeaders().get(HttpHeaders.CONTENT_TYPE), containsString("text/html"));
     }
 
     @Test

@@ -69,7 +69,7 @@ public class FetchApprovalHandler extends ApiGatewayHandler<Void, Object> {
 
     @Override
     protected List<MediaType> listSupportedMediaTypes() {
-        return List.of(APPLICATION_JSON_LD, MediaType.JSON_UTF_8, MediaType.HTML_UTF_8);
+        return List.of(MediaType.HTML_UTF_8, APPLICATION_JSON_LD, MediaType.JSON_UTF_8);
     }
 
     @Override
@@ -87,10 +87,10 @@ public class FetchApprovalHandler extends ApiGatewayHandler<Void, Object> {
             : fetchByQueryParameters(requestInfo);
         var foundApproval = approval.orElseThrow(() -> new NotFoundException(APPROVAL_NOT_FOUND_MESSAGE));
 
-        if (isHtmlRequest(requestInfo)) {
-            return renderHtml(foundApproval);
+        if (isJsonRequest(requestInfo)) {
+            return ApprovalResponse.fromApproval(foundApproval, apiHost);
         }
-        return ApprovalResponse.fromApproval(foundApproval, apiHost);
+        return renderHtml(foundApproval);
     }
 
     @Override
@@ -162,10 +162,10 @@ public class FetchApprovalHandler extends ApiGatewayHandler<Void, Object> {
         return approvalService.getApprovalByNamedIdentifier(namedIdentifier);
     }
 
-    private boolean isHtmlRequest(RequestInfo requestInfo) {
+    private boolean isJsonRequest(RequestInfo requestInfo) {
         try {
-            var mediaType = getDefaultResponseContentTypeHeaderValue(requestInfo);
-            return mediaType.is(MediaType.ANY_TEXT_TYPE);
+            var mediaType = getDefaultResponseContentTypeHeaderValue(requestInfo).withoutParameters();
+            return mediaType.is(MediaType.JSON_UTF_8) || mediaType.is(MediaType.create("application", "ld+json"));
         } catch (UnsupportedAcceptHeaderException e) {
             return false;
         }
