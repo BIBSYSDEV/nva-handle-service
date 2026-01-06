@@ -19,6 +19,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import no.sikt.nva.approvals.domain.Approval;
@@ -28,6 +29,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 import software.amazon.awssdk.services.dynamodb.model.PutItemRequest;
+import software.amazon.awssdk.services.dynamodb.model.TransactionCanceledException;
 
 class DynamoDbApprovalRepositoryTest {
 
@@ -231,6 +233,25 @@ class DynamoDbApprovalRepositoryTest {
         var approval = randomApproval(randomHandle());
 
         assertThrows(IllegalStateException.class, () -> approvalRepository.updateApprovalIdentifiers(approval));
+    }
+
+    @Test
+    void shouldThrowTransactionCanceledExceptionWhenAddingIdentifierThatAlreadyExistsInAnotherApproval() {
+        var sharedIdentifier = randomIdentifier();
+        var firstApproval = randomApproval(sharedIdentifier);
+        approvalRepository.save(firstApproval);
+
+        var secondApproval = randomApproval(randomHandle());
+        approvalRepository.save(secondApproval);
+
+        var updatedSecondApproval = new Approval(
+            secondApproval.identifier(),
+            List.of(sharedIdentifier),
+            secondApproval.source(),
+            secondApproval.handle()
+        );
+
+        assertThrows(TransactionCanceledException.class, () -> approvalRepository.updateApprovalIdentifiers(updatedSecondApproval));
     }
 
     private void insertIdentifierOnly(UUID approvalId, String identifierValue) {
