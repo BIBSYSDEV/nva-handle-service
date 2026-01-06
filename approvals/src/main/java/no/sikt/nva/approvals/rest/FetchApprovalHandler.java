@@ -165,7 +165,7 @@ public class FetchApprovalHandler extends ApiGatewayHandler<Void, Object> {
     private boolean isJsonRequest(RequestInfo requestInfo) {
         try {
             var mediaType = getDefaultResponseContentTypeHeaderValue(requestInfo).withoutParameters();
-            return mediaType.is(MediaType.JSON_UTF_8) || mediaType.is(MediaType.create("application", "ld+json"));
+            return mediaType.is(MediaType.JSON_UTF_8.withoutParameters()) || mediaType.is(MediaType.create("application", "ld+json"));
         } catch (UnsupportedAcceptHeaderException e) {
             return false;
         }
