@@ -245,7 +245,11 @@ public class DynamoDbApprovalRepository implements ApprovalRepository {
                 requestBuilder.addDeleteItem(table, operation.entry().getPrimaryKey());
             } else {
                 var document = operation.entry().toEnhancedDocument(approvalDao, handleDao);
-                requestBuilder.addPutItem(table, document);
+                var putRequest = TransactPutItemEnhancedRequest.builder(EnhancedDocument.class)
+                                     .item(document)
+                                     .conditionExpression(newDaoCondition())
+                                     .build();
+                requestBuilder.addPutItem(table, putRequest);
             }
             count++;
         }
