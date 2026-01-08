@@ -53,14 +53,10 @@ Parameters:
     Type: String
     Description: comma separated list of external clients that are allowed to contact the HTTP APIs, "*" indicates that all origins are allowed
     Default: '*'
-  DmpClientSecretArn:
-    Type: 'AWS::SSM::Parameter::Value<String>'
-    Description: ARN of the secret containing DMP API client credentials
-    Default: /NVA/DmpClientSecretArn
   DmpClientSecretName:
-    Type: 'AWS::SSM::Parameter::Value<String>'
+    Type: String
     Description: Name of the secret containing DMP API client credentials
-    Default: /NVA/DmpClientSecretName
+    Default: DmpClientCredentials
 
 Conditions:
   IsProd: !Equals [!Ref ApiDomain, 'api.nva.unit.no']
@@ -175,7 +171,7 @@ Resources:
             Action:
               - secretsmanager:GetSecretValue
             Resource:
-              - !Ref DmpClientSecretArn
+              - !Sub 'arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:${DmpClientSecretName}-*'
 
   ApiAccessLogGroup:
     Type: AWS::Logs::LogGroup
