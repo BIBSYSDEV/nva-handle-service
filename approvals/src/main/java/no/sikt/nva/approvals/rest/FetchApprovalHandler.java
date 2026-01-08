@@ -15,6 +15,10 @@ import java.net.URI;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import no.sikt.nva.approvals.dmp.DmpClientException;
+import no.sikt.nva.approvals.dmp.DmpClientService;
+import no.sikt.nva.approvals.dmp.DmpClientSupplier;
+import no.sikt.nva.approvals.dmp.model.ClinicalTrial;
 import no.sikt.nva.approvals.domain.Approval;
 import no.sikt.nva.approvals.domain.ApprovalService;
 import no.sikt.nva.approvals.domain.ApprovalServiceImpl;
@@ -29,9 +33,12 @@ import nva.commons.apigateway.exceptions.UnsupportedAcceptHeaderException;
 import nva.commons.core.Environment;
 import nva.commons.core.JacocoGenerated;
 import nva.commons.core.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class FetchApprovalHandler extends ApiGatewayHandler<Void, Object> {
 
+    private static final Logger logger = LoggerFactory.getLogger(FetchApprovalHandler.class);
     private static final String APPROVAL_ID_PATH_PARAMETER = "approvalId";
     private static final String HANDLE_QUERY_PARAMETER = "handle";
     private static final String NAME_QUERY_PARAMETER = "name";
@@ -44,22 +51,28 @@ public class FetchApprovalHandler extends ApiGatewayHandler<Void, Object> {
     private static final String CONFLICTING_PARAMETERS_MESSAGE =
         "Cannot use both path parameter and query parameters. Use either approvalId path or query parameters";
     private static final String TEMPLATE_NAME = "approval.jte";
+    private static final String DMP_IDENTIFIER_NAME = "DMP";
 
     private final ApprovalService approvalService;
     private final String apiHost;
     private final TemplateEngine templateEngine;
+    private final DmpClientService dmpClient;
 
     @JacocoGenerated
     public FetchApprovalHandler() {
-        this(ApprovalServiceImpl.defaultInstance(new Environment()), new Environment(), createTemplateEngine());
+        this(ApprovalServiceImpl.defaultInstance(new Environment()),
+            new Environment(),
+            createTemplateEngine(),
+            DmpClientSupplier.getDmpClientSupplier().get());
     }
 
     public FetchApprovalHandler(ApprovalService approvalService, Environment environment,
-                                TemplateEngine templateEngine) {
+                                TemplateEngine templateEngine, DmpClientService dmpClient) {
         super(Void.class, environment);
         this.approvalService = approvalService;
         this.apiHost = getApiHost(environment);
         this.templateEngine = templateEngine;
+        this.dmpClient = dmpClient;
     }
 
     @JacocoGenerated
@@ -172,9 +185,36 @@ public class FetchApprovalHandler extends ApiGatewayHandler<Void, Object> {
     }
 
     private String renderHtml(Approval approval) {
-        var model = ApprovalHtmlModel.fromApproval(approval);
+        var clinicalTrial = fetchClinicalTrialIfDmpIdentifierPresent(approval);
+        var model = clinicalTrial
+            .map(ct -> ApprovalHtmlModel.fromApprovalAndClinicalTrial(approval, ct))
+            .orElseGet(() -> ApprovalHtmlModel.fromApproval(approval));
         var output = new StringOutput();
         templateEngine.render(TEMPLATE_NAME, model, output);
         return output.toString();
+    }
+
+    private Optional<ClinicalTrial> fetchClinicalTrialIfDmpIdentifierPresent(Approval approval) {
+        if (isNull(dmpClient)) {
+            return Optional.empty();
+        }
+        return getDmpIdentifierValue(approval)
+            .flatMap(this::fetchClinicalTrial);
+    }
+
+    private Optional<String> getDmpIdentifierValue(Approval approval) {
+        return approval.namedIdentifiers().stream()
+            .filter(identifier -> DMP_IDENTIFIER_NAME.equals(identifier.name()))
+            .map(NamedIdentifier::value)
+            .findFirst();
+    }
+
+    private Optional<ClinicalTrial> fetchClinicalTrial(String dmpIdentifier) {
+        try {
+            return dmpClient.getClinicalTrial(dmpIdentifier);
+        } catch (DmpClientException exception) {
+            logger.warn("Failed to fetch clinical trial data for identifier: {}", dmpIdentifier, exception);
+            return Optional.empty();
+        }
     }
 }
