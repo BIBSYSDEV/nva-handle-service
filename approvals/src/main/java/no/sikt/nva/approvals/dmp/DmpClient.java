@@ -47,10 +47,10 @@ public class DmpClient implements DmpClientService {
             var request = buildRequest(uri);
             var response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
             return handleResponse(response);
-        } catch (IOException | InterruptedException exception) {
-            if (exception instanceof InterruptedException) {
-                Thread.currentThread().interrupt();
-            }
+        } catch (InterruptedException exception) {
+            Thread.currentThread().interrupt();
+            throw new DmpClientException("Failed to fetch clinical trial: " + identifier, exception);
+        } catch (IOException exception) {
             throw new DmpClientException("Failed to fetch clinical trial: " + identifier, exception);
         }
     }

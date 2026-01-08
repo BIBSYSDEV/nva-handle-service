@@ -43,11 +43,13 @@ public class OAuth2TokenService {
             .build());
     }
 
-    public synchronized String getAccessToken() throws DmpClientException {
-        if (isTokenValid()) {
-            return cachedToken;
+    public String getAccessToken() throws DmpClientException {
+        synchronized (this) {
+            if (isTokenValid()) {
+                return cachedToken;
+            }
+            return fetchNewToken();
         }
-        return fetchNewToken();
     }
 
     private boolean isTokenValid() {
@@ -67,10 +69,10 @@ public class OAuth2TokenService {
             var tokenResponse = JsonUtils.dtoObjectMapper.readValue(response.body(), TokenResponse.class);
             cacheToken(tokenResponse);
             return cachedToken;
-        } catch (IOException | InterruptedException exception) {
-            if (exception instanceof InterruptedException) {
-                Thread.currentThread().interrupt();
-            }
+        } catch (InterruptedException exception) {
+            Thread.currentThread().interrupt();
+            throw new DmpClientException("Failed to fetch OAuth2 token", exception);
+        } catch (IOException exception) {
             throw new DmpClientException("Failed to fetch OAuth2 token", exception);
         }
     }
