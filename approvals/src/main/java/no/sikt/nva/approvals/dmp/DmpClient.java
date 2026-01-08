@@ -36,7 +36,7 @@ public class DmpClient implements DmpClientService {
     @JacocoGenerated
     public DmpClient(OAuth2TokenService tokenService, String baseUrl) {
         this(tokenService, baseUrl, HttpClient.newBuilder()
-            .connectTimeout(Duration.ofSeconds(30))
+            .connectTimeout(Duration.ofSeconds(15))
             .build());
     }
 
