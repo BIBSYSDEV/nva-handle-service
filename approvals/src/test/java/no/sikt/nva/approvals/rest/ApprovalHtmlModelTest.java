@@ -165,7 +165,7 @@ class ApprovalHtmlModelTest {
     }
 
     @Test
-    void shouldFilterOutTrialSitesWithoutNvaPersonId() {
+    void shouldIncludeTrialSitesWithoutNvaPersonIdButWithNullId() {
         var approval = createApproval();
         var investigatorWithoutNvaId = new Investigator("Investigator", "789", "Dr.", "Jane", "Smith",
             "Research", null, null);
@@ -184,7 +184,10 @@ class ApprovalHtmlModelTest {
 
         var model = ApprovalHtmlModel.fromApprovalAndClinicalTrial(approval, clinicalTrial);
 
-        assertTrue(model.trialSites().isEmpty());
+        assertEquals(1, model.trialSites().size());
+        var trialSite = model.trialSites().iterator().next();
+        assertNull(trialSite.investigator().nvaPersonId());
+        assertEquals("Jane", trialSite.investigator().firstname());
     }
 
     private Approval createApproval() {

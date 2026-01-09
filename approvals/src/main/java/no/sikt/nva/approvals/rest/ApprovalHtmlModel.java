@@ -83,26 +83,23 @@ public record ApprovalHtmlModel(
         return clinicalTrial.sponsors().stream()
             .filter(sponsor -> isNotBlank(sponsor.name()))
             .map(sponsor -> new Sponsor(sponsor.name()))
-            .collect(Collectors.toList());
+            .toList();
     }
 
     private static Collection<TrialSite> extractTrialSites(ClinicalTrial clinicalTrial) {
         return clinicalTrial.trialSites().stream()
-            .filter(ApprovalHtmlModel::hasInvestigatorWithNvaPersonId)
+            .filter(site -> nonNull(site.investigator()))
             .map(ApprovalHtmlModel::toTrialSite)
-            .collect(Collectors.toList());
-    }
-
-    private static boolean hasInvestigatorWithNvaPersonId(no.sikt.nva.approvals.dmp.model.TrialSite site) {
-        return nonNull(site.investigator()) && nonNull(site.investigator().nvaPersonId());
+            .toList();
     }
 
     private static TrialSite toTrialSite(no.sikt.nva.approvals.dmp.model.TrialSite site) {
         var investigator = site.investigator();
+        var nvaPersonId = nonNull(investigator.nvaPersonId()) ? investigator.nvaPersonId().toString() : null;
         return new TrialSite(
             site.departmentName(),
             new Investigator(
-                investigator.nvaPersonId().toString(),
+                nvaPersonId,
                 investigator.title(),
                 investigator.firstName(),
                 investigator.lastName(),
