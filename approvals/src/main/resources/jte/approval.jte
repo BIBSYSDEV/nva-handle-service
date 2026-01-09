@@ -83,7 +83,7 @@
     <div class="content">
       <div class="header">
         <h3>Approval</h3>
-        <h1>${model.displayTitle()}</h1>
+        <h1 title="${model.displayTitle()}">${model.displayTitle()}</h1>
       </div>
       <div class="content-body">
         <div class="metadata">
