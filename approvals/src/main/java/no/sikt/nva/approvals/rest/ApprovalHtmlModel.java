@@ -14,6 +14,7 @@ import no.sikt.nva.approvals.dmp.model.ClinicalTrial;
 import no.sikt.nva.approvals.dmp.model.TrialEvent;
 import no.sikt.nva.approvals.domain.Approval;
 import no.sikt.nva.approvals.domain.NamedIdentifier;
+import nva.commons.core.paths.UriWrapper;
 
 public record ApprovalHtmlModel(
     UUID identifier,
@@ -29,6 +30,7 @@ public record ApprovalHtmlModel(
     private static final String EMPTY_STRING = "";
     private static final String NORWAY_REGION = "Norway";
     private static final String TRIAL_START_EVENT_TYPE = "TrialStart";
+    private static final String RESEARCH_PROFILE_PATH = "research-profile";
 
     public static ApprovalHtmlModel fromApproval(Approval approval) {
         var namedIdentifiers = getNamedIdentifiers(approval);
@@ -46,12 +48,13 @@ public record ApprovalHtmlModel(
         );
     }
 
-    public static ApprovalHtmlModel fromApprovalAndClinicalTrial(Approval approval, ClinicalTrial clinicalTrial) {
+    public static ApprovalHtmlModel fromApprovalAndClinicalTrial(Approval approval, ClinicalTrial clinicalTrial,
+                                                                  String applicationDomain) {
         var namedIdentifiers = getNamedIdentifiers(approval);
         var handleValue = nonNull(approval.handle()) ? approval.handle().toString() : EMPTY_STRING;
         var studyPeriodStart = extractStudyPeriodStart(clinicalTrial);
         var sponsors = extractSponsors(clinicalTrial);
-        var trialSites = extractTrialSites(clinicalTrial);
+        var trialSites = extractTrialSites(clinicalTrial, applicationDomain);
 
         return new ApprovalHtmlModel(
             approval.identifier(),
@@ -86,26 +89,39 @@ public record ApprovalHtmlModel(
             .toList();
     }
 
-    private static Collection<TrialSite> extractTrialSites(ClinicalTrial clinicalTrial) {
+    private static Collection<TrialSite> extractTrialSites(ClinicalTrial clinicalTrial, String applicationDomain) {
         return clinicalTrial.trialSites().stream()
             .filter(site -> nonNull(site.investigator()))
-            .map(ApprovalHtmlModel::toTrialSite)
+            .map(site -> toTrialSite(site, applicationDomain))
             .toList();
     }
 
-    private static TrialSite toTrialSite(no.sikt.nva.approvals.dmp.model.TrialSite site) {
+    private static TrialSite toTrialSite(no.sikt.nva.approvals.dmp.model.TrialSite site, String applicationDomain) {
         var investigator = site.investigator();
-        var nvaPersonId = nonNull(investigator.nvaPersonId()) ? investigator.nvaPersonId().toString() : null;
+        var profileUrl = buildProfileUrl(investigator.nvaPersonId(), applicationDomain);
         return new TrialSite(
             site.departmentName(),
             new Investigator(
-                nvaPersonId,
+                profileUrl,
                 investigator.title(),
                 investigator.firstName(),
                 investigator.lastName(),
                 investigator.department()
             )
         );
+    }
+
+    private static String buildProfileUrl(java.net.URI nvaPersonId, String applicationDomain) {
+        if (nvaPersonId == null || applicationDomain == null) {
+            return null;
+        }
+        var personIdPath = nvaPersonId.getPath();
+        var personId = personIdPath.substring(personIdPath.lastIndexOf('/') + 1);
+        return UriWrapper.fromHost(applicationDomain)
+            .addChild(RESEARCH_PROFILE_PATH)
+            .addChild(personId)
+            .getUri()
+            .toString();
     }
 
     private static Map<String, String> getNamedIdentifiers(Approval approval) {
@@ -131,7 +147,7 @@ public record ApprovalHtmlModel(
     }
 
     public record Investigator(
-        String nvaPersonId,
+        String profileUrl,
         String title,
         String firstname,
         String lastname,

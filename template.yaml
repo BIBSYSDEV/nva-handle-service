@@ -19,6 +19,10 @@ Parameters:
     Type: 'AWS::SSM::Parameter::Value<String>'
     Description: The Api domain
     Default: /NVA/ApiDomain
+  ApplicationDomain:
+    Type: 'AWS::SSM::Parameter::Value<String>'
+    Description: The Application domain
+    Default: /NVA/ApplicationDomain
   CustomDomainBasePath:
     Type: String
     Description: Base path mapping in CustomDomain
@@ -377,6 +381,7 @@ Resources:
           HANDLE_BASE_URI: !Ref HandleBaseUri
           HANDLE_DATABASE_SECRET_NAME: !Ref HandleDatabaseSecretName
           DMP_CLIENT_SECRET_NAME: !Ref DmpClientSecretName
+          APPLICATION_DOMAIN: !Ref ApplicationDomain
       Events:
         GetApproval:
           Type: Api

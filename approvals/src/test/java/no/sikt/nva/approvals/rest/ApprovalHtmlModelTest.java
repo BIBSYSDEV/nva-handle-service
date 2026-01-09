@@ -102,14 +102,14 @@ class ApprovalHtmlModelTest {
     @Test
     void shouldCreateInvestigatorRecord() {
         var investigator = new ApprovalHtmlModel.Investigator(
-            "http://example.org/person/123",
+            "https://nva.sikt.no/research-profile/123",
             "Dr.",
             "Jane",
             "Smith",
             "Oncology"
         );
 
-        assertEquals("http://example.org/person/123", investigator.nvaPersonId());
+        assertEquals("https://nva.sikt.no/research-profile/123", investigator.profileUrl());
         assertEquals("Dr.", investigator.title());
         assertEquals("Jane", investigator.firstname());
         assertEquals("Smith", investigator.lastname());
@@ -121,7 +121,7 @@ class ApprovalHtmlModelTest {
         var approval = createApproval();
         var clinicalTrial = createClinicalTrial();
 
-        var model = ApprovalHtmlModel.fromApprovalAndClinicalTrial(approval, clinicalTrial);
+        var model = ApprovalHtmlModel.fromApprovalAndClinicalTrial(approval, clinicalTrial, "nva.sikt.no");
 
         assertEquals(approval.identifier(), model.identifier());
         assertEquals("Test Clinical Trial", model.publicTitle());
@@ -133,7 +133,7 @@ class ApprovalHtmlModelTest {
         var approval = createApproval();
         var clinicalTrial = createClinicalTrial();
 
-        var model = ApprovalHtmlModel.fromApprovalAndClinicalTrial(approval, clinicalTrial);
+        var model = ApprovalHtmlModel.fromApprovalAndClinicalTrial(approval, clinicalTrial, "nva.sikt.no");
 
         assertEquals("2022-10-05", model.studyPeriodStart());
         assertTrue(model.hasStudyPeriod());
@@ -144,7 +144,7 @@ class ApprovalHtmlModelTest {
         var approval = createApproval();
         var clinicalTrial = createClinicalTrial();
 
-        var model = ApprovalHtmlModel.fromApprovalAndClinicalTrial(approval, clinicalTrial);
+        var model = ApprovalHtmlModel.fromApprovalAndClinicalTrial(approval, clinicalTrial, "nva.sikt.no");
 
         assertEquals(1, model.sponsors().size());
         assertEquals("Test Hospital", model.sponsors().iterator().next().name());
@@ -155,7 +155,7 @@ class ApprovalHtmlModelTest {
         var approval = createApproval();
         var clinicalTrial = createClinicalTrial();
 
-        var model = ApprovalHtmlModel.fromApprovalAndClinicalTrial(approval, clinicalTrial);
+        var model = ApprovalHtmlModel.fromApprovalAndClinicalTrial(approval, clinicalTrial, "nva.sikt.no");
 
         assertEquals(1, model.trialSites().size());
         var trialSite = model.trialSites().iterator().next();
@@ -165,7 +165,18 @@ class ApprovalHtmlModelTest {
     }
 
     @Test
-    void shouldIncludeTrialSitesWithoutNvaPersonIdButWithNullId() {
+    void shouldBuildProfileUrlFromNvaPersonId() {
+        var approval = createApproval();
+        var clinicalTrial = createClinicalTrial();
+
+        var model = ApprovalHtmlModel.fromApprovalAndClinicalTrial(approval, clinicalTrial, "nva.sikt.no");
+
+        var trialSite = model.trialSites().iterator().next();
+        assertEquals("https://nva.sikt.no/research-profile/12345", trialSite.investigator().profileUrl());
+    }
+
+    @Test
+    void shouldHaveNullProfileUrlWhenNvaPersonIdIsNull() {
         var approval = createApproval();
         var investigatorWithoutNvaId = new Investigator("Investigator", "789", "Dr.", "Jane", "Smith",
             "Research", null, null);
@@ -182,11 +193,11 @@ class ApprovalHtmlModelTest {
             null
         );
 
-        var model = ApprovalHtmlModel.fromApprovalAndClinicalTrial(approval, clinicalTrial);
+        var model = ApprovalHtmlModel.fromApprovalAndClinicalTrial(approval, clinicalTrial, "nva.sikt.no");
 
         assertEquals(1, model.trialSites().size());
         var trialSite = model.trialSites().iterator().next();
-        assertNull(trialSite.investigator().nvaPersonId());
+        assertNull(trialSite.investigator().profileUrl());
         assertEquals("Jane", trialSite.investigator().firstname());
     }
 

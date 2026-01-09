@@ -52,9 +52,11 @@ public class FetchApprovalHandler extends ApiGatewayHandler<Void, Object> {
         "Cannot use both path parameter and query parameters. Use either approvalId path or query parameters";
     private static final String TEMPLATE_NAME = "approval.jte";
     private static final String DMP_IDENTIFIER_NAME = "DMP";
+    private static final String APPLICATION_DOMAIN_ENV = "APPLICATION_DOMAIN";
 
     private final ApprovalService approvalService;
     private final String apiHost;
+    private final String applicationDomain;
     private final TemplateEngine templateEngine;
     private final DmpClientService dmpClient;
 
@@ -71,6 +73,7 @@ public class FetchApprovalHandler extends ApiGatewayHandler<Void, Object> {
         super(Void.class, environment);
         this.approvalService = approvalService;
         this.apiHost = getApiHost(environment);
+        this.applicationDomain = environment.readEnv(APPLICATION_DOMAIN_ENV);
         this.templateEngine = templateEngine;
         this.dmpClient = dmpClient;
     }
@@ -187,7 +190,7 @@ public class FetchApprovalHandler extends ApiGatewayHandler<Void, Object> {
     private String renderHtml(Approval approval) {
         var clinicalTrial = fetchClinicalTrialIfDmpIdentifierPresent(approval);
         var model = clinicalTrial
-            .map(ct -> ApprovalHtmlModel.fromApprovalAndClinicalTrial(approval, ct))
+            .map(ct -> ApprovalHtmlModel.fromApprovalAndClinicalTrial(approval, ct, applicationDomain))
             .orElseGet(() -> ApprovalHtmlModel.fromApproval(approval));
         var output = new StringOutput();
         templateEngine.render(TEMPLATE_NAME, model, output);

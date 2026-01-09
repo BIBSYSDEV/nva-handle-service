@@ -115,8 +115,8 @@
         <h2>Members</h2>
         @for(var site : model.trialSites())
         <div class="member-field">
-          @if(site.investigator().nvaPersonId() != null)
-          <a href="${site.investigator().nvaPersonId()}">${site.investigator().title()} ${site.investigator().firstname()} ${site.investigator().lastname()}</a>
+          @if(site.investigator().profileUrl() != null)
+          <a href="${site.investigator().profileUrl()}">${site.investigator().title()} ${site.investigator().firstname()} ${site.investigator().lastname()}</a>
           @else
           <span>${site.investigator().title()} ${site.investigator().firstname()} ${site.investigator().lastname()}</span>
           @endif
