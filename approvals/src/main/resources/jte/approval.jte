@@ -36,7 +36,7 @@
       .content {
           width: 900px;
           background-color: #ffffff;
-          height: 500px;
+          min-height: 500px;
           margin-top: 20px;
       }
       .header {
@@ -44,11 +44,20 @@
           display: flex;
           flex-direction: column;
           justify-content: center;
-          height: 87px;
+          min-height: 87px;
           border-left: 24px solid #dadfbf;
-          color: #ffffff;;
+          color: #ffffff;
           padding-left: 18px;
+          padding-right: 18px;
           h1 { margin-top: 10px;}
+      }
+      .header h1 {
+          display: -webkit-box;
+          -webkit-line-clamp: 2;
+          -webkit-box-orient: vertical;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          max-width: 100%;
       }
       .content-body { padding: 20px; }
       .metadata {
