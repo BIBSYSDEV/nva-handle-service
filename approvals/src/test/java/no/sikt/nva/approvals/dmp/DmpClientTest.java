@@ -127,7 +127,7 @@ class DmpClientTest {
     void shouldThrowExceptionWhenIdentifierIsNull() {
         dmpClient = new DmpClient(tokenService, BASE_URL, httpClient);
 
-        assertThrows(NullPointerException.class, () -> dmpClient.getClinicalTrial(null));
+        assertThrows(DmpClientException.class, () -> dmpClient.getClinicalTrial(null));
     }
 
     @Test

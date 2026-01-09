@@ -1,5 +1,7 @@
 package no.sikt.nva.approvals.dmp;
 
+import static java.util.Objects.nonNull;
+
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
@@ -26,7 +28,7 @@ public class FakeDmpClient implements DmpClientService {
     }
 
     public Optional<ClinicalTrial> getClinicalTrial(String identifier) throws DmpClientException {
-        if (exceptionToThrow != null) {
+        if (nonNull(exceptionToThrow)) {
             throw exceptionToThrow;
         }
         return Optional.ofNullable(clinicalTrials.get(identifier));

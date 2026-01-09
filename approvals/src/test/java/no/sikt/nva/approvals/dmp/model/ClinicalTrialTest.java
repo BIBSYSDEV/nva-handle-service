@@ -1,10 +1,12 @@
 package no.sikt.nva.approvals.dmp.model;
 
+import static nva.commons.core.ioutils.IoUtils.stringFromResources;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.emptyIterable;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.notNullValue;
 import java.net.URI;
+import java.nio.file.Path;
 import java.time.LocalDate;
 import java.util.List;
 import no.unit.nva.commons.json.JsonUtils;
@@ -12,71 +14,7 @@ import org.junit.jupiter.api.Test;
 
 class ClinicalTrialTest {
 
-    private static final String CLINICAL_TRIAL_JSON = """
-        {
-            "@context": "https://st-api.legemiddelverket.no/ctis/context/clinical-trial.json",
-            "id": "https://st-api.legemiddelverket.no/ctis/clinical-trial/2022-500027-76-00",
-            "type": "ClinicalTrial",
-            "identifier": "2022-500027-76-00",
-            "handle": "https://hdl.handle.net/11250.1/39083745",
-            "events": [
-                {
-                    "type": "TrialStart",
-                    "region": "EEA",
-                    "date": "2022-10-05"
-                },
-                {
-                    "type": "TrialStart",
-                    "region": "Norway",
-                    "date": "2022-10-05"
-                }
-            ],
-            "publicTitle": "METIMMOX-2: Test Clinical Trial",
-            "sponsors": [
-                {
-                    "type": "Sponsor",
-                    "name": "Akershus University Hospital",
-                    "organizationTypeCode": "8",
-                    "organizationTypeDisplayName": "Hospital"
-                }
-            ],
-            "publicContactPoint": {
-                "type": "PublicContactPoint",
-                "organizationName": "Akershus University Hospital",
-                "functionalName": "Ola Nordmann",
-                "functionalEmailAddress": "ola.nordmann@dmp.no",
-                "functionalPhoneNumber": "12345678"
-            },
-            "trialSites": [
-                {
-                    "type": "TrialSite",
-                    "organizationId": "7282",
-                    "departmentName": "Akershus University Hospital",
-                    "siteLocation": "Sykehusveien 25",
-                    "address": {
-                        "street": "Sykehusveien 25",
-                        "city": "Loerenskog",
-                        "postcode": "1474",
-                        "country": "Norway"
-                    },
-                    "nvaOrganizationId": "https://api.nva.unit.no/cristin/organization/1972.0.0.0",
-                    "investigator": {
-                        "type": "Investigator",
-                        "organizationId": "7282",
-                        "title": "Prof.",
-                        "firstName": "Ola",
-                        "lastName": "Nordmann",
-                        "department": "Department of Oncology",
-                        "contactInformation": {
-                            "telephone": "12345678",
-                            "email": "ola.nordmann@dmp.no"
-                        },
-                        "nvaPersonId": "https://api.nva.unit.no/cristin/person/23297"
-                    }
-                }
-            ]
-        }
-        """;
+    private static final String CLINICAL_TRIAL_JSON = stringFromResources(Path.of("clinical-trial.json"));
 
     @Test
     void shouldDeserializeFromJson() throws Exception {

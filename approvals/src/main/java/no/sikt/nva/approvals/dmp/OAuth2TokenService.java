@@ -64,7 +64,7 @@ public class OAuth2TokenService {
             var response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
             if (response.statusCode() != HTTP_OK) {
                 throw new DmpClientException(
-                    "Failed to obtain access token. Status: " + response.statusCode() + ", Body: " + response.body());
+                    "Failed to obtain access token. Status: %s, Body: %s".formatted(response.statusCode(), response.body()));
             }
             var tokenResponse = JsonUtils.dtoObjectMapper.readValue(response.body(), TokenResponse.class);
             cacheToken(tokenResponse);
@@ -78,7 +78,7 @@ public class OAuth2TokenService {
     }
 
     private HttpRequest buildTokenRequest() {
-        var credentials = secrets.clientId() + ":" + secrets.clientSecret();
+        var credentials = "%s:%s".formatted(secrets.clientId(), secrets.clientSecret());
         var encodedCredentials = Base64.getEncoder().encodeToString(credentials.getBytes(StandardCharsets.UTF_8));
         var body = GRANT_TYPE_PARAM + SCOPE_PARAM + URLEncoder.encode(secrets.scope(), StandardCharsets.UTF_8);
 

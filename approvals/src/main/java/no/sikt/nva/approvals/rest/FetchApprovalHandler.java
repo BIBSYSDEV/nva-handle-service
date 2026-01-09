@@ -188,9 +188,8 @@ public class FetchApprovalHandler extends ApiGatewayHandler<Void, Object> {
     }
 
     private String renderHtml(Approval approval) {
-        var clinicalTrial = fetchClinicalTrialIfDmpIdentifierPresent(approval);
-        var model = clinicalTrial
-            .map(ct -> ApprovalHtmlModel.fromApprovalAndClinicalTrial(approval, ct, applicationDomain))
+        var model = fetchClinicalTrialIfDmpIdentifierPresent(approval)
+            .map(clinicalTrial -> ApprovalHtmlModel.fromApprovalAndClinicalTrial(approval, clinicalTrial, applicationDomain))
             .orElseGet(() -> ApprovalHtmlModel.fromApproval(approval));
         var output = new StringOutput();
         templateEngine.render(TEMPLATE_NAME, model, output);
@@ -198,9 +197,6 @@ public class FetchApprovalHandler extends ApiGatewayHandler<Void, Object> {
     }
 
     private Optional<ClinicalTrial> fetchClinicalTrialIfDmpIdentifierPresent(Approval approval) {
-        if (isNull(dmpClient)) {
-            return Optional.empty();
-        }
         return getDmpIdentifierValue(approval)
             .flatMap(this::fetchClinicalTrial);
     }

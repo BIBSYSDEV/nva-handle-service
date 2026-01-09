@@ -1,9 +1,11 @@
 package no.sikt.nva.approvals.rest;
 
 import static java.util.Collections.emptyList;
+import static java.util.Objects.isNull;
 import static java.util.Objects.nonNull;
 import static nva.commons.core.StringUtils.isNotBlank;
 
+import java.net.URI;
 import java.time.LocalDate;
 import java.util.Collection;
 import java.util.Map;
@@ -111,12 +113,11 @@ public record ApprovalHtmlModel(
         );
     }
 
-    private static String buildProfileUrl(java.net.URI nvaPersonId, String applicationDomain) {
-        if (nvaPersonId == null || applicationDomain == null) {
+    private static String buildProfileUrl(URI nvaPersonId, String applicationDomain) {
+        if (isNull(nvaPersonId) || isNull(applicationDomain)) {
             return null;
         }
-        var personIdPath = nvaPersonId.getPath();
-        var personId = personIdPath.substring(personIdPath.lastIndexOf('/') + 1);
+        var personId = UriWrapper.fromUri(nvaPersonId).getLastPathElement();
         return UriWrapper.fromHost(applicationDomain)
             .addChild(RESEARCH_PROFILE_PATH)
             .addChild(personId)

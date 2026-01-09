@@ -41,7 +41,9 @@ public class DmpClient implements DmpClientService {
     }
 
     public Optional<ClinicalTrial> getClinicalTrial(String identifier) throws DmpClientException {
-        Objects.requireNonNull(identifier, "Identifier is required");
+        if (identifier == null) {
+            throw new DmpClientException("Identifier is required");
+        }
         try {
             var uri = buildClinicalTrialUri(identifier);
             var request = buildRequest(uri);
@@ -78,7 +80,7 @@ public class DmpClient implements DmpClientService {
         }
         if (response.statusCode() != HTTP_OK) {
             throw new DmpClientException(
-                "Unexpected response from DMP API. Status: " + response.statusCode() + ", Body: " + response.body());
+                "Unexpected response from DMP API. Status: %s, Body: %s".formatted(response.statusCode(), response.body()));
         }
         try {
             var clinicalTrial = JsonUtils.dtoObjectMapper.readValue(response.body(), ClinicalTrial.class);
