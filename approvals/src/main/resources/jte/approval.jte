@@ -36,7 +36,7 @@
       .content {
           width: 900px;
           background-color: #ffffff;
-          height: 500px;
+          min-height: 500px;
           margin-top: 20px;
       }
       .header {
@@ -44,11 +44,20 @@
           display: flex;
           flex-direction: column;
           justify-content: center;
-          height: 87px;
+          min-height: 87px;
           border-left: 24px solid #dadfbf;
-          color: #ffffff;;
+          color: #ffffff;
           padding-left: 18px;
+          padding-right: 18px;
           h1 { margin-top: 10px;}
+      }
+      .header h1 {
+          display: -webkit-box;
+          -webkit-line-clamp: 2;
+          -webkit-box-orient: vertical;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          max-width: 100%;
       }
       .content-body { padding: 20px; }
       .metadata {
@@ -74,7 +83,7 @@
     <div class="content">
       <div class="header">
         <h3>Approval</h3>
-        <h1>${model.displayTitle()}</h1>
+        <h1 title="${model.displayTitle()}">${model.displayTitle()}</h1>
       </div>
       <div class="content-body">
         <div class="metadata">
@@ -106,7 +115,11 @@
         <h2>Members</h2>
         @for(var site : model.trialSites())
         <div class="member-field">
-          <a href="${site.investigator().nvaPersonId()}">${site.investigator().title()} ${site.investigator().firstname()} ${site.investigator().lastname()}</a>
+          @if(site.investigator().profileUrl() != null)
+          <a href="${site.investigator().profileUrl()}">${site.investigator().title()} ${site.investigator().firstname()} ${site.investigator().lastname()}</a>
+          @else
+          <span>${site.investigator().title()} ${site.investigator().firstname()} ${site.investigator().lastname()}</span>
+          @endif
           <p>${site.departmentName()}, ${site.investigator().department()}</p>
         </div>
         @endfor

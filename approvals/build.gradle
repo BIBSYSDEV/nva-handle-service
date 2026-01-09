@@ -7,6 +7,8 @@ dependencies {
     implementation nvaLibs.apigateway
     implementation nvaLibs.core
     implementation nvaLibs.json
+    implementation nvaLibs.secrets
+    implementation nvaCatalog.aws.sdk2.secrets
 
     implementation nvaCatalog.aws.sdk2.dynamo
     implementation nvaCatalog.aws.sdk2.dynamodbenhanced

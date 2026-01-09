@@ -19,6 +19,10 @@ Parameters:
     Type: 'AWS::SSM::Parameter::Value<String>'
     Description: The Api domain
     Default: /NVA/ApiDomain
+  ApplicationDomain:
+    Type: 'AWS::SSM::Parameter::Value<String>'
+    Description: The Application domain
+    Default: /NVA/ApplicationDomain
   CustomDomainBasePath:
     Type: String
     Description: Base path mapping in CustomDomain
@@ -53,6 +57,10 @@ Parameters:
     Type: String
     Description: comma separated list of external clients that are allowed to contact the HTTP APIs, "*" indicates that all origins are allowed
     Default: '*'
+  DmpClientSecretName:
+    Type: String
+    Description: Name of the secret containing DMP API client credentials
+    Default: DmpClientCredentials
 
 Conditions:
   IsProd: !Equals [!Ref ApiDomain, 'api.nva.unit.no']
@@ -156,6 +164,19 @@ Resources:
             Resource:
               - !GetAtt ApprovalsTable.Arn
               - !Sub '${ApprovalsTable.Arn}/index/*'
+
+  ReadDmpClientSecretsManagedPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Action:
+              - secretsmanager:GetSecretValue
+            Resource:
+              - !Sub 'arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:${DmpClientSecretName}-*'
+
   ApiAccessLogGroup:
     Type: AWS::Logs::LogGroup
     Properties:
@@ -352,12 +373,15 @@ Resources:
       Handler: no.sikt.nva.approvals.rest.FetchApprovalHandler::handleRequest
       Policies:
         - !Ref DynamoDbTableAccessPolicy
+        - !Ref ReadDmpClientSecretsManagedPolicy
       Environment:
         Variables:
           HANDLE_PREFIX: !If [IsProd, !Ref HandlePrefixForApprovals, !Ref HandlePrefix]
           TABLE: !Ref ApprovalsTable
           HANDLE_BASE_URI: !Ref HandleBaseUri
           HANDLE_DATABASE_SECRET_NAME: !Ref HandleDatabaseSecretName
+          DMP_CLIENT_SECRET_NAME: !Ref DmpClientSecretName
+          APPLICATION_DOMAIN: !Ref ApplicationDomain
       Events:
         GetApproval:
           Type: Api

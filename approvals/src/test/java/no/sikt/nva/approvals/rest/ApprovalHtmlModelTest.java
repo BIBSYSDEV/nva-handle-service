@@ -6,8 +6,15 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import java.net.URI;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
+import no.sikt.nva.approvals.dmp.model.ClinicalTrial;
+import no.sikt.nva.approvals.dmp.model.Investigator;
+import no.sikt.nva.approvals.dmp.model.Sponsor;
+import no.sikt.nva.approvals.dmp.model.TrialEvent;
+import no.sikt.nva.approvals.dmp.model.TrialSite;
 import no.sikt.nva.approvals.domain.Approval;
 import no.sikt.nva.approvals.domain.NamedIdentifier;
 import org.junit.jupiter.api.Test;
@@ -95,17 +102,134 @@ class ApprovalHtmlModelTest {
     @Test
     void shouldCreateInvestigatorRecord() {
         var investigator = new ApprovalHtmlModel.Investigator(
-            "http://example.org/person/123",
+            "https://nva.sikt.no/research-profile/123",
             "Dr.",
             "Jane",
             "Smith",
             "Oncology"
         );
 
-        assertEquals("http://example.org/person/123", investigator.nvaPersonId());
+        assertEquals("https://nva.sikt.no/research-profile/123", investigator.profileUrl());
         assertEquals("Dr.", investigator.title());
         assertEquals("Jane", investigator.firstname());
         assertEquals("Smith", investigator.lastname());
         assertEquals("Oncology", investigator.department());
+    }
+
+    @Test
+    void shouldCreateModelFromApprovalAndClinicalTrial() {
+        var approval = createApproval();
+        var clinicalTrial = createClinicalTrial();
+
+        var model = ApprovalHtmlModel.fromApprovalAndClinicalTrial(approval, clinicalTrial, "nva.sikt.no");
+
+        assertEquals(approval.identifier(), model.identifier());
+        assertEquals("Test Clinical Trial", model.publicTitle());
+        assertEquals(approval.handle().value().toString(), model.handle());
+    }
+
+    @Test
+    void shouldExtractStudyPeriodStartFromNorwayTrialStartEvent() {
+        var approval = createApproval();
+        var clinicalTrial = createClinicalTrial();
+
+        var model = ApprovalHtmlModel.fromApprovalAndClinicalTrial(approval, clinicalTrial, "nva.sikt.no");
+
+        assertEquals("2022-10-05", model.studyPeriodStart());
+        assertTrue(model.hasStudyPeriod());
+    }
+
+    @Test
+    void shouldExtractSponsorsFromClinicalTrial() {
+        var approval = createApproval();
+        var clinicalTrial = createClinicalTrial();
+
+        var model = ApprovalHtmlModel.fromApprovalAndClinicalTrial(approval, clinicalTrial, "nva.sikt.no");
+
+        assertEquals(1, model.sponsors().size());
+        assertEquals("Test Hospital", model.sponsors().iterator().next().name());
+    }
+
+    @Test
+    void shouldExtractTrialSitesWithInvestigatorsFromClinicalTrial() {
+        var approval = createApproval();
+        var clinicalTrial = createClinicalTrial();
+
+        var model = ApprovalHtmlModel.fromApprovalAndClinicalTrial(approval, clinicalTrial, "nva.sikt.no");
+
+        assertEquals(1, model.trialSites().size());
+        var trialSite = model.trialSites().iterator().next();
+        assertEquals("Test Department", trialSite.departmentName());
+        assertEquals("John", trialSite.investigator().firstname());
+        assertEquals("Doe", trialSite.investigator().lastname());
+    }
+
+    @Test
+    void shouldBuildProfileUrlFromNvaPersonId() {
+        var approval = createApproval();
+        var clinicalTrial = createClinicalTrial();
+
+        var model = ApprovalHtmlModel.fromApprovalAndClinicalTrial(approval, clinicalTrial, "nva.sikt.no");
+
+        var trialSite = model.trialSites().iterator().next();
+        assertEquals("https://nva.sikt.no/research-profile/12345", trialSite.investigator().profileUrl());
+    }
+
+    @Test
+    void shouldHaveNullProfileUrlWhenNvaPersonIdIsNull() {
+        var approval = createApproval();
+        var investigatorWithoutNvaId = new Investigator("Investigator", "789", "Dr.", "Jane", "Smith",
+            "Research", null, null);
+        var trialSiteWithoutNvaId = new TrialSite("TrialSite", "789", "Other Department",
+            "Location", null, null, investigatorWithoutNvaId);
+        var clinicalTrial = new ClinicalTrial(
+            URI.create("https://example.com/trial/123"),
+            "123",
+            URI.create("https://hdl.handle.net/11250/1"),
+            "Test",
+            List.of(),
+            List.of(),
+            List.of(trialSiteWithoutNvaId),
+            null
+        );
+
+        var model = ApprovalHtmlModel.fromApprovalAndClinicalTrial(approval, clinicalTrial, "nva.sikt.no");
+
+        assertEquals(1, model.trialSites().size());
+        var trialSite = model.trialSites().iterator().next();
+        assertNull(trialSite.investigator().profileUrl());
+        assertEquals("Jane", trialSite.investigator().firstname());
+    }
+
+    private Approval createApproval() {
+        return new Approval(
+            UUID.randomUUID(),
+            List.of(new NamedIdentifier("DMP", "2022-500027-76-00")),
+            randomUri(),
+            randomHandle()
+        );
+    }
+
+    private ClinicalTrial createClinicalTrial() {
+        var events = List.of(
+            new TrialEvent("TrialStart", "EEA", LocalDate.of(2022, 9, 1)),
+            new TrialEvent("TrialStart", "Norway", LocalDate.of(2022, 10, 5))
+        );
+        var sponsors = List.of(new Sponsor("Sponsor", "Test Hospital", "8", "Hospital", null));
+        var investigator = new Investigator("Investigator", "123", "Prof.", "John", "Doe",
+            "Oncology", null, URI.create("https://api.nva.unit.no/cristin/person/12345"));
+        var trialSites = List.of(new TrialSite("TrialSite", "456", "Test Department",
+            "Test Location", null, null, investigator));
+
+        return new ClinicalTrial(
+            URI.create("https://api.example.com/clinical-trial/2022-500027-76-00"),
+            "2022-500027-76-00",
+            URI.create("https://hdl.handle.net/11250.1/12345"),
+            "Test Clinical Trial",
+            events,
+            sponsors,
+            trialSites,
+            null
+        );
     }
 }
