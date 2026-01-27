@@ -229,7 +229,7 @@ class FetchApprovalHandlerTest {
     }
 
     @Test
-    void shouldReturnHtmlWhenNoAcceptHeaderProvided() {
+    void shouldReturnJsonWhenNoAcceptHeaderProvided() {
         var approvalId = UUID.randomUUID();
         var approval = new Approval(approvalId, List.of(new NamedIdentifier("test", "value")), randomUri(), randomHandle());
         handler = new FetchApprovalHandler(new FakeApprovalService(List.of(approval)), environment, templateEngine, new FakeDmpClient());
@@ -238,7 +238,22 @@ class FetchApprovalHandlerTest {
         var response = handleRequest(request);
 
         assertEquals(HTTP_OK, response.getStatusCode());
+        assertThat(response.getHeaders().get(HttpHeaders.CONTENT_TYPE), containsString("application/json"));
+    }
+
+    @Test
+    void shouldReturnHtmlWhenBrowserAcceptHeaderProvided() {
+        var browserAcceptHeader = "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8";
+        var approvalId = UUID.randomUUID();
+        var approval = new Approval(approvalId, List.of(new NamedIdentifier("test", "value")), randomUri(), randomHandle());
+        handler = new FetchApprovalHandler(new FakeApprovalService(List.of(approval)), environment, templateEngine, new FakeDmpClient());
+        var request = createRequestWithAcceptHeader(approvalId, browserAcceptHeader);
+
+        var response = handleRequestAsString(request);
+
+        assertEquals(HTTP_OK, response.getStatusCode());
         assertThat(response.getHeaders().get(HttpHeaders.CONTENT_TYPE), containsString("text/html"));
+        assertThat(response.getBody(), containsString("<!DOCTYPE html>"));
     }
 
     @Test
