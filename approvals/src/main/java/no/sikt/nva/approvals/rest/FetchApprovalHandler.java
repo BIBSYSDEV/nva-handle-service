@@ -8,7 +8,9 @@ import static no.sikt.nva.approvals.utils.RequestUtils.getApprovalIdentifier;
 import static nva.commons.apigateway.MediaTypes.APPLICATION_JSON_LD;
 import static nva.commons.core.StringUtils.isNotBlank;
 import com.amazonaws.services.lambda.runtime.Context;
+import com.google.common.net.HttpHeaders;
 import com.google.common.net.MediaType;
+import java.util.Map;
 import gg.jte.TemplateEngine;
 import gg.jte.output.StringOutput;
 import java.net.URI;
@@ -114,6 +116,16 @@ public class FetchApprovalHandler extends ApiGatewayHandler<Void, Object> {
         return HTTP_OK;
     }
 
+    @Override
+    protected Map<String, String> getSuccessHeaders(RequestInfo requestInfo)
+        throws UnsupportedAcceptHeaderException {
+        var headers = super.getSuccessHeaders(requestInfo);
+        if (isMissingAcceptHeader(requestInfo)) {
+            headers.put(HttpHeaders.CONTENT_TYPE, MediaType.JSON_UTF_8.toString());
+        }
+        return headers;
+    }
+
     private boolean hasPathParameter(RequestInfo requestInfo) {
         var approvalId = requestInfo.getPathParameters().get(APPROVAL_ID_PATH_PARAMETER);
         return isNotBlank(approvalId);
@@ -179,12 +191,21 @@ public class FetchApprovalHandler extends ApiGatewayHandler<Void, Object> {
     }
 
     private boolean isJsonRequest(RequestInfo requestInfo) {
+        if (isMissingAcceptHeader(requestInfo)) {
+            return true;
+        }
         try {
             var mediaType = getDefaultResponseContentTypeHeaderValue(requestInfo).withoutParameters();
             return mediaType.is(MediaType.JSON_UTF_8.withoutParameters()) || mediaType.is(MediaType.create("application", "ld+json"));
         } catch (UnsupportedAcceptHeaderException e) {
-            return false;
+            return true;
         }
+    }
+
+    private boolean isMissingAcceptHeader(RequestInfo requestInfo) {
+        return requestInfo.getHeaderOptional("Accept")
+            .filter(StringUtils::isNotBlank)
+            .isEmpty();
     }
 
     private String renderHtml(Approval approval) {
