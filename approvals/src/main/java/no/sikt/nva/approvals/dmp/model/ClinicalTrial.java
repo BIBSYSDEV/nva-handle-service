@@ -5,6 +5,8 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Objects;
 
+// FIXME: Suppressing warning in order to upgrade PMD version
+@SuppressWarnings("unused")
 public record ClinicalTrial(
     URI id,
     String identifier,

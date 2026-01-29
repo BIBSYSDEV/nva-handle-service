@@ -13,6 +13,8 @@ import nva.commons.core.JacocoGenerated;
 import no.unit.nva.commons.json.JsonUtils;
 import nva.commons.core.paths.UriWrapper;
 
+// FIXME: Suppressing warning in order to upgrade PMD version
+@SuppressWarnings("PMD.DoNotUseThreads")
 public class DmpClient implements DmpClientService {
 
     private static final String AUTHORIZATION_HEADER = "Authorization";
@@ -40,6 +42,7 @@ public class DmpClient implements DmpClientService {
             .build());
     }
 
+    @Override
     public Optional<ClinicalTrial> getClinicalTrial(String identifier) throws DmpClientException {
         if (identifier == null) {
             throw new DmpClientException("Identifier is required");
