@@ -15,6 +15,8 @@ import java.util.Objects;
 import nva.commons.core.JacocoGenerated;
 import no.unit.nva.commons.json.JsonUtils;
 
+// FIXME: Suppressing warning in order to upgrade PMD version
+@SuppressWarnings({"PMD.DoNotUseThreads", "PMD.AvoidSynchronizedStatement"})
 public class OAuth2TokenService {
 
     private static final String CONTENT_TYPE_HEADER = "Content-Type";

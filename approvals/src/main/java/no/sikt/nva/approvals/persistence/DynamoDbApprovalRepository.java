@@ -47,6 +47,8 @@ import software.amazon.awssdk.enhanced.dynamodb.model.TransactPutItemEnhancedReq
 import software.amazon.awssdk.enhanced.dynamodb.model.TransactWriteItemsEnhancedRequest;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 
+// FIXME: Suppressing warning in order to upgrade PMD version
+@SuppressWarnings("PMD.CouplingBetweenObjects")
 public class DynamoDbApprovalRepository implements ApprovalRepository {
 
     private static final int BATCH_GET_ITEM_LIMIT = 80;
