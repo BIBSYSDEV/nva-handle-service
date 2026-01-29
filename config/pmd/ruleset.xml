@@ -45,6 +45,7 @@
     <exclude name="CommentDefaultAccessModifier"/>
     <!-- Conflicts with the rule category/java/codestyle.xml/AvoidProtectedMethodInFinalClassNotExtending -->
     <exclude name="DefaultPackage"/>
+    <exclude name="UseExplicitTypes"/>
 
 
     <!--<exclude name="BeanMembersShouldSerialize"/>-->
