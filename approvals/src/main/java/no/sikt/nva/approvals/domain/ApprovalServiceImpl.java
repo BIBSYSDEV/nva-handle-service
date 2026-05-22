@@ -125,6 +125,7 @@ public class ApprovalServiceImpl implements ApprovalService {
         return UriWrapper.fromHost(apiHost).addChild(APPROVAL_PATH).addChild(approvalId.toString()).getUri();
     }
 
+    @SuppressWarnings("PMD.AvoidCatchingGenericException")
     private Handle createHandle(URI approvalUri) throws ApprovalServiceException {
         try (var connection = connectionSupplier.get()) {
             var handle = handleDatabase.createHandle(environment.readEnv(HANDLE_PREFIX), approvalUri, connection);

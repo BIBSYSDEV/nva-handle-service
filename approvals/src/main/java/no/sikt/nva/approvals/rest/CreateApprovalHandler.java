@@ -30,6 +30,7 @@ public class CreateApprovalHandler extends ApiGatewayHandler<CreateApprovalReque
     }
 
     @Override
+    @SuppressWarnings("PMD.AvoidCatchingGenericException")
     protected void validateRequest(CreateApprovalRequest input, RequestInfo requestInfo, Context context)
         throws ApiGatewayException {
         try {
@@ -40,6 +41,7 @@ public class CreateApprovalHandler extends ApiGatewayHandler<CreateApprovalReque
     }
 
     @Override
+    @SuppressWarnings("PMD.AvoidCatchingGenericException")
     protected Void processInput(CreateApprovalRequest request, RequestInfo requestInfo, Context context)
         throws ApiGatewayException {
         try {
