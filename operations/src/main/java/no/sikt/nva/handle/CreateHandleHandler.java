@@ -50,6 +50,7 @@ public class CreateHandleHandler extends ApiGatewayHandler<HandleRequest, Handle
     }
 
     @Override
+    @SuppressWarnings("PMD.AvoidCatchingGenericException")
     protected HandleResponse processInput(HandleRequest input, RequestInfo requestInfo, Context context)
             throws ApiGatewayException {
         try (var connection = connectionSupplier.get()) {
@@ -63,6 +64,7 @@ public class CreateHandleHandler extends ApiGatewayHandler<HandleRequest, Handle
         }
     }
 
+    @SuppressWarnings("PMD.AvoidCatchingGenericException")
     private HandleResponse createHandle(HandleRequest input, Connection connection)
         throws SQLException {
         try {

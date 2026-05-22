@@ -46,6 +46,7 @@ public class UpdateHandleHandler extends ApiGatewayHandler<HandleRequest, Handle
     }
 
     @Override
+    @SuppressWarnings("PMD.AvoidCatchingGenericException")
     protected HandleResponse processInput(HandleRequest input, RequestInfo requestInfo, Context context)
         throws ApiGatewayException {
         var prefix = requestInfo.getPathParameter("prefix");
@@ -59,6 +60,7 @@ public class UpdateHandleHandler extends ApiGatewayHandler<HandleRequest, Handle
         }
     }
 
+    @SuppressWarnings("PMD.AvoidCatchingGenericException")
     private HandleResponse updateHandle(HandleRequest input, String prefix, String suffix, Connection connection)
         throws SQLException {
         try {

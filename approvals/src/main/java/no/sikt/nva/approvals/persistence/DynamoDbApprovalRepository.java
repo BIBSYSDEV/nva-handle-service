@@ -243,7 +243,7 @@ public class DynamoDbApprovalRepository implements ApprovalRepository {
             var approvalDao = ApprovalDao.fromApproval(approval);
             var handleDao = HandleDao.fromHandle(approval.handle());
             var operation = iterator.next();
-            if (DELETE.equals(operation.operation)) {
+            if (DELETE == operation.operation) {
                 requestBuilder.addDeleteItem(table, operation.entry().getPrimaryKey());
             } else {
                 var document = operation.entry().toEnhancedDocument(approvalDao, handleDao);

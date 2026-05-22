@@ -36,6 +36,7 @@ public class UpdateApprovalHandler extends ApiGatewayHandler<UpdateApprovalReque
     }
 
     @Override
+    @SuppressWarnings("PMD.AvoidCatchingGenericException")
     protected Void processInput(UpdateApprovalRequest request, RequestInfo requestInfo, Context context)
         throws ApiGatewayException {
         try {
