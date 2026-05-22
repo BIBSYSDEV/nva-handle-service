@@ -61,10 +61,6 @@ jacocoTestCoverageVerification {
     }
 }
 
-tasks.withType(Checkstyle).configureEach {
-    exclude 'gg/jte/generated/**'
-}
-
 tasks.withType(Pmd).configureEach {
     exclude 'gg/jte/generated/**'
 }
