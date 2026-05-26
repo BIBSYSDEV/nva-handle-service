@@ -1,4 +1,5 @@
 plugins {
+    id 'nva-handle-service.java-common-conventions'
     alias(libs.plugins.jte)
 }
 
@@ -46,27 +47,8 @@ sourceSets {
     }
 }
 
-jacocoTestReport {
-    afterEvaluate {
-        classDirectories.setFrom(files(classDirectories.files.collect {
-            fileTree(dir: it, exclude: ['gg/jte/generated/**'])
-        }))
-    }
-}
-
-jacocoTestCoverageVerification {
-    afterEvaluate {
-        classDirectories.setFrom(files(classDirectories.files.collect {
-            fileTree(dir: it, exclude: ['gg/jte/generated/**'])
-        }))
-    }
-}
-
-tasks.withType(Pmd).configureEach {
-    exclude 'gg/jte/generated/**'
-}
-
 test {
+    environment("API_HOST", "localhost")
     environment("COGNITO_AUTHORIZER_URLS", "urls")
     environment("ALLOWED_ORIGIN", "*")
     environment("HANDLE_PREFIX", "prefix")
