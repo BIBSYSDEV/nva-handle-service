@@ -21,7 +21,8 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import nva.commons.logutils.LogUtils;
+
+import nva.commons.logutils.LogRecorder;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.zalando.problem.Problem;
@@ -84,12 +85,12 @@ class CreateHandleHandlerTest {
         var uri = randomUri();
         var inputStream = createCreateHandleRequest(uri);
         mockHandleDatabaseCreateHandle(false, true, true);
-        var appender = LogUtils.getTestingAppenderForRootLogger();
+        var logRecorder = LogRecorder.forRoot(CreateHandleHandler.class);
         handler.handleRequest(inputStream, outputStream, context);
         var response = GatewayResponse.fromOutputStream(outputStream, HandleResponse.class);
-        assertThat(appender.getMessages(), containsString(String.format(CREATED_HANDLE_FOR_URI,
-                                                                        createHandleFromHandleId(CREATED_HANDLE_ID),
-                                                                        uri)));
+        var expectedMessage =
+            String.format(CREATED_HANDLE_FOR_URI, createHandleFromHandleId(CREATED_HANDLE_ID), uri);
+        assertThat(logRecorder.asString(), containsString(expectedMessage));
         assertThat(response.getStatusCode(), is(equalTo(HttpURLConnection.HTTP_CREATED)));
         assertThat(response.getBodyObject(HandleResponse.class).handle(),
                    is(equalTo(createHandleFromHandleId(CREATED_HANDLE_ID))));
@@ -136,12 +137,13 @@ class CreateHandleHandlerTest {
         var uri = randomUri();
         var inputStream = createCreateHandleRequest(uri);
         mockHandleDatabaseCreateHandle(true, false, false);
-        var appender = LogUtils.getTestingAppenderForRootLogger();
+        var logRecorder = LogRecorder.forRoot(CreateHandleHandler.class);
         handler.handleRequest(inputStream, outputStream, context);
         var response = GatewayResponse.fromOutputStream(outputStream, HandleResponse.class);
-        assertThat(appender.getMessages(), containsString(String.format(REUSED_EXISTING_HANDLE_FOR_URI,
-                                                                        createHandleFromHandleId(EXISTING_HANDLE_ID),
-                                                                        uri)));
+        var expectedMessage =
+            String.format(
+                REUSED_EXISTING_HANDLE_FOR_URI, createHandleFromHandleId(EXISTING_HANDLE_ID), uri);
+        assertThat(logRecorder.asString(), containsString(expectedMessage));
         assertThat(response.getStatusCode(), is(equalTo(HttpURLConnection.HTTP_CREATED)));
         assertThat(response.getBodyObject(HandleResponse.class).handle(),
                    is(equalTo(createHandleFromHandleId(EXISTING_HANDLE_ID))));
@@ -162,10 +164,10 @@ class CreateHandleHandlerTest {
         var uri = randomUri();
         var inputStream = createCreateHandleRequest(uri);
         mockHandleDatabaseCreateHandle(false, false, false);
-        var appender = LogUtils.getTestingAppenderForRootLogger();
+        var logRecorder = LogRecorder.forClass(CreateHandleHandler.class);
         handler.handleRequest(inputStream, outputStream, context);
         var response = GatewayResponse.fromOutputStream(outputStream, Problem.class);
-        assertThat(appender.getMessages(), containsString(String.format(ERROR_CREATING_HANDLE_FOR_URI, uri)));
+        assertThat(logRecorder.asString(), containsString(String.format(ERROR_CREATING_HANDLE_FOR_URI, uri)));
         assertThat(response.getStatusCode(), is(equalTo(HttpURLConnection.HTTP_BAD_GATEWAY)));
     }
 
@@ -175,17 +177,17 @@ class CreateHandleHandlerTest {
         var uri = randomUri();
         var inputStream = createCreateHandleRequest(uri);
         mockHandleDatabaseCreateHandle(false, true, false);
-        var appender = LogUtils.getTestingAppenderForRootLogger();
+        var logRecorder = LogRecorder.forClass(CreateHandleHandler.class);
         handler.handleRequest(inputStream, outputStream, context);
         var response = GatewayResponse.fromOutputStream(outputStream, Problem.class);
-        assertThat(appender.getMessages(), containsString(String.format(ERROR_CREATING_HANDLE_FOR_URI, uri)));
+        assertThat(logRecorder.asString(), containsString(String.format(ERROR_CREATING_HANDLE_FOR_URI, uri)));
         assertThat(response.getStatusCode(), is(equalTo(HttpURLConnection.HTTP_BAD_GATEWAY)));
         verify(connection, times(1)).rollback();
     }
 
     @Test
     void createHandleRequestThrowsHandleExceptionAndLogsErrorWhenNotAbleToConnectToHandleDatabase() {
-        var appender = LogUtils.getTestingAppenderForRootLogger();
+        var logRecorder = LogRecorder.forClass(CreateHandleHandler.class);
         @SuppressWarnings("unchecked") var connectionSupplier = (Supplier<Connection>) mock(Supplier.class);
         var uri = randomUri();
         var failure = "some connection failure";
@@ -194,7 +196,7 @@ class CreateHandleHandlerTest {
         var request = new HandleRequest(uri);
         assertThrows(CreateHandleException.class,
                      () -> failingHandler.processInput(request, null, null));
-        assertThat(appender.getMessages(), containsString(failure));
+        assertThat(logRecorder.asString(), containsString(failure));
     }
 
     private InputStream createCreateHandleRequest(URI uri) throws JsonProcessingException {

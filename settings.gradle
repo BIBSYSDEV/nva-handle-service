@@ -2,8 +2,6 @@ rootProject.name = 'nva-handle-service'
 include 'operations'
 include 'approvals'
 
-def nvaCommonsVersion = '2.4.5'
-
 dependencyResolutionManagement {
     repositories {
         mavenCentral()
