@@ -1,7 +1,3 @@
 plugins {
     id 'nva-handle-service.rootplugin'
 }
-
-allprojects {
-    apply plugin: 'nva-handle-service.java-common-conventions'
-}

@@ -1,65 +1,16 @@
-plugins {
-    // Apply the java Plugin to add support for Java.
-    id 'java'
-    id 'pmd'
-    id 'jacoco-report-aggregation'
+plugins{
+    id 'nva.java-conventions'
 }
 
-group = 'com.github.bibsysdev'
-
-
-
-java {
-    sourceCompatibility = JavaVersion.VERSION_21
-    targetCompatibility = JavaVersion.VERSION_21
-}
-
-repositories {
-    mavenCentral()
-    maven { url 'https://jitpack.io' }
-}
-
-tasks.named('test') {
-    environment "API_HOST", "localhost"
-    useJUnitPlatform {
-        excludeTags "RemoteTest", "integrationTest", "KarateTest"
+nva {
+    errorprone {
+        allErrorsAsWarnings = false
     }
-    failFast = true
-    testLogging {
-        events 'skipped', 'passed', 'failed'
-        showCauses true
-        exceptionFormat "full"
+    generatedCode = ['gg/jte/generated/**']
+    pmd {
+        rulesetFile = rootProject.file('config/pmd/ruleset.xml')
     }
-}
-
-pmd {
-    toolVersion = '7.23.0'
-    ruleSetConfig = rootProject.resources.text.fromFile('config/pmd/ruleset.xml')
-    ruleSets = []
-    ignoreFailures = false
-}
-
-check.dependsOn jacocoTestCoverageVerification
-jacocoTestCoverageVerification.dependsOn(jacocoTestReport)
-
-
-jacocoTestCoverageVerification {
-
-    violationRules {
-        rule {
-            limit {
-                counter = 'METHOD'
-                value = 'COVEREDRATIO'
-                minimum = 1.000
-            }
-        }
-
-        rule {
-            limit {
-                counter = 'CLASS'
-                value = 'COVEREDRATIO'
-                minimum = 1.000
-            }
-        }
+    spotless {
+        enabled = false
     }
 }
