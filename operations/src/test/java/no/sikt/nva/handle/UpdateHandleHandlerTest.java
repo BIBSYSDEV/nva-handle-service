@@ -32,6 +32,7 @@ import nva.commons.apigateway.GatewayResponse;
 import nva.commons.core.Environment;
 import nva.commons.core.paths.UriWrapper;
 import nva.commons.logutils.LogUtils;
+import nva.commons.logutils.LogRecorder;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.zalando.problem.Problem;
@@ -106,7 +107,7 @@ class UpdateHandleHandlerTest {
     @Test
     void updateHandleRequestThrowsHandleExceptionAndLogsErrorWhenNotAbleToConnectToHandleDatabase()
         throws IOException {
-        var appender = LogUtils.getTestingAppenderForRootLogger();
+        var logRecorder = LogRecorder.forClass(UpdateHandleHandler.class);
         @SuppressWarnings("unchecked") var connectionSupplier = (Supplier<Connection>) mock(Supplier.class);
         var uri = randomUri();
         var request = getUpdateHandleRequest(uri);
@@ -118,7 +119,7 @@ class UpdateHandleHandlerTest {
 
         var response = GatewayResponse.fromOutputStream(outputStream, HandleResponse.class);
         assertThat(response.getStatusCode(), is(equalTo(HttpURLConnection.HTTP_BAD_GATEWAY)));
-        assertThat(appender.getMessages(), containsString(failure));
+        assertThat(logRecorder.asString(), containsString(failure));
     }
 
     @Test

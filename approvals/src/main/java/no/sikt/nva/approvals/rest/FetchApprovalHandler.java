@@ -8,8 +8,7 @@ import static no.sikt.nva.approvals.utils.RequestUtils.getApprovalIdentifier;
 import static nva.commons.apigateway.MediaTypes.APPLICATION_JSON_LD;
 import static nva.commons.core.StringUtils.isNotBlank;
 import com.amazonaws.services.lambda.runtime.Context;
-import com.google.common.net.HttpHeaders;
-import com.google.common.net.MediaType;
+import nva.commons.apigateway.MediaType;
 import java.util.Map;
 import gg.jte.TemplateEngine;
 import gg.jte.output.StringOutput;
@@ -35,6 +34,7 @@ import nva.commons.apigateway.exceptions.UnsupportedAcceptHeaderException;
 import nva.commons.core.Environment;
 import nva.commons.core.JacocoGenerated;
 import nva.commons.core.StringUtils;
+import org.apache.hc.core5.http.HttpHeaders;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -196,7 +196,7 @@ public class FetchApprovalHandler extends ApiGatewayHandler<Void, Object> {
         }
         try {
             var mediaType = getDefaultResponseContentTypeHeaderValue(requestInfo).withoutParameters();
-            return mediaType.is(MediaType.JSON_UTF_8.withoutParameters()) || mediaType.is(MediaType.create("application", "ld+json"));
+            return mediaType.matches(MediaType.JSON_UTF_8.withoutParameters()) || mediaType.matches(MediaType.create("application", "ld+json"));
         } catch (UnsupportedAcceptHeaderException e) {
             return true;
         }

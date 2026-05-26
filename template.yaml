@@ -77,6 +77,8 @@ Globals:
         ALLOWED_ORIGIN: !Ref AllowedOrigins
         API_HOST: !Ref ApiDomain
         COGNITO_AUTHORIZER_URLS: !Join [ ",", !Ref CognitoAuthorizerUrls ]
+        LOG_LEVEL: "info"
+        LOG4J_CONFIGURATION_FILE: classpath:nva-log4j2.xml
   Api:
     OpenApiVersion: 3.0.1
     Cors:

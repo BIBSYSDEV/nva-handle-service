@@ -15,7 +15,7 @@ dependencies {
     implementation nvaCatalog.aws.sdk2.urlconnection
 
     implementation nvaCatalog.bundles.jackson
-    implementation nvaCatalog.guava
+    implementation nvaCatalog.httpcore5
 
     implementation libs.jte
 
@@ -24,6 +24,7 @@ dependencies {
     testImplementation nvaCatalog.bundles.testing.hamcrest
     testImplementation nvaCatalog.bundles.testing.mockito
     testImplementation nvaCatalog.aws.dynamodb.local
+    testImplementation nvaCatalog.httpcore5
 }
 
 jte {
