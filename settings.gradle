@@ -8,17 +8,14 @@ dependencyResolutionManagement {
         maven { url 'https://jitpack.io' }
     }
     versionCatalogs {
-        nvaCatalog {
+        // Version catalog for third-party dependencies
+        create("nvaCatalog") {
             from("com.github.bibsysdev:versions:${nvaCommonsVersion}")
         }
-        nvaLibs {
-            version('nva', nvaCommonsVersion)
-            library('apigateway', 'com.github.bibsysdev', 'apigateway').versionRef('nva')
-            library('core', 'com.github.bibsysdev', 'core').versionRef('nva')
-            library('json', 'com.github.bibsysdev', 'json').versionRef('nva')
-            library('logutils', 'com.github.bibsysdev', 'logutils').versionRef('nva')
-            library('secrets', 'com.github.bibsysdev', 'secrets').versionRef('nva')
-            library('testutils', 'com.github.bibsysdev', 'nvatestutils').versionRef('nva')
+
+        // Version catalog for libraries in nva-commons
+        create("nvaLibs") {
+            from("com.github.bibsysdev:nva-libs:${nvaCommonsVersion}")
         }
     }
 }
