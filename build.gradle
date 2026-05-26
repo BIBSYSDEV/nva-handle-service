@@ -5,12 +5,3 @@ plugins {
 allprojects {
     apply plugin: 'nva-handle-service.java-common-conventions'
 }
-
-tasks.withType(JavaCompile) {
-    sourceCompatibility = JavaVersion.VERSION_21
-}
-
-wrapper {
-    gradleVersion = "8.5"
-    distributionType = Wrapper.DistributionType.ALL
-}
