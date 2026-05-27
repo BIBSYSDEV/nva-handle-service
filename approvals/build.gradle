@@ -19,6 +19,7 @@ dependencies {
     implementation nvaCatalog.httpcore5
 
     implementation libs.jte
+    implementation libs.jte.runtime
 
     testImplementation nvaLibs.testutils
     testImplementation nvaCatalog.bundles.testing.junit
