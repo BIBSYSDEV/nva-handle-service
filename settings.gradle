@@ -16,7 +16,6 @@ pluginManagement {
 dependencyResolutionManagement {
     repositories {
         mavenCentral()
-        maven { url 'https://jitpack.io' }
     }
     versionCatalogs {
         // Version catalog for third-party dependencies
