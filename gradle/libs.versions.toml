@@ -5,6 +5,7 @@ jte = { strictly = '3.2.4' }
 [libraries]
 postgres = { group = 'org.postgresql', name = 'postgresql', version.ref = 'postgres' }
 jte = { group = 'gg.jte', name = 'jte', version.ref = 'jte' }
+jte-runtime = { group = 'gg.jte', name = 'jte-runtime', version.ref = 'jte' }
 
 [plugins]
 jte = { id = 'gg.jte.gradle', version.ref = 'jte' }
