@@ -1,5 +1,11 @@
 version: 0.2
 
+env:
+  variables:
+    GRADLE_USER_HOME: "/root/.gradle"
+    GRADLE_OPTS: "-Dorg.gradle.configuration-cache=false"
+    SAM_CLI_TELEMETRY: "0"
+
 phases:
   install:
     runtime-versions:
