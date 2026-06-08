@@ -9,6 +9,4 @@ public record TrialSite(
     String siteLocation,
     Address address,
     URI nvaOrganizationId,
-    Investigator investigator
-) {
-}
+    Investigator investigator) {}

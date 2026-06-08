@@ -43,17 +43,18 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/CreateApprovalRequest'
+              $ref: "#/components/schemas/CreateApprovalRequest"
       security:
-        - CognitoUserPool: [ 'https://api.nva.unit.no/scopes/third-party/approval-upsert', 'https://api.nva.unit.no/scopes/backend' ]
+        - CognitoUserPool:
+            ["https://api.nva.unit.no/scopes/third-party/approval-upsert", "https://api.nva.unit.no/scopes/backend"]
       x-amazon-apigateway-integration:
         uri:
           Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${NvaCreateApprovalFunction.Arn}/invocations
-        responses: { }
+        responses: {}
         httpMethod: POST
         type: AWS_PROXY
       responses:
-        '202':
+        "202":
           description: Approval accepted
           headers:
             Location:
@@ -65,24 +66,24 @@ paths:
               description: Number of seconds to wait before checking the approval
               schema:
                 type: integer
-        '400':
+        "400":
           description: Bad Request
           content:
             "application/json":
               schema:
-                $ref: '#/components/schemas/Problem'
-        '409':
+                $ref: "#/components/schemas/Problem"
+        "409":
           description: Conflict
           content:
             "application/json":
               schema:
-                $ref: '#/components/schemas/Problem'
-        '502':
+                $ref: "#/components/schemas/Problem"
+        "502":
           description: Bad gateway
           content:
             "application/json":
               schema:
-                $ref: '#/components/schemas/Problem'
+                $ref: "#/components/schemas/Problem"
     get:
       tags:
         - Approval
@@ -123,40 +124,40 @@ paths:
       x-amazon-apigateway-integration:
         uri:
           Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${NvaFetchApprovalFunction.Arn}/invocations
-        responses: { }
+        responses: {}
         httpMethod: POST
         type: AWS_PROXY
       responses:
-        '200':
+        "200":
           description: Approval found
           content:
             application/ld+json:
               schema:
-                $ref: '#/components/schemas/Approval'
+                $ref: "#/components/schemas/Approval"
             application/json:
               schema:
-                $ref: '#/components/schemas/Approval'
+                $ref: "#/components/schemas/Approval"
             text/html:
               schema:
                 type: string
-        '400':
+        "400":
           description: Bad Request - invalid query parameters or missing required parameters
           content:
             "application/json":
               schema:
-                $ref: '#/components/schemas/Problem'
-        '404':
+                $ref: "#/components/schemas/Problem"
+        "404":
           description: Approval not found
           content:
             "application/json":
               schema:
-                $ref: '#/components/schemas/Problem'
-        '502':
+                $ref: "#/components/schemas/Problem"
+        "502":
           description: Bad gateway
           content:
             "application/json":
               schema:
-                $ref: '#/components/schemas/Problem'
+                $ref: "#/components/schemas/Problem"
   /context:
     get:
       tags:
@@ -168,11 +169,11 @@ paths:
       x-amazon-apigateway-integration:
         uri:
           Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${NvaFetchContextFunction.Arn}/invocations
-        responses: { }
+        responses: {}
         httpMethod: POST
         type: AWS_PROXY
       responses:
-        '200':
+        "200":
           description: JSON-LD context
           content:
             application/ld+json:
@@ -192,11 +193,11 @@ paths:
       x-amazon-apigateway-integration:
         uri:
           Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${NvaFetchOntologyFunction.Arn}/invocations
-        responses: { }
+        responses: {}
         httpMethod: POST
         type: AWS_PROXY
       responses:
-        '200':
+        "200":
           description: RDF ontology in Turtle format
           content:
             text/turtle:
@@ -220,40 +221,40 @@ paths:
       x-amazon-apigateway-integration:
         uri:
           Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${NvaFetchApprovalFunction.Arn}/invocations
-        responses: { }
+        responses: {}
         httpMethod: POST
         type: AWS_PROXY
       responses:
-        '200':
+        "200":
           description: Approval found
           content:
             application/ld+json:
               schema:
-                $ref: '#/components/schemas/Approval'
+                $ref: "#/components/schemas/Approval"
             application/json:
               schema:
-                $ref: '#/components/schemas/Approval'
+                $ref: "#/components/schemas/Approval"
             text/html:
               schema:
                 type: string
-        '400':
+        "400":
           description: Bad Request
           content:
             "application/json":
               schema:
-                $ref: '#/components/schemas/Problem'
-        '404':
+                $ref: "#/components/schemas/Problem"
+        "404":
           description: Approval not found
           content:
             "application/json":
               schema:
-                $ref: '#/components/schemas/Problem'
-        '502':
+                $ref: "#/components/schemas/Problem"
+        "502":
           description: Bad gateway
           content:
             "application/json":
               schema:
-                $ref: '#/components/schemas/Problem'
+                $ref: "#/components/schemas/Problem"
     put:
       tags:
         - Approval
@@ -273,15 +274,15 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/UpdateApprovalRequest'
+              $ref: "#/components/schemas/UpdateApprovalRequest"
       x-amazon-apigateway-integration:
         uri:
           Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${NvaUpdateApprovalFunction.Arn}/invocations
-        responses: { }
+        responses: {}
         httpMethod: POST
         type: AWS_PROXY
       responses:
-        '202':
+        "202":
           description: Approval accepted
           headers:
             Location:
@@ -293,30 +294,30 @@ paths:
               description: Number of seconds to wait before checking the approval
               schema:
                 type: integer
-        '400':
+        "400":
           description: Bad Request
           content:
             "application/json":
               schema:
-                $ref: '#/components/schemas/Problem'
-        '404':
+                $ref: "#/components/schemas/Problem"
+        "404":
           description: Approval not found
           content:
             "application/json":
               schema:
-                $ref: '#/components/schemas/Problem'
-        '409':
+                $ref: "#/components/schemas/Problem"
+        "409":
           description: Conflict
           content:
             "application/json":
               schema:
-                $ref: '#/components/schemas/Problem'
-        '502':
+                $ref: "#/components/schemas/Problem"
+        "502":
           description: Bad gateway
           content:
             "application/json":
               schema:
-                $ref: '#/components/schemas/Problem'
+                $ref: "#/components/schemas/Problem"
 components:
   schemas:
     CreateApprovalRequest:
@@ -331,7 +332,7 @@ components:
         identifiers:
           type: array
           items:
-            $ref: '#/components/schemas/Identifier'
+            $ref: "#/components/schemas/Identifier"
           minItems: 1
           description: List of identifiers for the approval
         source:
@@ -356,7 +357,7 @@ components:
         identifiers:
           type: array
           items:
-            $ref: '#/components/schemas/Identifier'
+            $ref: "#/components/schemas/Identifier"
           minItems: 1
           description: List of identifiers for the approval
     Problem:
@@ -388,7 +389,7 @@ components:
       type: object
       description: An approval for associating a persistent handle identifier with a source URI
       properties:
-        '@context':
+        "@context":
           type: string
           format: uri
           description: JSON-LD context URI for this resource
@@ -408,7 +409,7 @@ components:
           type: array
           description: List of identifiers associated with this approval. Each identifier needs to be unique across all approvals.
           items:
-            $ref: '#/components/schemas/Identifier'
+            $ref: "#/components/schemas/Identifier"
         source:
           type: string
           format: uri
@@ -418,7 +419,7 @@ components:
           format: uri
           description: The full handle URI (e.g., https://hdl.handle.net/11250.1/12345)
       example:
-        '@context': https://api.nva.unit.no/approval/context
+        "@context": https://api.nva.unit.no/approval/context
         type: Approval
         id: https://api.nva.unit.no/approval/6ff5f1b5-97c1-40f0-86ad-2cbd9006eee2
         identifier: 6ff5f1b5-97c1-40f0-86ad-2cbd9006eee2

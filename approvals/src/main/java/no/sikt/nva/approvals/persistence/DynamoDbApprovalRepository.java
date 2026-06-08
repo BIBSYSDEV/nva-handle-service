@@ -17,6 +17,7 @@ import static nva.commons.core.attempt.Try.attempt;
 import static software.amazon.awssdk.enhanced.dynamodb.AttributeValueType.S;
 import static software.amazon.awssdk.enhanced.dynamodb.TableMetadata.primaryIndexName;
 import static software.amazon.awssdk.enhanced.dynamodb.model.QueryConditional.keyEqualTo;
+
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
@@ -51,264 +52,278 @@ import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 @SuppressWarnings("PMD.CouplingBetweenObjects")
 public class DynamoDbApprovalRepository implements ApprovalRepository {
 
-    private static final int BATCH_GET_ITEM_LIMIT = 80;
-    private static final int TRANSACT_WRITE_ITEM_LIMIT = 80;
-    private final DynamoDbTable<EnhancedDocument> table;
-    private final DynamoDbEnhancedClient client;
+  private static final int BATCH_GET_ITEM_LIMIT = 80;
+  private static final int TRANSACT_WRITE_ITEM_LIMIT = 80;
+  private final DynamoDbTable<EnhancedDocument> table;
+  private final DynamoDbEnhancedClient client;
 
-    public DynamoDbApprovalRepository(DynamoDbClient client, Environment environment) {
-        this.client = DynamoDbEnhancedClient.builder().dynamoDbClient(client).build();
-        this.table = this.client.table(environment.readEnv(TABLE), documentTableSchema());
+  public DynamoDbApprovalRepository(DynamoDbClient client, Environment environment) {
+    this.client = DynamoDbEnhancedClient.builder().dynamoDbClient(client).build();
+    this.table = this.client.table(environment.readEnv(TABLE), documentTableSchema());
+  }
+
+  @JacocoGenerated
+  public static ApprovalRepository defaultInstance(Environment environment) {
+    return new DynamoDbApprovalRepository(defaultDynamoClient(environment), environment);
+  }
+
+  @Override
+  public void save(Approval approval) {
+    var allDocuments = createDocuments(approval);
+    if (allDocuments.size() <= TRANSACT_WRITE_ITEM_LIMIT) {
+      saveDocumentsInTransaction(allDocuments);
+    } else {
+      splitToChunks(allDocuments).forEach(this::saveDocumentsInTransaction);
     }
+  }
 
-    @JacocoGenerated
-    public static ApprovalRepository defaultInstance(Environment environment) {
-        return new DynamoDbApprovalRepository(defaultDynamoClient(environment), environment);
+  @Override
+  public void updateApprovalIdentifiers(Approval approval) {
+    var databaseVersion =
+        findByApprovalIdentifier(approval.identifier())
+            .orElseThrow(
+                () ->
+                    new IllegalStateException(
+                        "Approval not found: %s".formatted(approval.identifier())));
+    var operations = new ArrayList<Operation>();
+    operations.addAll(getOperations(databaseVersion, approval, DELETE));
+    operations.addAll(getOperations(approval, databaseVersion, CREATE));
+    updateIdentifiersForApproval(approval, operations);
+  }
+
+  @Override
+  public Optional<Approval> findByApprovalIdentifier(UUID approvalIdentifier) {
+    var entities = fetchEntitiesByApprovalIdentifier(toDatabaseIdentifier(approvalIdentifier));
+    return entities.isEmpty() ? Optional.empty() : Optional.of(constructApproval(entities));
+  }
+
+  @Override
+  public Optional<Approval> findByHandle(Handle handle) {
+    var databaseIdentifier = HandleDao.fromHandle(handle).getDatabaseIdentifier();
+    var entities =
+        table
+            .index(GSI2)
+            .query(keyEqualTo(Key.builder().partitionValue(databaseIdentifier).build()))
+            .stream()
+            .map(Page::items)
+            .flatMap(List::stream)
+            .map(EnhancedDocument::toJson)
+            .map(this::toDatabaseEntity)
+            .toList();
+    return entities.isEmpty() ? Optional.empty() : Optional.of(constructApproval(entities));
+  }
+
+  @Override
+  public Optional<Approval> findByIdentifier(NamedIdentifier namedIdentifier) {
+    var primaryKey = IdentifierDao.fromIdentifier(namedIdentifier).getPrimaryKey();
+    var item = table.getItem(primaryKey);
+    var approvalDatabaseIdentifier = item.getString(PK1);
+    var entities = fetchEntitiesByApprovalIdentifier(approvalDatabaseIdentifier);
+    return entities.isEmpty() ? Optional.empty() : Optional.of(constructApproval(entities));
+  }
+
+  @Override
+  public List<NamedIdentifierQueryObject> findIdentifiers(
+      Collection<NamedIdentifier> namedIdentifiers) {
+    if (namedIdentifiers.isEmpty()) {
+      return List.of();
     }
+    var keys =
+        namedIdentifiers.stream()
+            .map(IdentifierDao::fromIdentifier)
+            .map(IdentifierDao::getPrimaryKey)
+            .toList();
 
-    @Override
-    public void save(Approval approval) {
-        var allDocuments = createDocuments(approval);
-        if (allDocuments.size() <= TRANSACT_WRITE_ITEM_LIMIT) {
-            saveDocumentsInTransaction(allDocuments);
-        } else {
-            splitToChunks(allDocuments).forEach(this::saveDocumentsInTransaction);
-        }
-    }
+    return splitToChunks(keys).stream()
+        .flatMap(keyBatch -> fetchIdentifiersBatch(keyBatch).stream())
+        .distinct()
+        .toList();
+  }
 
-    @Override
-    public void updateApprovalIdentifiers(Approval approval) {
-        var databaseVersion = findByApprovalIdentifier(approval.identifier()).orElseThrow(
-            () -> new IllegalStateException("Approval not found: %s".formatted(approval.identifier())));
-        var operations = new ArrayList<Operation>();
-        operations.addAll(getOperations(databaseVersion, approval, DELETE));
-        operations.addAll(getOperations(approval, databaseVersion, CREATE));
-        updateIdentifiersForApproval(approval, operations);
-    }
+  private static <T> List<List<T>> splitToChunks(List<T> list) {
+    return IntStream.range(0, (list.size() + BATCH_GET_ITEM_LIMIT - 1) / BATCH_GET_ITEM_LIMIT)
+        .mapToObj(
+            i ->
+                list.subList(
+                    i * BATCH_GET_ITEM_LIMIT,
+                    Math.min((i + 1) * BATCH_GET_ITEM_LIMIT, list.size())))
+        .toList();
+  }
 
-    @Override
-    public Optional<Approval> findByApprovalIdentifier(UUID approvalIdentifier) {
-        var entities = fetchEntitiesByApprovalIdentifier(toDatabaseIdentifier(approvalIdentifier));
-        return entities.isEmpty() ? Optional.empty() : Optional.of(constructApproval(entities));
-    }
+  private static Approval constructApproval(List<DatabaseEntry> entities) {
+    var handle = getHandle(entities);
+    var identifiers = getIdentifiers(entities);
+    var approvalDao = getApproval(entities);
+    return new Approval(approvalDao.identifier(), identifiers, approvalDao.source(), handle);
+  }
 
-    @Override
-    public Optional<Approval> findByHandle(Handle handle) {
-        var databaseIdentifier = HandleDao.fromHandle(handle).getDatabaseIdentifier();
-        var entities = table.index(GSI2)
-                          .query(keyEqualTo(Key.builder().partitionValue(databaseIdentifier).build()))
-                          .stream()
-                          .map(Page::items)
-                          .flatMap(List::stream)
-                          .map(EnhancedDocument::toJson)
-                          .map(this::toDatabaseEntity)
-                          .toList();
-        return entities.isEmpty() ? Optional.empty() : Optional.of(constructApproval(entities));
-    }
+  private static Handle getHandle(List<DatabaseEntry> entities) {
+    return entities.stream()
+        .filter(HandleDao.class::isInstance)
+        .map(HandleDao.class::cast)
+        .findFirst()
+        .map(HandleDao::toHandle)
+        .orElseThrow(() -> new IllegalStateException("Handle not found for approval"));
+  }
 
-    @Override
-    public Optional<Approval> findByIdentifier(NamedIdentifier namedIdentifier) {
-        var primaryKey = IdentifierDao.fromIdentifier(namedIdentifier).getPrimaryKey();
-        var item = table.getItem(primaryKey);
-        var approvalDatabaseIdentifier = item.getString(PK1);
-        var entities = fetchEntitiesByApprovalIdentifier(approvalDatabaseIdentifier);
-        return entities.isEmpty() ? Optional.empty() : Optional.of(constructApproval(entities));
-    }
+  private static List<NamedIdentifier> getIdentifiers(List<DatabaseEntry> entities) {
+    return entities.stream()
+        .filter(IdentifierDao.class::isInstance)
+        .map(IdentifierDao.class::cast)
+        .map(IdentifierDao::toIdentifier)
+        .toList();
+  }
 
-    @Override
-    public List<NamedIdentifierQueryObject> findIdentifiers(Collection<NamedIdentifier> namedIdentifiers) {
-        if (namedIdentifiers.isEmpty()) {
-            return List.of();
-        }
-        var keys = namedIdentifiers.stream()
-                       .map(IdentifierDao::fromIdentifier)
-                       .map(IdentifierDao::getPrimaryKey)
-                       .toList();
+  private static ApprovalDao getApproval(List<DatabaseEntry> entities) {
+    return entities.stream()
+        .filter(ApprovalDao.class::isInstance)
+        .map(ApprovalDao.class::cast)
+        .findFirst()
+        .orElseThrow(() -> new IllegalStateException("Approval not found"));
+  }
 
-        return splitToChunks(keys).stream()
-                   .flatMap(keyBatch -> fetchIdentifiersBatch(keyBatch).stream())
-                   .distinct()
-                   .toList();
-    }
+  private static DocumentTableSchema documentTableSchema() {
+    return TableSchema.documentSchemaBuilder()
+        .addIndexPartitionKey(primaryIndexName(), PK0, S)
+        .addIndexSortKey(primaryIndexName(), SK0, S)
+        .addIndexPartitionKey(GSI1, PK1, S)
+        .addIndexSortKey(GSI1, SK1, S)
+        .addIndexPartitionKey(GSI2, PK2, S)
+        .addIndexSortKey(GSI2, SK2, S)
+        .attributeConverterProviders(AttributeConverterProvider.defaultProvider())
+        .build();
+  }
 
-    private static <T> List<List<T>> splitToChunks(List<T> list) {
-        return IntStream.range(0, (list.size() + BATCH_GET_ITEM_LIMIT - 1) / BATCH_GET_ITEM_LIMIT)
-                   .mapToObj(i -> list.subList(i * BATCH_GET_ITEM_LIMIT,
-                                               Math.min((i + 1) * BATCH_GET_ITEM_LIMIT, list.size())))
-                   .toList();
-    }
+  private static Expression newDaoCondition() {
+    return Expression.builder()
+        .expression("attribute_not_exists(#pk) AND attribute_not_exists(#sk)")
+        .expressionNames(Map.of("#pk", PK0, "#sk", SK0))
+        .build();
+  }
 
-    private static Approval constructApproval(List<DatabaseEntry> entities) {
-        var handle = getHandle(entities);
-        var identifiers = getIdentifiers(entities);
-        var approvalDao = getApproval(entities);
-        return new Approval(approvalDao.identifier(), identifiers, approvalDao.source(), handle);
-    }
+  private static List<Operation> getOperations(
+      Approval approval, Approval existingApproval, DatabaseOperation operation) {
+    return approval.namedIdentifiers().stream()
+        .filter(id -> !existingApproval.namedIdentifiers().contains(id))
+        .map(identifier -> new Operation(operation, IdentifierDao.fromIdentifier(identifier)))
+        .toList();
+  }
 
-    private static Handle getHandle(List<DatabaseEntry> entities) {
-        return entities.stream()
-                   .filter(HandleDao.class::isInstance)
-                   .map(HandleDao.class::cast)
-                   .findFirst()
-                   .map(HandleDao::toHandle)
-                   .orElseThrow(() -> new IllegalStateException("Handle not found for approval"));
-    }
+  private List<NamedIdentifierQueryObject> fetchIdentifiersBatch(List<Key> keys) {
+    var readBatchBuilder = ReadBatch.builder(EnhancedDocument.class).mappedTableResource(table);
 
-    private static List<NamedIdentifier> getIdentifiers(List<DatabaseEntry> entities) {
-        return entities.stream()
-                   .filter(IdentifierDao.class::isInstance)
-                   .map(IdentifierDao.class::cast)
-                   .map(IdentifierDao::toIdentifier)
-                   .toList();
-    }
+    keys.forEach(readBatchBuilder::addGetItem);
 
-    private static ApprovalDao getApproval(List<DatabaseEntry> entities) {
-        return entities.stream()
-                   .filter(ApprovalDao.class::isInstance)
-                   .map(ApprovalDao.class::cast)
-                   .findFirst()
-                   .orElseThrow(() -> new IllegalStateException("Approval not found"));
-    }
+    var batchRequest =
+        BatchGetItemEnhancedRequest.builder().addReadBatch(readBatchBuilder.build()).build();
 
-    private static DocumentTableSchema documentTableSchema() {
-        return TableSchema.documentSchemaBuilder()
-                   .addIndexPartitionKey(primaryIndexName(), PK0, S)
-                   .addIndexSortKey(primaryIndexName(), SK0, S)
-                   .addIndexPartitionKey(GSI1, PK1, S)
-                   .addIndexSortKey(GSI1, SK1, S)
-                   .addIndexPartitionKey(GSI2, PK2, S)
-                   .addIndexSortKey(GSI2, SK2, S)
-                   .attributeConverterProviders(AttributeConverterProvider.defaultProvider())
-                   .build();
-    }
+    var batchResults = client.batchGetItem(batchRequest);
 
-    private static Expression newDaoCondition() {
-        return Expression.builder()
-                   .expression("attribute_not_exists(#pk) AND attribute_not_exists(#sk)")
-                   .expressionNames(Map.of("#pk", PK0, "#sk", SK0))
-                   .build();
-    }
+    return batchResults.resultsForTable(table).stream()
+        .map(EnhancedDocument::toJson)
+        .map(NamedIdentifierQueryObject::fromJson)
+        .toList();
+  }
 
-    private static List<Operation> getOperations(Approval approval, Approval existingApproval,
-                                                 DatabaseOperation operation) {
-        return approval.namedIdentifiers()
-                   .stream()
-                   .filter(id -> !existingApproval.namedIdentifiers().contains(id))
-                   .map(identifier -> new Operation(operation,
-                                                    IdentifierDao.fromIdentifier(identifier)))
-                   .toList();
-    }
+  private void saveDocumentsInTransaction(List<EnhancedDocument> documents) {
+    var requestBuilder = TransactWriteItemsEnhancedRequest.builder();
 
-    private List<NamedIdentifierQueryObject> fetchIdentifiersBatch(List<Key> keys) {
-        var readBatchBuilder = ReadBatch.builder(EnhancedDocument.class).mappedTableResource(table);
-
-        keys.forEach(readBatchBuilder::addGetItem);
-
-        var batchRequest = BatchGetItemEnhancedRequest.builder().addReadBatch(readBatchBuilder.build()).build();
-
-        var batchResults = client.batchGetItem(batchRequest);
-
-        return batchResults.resultsForTable(table)
-                   .stream()
-                   .map(EnhancedDocument::toJson)
-                   .map(NamedIdentifierQueryObject::fromJson)
-                   .toList();
-    }
-
-    private void saveDocumentsInTransaction(List<EnhancedDocument> documents) {
-        var requestBuilder = TransactWriteItemsEnhancedRequest.builder();
-
-        documents.forEach(document -> {
-            var putRequest = TransactPutItemEnhancedRequest.builder(EnhancedDocument.class)
-                                 .item(document)
-                                 .conditionExpression(newDaoCondition())
-                                 .build();
-            requestBuilder.addPutItem(table, putRequest);
+    documents.forEach(
+        document -> {
+          var putRequest =
+              TransactPutItemEnhancedRequest.builder(EnhancedDocument.class)
+                  .item(document)
+                  .conditionExpression(newDaoCondition())
+                  .build();
+          requestBuilder.addPutItem(table, putRequest);
         });
 
-        client.transactWriteItems(requestBuilder.build());
-    }
+    client.transactWriteItems(requestBuilder.build());
+  }
 
-    private void updateIdentifiersForApproval(Approval approval, List<Operation> operations) {
-        var iterator = operations.iterator();
-        while (iterator.hasNext()) {
-            sendTransaction(approval, iterator);
-        }
+  private void updateIdentifiersForApproval(Approval approval, List<Operation> operations) {
+    var iterator = operations.iterator();
+    while (iterator.hasNext()) {
+      sendTransaction(approval, iterator);
     }
+  }
 
-    private void sendTransaction(Approval approval, Iterator<Operation> iterator) {
-        var count = 0;
-        var requestBuilder = TransactWriteItemsEnhancedRequest.builder();
-        while (count < TRANSACT_WRITE_ITEM_LIMIT && iterator.hasNext()) {
-            var approvalDao = ApprovalDao.fromApproval(approval);
-            var handleDao = HandleDao.fromHandle(approval.handle());
-            var operation = iterator.next();
-            if (DELETE == operation.operation) {
-                requestBuilder.addDeleteItem(table, operation.entry().getPrimaryKey());
-            } else {
-                var document = operation.entry().toEnhancedDocument(approvalDao, handleDao);
-                var putRequest = TransactPutItemEnhancedRequest.builder(EnhancedDocument.class)
-                                     .item(document)
-                                     .conditionExpression(newDaoCondition())
-                                     .build();
-                requestBuilder.addPutItem(table, putRequest);
-            }
-            count++;
-        }
-        client.transactWriteItems(requestBuilder.build());
+  private void sendTransaction(Approval approval, Iterator<Operation> iterator) {
+    var count = 0;
+    var requestBuilder = TransactWriteItemsEnhancedRequest.builder();
+    while (count < TRANSACT_WRITE_ITEM_LIMIT && iterator.hasNext()) {
+      var approvalDao = ApprovalDao.fromApproval(approval);
+      var handleDao = HandleDao.fromHandle(approval.handle());
+      var operation = iterator.next();
+      if (DELETE == operation.operation) {
+        requestBuilder.addDeleteItem(table, operation.entry().getPrimaryKey());
+      } else {
+        var document = operation.entry().toEnhancedDocument(approvalDao, handleDao);
+        var putRequest =
+            TransactPutItemEnhancedRequest.builder(EnhancedDocument.class)
+                .item(document)
+                .conditionExpression(newDaoCondition())
+                .build();
+        requestBuilder.addPutItem(table, putRequest);
+      }
+      count++;
     }
+    client.transactWriteItems(requestBuilder.build());
+  }
 
-    private List<DatabaseEntry> fetchEntitiesByApprovalIdentifier(String databaseIdentifier) {
-        return table.index(GSI1)
-                   .query(keyEqualTo(Key.builder().partitionValue(databaseIdentifier).build()))
-                   .stream()
-                   .map(Page::items)
-                   .flatMap(List::stream)
-                   .map(EnhancedDocument::toJson)
-                   .map(this::toDatabaseEntity)
-                   .toList();
+  private List<DatabaseEntry> fetchEntitiesByApprovalIdentifier(String databaseIdentifier) {
+    return table
+        .index(GSI1)
+        .query(keyEqualTo(Key.builder().partitionValue(databaseIdentifier).build()))
+        .stream()
+        .map(Page::items)
+        .flatMap(List::stream)
+        .map(EnhancedDocument::toJson)
+        .map(this::toDatabaseEntity)
+        .toList();
+  }
+
+  private DatabaseEntry toDatabaseEntity(String value) {
+    return attempt(() -> JsonUtils.dtoObjectMapper.readValue(value, DatabaseEntry.class))
+        .orElseThrow();
+  }
+
+  private List<EnhancedDocument> createDocuments(Approval approval) {
+    var documents = new ArrayList<EnhancedDocument>();
+    documents.add(createHandleEntity(approval));
+    documents.add(createApprovalEntity(approval));
+    documents.addAll(createIdentifiersEntities(approval));
+    return documents;
+  }
+
+  private EnhancedDocument createApprovalEntity(Approval approval) {
+    var handleDao = HandleDao.fromHandle(approval.handle());
+    return ApprovalDao.fromApproval(approval).toEnhancedDocument(handleDao);
+  }
+
+  private List<EnhancedDocument> createIdentifiersEntities(Approval approval) {
+    return approval.namedIdentifiers().stream()
+        .map(identifier -> createIdentifierDocument(identifier, approval))
+        .toList();
+  }
+
+  private EnhancedDocument createIdentifierDocument(
+      NamedIdentifier namedIdentifier, Approval approval) {
+    var handleDao = HandleDao.fromHandle(approval.handle());
+    var approvalDao = ApprovalDao.fromApproval(approval);
+    return IdentifierDao.fromIdentifier(namedIdentifier).toEnhancedDocument(approvalDao, handleDao);
+  }
+
+  private EnhancedDocument createHandleEntity(Approval approval) {
+    var approvalDao = ApprovalDao.fromApproval(approval);
+    return HandleDao.fromHandle(approval.handle()).toEnhancedDocument(approvalDao);
+  }
+
+  public record Operation(DatabaseOperation operation, IdentifierDao entry) {
+
+    public enum DatabaseOperation {
+      CREATE,
+      DELETE
     }
-
-    private DatabaseEntry toDatabaseEntity(String value) {
-        return attempt(() -> JsonUtils.dtoObjectMapper.readValue(value, DatabaseEntry.class)).orElseThrow();
-    }
-
-    private List<EnhancedDocument> createDocuments(Approval approval) {
-        var documents = new ArrayList<EnhancedDocument>();
-        documents.add(createHandleEntity(approval));
-        documents.add(createApprovalEntity(approval));
-        documents.addAll(createIdentifiersEntities(approval));
-        return documents;
-    }
-
-    private EnhancedDocument createApprovalEntity(Approval approval) {
-        var handleDao = HandleDao.fromHandle(approval.handle());
-        return ApprovalDao.fromApproval(approval).toEnhancedDocument(handleDao);
-    }
-
-    private List<EnhancedDocument> createIdentifiersEntities(Approval approval) {
-        return approval.namedIdentifiers()
-                   .stream()
-                   .map(identifier -> createIdentifierDocument(identifier, approval))
-                   .toList();
-    }
-
-    private EnhancedDocument createIdentifierDocument(NamedIdentifier namedIdentifier, Approval approval) {
-        var handleDao = HandleDao.fromHandle(approval.handle());
-        var approvalDao = ApprovalDao.fromApproval(approval);
-        return IdentifierDao.fromIdentifier(namedIdentifier)
-                   .toEnhancedDocument(approvalDao, handleDao);
-    }
-
-    private EnhancedDocument createHandleEntity(Approval approval) {
-        var approvalDao = ApprovalDao.fromApproval(approval);
-        return HandleDao.fromHandle(approval.handle()).toEnhancedDocument(approvalDao);
-    }
-
-    public record Operation(DatabaseOperation operation, IdentifierDao entry) {
-
-        public enum DatabaseOperation {
-            CREATE, DELETE
-        }
-    }
+  }
 }

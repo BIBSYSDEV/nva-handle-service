@@ -15,11 +15,10 @@ public record ClinicalTrial(
     Collection<TrialEvent> events,
     Collection<Sponsor> sponsors,
     Collection<TrialSite> trialSites,
-    PublicContactPoint publicContactPoint
-) {
-    public ClinicalTrial {
-        events = Objects.isNull(events) ? Collections.emptyList() : events;
-        sponsors = Objects.isNull(sponsors) ? Collections.emptyList() : sponsors;
-        trialSites = Objects.isNull(trialSites) ? Collections.emptyList() : trialSites;
-    }
+    PublicContactPoint publicContactPoint) {
+  public ClinicalTrial {
+    events = Objects.isNull(events) ? Collections.emptyList() : events;
+    sponsors = Objects.isNull(sponsors) ? Collections.emptyList() : sponsors;
+    trialSites = Objects.isNull(trialSites) ? Collections.emptyList() : trialSites;
+  }
 }

@@ -9,8 +9,8 @@ import java.util.Objects;
 @JsonTypeName("Identifier")
 public record NamedIdentifier(String name, String value) {
 
-    public NamedIdentifier {
-        Objects.requireNonNull(name, "name must not be null");
-        Objects.requireNonNull(value, "value must not be null");
-    }
+  public NamedIdentifier {
+    Objects.requireNonNull(name, "name must not be null");
+    Objects.requireNonNull(value, "value must not be null");
+  }
 }

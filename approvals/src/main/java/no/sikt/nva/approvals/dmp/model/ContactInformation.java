@@ -1,8 +1,3 @@
 package no.sikt.nva.approvals.dmp.model;
 
-public record ContactInformation(
-    Address address,
-    String telephone,
-    String email
-) {
-}
+public record ContactInformation(Address address, String telephone, String email) {}

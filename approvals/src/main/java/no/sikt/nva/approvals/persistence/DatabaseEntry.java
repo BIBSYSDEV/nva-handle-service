@@ -7,11 +7,14 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo.Id;
 import no.unit.nva.commons.json.JsonSerializable;
 
 @JsonTypeInfo(use = Id.NAME, property = "type")
-@JsonSubTypes({@JsonSubTypes.Type(IdentifierDao.class), @JsonSubTypes.Type(HandleDao.class),
-    @JsonSubTypes.Type(ApprovalDao.class)})
+@JsonSubTypes({
+  @JsonSubTypes.Type(IdentifierDao.class),
+  @JsonSubTypes.Type(HandleDao.class),
+  @JsonSubTypes.Type(ApprovalDao.class)
+})
 @SuppressWarnings("PMD.ImplicitFunctionalInterface")
 public interface DatabaseEntry extends JsonSerializable {
 
-    @JsonIgnore
-    String getDatabaseIdentifier();
+  @JsonIgnore
+  String getDatabaseIdentifier();
 }

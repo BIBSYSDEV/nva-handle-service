@@ -2,7 +2,7 @@ openapi: 3.0.1
 info:
   title: NVA Handle API
   description: API for creating and updating persistent handle identifiers
-  version: '1.0'
+  version: "1.0"
   license:
     name: MIT
   contact:
@@ -22,38 +22,38 @@ paths:
       summary: Create handle for a URI. Include prefix and suffix in the body for imported handle or use only uri field for default handle.
       operationId: createHandle
       security:
-        - CognitoUserPool: [ 'https://api.nva.unit.no/scopes/backend' ]
+        - CognitoUserPool: ["https://api.nva.unit.no/scopes/backend"]
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/Request'
+              $ref: "#/components/schemas/Request"
       x-amazon-apigateway-integration:
         uri:
           Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${NvaCreateHandleFunction.Arn}/invocations
-        responses: { }
+        responses: {}
         httpMethod: POST
         type: AWS_PROXY
       responses:
-        '201':
+        "201":
           description: Handle created
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Response'
-        '400':
+                $ref: "#/components/schemas/Response"
+        "400":
           description: Bad Request
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Problem'
-        '502':
+                $ref: "#/components/schemas/Problem"
+        "502":
           description: Bad Gateway
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Problem'
+                $ref: "#/components/schemas/Problem"
   /{prefix}/{suffix}:
     put:
       tags:
@@ -79,38 +79,38 @@ paths:
           explode: false
           description: The suffix, a unique identifier for a specific digital object within the namespace of the registering organization.
       security:
-        - CognitoUserPool: [ 'https://api.nva.unit.no/scopes/backend' ]
+        - CognitoUserPool: ["https://api.nva.unit.no/scopes/backend"]
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/Request'
+              $ref: "#/components/schemas/Request"
       x-amazon-apigateway-integration:
         uri:
           Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${NvaUpdateHandleFunction.Arn}/invocations
-        responses: { }
+        responses: {}
         httpMethod: POST
         type: AWS_PROXY
       responses:
-        '200':
+        "200":
           description: Handle updated successfully
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Response'
-        '400':
+                $ref: "#/components/schemas/Response"
+        "400":
           description: Bad Request
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Problem'
-        '502':
+                $ref: "#/components/schemas/Problem"
+        "502":
           description: Bad Gateway
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Problem'
+                $ref: "#/components/schemas/Problem"
 components:
   schemas:
     Request:
@@ -169,5 +169,4 @@ components:
       x-amazon-apigateway-authorizer:
         type: cognito_user_pools
         providerARNs:
-          - Ref:
-              CognitoAuthorizerArn
+          - Ref: CognitoAuthorizerArn

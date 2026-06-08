@@ -1,6 +1,7 @@
 package no.sikt.nva.approvals.rest;
 
 import static java.util.Objects.nonNull;
+
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.annotation.JsonTypeInfo.Id;
@@ -20,40 +21,35 @@ public record ApprovalResponse(
     UUID identifier,
     Collection<NamedIdentifier> identifiers,
     URI source,
-    String handle
-) {
+    String handle) {
 
-    private static final String APPROVAL_PATH = "approval";
-    private static final String CONTEXT_PATH = "context";
+  private static final String APPROVAL_PATH = "approval";
+  private static final String CONTEXT_PATH = "context";
 
-    public static ApprovalResponse fromApproval(Approval approval, String apiHost) {
-        var id = buildId(apiHost, approval.identifier());
-        var contextUri = buildContextUri(apiHost);
-        return new ApprovalResponse(
-            contextUri,
-            id,
-            approval.identifier(),
-            approval.namedIdentifiers(),
-            approval.source(),
-            extractHandle(approval)
-        );
-    }
+  public static ApprovalResponse fromApproval(Approval approval, String apiHost) {
+    var id = buildId(apiHost, approval.identifier());
+    var contextUri = buildContextUri(apiHost);
+    return new ApprovalResponse(
+        contextUri,
+        id,
+        approval.identifier(),
+        approval.namedIdentifiers(),
+        approval.source(),
+        extractHandle(approval));
+  }
 
-    private static String extractHandle(Approval approval) {
-        return nonNull(approval.handle()) ? approval.handle().value().toString() : null;
-    }
+  private static String extractHandle(Approval approval) {
+    return nonNull(approval.handle()) ? approval.handle().value().toString() : null;
+  }
 
-    private static URI buildId(String apiHost, UUID identifier) {
-        return UriWrapper.fromHost(apiHost)
-            .addChild(APPROVAL_PATH)
-            .addChild(identifier.toString())
-            .getUri();
-    }
+  private static URI buildId(String apiHost, UUID identifier) {
+    return UriWrapper.fromHost(apiHost)
+        .addChild(APPROVAL_PATH)
+        .addChild(identifier.toString())
+        .getUri();
+  }
 
-    private static URI buildContextUri(String apiHost) {
-        return UriWrapper.fromHost(apiHost)
-            .addChild(APPROVAL_PATH)
-            .addChild(CONTEXT_PATH)
-            .getUri();
-    }
+  private static URI buildContextUri(String apiHost) {
+    return UriWrapper.fromHost(apiHost).addChild(APPROVAL_PATH).addChild(CONTEXT_PATH).getUri();
+  }
 }

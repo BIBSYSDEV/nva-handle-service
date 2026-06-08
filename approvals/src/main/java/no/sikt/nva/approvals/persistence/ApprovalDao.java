@@ -7,6 +7,7 @@ import static no.sikt.nva.approvals.persistence.DynamoDbConstants.SK0;
 import static no.sikt.nva.approvals.persistence.DynamoDbConstants.SK1;
 import static no.sikt.nva.approvals.persistence.DynamoDbConstants.SK2;
 import static no.sikt.nva.approvals.persistence.DynamoDbConstants.STRING;
+
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.annotation.JsonTypeInfo.Id;
 import com.fasterxml.jackson.annotation.JsonTypeName;
@@ -20,32 +21,32 @@ import software.amazon.awssdk.enhanced.dynamodb.document.EnhancedDocument;
 @JsonTypeName("Approval")
 public record ApprovalDao(UUID identifier, URI source) implements DatabaseEntry {
 
-    public static ApprovalDao fromApproval(Approval approval) {
-        return new ApprovalDao(approval.identifier(), approval.source());
-    }
+  public static ApprovalDao fromApproval(Approval approval) {
+    return new ApprovalDao(approval.identifier(), approval.source());
+  }
 
-    @Override
-    public String getDatabaseIdentifier() {
-        return "Approval:%s".formatted(identifier.toString());
-    }
+  @Override
+  public String getDatabaseIdentifier() {
+    return "Approval:%s".formatted(identifier.toString());
+  }
 
-    public static String toDatabaseIdentifier(UUID identifier) {
-        return "Approval:%s".formatted(identifier.toString());
-    }
+  public static String toDatabaseIdentifier(UUID identifier) {
+    return "Approval:%s".formatted(identifier.toString());
+  }
 
-    public static UUID identifierFromDatabaseIdentifier(String identifier) {
-        return UUID.fromString(identifier.replace("Approval:", StringUtils.EMPTY_STRING));
-    }
+  public static UUID identifierFromDatabaseIdentifier(String identifier) {
+    return UUID.fromString(identifier.replace("Approval:", StringUtils.EMPTY_STRING));
+  }
 
-    public EnhancedDocument toEnhancedDocument(HandleDao handleDao) {
-        return EnhancedDocument.builder()
-                   .json(toJsonString())
-                   .put(PK0, getDatabaseIdentifier(), STRING)
-                   .put(SK0, getDatabaseIdentifier(), STRING)
-                   .put(PK1, getDatabaseIdentifier(), STRING)
-                   .put(SK1, getDatabaseIdentifier(), STRING)
-                   .put(PK2, handleDao.getDatabaseIdentifier(), STRING)
-                   .put(SK2, handleDao.getDatabaseIdentifier(), STRING)
-                   .build();
-    }
+  public EnhancedDocument toEnhancedDocument(HandleDao handleDao) {
+    return EnhancedDocument.builder()
+        .json(toJsonString())
+        .put(PK0, getDatabaseIdentifier(), STRING)
+        .put(SK0, getDatabaseIdentifier(), STRING)
+        .put(PK1, getDatabaseIdentifier(), STRING)
+        .put(SK1, getDatabaseIdentifier(), STRING)
+        .put(PK2, handleDao.getDatabaseIdentifier(), STRING)
+        .put(SK2, handleDao.getDatabaseIdentifier(), STRING)
+        .build();
+  }
 }
