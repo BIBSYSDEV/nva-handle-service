@@ -5,6 +5,4 @@ public record Sponsor(
     String name,
     String organizationTypeCode,
     String organizationTypeDisplayName,
-    ContactInformation contactInformation
-) {
-}
+    ContactInformation contactInformation) {}

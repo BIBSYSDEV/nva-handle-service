@@ -7,6 +7,7 @@ import static java.net.HttpURLConnection.HTTP_CONFLICT;
 import static no.unit.nva.testutils.RandomDataGenerator.randomString;
 import static no.unit.nva.testutils.RandomDataGenerator.randomUri;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+
 import com.amazonaws.services.lambda.runtime.Context;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import java.io.ByteArrayOutputStream;
@@ -31,111 +32,117 @@ import org.zalando.problem.Problem;
 
 class CreateApprovalHandlerTest {
 
-    private static final Context context = new FakeContext();
-    private CreateApprovalHandler handler;
-    private ByteArrayOutputStream output;
-    private FakeApprovalService approvalService;
+  private static final Context context = new FakeContext();
+  private CreateApprovalHandler handler;
+  private ByteArrayOutputStream output;
+  private FakeApprovalService approvalService;
 
-    @BeforeEach
-    void setUp() {
-        this.output = new ByteArrayOutputStream();
-        approvalService = new FakeApprovalService();
-        handler = new CreateApprovalHandler(approvalService, new Environment());
-    }
+  @BeforeEach
+  void setUp() {
+    this.output = new ByteArrayOutputStream();
+    approvalService = new FakeApprovalService();
+    handler = new CreateApprovalHandler(approvalService, new Environment());
+  }
 
-    @Test
-    void shouldReturnAcceptedResponseOnSuccess() throws IOException {
-        var request = createRequest(randomApprovalRequest(randomUri()));
+  @Test
+  void shouldReturnAcceptedResponseOnSuccess() throws IOException {
+    var request = createRequest(randomApprovalRequest(randomUri()));
 
-        handler.handleRequest(request, output, context);
+    handler.handleRequest(request, output, context);
 
-        var response = GatewayResponse.fromOutputStream(output, Void.class);
+    var response = GatewayResponse.fromOutputStream(output, Void.class);
 
-        assertEquals(HTTP_ACCEPTED, response.getStatusCode());
-    }
+    assertEquals(HTTP_ACCEPTED, response.getStatusCode());
+  }
 
-    @Test
-    void shouldSetLocationHeaderOnSuccess() throws IOException {
-        var request = createRequest(randomApprovalRequest(randomUri()));
+  @Test
+  void shouldSetLocationHeaderOnSuccess() throws IOException {
+    var request = createRequest(randomApprovalRequest(randomUri()));
 
-        handler.handleRequest(request, output, context);
+    handler.handleRequest(request, output, context);
 
-        var response = GatewayResponse.fromOutputStream(output, Void.class);
+    var response = GatewayResponse.fromOutputStream(output, Void.class);
 
-        var locationHeader = response.getHeaders().get("Location");
-        var expectedLocation = createExpectedLocationHeader();
+    var locationHeader = response.getHeaders().get("Location");
+    var expectedLocation = createExpectedLocationHeader();
 
-        assertEquals(expectedLocation, locationHeader);
-    }
+    assertEquals(expectedLocation, locationHeader);
+  }
 
-    @Test
-    void shouldSetRetryAfterHeaderOnSuccessWith5SecondsValue() throws IOException {
-        var request = createRequest(randomApprovalRequest(randomUri()));
+  @Test
+  void shouldSetRetryAfterHeaderOnSuccessWith5SecondsValue() throws IOException {
+    var request = createRequest(randomApprovalRequest(randomUri()));
 
-        handler.handleRequest(request, output, context);
+    handler.handleRequest(request, output, context);
 
-        var response = GatewayResponse.fromOutputStream(output, Void.class);
+    var response = GatewayResponse.fromOutputStream(output, Void.class);
 
-        var retryAfterHeader = response.getHeaders().get("Retry-After");
+    var retryAfterHeader = response.getHeaders().get("Retry-After");
 
-        assertEquals("5", retryAfterHeader);
-    }
+    assertEquals("5", retryAfterHeader);
+  }
 
-    private String createExpectedLocationHeader() {
-        return UriWrapper.fromHost(new Environment().readEnv("API_HOST"))
-                   .addChild("approval")
-                   .addChild(approvalService.getPersistedApproval().identifier().toString())
-                   .toString();
-    }
+  private String createExpectedLocationHeader() {
+    return UriWrapper.fromHost(new Environment().readEnv("API_HOST"))
+        .addChild("approval")
+        .addChild(approvalService.getPersistedApproval().identifier().toString())
+        .toString();
+  }
 
-    @Test
-    void shouldReturnBadRequestWhenRequestBodyIsInvalid() throws IOException {
-        var request = createRequest(randomApprovalRequest(null));
+  @Test
+  void shouldReturnBadRequestWhenRequestBodyIsInvalid() throws IOException {
+    var request = createRequest(randomApprovalRequest(null));
 
-        handler.handleRequest(request, output, context);
+    handler.handleRequest(request, output, context);
 
-        var response = GatewayResponse.fromOutputStream(output, Void.class);
+    var response = GatewayResponse.fromOutputStream(output, Void.class);
 
-        assertEquals(HTTP_BAD_REQUEST, response.getStatusCode());
-    }
+    assertEquals(HTTP_BAD_REQUEST, response.getStatusCode());
+  }
 
-    @Test
-    void shouldReturnConflictWhenApprovalServiceThrowsConflictException() throws IOException {
-        var key = "key";
-        var value = "value";
-        handler = new CreateApprovalHandler(
+  @Test
+  void shouldReturnConflictWhenApprovalServiceThrowsConflictException() throws IOException {
+    var key = "key";
+    var value = "value";
+    handler =
+        new CreateApprovalHandler(
             new FakeApprovalService(new ApprovalConflictException("conflict", Map.of(key, value))),
             new Environment());
-        var request = createRequest(randomApprovalRequest(randomUri()));
+    var request = createRequest(randomApprovalRequest(randomUri()));
 
-        handler.handleRequest(request, output, context);
+    handler.handleRequest(request, output, context);
 
-        var response = GatewayResponse.fromOutputStream(output, Problem.class);
-        var problem = response.getBodyObject(Problem.class);
+    var response = GatewayResponse.fromOutputStream(output, Problem.class);
+    var problem = response.getBodyObject(Problem.class);
 
-        assertEquals(HTTP_CONFLICT, response.getStatusCode());
-        assertEquals(value, ((Map<String, String>) problem.getParameters().get("conflictingKeys")).get(key));
-    }
+    assertEquals(HTTP_CONFLICT, response.getStatusCode());
+    assertEquals(
+        value, ((Map<String, String>) problem.getParameters().get("conflictingKeys")).get(key));
+  }
 
-    @Test
-    void shouldReturnBadGatewayOnWhenApprovalServiceThrowsApprovalServiceException() throws IOException {
-        handler = new CreateApprovalHandler(
-            new FakeApprovalService(new ApprovalServiceException("error")),
-            new Environment());
-        var request = createRequest(randomApprovalRequest(randomUri()));
+  @Test
+  void shouldReturnBadGatewayOnWhenApprovalServiceThrowsApprovalServiceException()
+      throws IOException {
+    handler =
+        new CreateApprovalHandler(
+            new FakeApprovalService(new ApprovalServiceException("error")), new Environment());
+    var request = createRequest(randomApprovalRequest(randomUri()));
 
-        handler.handleRequest(request, output, context);
+    handler.handleRequest(request, output, context);
 
-        var response = GatewayResponse.fromOutputStream(output, Void.class);
+    var response = GatewayResponse.fromOutputStream(output, Void.class);
 
-        assertEquals(HTTP_BAD_GATEWAY, response.getStatusCode());
-    }
+    assertEquals(HTTP_BAD_GATEWAY, response.getStatusCode());
+  }
 
-    private static CreateApprovalRequest randomApprovalRequest(URI source) {
-        return new CreateApprovalRequest(List.of(new NamedIdentifier(randomString(), randomString())), source);
-    }
+  private static CreateApprovalRequest randomApprovalRequest(URI source) {
+    return new CreateApprovalRequest(
+        List.of(new NamedIdentifier(randomString(), randomString())), source);
+  }
 
-    private InputStream createRequest(CreateApprovalRequest request) throws JsonProcessingException {
-        return new HandlerRequestBuilder<CreateApprovalRequest>(JsonUtils.dtoObjectMapper).withBody(request).build();
-    }
+  private InputStream createRequest(CreateApprovalRequest request) throws JsonProcessingException {
+    return new HandlerRequestBuilder<CreateApprovalRequest>(JsonUtils.dtoObjectMapper)
+        .withBody(request)
+        .build();
+  }
 }

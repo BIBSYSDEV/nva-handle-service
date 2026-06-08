@@ -10,6 +10,7 @@ import static no.sikt.nva.approvals.persistence.DynamoDbConstants.SK0;
 import static no.sikt.nva.approvals.persistence.DynamoDbConstants.SK1;
 import static no.sikt.nva.approvals.persistence.DynamoDbConstants.SK2;
 import static nva.commons.core.attempt.Try.attempt;
+
 import com.amazonaws.services.dynamodbv2.local.embedded.DynamoDBEmbedded;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -30,69 +31,89 @@ import software.amazon.awssdk.services.dynamodb.model.ScanRequest;
 
 public record DynamoDbLocal(DynamoDbClient client) {
 
-    public static DynamoDbLocal dynamoDBLocal(String table) {
-        var database = DynamoDBEmbedded.create(null, true);
-        var client = database.dynamoDbClient();
-        createTableIfNotExists(client, table);
-        return new DynamoDbLocal(client);
-    }
+  public static DynamoDbLocal dynamoDBLocal(String table) {
+    var database = DynamoDBEmbedded.create(null, true);
+    var client = database.dynamoDbClient();
+    createTableIfNotExists(client, table);
+    return new DynamoDbLocal(client);
+  }
 
-    public void cleanTable(String table) {
-        var scanResponse = client.scan(ScanRequest.builder().tableName(table).build());
-        scanResponse.items().forEach(item -> {
-            var key = new HashMap<String, AttributeValue>();
-            key.put(PK0, item.get(PK0));
-            key.put(SK0, item.get(SK0));
-            client.deleteItem(DeleteItemRequest.builder().tableName(table).key(key).build());
-        });
-    }
+  public void cleanTable(String table) {
+    var scanResponse = client.scan(ScanRequest.builder().tableName(table).build());
+    scanResponse
+        .items()
+        .forEach(
+            item -> {
+              var key = new HashMap<String, AttributeValue>();
+              key.put(PK0, item.get(PK0));
+              key.put(SK0, item.get(SK0));
+              client.deleteItem(DeleteItemRequest.builder().tableName(table).key(key).build());
+            });
+  }
 
-    private static void createTableIfNotExists(DynamoDbClient client, String table) {
-        attempt(() -> client.createTable(createTableRequest(table)));
-    }
+  private static void createTableIfNotExists(DynamoDbClient client, String table) {
+    attempt(() -> client.createTable(createTableRequest(table)));
+  }
 
-    private static CreateTableRequest createTableRequest(String table) {
-        return CreateTableRequest.builder()
-                   .tableName(table)
-                   .provisionedThroughput(createProvisionedThroughput())
-                   .attributeDefinitions(createAttribute(PK0), createAttribute(SK0), createAttribute(PK1),
-                                         createAttribute(SK1), createAttribute(PK2), createAttribute(SK2))
-                   .globalSecondaryIndexes(createGlobalSecondaryIndex(GSI1, PK1, SK1),
-                                           createGlobalSecondaryIndex(GSI2, PK2, SK2))
-                   .keySchema(createKeySchemaElements(PK0, SK0))
-                   .build();
-    }
+  private static CreateTableRequest createTableRequest(String table) {
+    return CreateTableRequest.builder()
+        .tableName(table)
+        .provisionedThroughput(createProvisionedThroughput())
+        .attributeDefinitions(
+            createAttribute(PK0),
+            createAttribute(SK0),
+            createAttribute(PK1),
+            createAttribute(SK1),
+            createAttribute(PK2),
+            createAttribute(SK2))
+        .globalSecondaryIndexes(
+            createGlobalSecondaryIndex(GSI1, PK1, SK1), createGlobalSecondaryIndex(GSI2, PK2, SK2))
+        .keySchema(createKeySchemaElements(PK0, SK0))
+        .build();
+  }
 
-    private static GlobalSecondaryIndex createGlobalSecondaryIndex(String name, String partitionKey, String sortKey) {
-        return GlobalSecondaryIndex.builder()
-                   .indexName(name)
-                   .provisionedThroughput(createProvisionedThroughput())
-                   .projection(Projection.builder().projectionType(ProjectionType.ALL).build())
-                   .keySchema(createKeySchemaElements(partitionKey, sortKey))
-                   .build();
-    }
+  private static GlobalSecondaryIndex createGlobalSecondaryIndex(
+      String name, String partitionKey, String sortKey) {
+    return GlobalSecondaryIndex.builder()
+        .indexName(name)
+        .provisionedThroughput(createProvisionedThroughput())
+        .projection(Projection.builder().projectionType(ProjectionType.ALL).build())
+        .keySchema(createKeySchemaElements(partitionKey, sortKey))
+        .build();
+  }
 
-    private static ArrayList<KeySchemaElement> createKeySchemaElements(String partitionKey, String sortKey) {
-        var keySchemas = new ArrayList<KeySchemaElement>();
-        createSchemaElement(KeyType.HASH, partitionKey).ifPresentOrElse(keySchemas::add, IllegalArgumentException::new);
-        createSchemaElement(KeyType.RANGE, sortKey).ifPresent(keySchemas::add);
-        return keySchemas;
-    }
+  private static ArrayList<KeySchemaElement> createKeySchemaElements(
+      String partitionKey, String sortKey) {
+    var keySchemas = new ArrayList<KeySchemaElement>();
+    createSchemaElement(KeyType.HASH, partitionKey)
+        .ifPresentOrElse(keySchemas::add, IllegalArgumentException::new);
+    createSchemaElement(KeyType.RANGE, sortKey).ifPresent(keySchemas::add);
+    return keySchemas;
+  }
 
-    private static ProvisionedThroughput createProvisionedThroughput() {
-        return ProvisionedThroughput.builder().readCapacityUnits(1000L).writeCapacityUnits(1000L).build();
-    }
+  private static ProvisionedThroughput createProvisionedThroughput() {
+    return ProvisionedThroughput.builder()
+        .readCapacityUnits(1000L)
+        .writeCapacityUnits(1000L)
+        .build();
+  }
 
-    private static Optional<KeySchemaElement> createSchemaElement(KeyType keyType, String attributeName) {
-        return isNullSortKey(keyType, attributeName) ? Optional.empty()
-                   : Optional.of(KeySchemaElement.builder().keyType(keyType).attributeName(attributeName).build());
-    }
+  private static Optional<KeySchemaElement> createSchemaElement(
+      KeyType keyType, String attributeName) {
+    return isNullSortKey(keyType, attributeName)
+        ? Optional.empty()
+        : Optional.of(
+            KeySchemaElement.builder().keyType(keyType).attributeName(attributeName).build());
+  }
 
-    private static boolean isNullSortKey(KeyType keyType, String attributeName) {
-        return KeyType.RANGE == keyType && isNull(attributeName);
-    }
+  private static boolean isNullSortKey(KeyType keyType, String attributeName) {
+    return KeyType.RANGE == keyType && isNull(attributeName);
+  }
 
-    private static AttributeDefinition createAttribute(String attributeName) {
-        return AttributeDefinition.builder().attributeName(attributeName).attributeType(ScalarAttributeType.S).build();
-    }
+  private static AttributeDefinition createAttribute(String attributeName) {
+    return AttributeDefinition.builder()
+        .attributeName(attributeName)
+        .attributeType(ScalarAttributeType.S)
+        .build();
+  }
 }

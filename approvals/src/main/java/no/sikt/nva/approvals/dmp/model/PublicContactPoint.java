@@ -5,6 +5,4 @@ public record PublicContactPoint(
     String organizationName,
     String functionalName,
     String functionalEmailAddress,
-    String functionalPhoneNumber
-) {
-}
+    String functionalPhoneNumber) {}

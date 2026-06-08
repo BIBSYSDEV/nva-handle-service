@@ -1,6 +1,12 @@
 package no.sikt.nva.handle;
 
+import static java.util.Objects.isNull;
+import static java.util.Objects.nonNull;
+import static no.sikt.nva.handle.HandleDatabase.ERROR_CREATING_HANDLE_FOR_URI;
+import static no.sikt.nva.handle.utils.DatabaseConnectionSupplier.getConnectionSupplier;
+
 import com.amazonaws.services.lambda.runtime.Context;
+import java.net.HttpURLConnection;
 import java.net.URI;
 import java.sql.Connection;
 import java.sql.SQLException;
@@ -15,86 +21,82 @@ import nva.commons.apigateway.RequestInfo;
 import nva.commons.apigateway.exceptions.ApiGatewayException;
 import nva.commons.core.Environment;
 import nva.commons.core.JacocoGenerated;
-
-import java.net.HttpURLConnection;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import static java.util.Objects.isNull;
-import static java.util.Objects.nonNull;
-import static no.sikt.nva.handle.HandleDatabase.ERROR_CREATING_HANDLE_FOR_URI;
-import static no.sikt.nva.handle.utils.DatabaseConnectionSupplier.getConnectionSupplier;
-
 public class CreateHandleHandler extends ApiGatewayHandler<HandleRequest, HandleResponse> {
 
-    private static final String NULL_URI_ERROR = "uri can not be null";
-    private static final Logger logger = LoggerFactory.getLogger(CreateHandleHandler.class);
-    private final HandleDatabase handleDatabase;
-    private final Supplier<Connection> connectionSupplier;
+  private static final String NULL_URI_ERROR = "uri can not be null";
+  private static final Logger logger = LoggerFactory.getLogger(CreateHandleHandler.class);
+  private final HandleDatabase handleDatabase;
+  private final Supplier<Connection> connectionSupplier;
 
-    @JacocoGenerated
-    public CreateHandleHandler() {
-        this(new Environment(), getConnectionSupplier());
-    }
+  @JacocoGenerated
+  public CreateHandleHandler() {
+    this(new Environment(), getConnectionSupplier());
+  }
 
-    public CreateHandleHandler(Environment environment, Supplier<Connection> connectionSupplier) {
-        super(HandleRequest.class, environment);
-        this.handleDatabase = new HandleDatabase(environment);
-        this.connectionSupplier = connectionSupplier;
-    }
+  public CreateHandleHandler(Environment environment, Supplier<Connection> connectionSupplier) {
+    super(HandleRequest.class, environment);
+    this.handleDatabase = new HandleDatabase(environment);
+    this.connectionSupplier = connectionSupplier;
+  }
 
-    @Override
-    protected void validateRequest(HandleRequest createHandleRequest, RequestInfo requestInfo, Context context)
-        throws ApiGatewayException {
-        validate(createHandleRequest);
-    }
+  @Override
+  protected void validateRequest(
+      HandleRequest createHandleRequest, RequestInfo requestInfo, Context context)
+      throws ApiGatewayException {
+    validate(createHandleRequest);
+  }
 
-    @Override
-    @SuppressWarnings("PMD.AvoidCatchingGenericException")
-    protected HandleResponse processInput(HandleRequest input, RequestInfo requestInfo, Context context)
-            throws ApiGatewayException {
-        try (var connection = connectionSupplier.get()) {
-            return createHandle(input, connection);
-        } catch (HandleAlreadyExistException e) {
-            throw new CreateHandleException(e, HttpURLConnection.HTTP_CONFLICT);
-        } catch (Exception e) {
-            var message = getNestedExceptionMessage(String.format(ERROR_CREATING_HANDLE_FOR_URI, input.uri()), e);
-            logger.error(message, e);
-            throw new CreateHandleException(e, HttpURLConnection.HTTP_BAD_GATEWAY);
-        }
+  @Override
+  @SuppressWarnings("PMD.AvoidCatchingGenericException")
+  protected HandleResponse processInput(
+      HandleRequest input, RequestInfo requestInfo, Context context) throws ApiGatewayException {
+    try (var connection = connectionSupplier.get()) {
+      return createHandle(input, connection);
+    } catch (HandleAlreadyExistException e) {
+      throw new CreateHandleException(e, HttpURLConnection.HTTP_CONFLICT);
+    } catch (Exception e) {
+      var message =
+          getNestedExceptionMessage(String.format(ERROR_CREATING_HANDLE_FOR_URI, input.uri()), e);
+      logger.error(message, e);
+      throw new CreateHandleException(e, HttpURLConnection.HTTP_BAD_GATEWAY);
     }
+  }
 
-    @SuppressWarnings("PMD.AvoidCatchingGenericException")
-    private HandleResponse createHandle(HandleRequest input, Connection connection)
-        throws SQLException {
-        try {
-            logger.info("Creating handle for uri: {}", input.uri());
-            URI handle;
-            if (nonNull(input.prefix()) && nonNull(input.suffix())) {
-                handle = handleDatabase.createHandle(input.prefix(), input.suffix(), input.uri(), connection);
-            } else {
-                handle = handleDatabase.createHandle(input.uri(), connection);
-            }
-            connection.commit();
-            return new HandleResponse(handle);
-        } catch (Exception e) {
-            connection.rollback();
-            throw e;
-        }
+  @SuppressWarnings("PMD.AvoidCatchingGenericException")
+  private HandleResponse createHandle(HandleRequest input, Connection connection)
+      throws SQLException {
+    try {
+      logger.info("Creating handle for uri: {}", input.uri());
+      URI handle;
+      if (nonNull(input.prefix()) && nonNull(input.suffix())) {
+        handle =
+            handleDatabase.createHandle(input.prefix(), input.suffix(), input.uri(), connection);
+      } else {
+        handle = handleDatabase.createHandle(input.uri(), connection);
+      }
+      connection.commit();
+      return new HandleResponse(handle);
+    } catch (Exception e) {
+      connection.rollback();
+      throw e;
     }
+  }
 
-    private static String getNestedExceptionMessage(String message, Exception e) {
-        return isNull(e.getMessage()) ? message : e.getMessage();
-    }
+  private static String getNestedExceptionMessage(String message, Exception e) {
+    return isNull(e.getMessage()) ? message : e.getMessage();
+  }
 
-    @Override
-    protected Integer getSuccessStatusCode(HandleRequest input, HandleResponse output) {
-        return HttpURLConnection.HTTP_CREATED;
-    }
+  @Override
+  protected Integer getSuccessStatusCode(HandleRequest input, HandleResponse output) {
+    return HttpURLConnection.HTTP_CREATED;
+  }
 
-    private void validate(HandleRequest input) throws MalformedRequestException {
-        if (isNull(input) || isNull(input.uri())) {
-            throw new MalformedRequestException(NULL_URI_ERROR);
-        }
+  private void validate(HandleRequest input) throws MalformedRequestException {
+    if (isNull(input) || isNull(input.uri())) {
+      throw new MalformedRequestException(NULL_URI_ERROR);
     }
+  }
 }

@@ -10,6 +10,4 @@ public record Investigator(
     String lastName,
     String department,
     ContactInformation contactInformation,
-    URI nvaPersonId
-) {
-}
+    URI nvaPersonId) {}
