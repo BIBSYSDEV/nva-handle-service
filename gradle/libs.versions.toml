@@ -1,5 +1,5 @@
 [versions]
-postgres = { strictly = '42.7.11' }
+postgres = { strictly = '42.7.13' }
 jte = { strictly = '3.2.4' }
 
 [libraries]
