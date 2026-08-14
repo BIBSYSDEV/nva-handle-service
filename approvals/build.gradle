@@ -50,14 +50,10 @@ jte {
     generate()
 }
 
-tasks.named('classes') {
-    dependsOn 'generateJte'
-}
-
 sourceSets {
     main {
         java {
-            srcDir(layout.buildDirectory.dir('jte-classes'))
+            srcDir(files(layout.buildDirectory.dir('jte-classes')).builtBy(tasks.named('generateJte')))
         }
     }
 }
