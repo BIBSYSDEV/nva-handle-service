@@ -39,8 +39,6 @@ dependencies {
     testImplementation(nvaCatalog.mockito.core)
     testImplementation(nvaCatalog.zalando)
     testImplementation(nvaLibs.testutils)
-    testRuntimeOnly(nvaCatalog.junit.jupiter.engine)
-    testRuntimeOnly(nvaCatalog.junit.platform.launcher)
 }
 
 jte {
