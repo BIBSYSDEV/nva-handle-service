@@ -11,7 +11,6 @@ import static no.sikt.nva.approvals.persistence.DynamoDbConstants.SK1;
 import static no.sikt.nva.approvals.persistence.DynamoDbConstants.SK2;
 import static nva.commons.core.attempt.Try.attempt;
 
-import com.amazonaws.services.dynamodbv2.local.embedded.DynamoDBEmbedded;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Optional;
@@ -28,6 +27,7 @@ import software.amazon.awssdk.services.dynamodb.model.ProjectionType;
 import software.amazon.awssdk.services.dynamodb.model.ProvisionedThroughput;
 import software.amazon.awssdk.services.dynamodb.model.ScalarAttributeType;
 import software.amazon.awssdk.services.dynamodb.model.ScanRequest;
+import software.amazon.dynamodb.services.local.embedded.DynamoDBEmbedded;
 
 public record DynamoDbLocal(DynamoDbClient client) {
 
