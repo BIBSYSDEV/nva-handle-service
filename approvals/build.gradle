@@ -24,23 +24,14 @@ dependencies {
     implementation(nvaCatalog.jackson.databind)
     implementation(nvaCatalog.slf4j.api)
     implementation(nvaLibs.secrets)
-    runtimeOnly(libs.jte)
-    runtimeOnly(nvaCatalog.jackson.core)
-    runtimeOnly(nvaCatalog.jackson.dataformat.xml)
-    runtimeOnly(nvaCatalog.jackson.datatype.jdk8)
-    runtimeOnly(nvaCatalog.jackson.datatype.jsr310)
-    runtimeOnly(nvaCatalog.jackson.datatype.problem)
-    runtimeOnly(nvaCatalog.jackson.module.parameter.names)
     testImplementation(libs.jte)
-    testImplementation(nvaCatalog.aws.dynamodb.local)
+    testImplementation(nvaCatalog.aws.sdk2.dynamodblocal)
     testImplementation(nvaCatalog.hamcrest)
     testImplementation(nvaCatalog.jackson.core)
     testImplementation(nvaCatalog.junit.jupiter.api)
     testImplementation(nvaCatalog.mockito.core)
     testImplementation(nvaCatalog.zalando)
     testImplementation(nvaLibs.testutils)
-    testRuntimeOnly(nvaCatalog.junit.jupiter.engine)
-    testRuntimeOnly(nvaCatalog.junit.platform.launcher)
 }
 
 jte {
@@ -50,14 +41,10 @@ jte {
     generate()
 }
 
-tasks.named('classes') {
-    dependsOn 'generateJte'
-}
-
 sourceSets {
     main {
         java {
-            srcDir(layout.buildDirectory.dir('jte-classes'))
+            srcDir(files(layout.buildDirectory.dir('jte-classes')).builtBy(tasks.named('generateJte')))
         }
     }
 }
