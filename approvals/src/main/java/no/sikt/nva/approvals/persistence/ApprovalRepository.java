@@ -6,6 +6,7 @@ import java.util.Optional;
 import java.util.UUID;
 import no.sikt.nva.approvals.domain.Approval;
 import no.sikt.nva.approvals.domain.Handle;
+import no.sikt.nva.approvals.domain.IdentifierPolicy;
 import no.sikt.nva.approvals.domain.NamedIdentifier;
 
 public interface ApprovalRepository {
@@ -21,4 +22,8 @@ public interface ApprovalRepository {
   Optional<Approval> findByIdentifier(NamedIdentifier namedIdentifier);
 
   List<NamedIdentifierQueryObject> findIdentifiers(Collection<NamedIdentifier> namedIdentifiers);
+
+  Optional<IdentifierPolicy> findIdentifierPolicy(UUID customerId);
+
+  void saveIdentifierPolicy(IdentifierPolicy identifierPolicy);
 }

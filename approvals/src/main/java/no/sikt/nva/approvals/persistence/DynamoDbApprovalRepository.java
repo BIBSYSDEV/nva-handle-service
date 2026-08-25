@@ -28,6 +28,7 @@ import java.util.UUID;
 import java.util.stream.IntStream;
 import no.sikt.nva.approvals.domain.Approval;
 import no.sikt.nva.approvals.domain.Handle;
+import no.sikt.nva.approvals.domain.IdentifierPolicy;
 import no.sikt.nva.approvals.domain.NamedIdentifier;
 import no.sikt.nva.approvals.persistence.DynamoDbApprovalRepository.Operation.DatabaseOperation;
 import no.unit.nva.commons.json.JsonUtils;
@@ -42,6 +43,7 @@ import software.amazon.awssdk.enhanced.dynamodb.TableSchema;
 import software.amazon.awssdk.enhanced.dynamodb.document.DocumentTableSchema;
 import software.amazon.awssdk.enhanced.dynamodb.document.EnhancedDocument;
 import software.amazon.awssdk.enhanced.dynamodb.model.BatchGetItemEnhancedRequest;
+import software.amazon.awssdk.enhanced.dynamodb.model.GetItemEnhancedRequest;
 import software.amazon.awssdk.enhanced.dynamodb.model.Page;
 import software.amazon.awssdk.enhanced.dynamodb.model.ReadBatch;
 import software.amazon.awssdk.enhanced.dynamodb.model.TransactPutItemEnhancedRequest;
@@ -325,5 +327,28 @@ public class DynamoDbApprovalRepository implements ApprovalRepository {
       CREATE,
       DELETE
     }
+  }
+
+  @Override
+  public Optional<IdentifierPolicy> findIdentifierPolicy(UUID customerId) {
+    var request =
+        GetItemEnhancedRequest.builder()
+            .key(IdentifierPolicyDao.primaryKey(customerId))
+            .consistentRead(true)
+            .build();
+    return Optional.ofNullable(table.getItem(request))
+        .map(EnhancedDocument::toJson)
+        .map(this::toIdentifierPolicyDao)
+        .map(IdentifierPolicyDao::toIdentifierPolicy);
+  }
+
+  private IdentifierPolicyDao toIdentifierPolicyDao(String value) {
+    return attempt(() -> JsonUtils.dtoObjectMapper.readValue(value, IdentifierPolicyDao.class))
+        .orElseThrow();
+  }
+
+  @Override
+  public void saveIdentifierPolicy(IdentifierPolicy identifierPolicy) {
+    table.putItem(IdentifierPolicyDao.fromIdentifierPolicy(identifierPolicy).toEnhancedDocument());
   }
 }

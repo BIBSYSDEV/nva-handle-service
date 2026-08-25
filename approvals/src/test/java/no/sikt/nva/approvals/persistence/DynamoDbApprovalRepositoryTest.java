@@ -11,10 +11,12 @@ import static no.sikt.nva.approvals.persistence.DynamoDbLocal.dynamoDBLocal;
 import static no.sikt.nva.approvals.utils.TestUtils.randomApproval;
 import static no.sikt.nva.approvals.utils.TestUtils.randomHandle;
 import static no.sikt.nva.approvals.utils.TestUtils.randomIdentifier;
+import static no.sikt.nva.approvals.utils.TestUtils.randomIdentifierPolicy;
 import static no.sikt.nva.approvals.utils.TestUtils.randomIdentifiers;
 import static no.unit.nva.testutils.RandomDataGenerator.randomString;
 import static no.unit.nva.testutils.RandomDataGenerator.randomUri;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -22,14 +24,17 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import no.sikt.nva.approvals.domain.Approval;
+import no.sikt.nva.approvals.domain.IdentifierPolicy;
 import nva.commons.core.Environment;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 import software.amazon.awssdk.services.dynamodb.model.PutItemRequest;
+import software.amazon.awssdk.services.dynamodb.model.ScanRequest;
 import software.amazon.awssdk.services.dynamodb.model.TransactionCanceledException;
 
 class DynamoDbApprovalRepositoryTest {
@@ -291,5 +296,57 @@ class DynamoDbApprovalRepositoryTest {
     item.put(PK2, AttributeValue.builder().s(pk2Sk2).build());
     item.put(SK2, AttributeValue.builder().s(pk2Sk2).build());
     return item;
+  }
+
+  @Test
+  void shouldPersistAndFindIdentifierPolicy() {
+    var identifierPolicy = randomIdentifierPolicy();
+    approvalRepository.saveIdentifierPolicy(identifierPolicy);
+
+    assertEquals(
+        identifierPolicy,
+        approvalRepository.findIdentifierPolicy(identifierPolicy.customerId()).orElseThrow());
+  }
+
+  @Test
+  void shouldReturnEmptyOptionalWhenIdentifierPolicyNotFound() {
+    assertTrue(approvalRepository.findIdentifierPolicy(randomUUID()).isEmpty());
+  }
+
+  @Test
+  void shouldOverwriteExistingIdentifierPolicy() {
+    var customerId = randomUUID();
+    approvalRepository.saveIdentifierPolicy(new IdentifierPolicy(customerId, Set.of("DMP")));
+    var updatedPolicy = new IdentifierPolicy(customerId, Set.of("DMP", "CTIS"));
+
+    approvalRepository.saveIdentifierPolicy(updatedPolicy);
+
+    assertEquals(updatedPolicy, approvalRepository.findIdentifierPolicy(customerId).orElseThrow());
+  }
+
+  @Test
+  void shouldStoreIdentifierPolicyUnderCustomerPartitionKey() {
+    var identifierPolicy = randomIdentifierPolicy();
+    approvalRepository.saveIdentifierPolicy(identifierPolicy);
+    var item = scanSingleItem();
+
+    assertEquals("Customer:%s".formatted(identifierPolicy.customerId()), item.get(PK0).s());
+    assertEquals("IdentifierPolicy", item.get(SK0).s());
+  }
+
+  @Test
+  void shouldNotIndexIdentifierPolicyInSecondaryIndexes() {
+    approvalRepository.saveIdentifierPolicy(randomIdentifierPolicy());
+    var item = scanSingleItem();
+
+    assertFalse(item.containsKey(PK1));
+    assertFalse(item.containsKey(PK2));
+  }
+
+  private Map<String, AttributeValue> scanSingleItem() {
+    var response = dynamoDbLocal.client().scan(ScanRequest.builder().tableName(TABLE).build());
+
+    assertEquals(1, response.count());
+    return response.items().getFirst();
   }
 }
