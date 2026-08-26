@@ -22,15 +22,15 @@ public class IdentifierPolicyServiceImpl implements IdentifierPolicyService {
   }
 
   @Override
-  public IdentifierPolicy getIdentifierPolicy(UUID customerId) {
+  public IdentifierPolicy getIdentifierPolicy(UUID customerIdentifier) {
     return approvalRepository
-        .findIdentifierPolicy(customerId)
-        .orElseGet(() -> IdentifierPolicy.denyAll(customerId));
+        .findIdentifierPolicy(customerIdentifier)
+        .orElseGet(() -> IdentifierPolicy.denyAll(customerIdentifier));
   }
 
   @Override
   public Set<String> findDisallowedIdentifierNames(
-      UUID customerId, Collection<NamedIdentifier> namedIdentifiers) {
-    return getIdentifierPolicy(customerId).disallowedNames(namedIdentifiers);
+      UUID customerIdentifier, Collection<NamedIdentifier> namedIdentifiers) {
+    return getIdentifierPolicy(customerIdentifier).disallowedNames(namedIdentifiers);
   }
 }

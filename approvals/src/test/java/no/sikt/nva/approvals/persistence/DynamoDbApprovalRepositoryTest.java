@@ -46,6 +46,10 @@ class DynamoDbApprovalRepositoryTest {
   private static final String TABLE = ENVIRONMENT.readEnv(DynamoDbConstants.TABLE);
   private static final String DMP = "DMP";
   private static final String CTIS = "CTIS";
+  private static final String CUSTOMER_PARTITION_KEY = "Customer:%s";
+  private static final String IDENTIFIER_POLICY_TYPE = "IdentifierPolicy";
+  private static final String TYPE_FIELD = "type";
+  private static final String CUSTOMER_IDENTIFIER_FIELD = "customerIdentifier";
   private ApprovalRepository approvalRepository;
   private DynamoDbLocal dynamoDbLocal;
 
@@ -286,7 +290,9 @@ class DynamoDbApprovalRepositoryTest {
 
     assertEquals(
         identifierPolicy,
-        approvalRepository.findIdentifierPolicy(identifierPolicy.customerId()).orElseThrow());
+        approvalRepository
+            .findIdentifierPolicy(identifierPolicy.customerIdentifier())
+            .orElseThrow());
   }
 
   @Test
@@ -296,23 +302,24 @@ class DynamoDbApprovalRepositoryTest {
 
   @Test
   void shouldOverwriteExistingIdentifierPolicy() {
-    var customerId = randomUUID();
-    approvalRepository.saveIdentifierPolicy(new IdentifierPolicy(customerId, Set.of(DMP)));
-    var updatedPolicy = new IdentifierPolicy(customerId, Set.of(DMP, CTIS));
+    var customerIdentifier = randomUUID();
+    approvalRepository.saveIdentifierPolicy(new IdentifierPolicy(customerIdentifier, Set.of(DMP)));
+    var updatedPolicy = new IdentifierPolicy(customerIdentifier, Set.of(DMP, CTIS));
 
     approvalRepository.saveIdentifierPolicy(updatedPolicy);
 
-    assertEquals(updatedPolicy, approvalRepository.findIdentifierPolicy(customerId).orElseThrow());
+    assertEquals(
+        updatedPolicy, approvalRepository.findIdentifierPolicy(customerIdentifier).orElseThrow());
   }
 
   @Test
   void shouldPersistAndFindIdentifierPolicyWithoutAllowedIdentifierNames() {
-    var customerId = randomUUID();
-    approvalRepository.saveIdentifierPolicy(IdentifierPolicy.denyAll(customerId));
+    var customerIdentifier = randomUUID();
+    approvalRepository.saveIdentifierPolicy(IdentifierPolicy.denyAll(customerIdentifier));
 
     assertEquals(
-        IdentifierPolicy.denyAll(customerId),
-        approvalRepository.findIdentifierPolicy(customerId).orElseThrow());
+        IdentifierPolicy.denyAll(customerIdentifier),
+        approvalRepository.findIdentifierPolicy(customerIdentifier).orElseThrow());
   }
 
   @Test
@@ -321,8 +328,19 @@ class DynamoDbApprovalRepositoryTest {
     approvalRepository.saveIdentifierPolicy(identifierPolicy);
     var item = scanSingleItem();
 
-    assertEquals("Customer:%s".formatted(identifierPolicy.customerId()), item.get(PK0).s());
-    assertEquals("IdentifierPolicy", item.get(SK0).s());
+    assertEquals(
+        CUSTOMER_PARTITION_KEY.formatted(identifierPolicy.customerIdentifier()), item.get(PK0).s());
+    assertEquals(IDENTIFIER_POLICY_TYPE, item.get(SK0).s());
+  }
+
+  @Test
+  void shouldTreatSeededIdentifierPolicyWithoutAllowedIdentifierNamesAsDenyAll() {
+    var customerIdentifier = randomUUID();
+    insertIdentifierPolicyWithoutAllowedIdentifierNames(customerIdentifier);
+
+    assertEquals(
+        IdentifierPolicy.denyAll(customerIdentifier),
+        approvalRepository.findIdentifierPolicy(customerIdentifier).orElseThrow());
   }
 
   @Test
@@ -342,6 +360,20 @@ class DynamoDbApprovalRepositoryTest {
 
     assertFalse(item.containsKey(PK1));
     assertFalse(item.containsKey(PK2));
+  }
+
+  private void insertIdentifierPolicyWithoutAllowedIdentifierNames(UUID customerIdentifier) {
+    var item = new HashMap<String, AttributeValue>();
+    item.put(
+        PK0,
+        AttributeValue.builder().s(CUSTOMER_PARTITION_KEY.formatted(customerIdentifier)).build());
+    item.put(SK0, AttributeValue.builder().s(IDENTIFIER_POLICY_TYPE).build());
+    item.put(TYPE_FIELD, AttributeValue.builder().s(IDENTIFIER_POLICY_TYPE).build());
+    item.put(
+        CUSTOMER_IDENTIFIER_FIELD,
+        AttributeValue.builder().s(customerIdentifier.toString()).build());
+
+    dynamoDbLocal.client().putItem(PutItemRequest.builder().tableName(TABLE).item(item).build());
   }
 
   private void insertIdentifierOnly(UUID approvalId, String identifierValue) {

@@ -18,7 +18,7 @@ import software.amazon.awssdk.enhanced.dynamodb.document.EnhancedDocument;
 
 @JsonTypeInfo(use = Id.NAME, property = "type")
 @JsonTypeName("IdentifierPolicy")
-public record IdentifierPolicyDao(UUID customerId, Set<String> allowedIdentifierNames)
+public record IdentifierPolicyDao(UUID customerIdentifier, Set<String> allowedIdentifierNames)
     implements DatabaseEntry {
 
   private static final String CUSTOMER_KEY = "Customer:%s";
@@ -31,7 +31,7 @@ public record IdentifierPolicyDao(UUID customerId, Set<String> allowedIdentifier
 
   public static IdentifierPolicyDao fromIdentifierPolicy(IdentifierPolicy identifierPolicy) {
     return new IdentifierPolicyDao(
-        identifierPolicy.customerId(), identifierPolicy.allowedIdentifierNames());
+        identifierPolicy.customerIdentifier(), identifierPolicy.allowedIdentifierNames());
   }
 
   public static IdentifierPolicyDao fromJson(String json) {
@@ -39,20 +39,20 @@ public record IdentifierPolicyDao(UUID customerId, Set<String> allowedIdentifier
         .orElseThrow();
   }
 
-  public static Key primaryKey(UUID customerId) {
+  public static Key primaryKey(UUID customerIdentifier) {
     return Key.builder()
-        .partitionValue(customerKey(customerId))
+        .partitionValue(customerKey(customerIdentifier))
         .sortValue(IDENTIFIER_POLICY_SORT_KEY)
         .build();
   }
 
   @Override
   public String getDatabaseIdentifier() {
-    return customerKey(customerId);
+    return customerKey(customerIdentifier);
   }
 
   public IdentifierPolicy toIdentifierPolicy() {
-    return new IdentifierPolicy(customerId, allowedIdentifierNames);
+    return new IdentifierPolicy(customerIdentifier, allowedIdentifierNames);
   }
 
   public EnhancedDocument toEnhancedDocument() {
@@ -63,7 +63,7 @@ public record IdentifierPolicyDao(UUID customerId, Set<String> allowedIdentifier
         .build();
   }
 
-  private static String customerKey(UUID customerId) {
-    return CUSTOMER_KEY.formatted(customerId);
+  private static String customerKey(UUID customerIdentifier) {
+    return CUSTOMER_KEY.formatted(customerIdentifier);
   }
 }

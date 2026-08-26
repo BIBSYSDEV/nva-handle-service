@@ -143,8 +143,8 @@ public class DynamoDbApprovalRepository implements ApprovalRepository {
   }
 
   @Override
-  public Optional<IdentifierPolicy> findIdentifierPolicy(UUID customerId) {
-    return Optional.ofNullable(table.getItem(IdentifierPolicyDao.primaryKey(customerId)))
+  public Optional<IdentifierPolicy> findIdentifierPolicy(UUID customerIdentifier) {
+    return Optional.ofNullable(table.getItem(IdentifierPolicyDao.primaryKey(customerIdentifier)))
         .map(EnhancedDocument::toJson)
         .map(IdentifierPolicyDao::fromJson)
         .map(IdentifierPolicyDao::toIdentifierPolicy);

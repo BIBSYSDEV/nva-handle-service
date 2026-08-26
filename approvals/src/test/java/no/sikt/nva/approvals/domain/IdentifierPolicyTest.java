@@ -76,7 +76,24 @@ class IdentifierPolicyTest {
             new NamedIdentifier(CTIS, randomString()),
             new NamedIdentifier(CTIS.toLowerCase(Locale.ROOT), randomString()));
 
-    assertEquals(1, identifierPolicy.disallowedNames(namedIdentifiers).size());
+    assertEquals(Set.of(CTIS), identifierPolicy.disallowedNames(namedIdentifiers));
+  }
+
+  @Test
+  void shouldReportSameDisallowedNameRegardlessOfIdentifierOrder() {
+    var identifierPolicy = new IdentifierPolicy(randomUUID(), Set.of(DMP));
+    var lowerCaseFirst =
+        List.of(
+            new NamedIdentifier(CTIS.toLowerCase(Locale.ROOT), randomString()),
+            new NamedIdentifier(CTIS, randomString()));
+    var upperCaseFirst =
+        List.of(
+            new NamedIdentifier(CTIS, randomString()),
+            new NamedIdentifier(CTIS.toLowerCase(Locale.ROOT), randomString()));
+
+    assertEquals(
+        identifierPolicy.disallowedNames(upperCaseFirst),
+        identifierPolicy.disallowedNames(lowerCaseFirst));
   }
 
   @Test
@@ -107,30 +124,30 @@ class IdentifierPolicyTest {
 
   @Test
   void shouldThrowExceptionWhenAllowedIdentifierNamesIsNull() {
-    var customerId = randomUUID();
+    var customerIdentifier = randomUUID();
 
-    assertThrows(NullPointerException.class, () -> new IdentifierPolicy(customerId, null));
+    assertThrows(NullPointerException.class, () -> new IdentifierPolicy(customerIdentifier, null));
   }
 
   @Test
   void shouldThrowExceptionWhenAllowedIdentifierNameIsBlank() {
-    var customerId = randomUUID();
+    var customerIdentifier = randomUUID();
     var allowedIdentifierNames = Set.of(DMP, BLANK_NAME);
 
     assertThrows(
         IllegalArgumentException.class,
-        () -> new IdentifierPolicy(customerId, allowedIdentifierNames));
+        () -> new IdentifierPolicy(customerIdentifier, allowedIdentifierNames));
   }
 
   @Test
   void shouldThrowExceptionWhenAllowedIdentifierNameIsNull() {
-    var customerId = randomUUID();
+    var customerIdentifier = randomUUID();
     var allowedIdentifierNames = new HashSet<String>();
     allowedIdentifierNames.add(DMP);
     allowedIdentifierNames.add(null);
 
     assertThrows(
         IllegalArgumentException.class,
-        () -> new IdentifierPolicy(customerId, allowedIdentifierNames));
+        () -> new IdentifierPolicy(customerIdentifier, allowedIdentifierNames));
   }
 }

@@ -1,24 +1,22 @@
 package no.sikt.nva.approvals.domain;
 
-import static java.util.Comparator.comparing;
 import static java.util.Objects.requireNonNull;
-import static java.util.stream.Collectors.toCollection;
+import static java.util.stream.Collectors.toMap;
 import static java.util.stream.Collectors.toUnmodifiableSet;
 
 import java.util.Collection;
 import java.util.Locale;
 import java.util.Set;
-import java.util.TreeSet;
 import java.util.UUID;
 import nva.commons.core.StringUtils;
 
-public record IdentifierPolicy(UUID customerId, Set<String> allowedIdentifierNames) {
+public record IdentifierPolicy(UUID customerIdentifier, Set<String> allowedIdentifierNames) {
 
   private static final String BLANK_NAME_MESSAGE =
       "allowedIdentifierNames must not contain blank names";
 
   public IdentifierPolicy {
-    requireNonNull(customerId, "customerId must not be null");
+    requireNonNull(customerIdentifier, "customerIdentifier must not be null");
     requireNonNull(allowedIdentifierNames, "allowedIdentifierNames must not be null");
     allowedIdentifierNames =
         requireNonBlankNames(allowedIdentifierNames).stream()
@@ -26,8 +24,8 @@ public record IdentifierPolicy(UUID customerId, Set<String> allowedIdentifierNam
             .collect(toUnmodifiableSet());
   }
 
-  public static IdentifierPolicy denyAll(UUID customerId) {
-    return new IdentifierPolicy(customerId, Set.of());
+  public static IdentifierPolicy denyAll(UUID customerIdentifier) {
+    return new IdentifierPolicy(customerIdentifier, Set.of());
   }
 
   public boolean permits(NamedIdentifier namedIdentifier) {
@@ -39,11 +37,16 @@ public record IdentifierPolicy(UUID customerId, Set<String> allowedIdentifierNam
         namedIdentifiers.stream()
             .map(NamedIdentifier::name)
             .filter(name -> !permitsName(name))
-            .collect(toCollection(IdentifierPolicy::namesDistinctByNormalizedForm)));
+            .collect(
+                toMap(
+                    IdentifierPolicy::normalize,
+                    name -> name,
+                    IdentifierPolicy::firstInNaturalOrder))
+            .values());
   }
 
-  private static Set<String> namesDistinctByNormalizedForm() {
-    return new TreeSet<>(comparing(IdentifierPolicy::normalize));
+  private static String firstInNaturalOrder(String name, String otherName) {
+    return name.compareTo(otherName) <= 0 ? name : otherName;
   }
 
   private static Collection<String> requireNonBlankNames(Collection<String> names) {

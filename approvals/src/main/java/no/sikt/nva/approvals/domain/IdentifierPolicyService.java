@@ -6,8 +6,8 @@ import java.util.UUID;
 
 public interface IdentifierPolicyService {
 
-  IdentifierPolicy getIdentifierPolicy(UUID customerId);
+  IdentifierPolicy getIdentifierPolicy(UUID customerIdentifier);
 
   Set<String> findDisallowedIdentifierNames(
-      UUID customerId, Collection<NamedIdentifier> namedIdentifiers);
+      UUID customerIdentifier, Collection<NamedIdentifier> namedIdentifiers);
 }

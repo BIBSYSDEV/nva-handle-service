@@ -23,7 +23,7 @@ public interface ApprovalRepository {
 
   List<NamedIdentifierQueryObject> findIdentifiers(Collection<NamedIdentifier> namedIdentifiers);
 
-  Optional<IdentifierPolicy> findIdentifierPolicy(UUID customerId);
+  Optional<IdentifierPolicy> findIdentifierPolicy(UUID customerIdentifier);
 
   void saveIdentifierPolicy(IdentifierPolicy identifierPolicy);
 }
