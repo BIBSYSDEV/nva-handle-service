@@ -8,6 +8,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import org.junit.jupiter.api.Test;
@@ -16,6 +17,7 @@ class IdentifierPolicyTest {
 
   private static final String DMP = "DMP";
   private static final String CTIS = "CTIS";
+  private static final String BLANK_NAME = "  ";
 
   @Test
   void shouldPermitIdentifierWithAllowedName() {
@@ -73,5 +75,27 @@ class IdentifierPolicyTest {
     var customerId = randomUUID();
 
     assertThrows(NullPointerException.class, () -> new IdentifierPolicy(customerId, null));
+  }
+
+  @Test
+  void shouldThrowExceptionWhenAllowedIdentifierNameIsBlank() {
+    var customerId = randomUUID();
+    var allowedIdentifierNames = Set.of(DMP, BLANK_NAME);
+
+    assertThrows(
+        IllegalArgumentException.class,
+        () -> new IdentifierPolicy(customerId, allowedIdentifierNames));
+  }
+
+  @Test
+  void shouldThrowExceptionWhenAllowedIdentifierNameIsNull() {
+    var customerId = randomUUID();
+    var allowedIdentifierNames = new HashSet<String>();
+    allowedIdentifierNames.add(DMP);
+    allowedIdentifierNames.add(null);
+
+    assertThrows(
+        IllegalArgumentException.class,
+        () -> new IdentifierPolicy(customerId, allowedIdentifierNames));
   }
 }
