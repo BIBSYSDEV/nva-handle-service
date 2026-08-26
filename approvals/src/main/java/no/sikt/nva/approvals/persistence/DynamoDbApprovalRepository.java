@@ -145,7 +145,7 @@ public class DynamoDbApprovalRepository implements ApprovalRepository {
   public Optional<IdentifierPolicy> findIdentifierPolicy(UUID customerId) {
     return Optional.ofNullable(table.getItem(IdentifierPolicyDao.primaryKey(customerId)))
         .map(EnhancedDocument::toJson)
-        .map(this::toIdentifierPolicyDao)
+        .map(IdentifierPolicyDao::fromJson)
         .map(IdentifierPolicyDao::toIdentifierPolicy);
   }
 
@@ -299,11 +299,6 @@ public class DynamoDbApprovalRepository implements ApprovalRepository {
 
   private DatabaseEntry toDatabaseEntity(String value) {
     return attempt(() -> JsonUtils.dtoObjectMapper.readValue(value, DatabaseEntry.class))
-        .orElseThrow();
-  }
-
-  private IdentifierPolicyDao toIdentifierPolicyDao(String value) {
-    return attempt(() -> JsonUtils.dtoObjectMapper.readValue(value, IdentifierPolicyDao.class))
         .orElseThrow();
   }
 
