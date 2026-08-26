@@ -12,7 +12,6 @@ import com.fasterxml.jackson.annotation.JsonTypeName;
 import java.util.Set;
 import java.util.UUID;
 import no.sikt.nva.approvals.domain.IdentifierPolicy;
-import no.unit.nva.commons.json.JsonSerializable;
 import no.unit.nva.commons.json.JsonUtils;
 import software.amazon.awssdk.enhanced.dynamodb.Key;
 import software.amazon.awssdk.enhanced.dynamodb.document.EnhancedDocument;
@@ -20,7 +19,7 @@ import software.amazon.awssdk.enhanced.dynamodb.document.EnhancedDocument;
 @JsonTypeInfo(use = Id.NAME, property = "type")
 @JsonTypeName("IdentifierPolicy")
 public record IdentifierPolicyDao(UUID customerId, Set<String> allowedIdentifierNames)
-    implements JsonSerializable {
+    implements DatabaseEntry {
 
   private static final String CUSTOMER_KEY = "Customer:%s";
   private static final String IDENTIFIER_POLICY_SORT_KEY = "IdentifierPolicy";
@@ -42,9 +41,14 @@ public record IdentifierPolicyDao(UUID customerId, Set<String> allowedIdentifier
 
   public static Key primaryKey(UUID customerId) {
     return Key.builder()
-        .partitionValue(CUSTOMER_KEY.formatted(customerId))
+        .partitionValue(customerKey(customerId))
         .sortValue(IDENTIFIER_POLICY_SORT_KEY)
         .build();
+  }
+
+  @Override
+  public String getDatabaseIdentifier() {
+    return customerKey(customerId);
   }
 
   public IdentifierPolicy toIdentifierPolicy() {
@@ -54,8 +58,12 @@ public record IdentifierPolicyDao(UUID customerId, Set<String> allowedIdentifier
   public EnhancedDocument toEnhancedDocument() {
     return EnhancedDocument.builder()
         .json(toJsonString())
-        .put(PK0, CUSTOMER_KEY.formatted(customerId), STRING)
+        .put(PK0, getDatabaseIdentifier(), STRING)
         .put(SK0, IDENTIFIER_POLICY_SORT_KEY, STRING)
         .build();
+  }
+
+  private static String customerKey(UUID customerId) {
+    return CUSTOMER_KEY.formatted(customerId);
   }
 }

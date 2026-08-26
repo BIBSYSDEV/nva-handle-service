@@ -15,8 +15,10 @@ import static no.sikt.nva.approvals.utils.TestUtils.randomIdentifierPolicy;
 import static no.sikt.nva.approvals.utils.TestUtils.randomIdentifiers;
 import static no.unit.nva.testutils.RandomDataGenerator.randomString;
 import static no.unit.nva.testutils.RandomDataGenerator.randomUri;
+import static nva.commons.core.attempt.Try.attempt;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -28,6 +30,7 @@ import java.util.Set;
 import java.util.UUID;
 import no.sikt.nva.approvals.domain.Approval;
 import no.sikt.nva.approvals.domain.IdentifierPolicy;
+import no.unit.nva.commons.json.JsonUtils;
 import nva.commons.core.Environment;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -315,6 +318,16 @@ class DynamoDbApprovalRepositoryTest {
 
     assertEquals("Customer:%s".formatted(identifierPolicy.customerId()), item.get(PK0).s());
     assertEquals("IdentifierPolicy", item.get(SK0).s());
+  }
+
+  @Test
+  void shouldDeserializeIdentifierPolicyAsDatabaseEntry() {
+    var json = IdentifierPolicyDao.fromIdentifierPolicy(randomIdentifierPolicy()).toJsonString();
+
+    var databaseEntry =
+        attempt(() -> JsonUtils.dtoObjectMapper.readValue(json, DatabaseEntry.class)).orElseThrow();
+
+    assertInstanceOf(IdentifierPolicyDao.class, databaseEntry);
   }
 
   @Test

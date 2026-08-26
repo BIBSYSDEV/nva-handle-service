@@ -10,7 +10,8 @@ import no.unit.nva.commons.json.JsonSerializable;
 @JsonSubTypes({
   @JsonSubTypes.Type(IdentifierDao.class),
   @JsonSubTypes.Type(HandleDao.class),
-  @JsonSubTypes.Type(ApprovalDao.class)
+  @JsonSubTypes.Type(ApprovalDao.class),
+  @JsonSubTypes.Type(IdentifierPolicyDao.class)
 })
 @SuppressWarnings("PMD.ImplicitFunctionalInterface")
 public interface DatabaseEntry extends JsonSerializable {
