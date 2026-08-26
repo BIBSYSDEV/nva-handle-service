@@ -1,17 +1,17 @@
 package no.sikt.nva.approvals.domain;
 
+import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.toUnmodifiableSet;
 
 import java.util.Collection;
-import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 
 public record IdentifierPolicy(UUID customerId, Set<String> allowedIdentifierNames) {
 
   public IdentifierPolicy {
-    Objects.requireNonNull(customerId, "customerId must not be null");
-    Objects.requireNonNull(allowedIdentifierNames, "allowedIdentifierNames must not be null");
+    requireNonNull(customerId, "customerId must not be null");
+    requireNonNull(allowedIdentifierNames, "allowedIdentifierNames must not be null");
     allowedIdentifierNames = Set.copyOf(allowedIdentifierNames);
   }
 
