@@ -10,6 +10,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Set;
 import org.junit.jupiter.api.Test;
 
@@ -50,6 +51,25 @@ class IdentifierPolicyTest {
             new NamedIdentifier(CTIS, randomString()), new NamedIdentifier(CTIS, randomString()));
 
     assertEquals(Set.of(CTIS), identifierPolicy.disallowedNames(namedIdentifiers));
+  }
+
+  @Test
+  void shouldReportDisallowedNameOnceWhenSharedByIdentifiersDifferingOnlyByCase() {
+    var identifierPolicy = new IdentifierPolicy(randomUUID(), Set.of(DMP));
+    var namedIdentifiers =
+        List.of(
+            new NamedIdentifier(CTIS, randomString()),
+            new NamedIdentifier(CTIS.toLowerCase(Locale.ROOT), randomString()));
+
+    assertEquals(1, identifierPolicy.disallowedNames(namedIdentifiers).size());
+  }
+
+  @Test
+  void shouldTreatAllowedIdentifierNamesDifferingOnlyByCaseAsOne() {
+    var allowedIdentifierNames = Set.of(DMP, DMP.toLowerCase(Locale.ROOT));
+    var identifierPolicy = new IdentifierPolicy(randomUUID(), allowedIdentifierNames);
+
+    assertEquals(1, identifierPolicy.allowedIdentifierNames().size());
   }
 
   @Test

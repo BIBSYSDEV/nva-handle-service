@@ -1,10 +1,14 @@
 package no.sikt.nva.approvals.domain;
 
+import static java.util.Comparator.comparing;
 import static java.util.Objects.requireNonNull;
+import static java.util.stream.Collectors.toCollection;
 import static java.util.stream.Collectors.toUnmodifiableSet;
 
 import java.util.Collection;
+import java.util.Locale;
 import java.util.Set;
+import java.util.TreeSet;
 import java.util.UUID;
 import nva.commons.core.StringUtils;
 
@@ -16,7 +20,10 @@ public record IdentifierPolicy(UUID customerId, Set<String> allowedIdentifierNam
   public IdentifierPolicy {
     requireNonNull(customerId, "customerId must not be null");
     requireNonNull(allowedIdentifierNames, "allowedIdentifierNames must not be null");
-    allowedIdentifierNames = Set.copyOf(requireNonBlankNames(allowedIdentifierNames));
+    allowedIdentifierNames =
+        requireNonBlankNames(allowedIdentifierNames).stream()
+            .map(IdentifierPolicy::normalize)
+            .collect(toUnmodifiableSet());
   }
 
   public static IdentifierPolicy denyAll(UUID customerId) {
@@ -28,10 +35,15 @@ public record IdentifierPolicy(UUID customerId, Set<String> allowedIdentifierNam
   }
 
   public Set<String> disallowedNames(Collection<NamedIdentifier> namedIdentifiers) {
-    return namedIdentifiers.stream()
-        .map(NamedIdentifier::name)
-        .filter(name -> !permitsName(name))
-        .collect(toUnmodifiableSet());
+    return Set.copyOf(
+        namedIdentifiers.stream()
+            .map(NamedIdentifier::name)
+            .filter(name -> !permitsName(name))
+            .collect(toCollection(IdentifierPolicy::namesDistinctByNormalizedForm)));
+  }
+
+  private static Set<String> namesDistinctByNormalizedForm() {
+    return new TreeSet<>(comparing(IdentifierPolicy::normalize));
   }
 
   private static Collection<String> requireNonBlankNames(Collection<String> names) {
@@ -41,8 +53,11 @@ public record IdentifierPolicy(UUID customerId, Set<String> allowedIdentifierNam
     return names;
   }
 
+  private static String normalize(String name) {
+    return name.toLowerCase(Locale.ROOT);
+  }
+
   private boolean permitsName(String name) {
-    return allowedIdentifierNames.stream()
-        .anyMatch(allowedName -> allowedName.equalsIgnoreCase(name));
+    return allowedIdentifierNames.contains(normalize(name));
   }
 }
