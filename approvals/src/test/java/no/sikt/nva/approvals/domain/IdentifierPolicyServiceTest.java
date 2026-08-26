@@ -1,6 +1,7 @@
 package no.sikt.nva.approvals.domain;
 
 import static java.util.UUID.randomUUID;
+import static java.util.stream.Collectors.toUnmodifiableSet;
 import static no.sikt.nva.approvals.utils.TestUtils.randomIdentifiers;
 import static no.unit.nva.testutils.RandomDataGenerator.randomString;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -17,6 +18,7 @@ import org.junit.jupiter.api.Test;
 
 class IdentifierPolicyServiceTest {
 
+  private static final String DMP = "DMP";
   private ApprovalRepository approvalRepository;
   private IdentifierPolicyService identifierPolicyService;
 
@@ -37,26 +39,28 @@ class IdentifierPolicyServiceTest {
   }
 
   @Test
-  void shouldDisallowAllIdentifiersWhenCustomerHasNoPolicy() {
+  void shouldDisallowAllIdentifierNamesWhenCustomerHasNoPolicy() {
     var customerId = randomUUID();
     var namedIdentifiers = randomIdentifiers(2);
+    var expectedNames =
+        namedIdentifiers.stream().map(NamedIdentifier::name).collect(toUnmodifiableSet());
     when(approvalRepository.findIdentifierPolicy(customerId)).thenReturn(Optional.empty());
 
     assertEquals(
-        namedIdentifiers,
-        identifierPolicyService.findDisallowedIdentifiers(customerId, namedIdentifiers));
+        expectedNames,
+        identifierPolicyService.findDisallowedIdentifierNames(customerId, namedIdentifiers));
   }
 
   @Test
-  void shouldReturnNoDisallowedIdentifiersWhenAllNamesAreAllowed() {
+  void shouldReturnNoDisallowedIdentifierNamesWhenAllNamesAreAllowed() {
     var customerId = randomUUID();
-    var namedIdentifier = new NamedIdentifier("DMP", randomString());
+    var namedIdentifier = new NamedIdentifier(DMP, randomString());
     when(approvalRepository.findIdentifierPolicy(customerId))
-        .thenReturn(Optional.of(new IdentifierPolicy(customerId, Set.of("DMP"))));
+        .thenReturn(Optional.of(new IdentifierPolicy(customerId, Set.of(DMP))));
 
     assertTrue(
         identifierPolicyService
-            .findDisallowedIdentifiers(customerId, List.of(namedIdentifier))
+            .findDisallowedIdentifierNames(customerId, List.of(namedIdentifier))
             .isEmpty());
   }
 }

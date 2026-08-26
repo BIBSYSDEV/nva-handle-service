@@ -41,6 +41,8 @@ class DynamoDbApprovalRepositoryTest {
 
   private static final Environment ENVIRONMENT = new Environment();
   private static final String TABLE = ENVIRONMENT.readEnv(DynamoDbConstants.TABLE);
+  private static final String DMP = "DMP";
+  private static final String CTIS = "CTIS";
   private ApprovalRepository approvalRepository;
   private DynamoDbLocal dynamoDbLocal;
 
@@ -269,6 +271,51 @@ class DynamoDbApprovalRepositoryTest {
         () -> approvalRepository.updateApprovalIdentifiers(updatedSecondApproval));
   }
 
+  @Test
+  void shouldPersistAndFindIdentifierPolicy() {
+    var identifierPolicy = randomIdentifierPolicy();
+    approvalRepository.saveIdentifierPolicy(identifierPolicy);
+
+    assertEquals(
+        identifierPolicy,
+        approvalRepository.findIdentifierPolicy(identifierPolicy.customerId()).orElseThrow());
+  }
+
+  @Test
+  void shouldReturnEmptyOptionalWhenIdentifierPolicyNotFound() {
+    assertTrue(approvalRepository.findIdentifierPolicy(randomUUID()).isEmpty());
+  }
+
+  @Test
+  void shouldOverwriteExistingIdentifierPolicy() {
+    var customerId = randomUUID();
+    approvalRepository.saveIdentifierPolicy(new IdentifierPolicy(customerId, Set.of(DMP)));
+    var updatedPolicy = new IdentifierPolicy(customerId, Set.of(DMP, CTIS));
+
+    approvalRepository.saveIdentifierPolicy(updatedPolicy);
+
+    assertEquals(updatedPolicy, approvalRepository.findIdentifierPolicy(customerId).orElseThrow());
+  }
+
+  @Test
+  void shouldStoreIdentifierPolicyUnderCustomerPartitionKey() {
+    var identifierPolicy = randomIdentifierPolicy();
+    approvalRepository.saveIdentifierPolicy(identifierPolicy);
+    var item = scanSingleItem();
+
+    assertEquals("Customer:%s".formatted(identifierPolicy.customerId()), item.get(PK0).s());
+    assertEquals("IdentifierPolicy", item.get(SK0).s());
+  }
+
+  @Test
+  void shouldNotIndexIdentifierPolicyInSecondaryIndexes() {
+    approvalRepository.saveIdentifierPolicy(randomIdentifierPolicy());
+    var item = scanSingleItem();
+
+    assertFalse(item.containsKey(PK1));
+    assertFalse(item.containsKey(PK2));
+  }
+
   private void insertIdentifierOnly(UUID approvalId, String identifierValue) {
     var item = createBaseItem(identifierValue, identifierValue, approvalId, identifierValue);
     item.put("type", AttributeValue.builder().s("Identifier").build());
@@ -296,51 +343,6 @@ class DynamoDbApprovalRepositoryTest {
     item.put(PK2, AttributeValue.builder().s(pk2Sk2).build());
     item.put(SK2, AttributeValue.builder().s(pk2Sk2).build());
     return item;
-  }
-
-  @Test
-  void shouldPersistAndFindIdentifierPolicy() {
-    var identifierPolicy = randomIdentifierPolicy();
-    approvalRepository.saveIdentifierPolicy(identifierPolicy);
-
-    assertEquals(
-        identifierPolicy,
-        approvalRepository.findIdentifierPolicy(identifierPolicy.customerId()).orElseThrow());
-  }
-
-  @Test
-  void shouldReturnEmptyOptionalWhenIdentifierPolicyNotFound() {
-    assertTrue(approvalRepository.findIdentifierPolicy(randomUUID()).isEmpty());
-  }
-
-  @Test
-  void shouldOverwriteExistingIdentifierPolicy() {
-    var customerId = randomUUID();
-    approvalRepository.saveIdentifierPolicy(new IdentifierPolicy(customerId, Set.of("DMP")));
-    var updatedPolicy = new IdentifierPolicy(customerId, Set.of("DMP", "CTIS"));
-
-    approvalRepository.saveIdentifierPolicy(updatedPolicy);
-
-    assertEquals(updatedPolicy, approvalRepository.findIdentifierPolicy(customerId).orElseThrow());
-  }
-
-  @Test
-  void shouldStoreIdentifierPolicyUnderCustomerPartitionKey() {
-    var identifierPolicy = randomIdentifierPolicy();
-    approvalRepository.saveIdentifierPolicy(identifierPolicy);
-    var item = scanSingleItem();
-
-    assertEquals("Customer:%s".formatted(identifierPolicy.customerId()), item.get(PK0).s());
-    assertEquals("IdentifierPolicy", item.get(SK0).s());
-  }
-
-  @Test
-  void shouldNotIndexIdentifierPolicyInSecondaryIndexes() {
-    approvalRepository.saveIdentifierPolicy(randomIdentifierPolicy());
-    var item = scanSingleItem();
-
-    assertFalse(item.containsKey(PK1));
-    assertFalse(item.containsKey(PK2));
   }
 
   private Map<String, AttributeValue> scanSingleItem() {

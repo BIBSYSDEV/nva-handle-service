@@ -1,6 +1,7 @@
 package no.sikt.nva.approvals.domain;
 
 import static java.util.UUID.randomUUID;
+import static java.util.stream.Collectors.toUnmodifiableSet;
 import static no.sikt.nva.approvals.utils.TestUtils.randomIdentifiers;
 import static no.unit.nva.testutils.RandomDataGenerator.randomString;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -31,20 +32,32 @@ class IdentifierPolicyTest {
   }
 
   @Test
-  void shouldReturnOnlyDisallowedIdentifiers() {
+  void shouldReturnOnlyDisallowedNames() {
     var identifierPolicy = new IdentifierPolicy(randomUUID(), Set.of(DMP));
     var allowed = new NamedIdentifier(DMP, randomString());
     var disallowed = new NamedIdentifier(CTIS, randomString());
 
-    assertEquals(List.of(disallowed), identifierPolicy.rejects(List.of(allowed, disallowed)));
+    assertEquals(Set.of(CTIS), identifierPolicy.disallowedNames(List.of(allowed, disallowed)));
+  }
+
+  @Test
+  void shouldReportDisallowedNameOnceWhenSharedBySeveralIdentifiers() {
+    var identifierPolicy = new IdentifierPolicy(randomUUID(), Set.of(DMP));
+    var namedIdentifiers =
+        List.of(
+            new NamedIdentifier(CTIS, randomString()), new NamedIdentifier(CTIS, randomString()));
+
+    assertEquals(Set.of(CTIS), identifierPolicy.disallowedNames(namedIdentifiers));
   }
 
   @Test
   void shouldRejectEverythingWhenPolicyDeniesAll() {
     var namedIdentifiers = randomIdentifiers(3);
     var identifierPolicy = IdentifierPolicy.denyAll(randomUUID());
+    var expectedNames =
+        namedIdentifiers.stream().map(NamedIdentifier::name).collect(toUnmodifiableSet());
 
-    assertEquals(namedIdentifiers, identifierPolicy.rejects(namedIdentifiers));
+    assertEquals(expectedNames, identifierPolicy.disallowedNames(namedIdentifiers));
   }
 
   @Test

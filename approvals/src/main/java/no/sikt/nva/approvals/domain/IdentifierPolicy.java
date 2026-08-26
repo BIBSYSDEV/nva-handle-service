@@ -1,7 +1,8 @@
 package no.sikt.nva.approvals.domain;
 
+import static java.util.stream.Collectors.toUnmodifiableSet;
+
 import java.util.Collection;
-import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
@@ -19,11 +20,18 @@ public record IdentifierPolicy(UUID customerId, Set<String> allowedIdentifierNam
   }
 
   public boolean permits(NamedIdentifier namedIdentifier) {
-    return allowedIdentifierNames.stream()
-        .anyMatch(allowedName -> allowedName.equalsIgnoreCase(namedIdentifier.name()));
+    return permitsName(namedIdentifier.name());
   }
 
-  public List<NamedIdentifier> rejects(Collection<NamedIdentifier> namedIdentifiers) {
-    return namedIdentifiers.stream().filter(identifier -> !permits(identifier)).toList();
+  public Set<String> disallowedNames(Collection<NamedIdentifier> namedIdentifiers) {
+    return namedIdentifiers.stream()
+        .map(NamedIdentifier::name)
+        .filter(name -> !permitsName(name))
+        .collect(toUnmodifiableSet());
+  }
+
+  private boolean permitsName(String name) {
+    return allowedIdentifierNames.stream()
+        .anyMatch(allowedName -> allowedName.equalsIgnoreCase(name));
   }
 }

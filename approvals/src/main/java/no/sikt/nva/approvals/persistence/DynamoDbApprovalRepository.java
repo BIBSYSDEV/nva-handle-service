@@ -142,6 +142,24 @@ public class DynamoDbApprovalRepository implements ApprovalRepository {
         .toList();
   }
 
+  @Override
+  public Optional<IdentifierPolicy> findIdentifierPolicy(UUID customerId) {
+    var request =
+        GetItemEnhancedRequest.builder()
+            .key(IdentifierPolicyDao.primaryKey(customerId))
+            .consistentRead(true)
+            .build();
+    return Optional.ofNullable(table.getItem(request))
+        .map(EnhancedDocument::toJson)
+        .map(this::toIdentifierPolicyDao)
+        .map(IdentifierPolicyDao::toIdentifierPolicy);
+  }
+
+  @Override
+  public void saveIdentifierPolicy(IdentifierPolicy identifierPolicy) {
+    table.putItem(IdentifierPolicyDao.fromIdentifierPolicy(identifierPolicy).toEnhancedDocument());
+  }
+
   private static <T> List<List<T>> splitToChunks(List<T> list) {
     return IntStream.range(0, (list.size() + BATCH_GET_ITEM_LIMIT - 1) / BATCH_GET_ITEM_LIMIT)
         .mapToObj(
@@ -290,6 +308,11 @@ public class DynamoDbApprovalRepository implements ApprovalRepository {
         .orElseThrow();
   }
 
+  private IdentifierPolicyDao toIdentifierPolicyDao(String value) {
+    return attempt(() -> JsonUtils.dtoObjectMapper.readValue(value, IdentifierPolicyDao.class))
+        .orElseThrow();
+  }
+
   private List<EnhancedDocument> createDocuments(Approval approval) {
     var documents = new ArrayList<EnhancedDocument>();
     documents.add(createHandleEntity(approval));
@@ -327,28 +350,5 @@ public class DynamoDbApprovalRepository implements ApprovalRepository {
       CREATE,
       DELETE
     }
-  }
-
-  @Override
-  public Optional<IdentifierPolicy> findIdentifierPolicy(UUID customerId) {
-    var request =
-        GetItemEnhancedRequest.builder()
-            .key(IdentifierPolicyDao.primaryKey(customerId))
-            .consistentRead(true)
-            .build();
-    return Optional.ofNullable(table.getItem(request))
-        .map(EnhancedDocument::toJson)
-        .map(this::toIdentifierPolicyDao)
-        .map(IdentifierPolicyDao::toIdentifierPolicy);
-  }
-
-  private IdentifierPolicyDao toIdentifierPolicyDao(String value) {
-    return attempt(() -> JsonUtils.dtoObjectMapper.readValue(value, IdentifierPolicyDao.class))
-        .orElseThrow();
-  }
-
-  @Override
-  public void saveIdentifierPolicy(IdentifierPolicy identifierPolicy) {
-    table.putItem(IdentifierPolicyDao.fromIdentifierPolicy(identifierPolicy).toEnhancedDocument());
   }
 }

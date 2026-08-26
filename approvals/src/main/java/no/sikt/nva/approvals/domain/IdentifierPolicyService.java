@@ -1,13 +1,13 @@
 package no.sikt.nva.approvals.domain;
 
 import java.util.Collection;
-import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 public interface IdentifierPolicyService {
 
   IdentifierPolicy getIdentifierPolicy(UUID customerId);
 
-  List<NamedIdentifier> findDisallowedIdentifiers(
+  Set<String> findDisallowedIdentifierNames(
       UUID customerId, Collection<NamedIdentifier> namedIdentifiers);
 }

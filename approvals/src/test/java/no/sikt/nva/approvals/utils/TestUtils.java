@@ -79,6 +79,6 @@ public class TestUtils {
   }
 
   public static IdentifierPolicy randomIdentifierPolicy() {
-    return new IdentifierPolicy(randomUUID(), Set.of(randomString(), randomString()));
+    return new IdentifierPolicy(randomUUID(), Set.of(randomString()));
   }
 }
