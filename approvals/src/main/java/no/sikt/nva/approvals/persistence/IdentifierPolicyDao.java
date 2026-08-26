@@ -1,5 +1,6 @@
 package no.sikt.nva.approvals.persistence;
 
+import static java.util.Objects.isNull;
 import static no.sikt.nva.approvals.persistence.DynamoDbConstants.PK0;
 import static no.sikt.nva.approvals.persistence.DynamoDbConstants.SK0;
 import static no.sikt.nva.approvals.persistence.DynamoDbConstants.STRING;
@@ -23,6 +24,11 @@ public record IdentifierPolicyDao(UUID customerId, Set<String> allowedIdentifier
 
   private static final String CUSTOMER_KEY = "Customer:%s";
   private static final String IDENTIFIER_POLICY_SORT_KEY = "IdentifierPolicy";
+
+  // An empty set is omitted by the NON_EMPTY inclusion of the serializing object mapper
+  public IdentifierPolicyDao {
+    allowedIdentifierNames = isNull(allowedIdentifierNames) ? Set.of() : allowedIdentifierNames;
+  }
 
   public static IdentifierPolicyDao fromIdentifierPolicy(IdentifierPolicy identifierPolicy) {
     return new IdentifierPolicyDao(

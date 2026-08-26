@@ -298,6 +298,16 @@ class DynamoDbApprovalRepositoryTest {
   }
 
   @Test
+  void shouldPersistAndFindIdentifierPolicyWithoutAllowedIdentifierNames() {
+    var customerId = randomUUID();
+    approvalRepository.saveIdentifierPolicy(IdentifierPolicy.denyAll(customerId));
+
+    assertEquals(
+        IdentifierPolicy.denyAll(customerId),
+        approvalRepository.findIdentifierPolicy(customerId).orElseThrow());
+  }
+
+  @Test
   void shouldStoreIdentifierPolicyUnderCustomerPartitionKey() {
     var identifierPolicy = randomIdentifierPolicy();
     approvalRepository.saveIdentifierPolicy(identifierPolicy);
