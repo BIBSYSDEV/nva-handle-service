@@ -147,6 +147,11 @@ class DynamoDbApprovalRepositoryTest {
   }
 
   @Test
+  void shouldReturnEmptyOptionalWhenIdentifierNotFound() {
+    assertTrue(approvalRepository.findByIdentifier(randomIdentifier()).isEmpty());
+  }
+
+  @Test
   void shouldFindIdentifiers() {
     var identifiers = randomIdentifiers();
     var approval = randomApproval(identifiers, randomUUID());

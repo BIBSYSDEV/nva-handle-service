@@ -54,7 +54,7 @@ public record IdentifierPolicy(UUID customerId, Set<String> allowedIdentifierNam
   }
 
   private static String normalize(String name) {
-    return name.toLowerCase(Locale.ROOT);
+    return name.trim().toLowerCase(Locale.ROOT);
   }
 
   private boolean permitsName(String name) {

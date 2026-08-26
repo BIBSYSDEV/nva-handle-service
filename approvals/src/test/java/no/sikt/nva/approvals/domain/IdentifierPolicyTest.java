@@ -19,6 +19,7 @@ class IdentifierPolicyTest {
   private static final String DMP = "DMP";
   private static final String CTIS = "CTIS";
   private static final String BLANK_NAME = "  ";
+  private static final String PADDED_DMP = "  DMP  ";
 
   @Test
   void shouldPermitIdentifierWithAllowedName() {
@@ -32,6 +33,20 @@ class IdentifierPolicyTest {
     var identifierPolicy = new IdentifierPolicy(randomUUID(), Set.of(DMP));
 
     assertTrue(identifierPolicy.permits(new NamedIdentifier("dmp", randomString())));
+  }
+
+  @Test
+  void shouldPermitIdentifierWhenAllowedNameIsPaddedWithWhitespace() {
+    var identifierPolicy = new IdentifierPolicy(randomUUID(), Set.of(PADDED_DMP));
+
+    assertTrue(identifierPolicy.permits(new NamedIdentifier(DMP, randomString())));
+  }
+
+  @Test
+  void shouldPermitIdentifierWhenRequestedNameIsPaddedWithWhitespace() {
+    var identifierPolicy = new IdentifierPolicy(randomUUID(), Set.of(DMP));
+
+    assertTrue(identifierPolicy.permits(new NamedIdentifier(PADDED_DMP, randomString())));
   }
 
   @Test
