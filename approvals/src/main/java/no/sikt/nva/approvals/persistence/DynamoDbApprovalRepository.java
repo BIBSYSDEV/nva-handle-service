@@ -43,7 +43,6 @@ import software.amazon.awssdk.enhanced.dynamodb.TableSchema;
 import software.amazon.awssdk.enhanced.dynamodb.document.DocumentTableSchema;
 import software.amazon.awssdk.enhanced.dynamodb.document.EnhancedDocument;
 import software.amazon.awssdk.enhanced.dynamodb.model.BatchGetItemEnhancedRequest;
-import software.amazon.awssdk.enhanced.dynamodb.model.GetItemEnhancedRequest;
 import software.amazon.awssdk.enhanced.dynamodb.model.Page;
 import software.amazon.awssdk.enhanced.dynamodb.model.ReadBatch;
 import software.amazon.awssdk.enhanced.dynamodb.model.TransactPutItemEnhancedRequest;
@@ -144,12 +143,7 @@ public class DynamoDbApprovalRepository implements ApprovalRepository {
 
   @Override
   public Optional<IdentifierPolicy> findIdentifierPolicy(UUID customerId) {
-    var request =
-        GetItemEnhancedRequest.builder()
-            .key(IdentifierPolicyDao.primaryKey(customerId))
-            .consistentRead(true)
-            .build();
-    return Optional.ofNullable(table.getItem(request))
+    return Optional.ofNullable(table.getItem(IdentifierPolicyDao.primaryKey(customerId)))
         .map(EnhancedDocument::toJson)
         .map(this::toIdentifierPolicyDao)
         .map(IdentifierPolicyDao::toIdentifierPolicy);
