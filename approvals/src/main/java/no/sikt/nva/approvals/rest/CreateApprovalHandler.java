@@ -19,27 +19,36 @@ import nva.commons.core.JacocoGenerated;
 public class CreateApprovalHandler extends ApiGatewayHandler<CreateApprovalRequest, Void> {
 
   private final ApprovalService approvalService;
+  private final IdentifierAuthorizer identifierAuthorizer;
 
   @JacocoGenerated
   public CreateApprovalHandler() {
-    this(ApprovalServiceImpl.defaultInstance(new Environment()), new Environment());
+    this(new Environment());
   }
 
-  public CreateApprovalHandler(ApprovalService approvalService, Environment environment) {
+  public CreateApprovalHandler(
+      ApprovalService approvalService,
+      IdentifierAuthorizer identifierAuthorizer,
+      Environment environment) {
     super(CreateApprovalRequest.class, environment);
     this.approvalService = approvalService;
+    this.identifierAuthorizer = identifierAuthorizer;
+  }
+
+  @JacocoGenerated
+  private CreateApprovalHandler(Environment environment) {
+    this(
+        ApprovalServiceImpl.defaultInstance(environment),
+        IdentifierAuthorizer.defaultInstance(environment),
+        environment);
   }
 
   @Override
-  @SuppressWarnings("PMD.AvoidCatchingGenericException")
   protected void validateRequest(
       CreateApprovalRequest input, RequestInfo requestInfo, Context context)
       throws ApiGatewayException {
-    try {
-      input.validate();
-    } catch (Exception exception) {
-      throw new BadRequestException(exception.getMessage());
-    }
+    validateInput(input);
+    identifierAuthorizer.authorizeIdentifiers(requestInfo, input.identifiers());
   }
 
   @Override
@@ -64,5 +73,14 @@ public class CreateApprovalHandler extends ApiGatewayHandler<CreateApprovalReque
   private void addHeaders(Approval approval) {
     addAdditionalHeaders(
         () -> createAdditionalApprovalHeaders(approval.identifier(), getApiHost(environment)));
+  }
+
+  @SuppressWarnings("PMD.AvoidCatchingGenericException")
+  private static void validateInput(CreateApprovalRequest input) throws BadRequestException {
+    try {
+      input.validate();
+    } catch (Exception exception) {
+      throw new BadRequestException(exception.getMessage());
+    }
   }
 }
