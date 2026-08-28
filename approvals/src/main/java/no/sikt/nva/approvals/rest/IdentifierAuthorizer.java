@@ -6,6 +6,7 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.util.Collection;
 import java.util.UUID;
+import no.sikt.nva.approvals.domain.IdentifierPolicy;
 import no.sikt.nva.approvals.domain.IdentifierPolicyService;
 import no.sikt.nva.approvals.domain.IdentifierPolicyServiceImpl;
 import no.sikt.nva.approvals.domain.NamedIdentifier;
@@ -43,12 +44,8 @@ public class IdentifierAuthorizer {
   public void authorizeIdentifiers(
       RequestInfo requestInfo, Collection<NamedIdentifier> namedIdentifiers)
       throws ApiGatewayException {
-    if (requestInfo.clientIsInternalBackend()) {
-      return;
-    }
     var disallowedIdentifierNames =
-        identifierPolicyService.findDisallowedIdentifierNames(
-            resolveCustomerIdentifier(requestInfo), namedIdentifiers);
+        resolveIdentifierPolicy(requestInfo).disallowedNames(namedIdentifiers);
     if (!disallowedIdentifierNames.isEmpty()) {
       throw new DisallowedIdentifierNamesException(disallowedIdentifierNames);
     }
@@ -56,6 +53,13 @@ public class IdentifierAuthorizer {
 
   private static UUID toCustomerIdentifier(URI customerUri) {
     return UUID.fromString(UriWrapper.fromUri(customerUri).getLastPathElement());
+  }
+
+  private IdentifierPolicy resolveIdentifierPolicy(RequestInfo requestInfo)
+      throws UnauthorizedException {
+    return requestInfo.clientIsInternalBackend()
+        ? IdentifierPolicy.ALLOW_ALL
+        : identifierPolicyService.getIdentifierPolicy(resolveCustomerIdentifier(requestInfo));
   }
 
   private UUID resolveCustomerIdentifier(RequestInfo requestInfo) throws UnauthorizedException {

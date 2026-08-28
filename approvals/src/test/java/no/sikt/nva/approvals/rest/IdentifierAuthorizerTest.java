@@ -14,10 +14,13 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import java.net.URI;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import no.sikt.nva.approvals.domain.IdentifierPolicy;
 import no.sikt.nva.approvals.domain.IdentifierPolicyService;
+import no.sikt.nva.approvals.domain.NamedIdentifier;
 import no.unit.nva.clients.GetExternalClientResponse;
 import no.unit.nva.clients.IdentityServiceClient;
 import no.unit.nva.commons.json.JsonUtils;
@@ -53,24 +56,26 @@ class IdentifierAuthorizerTest {
   @Test
   void shouldAllowIdentifiersWhenAllNamesAreAllowedForCustomer() throws Exception {
     var requestInfo = requestInfoWithScope(THIRD_PARTY_SCOPE);
+    var namedIdentifier = new NamedIdentifier(REK, randomString());
     mockExternalClientWithCustomer(randomUUID());
-    when(identifierPolicyService.findDisallowedIdentifierNames(any(), any())).thenReturn(Set.of());
+    when(identifierPolicyService.getIdentifierPolicy(any()))
+        .thenReturn(new IdentifierPolicy(Set.of(REK)));
 
     assertDoesNotThrow(
-        () -> identifierAuthorizer.authorizeIdentifiers(requestInfo, randomIdentifiers()));
+        () -> identifierAuthorizer.authorizeIdentifiers(requestInfo, List.of(namedIdentifier)));
   }
 
   @Test
   void shouldRejectIdentifiersWhenNameIsNotAllowedForCustomer() throws Exception {
     var requestInfo = requestInfoWithScope(THIRD_PARTY_SCOPE);
+    var namedIdentifier = new NamedIdentifier(REK, randomString());
     mockExternalClientWithCustomer(randomUUID());
-    when(identifierPolicyService.findDisallowedIdentifierNames(any(), any()))
-        .thenReturn(Set.of(REK));
+    when(identifierPolicyService.getIdentifierPolicy(any())).thenReturn(IdentifierPolicy.DENY_ALL);
 
     var exception =
         assertThrows(
             DisallowedIdentifierNamesException.class,
-            () -> identifierAuthorizer.authorizeIdentifiers(requestInfo, randomIdentifiers()));
+            () -> identifierAuthorizer.authorizeIdentifiers(requestInfo, List.of(namedIdentifier)));
 
     assertEquals(HTTP_FORBIDDEN, exception.getStatusCode());
     assertTrue(exception.getMessage().contains(REK));
@@ -80,16 +85,15 @@ class IdentifierAuthorizerTest {
   void shouldLookUpPolicyForCustomerOfTheAuthenticatedClient() throws Exception {
     var requestInfo = requestInfoWithScope(THIRD_PARTY_SCOPE);
     var customerIdentifier = randomUUID();
-    var namedIdentifiers = randomIdentifiers();
+    var namedIdentifier = new NamedIdentifier(REK, randomString());
     mockExternalClientWithCustomer(customerIdentifier);
-    when(identifierPolicyService.findDisallowedIdentifierNames(
-            customerIdentifier, namedIdentifiers))
-        .thenReturn(Set.of(REK));
+    when(identifierPolicyService.getIdentifierPolicy(customerIdentifier))
+        .thenReturn(IdentifierPolicy.DENY_ALL);
 
     var exception =
         assertThrows(
             DisallowedIdentifierNamesException.class,
-            () -> identifierAuthorizer.authorizeIdentifiers(requestInfo, namedIdentifiers));
+            () -> identifierAuthorizer.authorizeIdentifiers(requestInfo, List.of(namedIdentifier)));
 
     assertTrue(exception.getMessage().contains(REK));
   }
