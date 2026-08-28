@@ -11,10 +11,14 @@ import static no.sikt.nva.approvals.persistence.DynamoDbLocal.dynamoDBLocal;
 import static no.sikt.nva.approvals.utils.TestUtils.randomApproval;
 import static no.sikt.nva.approvals.utils.TestUtils.randomHandle;
 import static no.sikt.nva.approvals.utils.TestUtils.randomIdentifier;
+import static no.sikt.nva.approvals.utils.TestUtils.randomIdentifierPolicy;
 import static no.sikt.nva.approvals.utils.TestUtils.randomIdentifiers;
 import static no.unit.nva.testutils.RandomDataGenerator.randomString;
 import static no.unit.nva.testutils.RandomDataGenerator.randomUri;
+import static nva.commons.core.attempt.Try.attempt;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -22,20 +26,30 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import no.sikt.nva.approvals.domain.Approval;
+import no.sikt.nva.approvals.domain.IdentifierPolicy;
+import no.unit.nva.commons.json.JsonUtils;
 import nva.commons.core.Environment;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 import software.amazon.awssdk.services.dynamodb.model.PutItemRequest;
+import software.amazon.awssdk.services.dynamodb.model.ScanRequest;
 import software.amazon.awssdk.services.dynamodb.model.TransactionCanceledException;
 
 class DynamoDbApprovalRepositoryTest {
 
   private static final Environment ENVIRONMENT = new Environment();
   private static final String TABLE = ENVIRONMENT.readEnv(DynamoDbConstants.TABLE);
+  private static final String DMP = "DMP";
+  private static final String CTIS = "CTIS";
+  private static final String CUSTOMER_PARTITION_KEY = "Customer:%s";
+  private static final String IDENTIFIER_POLICY_TYPE = "IdentifierPolicy";
+  private static final String TYPE_FIELD = "type";
+  private static final String CUSTOMER_IDENTIFIER_FIELD = "customerIdentifier";
   private ApprovalRepository approvalRepository;
   private DynamoDbLocal dynamoDbLocal;
 
@@ -134,6 +148,11 @@ class DynamoDbApprovalRepositoryTest {
     var persistedApproval = approvalRepository.findByIdentifier(identifier);
 
     assertEquals(approval, persistedApproval.orElseThrow());
+  }
+
+  @Test
+  void shouldReturnEmptyOptionalWhenIdentifierNotFound() {
+    assertTrue(approvalRepository.findByIdentifier(randomIdentifier()).isEmpty());
   }
 
   @Test
@@ -264,6 +283,99 @@ class DynamoDbApprovalRepositoryTest {
         () -> approvalRepository.updateApprovalIdentifiers(updatedSecondApproval));
   }
 
+  @Test
+  void shouldPersistAndFindIdentifierPolicy() {
+    var customerIdentifier = randomUUID();
+    var identifierPolicy = randomIdentifierPolicy();
+    approvalRepository.saveIdentifierPolicy(customerIdentifier, identifierPolicy);
+
+    assertEquals(
+        identifierPolicy,
+        approvalRepository.findIdentifierPolicy(customerIdentifier).orElseThrow());
+  }
+
+  @Test
+  void shouldReturnEmptyOptionalWhenIdentifierPolicyNotFound() {
+    assertTrue(approvalRepository.findIdentifierPolicy(randomUUID()).isEmpty());
+  }
+
+  @Test
+  void shouldOverwriteExistingIdentifierPolicy() {
+    var customerIdentifier = randomUUID();
+    approvalRepository.saveIdentifierPolicy(customerIdentifier, new IdentifierPolicy(Set.of(DMP)));
+    var updatedPolicy = new IdentifierPolicy(Set.of(DMP, CTIS));
+
+    approvalRepository.saveIdentifierPolicy(customerIdentifier, updatedPolicy);
+
+    assertEquals(
+        updatedPolicy, approvalRepository.findIdentifierPolicy(customerIdentifier).orElseThrow());
+  }
+
+  @Test
+  void shouldPersistAndFindIdentifierPolicyWithoutAllowedIdentifierNames() {
+    var customerIdentifier = randomUUID();
+    approvalRepository.saveIdentifierPolicy(customerIdentifier, IdentifierPolicy.DENY_ALL);
+
+    assertEquals(
+        IdentifierPolicy.DENY_ALL,
+        approvalRepository.findIdentifierPolicy(customerIdentifier).orElseThrow());
+  }
+
+  @Test
+  void shouldStoreIdentifierPolicyUnderCustomerPartitionKey() {
+    var customerIdentifier = randomUUID();
+    approvalRepository.saveIdentifierPolicy(customerIdentifier, randomIdentifierPolicy());
+    var item = scanSingleItem();
+
+    assertEquals(CUSTOMER_PARTITION_KEY.formatted(customerIdentifier), item.get(PK0).s());
+    assertEquals(IDENTIFIER_POLICY_TYPE, item.get(SK0).s());
+  }
+
+  @Test
+  void shouldTreatSeededIdentifierPolicyWithoutAllowedIdentifierNamesAsDenyAll() {
+    var customerIdentifier = randomUUID();
+    insertIdentifierPolicyWithoutAllowedIdentifierNames(customerIdentifier);
+
+    assertEquals(
+        IdentifierPolicy.DENY_ALL,
+        approvalRepository.findIdentifierPolicy(customerIdentifier).orElseThrow());
+  }
+
+  @Test
+  void shouldDeserializeIdentifierPolicyAsDatabaseEntry() {
+    var json =
+        IdentifierPolicyDao.fromIdentifierPolicy(randomUUID(), randomIdentifierPolicy())
+            .toJsonString();
+
+    var databaseEntry =
+        attempt(() -> JsonUtils.dtoObjectMapper.readValue(json, DatabaseEntry.class)).orElseThrow();
+
+    assertInstanceOf(IdentifierPolicyDao.class, databaseEntry);
+  }
+
+  @Test
+  void shouldNotIndexIdentifierPolicyInSecondaryIndexes() {
+    approvalRepository.saveIdentifierPolicy(randomUUID(), randomIdentifierPolicy());
+    var item = scanSingleItem();
+
+    assertFalse(item.containsKey(PK1));
+    assertFalse(item.containsKey(PK2));
+  }
+
+  private void insertIdentifierPolicyWithoutAllowedIdentifierNames(UUID customerIdentifier) {
+    var item = new HashMap<String, AttributeValue>();
+    item.put(
+        PK0,
+        AttributeValue.builder().s(CUSTOMER_PARTITION_KEY.formatted(customerIdentifier)).build());
+    item.put(SK0, AttributeValue.builder().s(IDENTIFIER_POLICY_TYPE).build());
+    item.put(TYPE_FIELD, AttributeValue.builder().s(IDENTIFIER_POLICY_TYPE).build());
+    item.put(
+        CUSTOMER_IDENTIFIER_FIELD,
+        AttributeValue.builder().s(customerIdentifier.toString()).build());
+
+    dynamoDbLocal.client().putItem(PutItemRequest.builder().tableName(TABLE).item(item).build());
+  }
+
   private void insertIdentifierOnly(UUID approvalId, String identifierValue) {
     var item = createBaseItem(identifierValue, identifierValue, approvalId, identifierValue);
     item.put("type", AttributeValue.builder().s("Identifier").build());
@@ -291,5 +403,12 @@ class DynamoDbApprovalRepositoryTest {
     item.put(PK2, AttributeValue.builder().s(pk2Sk2).build());
     item.put(SK2, AttributeValue.builder().s(pk2Sk2).build());
     return item;
+  }
+
+  private Map<String, AttributeValue> scanSingleItem() {
+    var response = dynamoDbLocal.client().scan(ScanRequest.builder().tableName(TABLE).build());
+
+    assertEquals(1, response.count());
+    return response.items().getFirst();
   }
 }

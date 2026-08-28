@@ -7,10 +7,12 @@ import static no.unit.nva.testutils.RandomDataGenerator.randomUri;
 import java.net.URI;
 import java.util.Collection;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 import java.util.stream.IntStream;
 import no.sikt.nva.approvals.domain.Approval;
 import no.sikt.nva.approvals.domain.Handle;
+import no.sikt.nva.approvals.domain.IdentifierPolicy;
 import no.sikt.nva.approvals.domain.NamedIdentifier;
 import no.sikt.nva.approvals.persistence.ApprovalDao;
 import no.sikt.nva.approvals.persistence.HandleDao;
@@ -74,5 +76,9 @@ public class TestUtils {
             .addChild(randomString())
             .addChild(randomString())
             .getUri());
+  }
+
+  public static IdentifierPolicy randomIdentifierPolicy() {
+    return new IdentifierPolicy(Set.of(randomString()));
   }
 }

@@ -28,6 +28,7 @@ import java.util.UUID;
 import java.util.stream.IntStream;
 import no.sikt.nva.approvals.domain.Approval;
 import no.sikt.nva.approvals.domain.Handle;
+import no.sikt.nva.approvals.domain.IdentifierPolicy;
 import no.sikt.nva.approvals.domain.NamedIdentifier;
 import no.sikt.nva.approvals.persistence.DynamoDbApprovalRepository.Operation.DatabaseOperation;
 import no.unit.nva.commons.json.JsonUtils;
@@ -116,10 +117,11 @@ public class DynamoDbApprovalRepository implements ApprovalRepository {
   @Override
   public Optional<Approval> findByIdentifier(NamedIdentifier namedIdentifier) {
     var primaryKey = IdentifierDao.fromIdentifier(namedIdentifier).getPrimaryKey();
-    var item = table.getItem(primaryKey);
-    var approvalDatabaseIdentifier = item.getString(PK1);
-    var entities = fetchEntitiesByApprovalIdentifier(approvalDatabaseIdentifier);
-    return entities.isEmpty() ? Optional.empty() : Optional.of(constructApproval(entities));
+    return Optional.ofNullable(table.getItem(primaryKey))
+        .map(item -> item.getString(PK1))
+        .map(this::fetchEntitiesByApprovalIdentifier)
+        .filter(entities -> !entities.isEmpty())
+        .map(DynamoDbApprovalRepository::constructApproval);
   }
 
   @Override
@@ -138,6 +140,21 @@ public class DynamoDbApprovalRepository implements ApprovalRepository {
         .flatMap(keyBatch -> fetchIdentifiersBatch(keyBatch).stream())
         .distinct()
         .toList();
+  }
+
+  @Override
+  public Optional<IdentifierPolicy> findIdentifierPolicy(UUID customerIdentifier) {
+    return Optional.ofNullable(table.getItem(IdentifierPolicyDao.primaryKey(customerIdentifier)))
+        .map(EnhancedDocument::toJson)
+        .map(IdentifierPolicyDao::fromJson)
+        .map(IdentifierPolicyDao::toIdentifierPolicy);
+  }
+
+  @Override
+  public void saveIdentifierPolicy(UUID customerIdentifier, IdentifierPolicy identifierPolicy) {
+    table.putItem(
+        IdentifierPolicyDao.fromIdentifierPolicy(customerIdentifier, identifierPolicy)
+            .toEnhancedDocument());
   }
 
   private static <T> List<List<T>> splitToChunks(List<T> list) {
