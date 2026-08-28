@@ -281,12 +281,6 @@ paths:
           schema:
             type: string
             format: uuid
-        - name: Content-Type
-          in: header
-          required: true
-          schema:
-            type: string
-            default: application/json
       x-amazon-apigateway-request-validator: validate_body
       requestBody:
         required: true
