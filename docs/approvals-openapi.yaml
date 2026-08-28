@@ -281,12 +281,16 @@ paths:
           schema:
             type: string
             format: uuid
+      x-amazon-apigateway-request-validator: validate_body
       requestBody:
         required: true
         content:
           application/json:
             schema:
               $ref: "#/components/schemas/UpdateApprovalRequest"
+      security:
+        - CognitoUserPool:
+            ["https://api.nva.unit.no/scopes/third-party/approval-upsert", "https://api.nva.unit.no/scopes/backend"]
       x-amazon-apigateway-integration:
         uri:
           Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${NvaUpdateApprovalFunction.Arn}/invocations
