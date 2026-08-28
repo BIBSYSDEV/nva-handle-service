@@ -72,6 +72,12 @@ paths:
             "application/json":
               schema:
                 $ref: "#/components/schemas/Problem"
+        "401":
+          description: Unauthorized - missing or invalid token, or the customer of the authenticated client could not be resolved
+          content:
+            "application/json":
+              schema:
+                $ref: "#/components/schemas/Problem"
         "403":
           description: Forbidden - one or more identifier names are not allowed for the customer of the client
           content:
@@ -302,6 +308,12 @@ paths:
                 type: integer
         "400":
           description: Bad Request
+          content:
+            "application/json":
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "401":
+          description: Unauthorized - missing or invalid token, or the customer of the authenticated client could not be resolved
           content:
             "application/json":
               schema:
