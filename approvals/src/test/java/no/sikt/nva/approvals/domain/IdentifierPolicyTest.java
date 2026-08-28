@@ -22,31 +22,31 @@ class IdentifierPolicyTest {
   private static final String PADDED_DMP = "  DMP  ";
 
   @Test
-  void shouldPermitIdentifierWithAllowedName() {
+  void shouldAllowIdentifierWithAllowedName() {
     var identifierPolicy = new IdentifierPolicy(randomUUID(), Set.of(DMP));
 
-    assertTrue(identifierPolicy.permits(new NamedIdentifier(DMP, randomString())));
+    assertTrue(identifierPolicy.allows(new NamedIdentifier(DMP, randomString())));
   }
 
   @Test
-  void shouldPermitIdentifierRegardlessOfCase() {
+  void shouldAllowIdentifierRegardlessOfCase() {
     var identifierPolicy = new IdentifierPolicy(randomUUID(), Set.of(DMP));
 
-    assertTrue(identifierPolicy.permits(new NamedIdentifier("dmp", randomString())));
+    assertTrue(identifierPolicy.allows(new NamedIdentifier("dmp", randomString())));
   }
 
   @Test
-  void shouldPermitIdentifierWhenAllowedNameIsPaddedWithWhitespace() {
+  void shouldAllowIdentifierWhenAllowedNameIsPaddedWithWhitespace() {
     var identifierPolicy = new IdentifierPolicy(randomUUID(), Set.of(PADDED_DMP));
 
-    assertTrue(identifierPolicy.permits(new NamedIdentifier(DMP, randomString())));
+    assertTrue(identifierPolicy.allows(new NamedIdentifier(DMP, randomString())));
   }
 
   @Test
-  void shouldPermitIdentifierWhenRequestedNameIsPaddedWithWhitespace() {
+  void shouldAllowIdentifierWhenRequestedNameIsPaddedWithWhitespace() {
     var identifierPolicy = new IdentifierPolicy(randomUUID(), Set.of(DMP));
 
-    assertTrue(identifierPolicy.permits(new NamedIdentifier(PADDED_DMP, randomString())));
+    assertTrue(identifierPolicy.allows(new NamedIdentifier(PADDED_DMP, randomString())));
   }
 
   @Test

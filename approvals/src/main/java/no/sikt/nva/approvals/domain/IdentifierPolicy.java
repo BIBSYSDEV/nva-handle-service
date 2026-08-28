@@ -28,15 +28,15 @@ public record IdentifierPolicy(UUID customerIdentifier, Set<String> allowedIdent
     return new IdentifierPolicy(customerIdentifier, Set.of());
   }
 
-  public boolean permits(NamedIdentifier namedIdentifier) {
-    return permitsName(namedIdentifier.name());
+  public boolean allows(NamedIdentifier namedIdentifier) {
+    return allowsName(namedIdentifier.name());
   }
 
   public Set<String> disallowedNames(Collection<NamedIdentifier> namedIdentifiers) {
     return Set.copyOf(
         namedIdentifiers.stream()
             .map(NamedIdentifier::name)
-            .filter(name -> !permitsName(name))
+            .filter(name -> !allowsName(name))
             .collect(
                 toMap(
                     IdentifierPolicy::normalize,
@@ -60,7 +60,7 @@ public record IdentifierPolicy(UUID customerIdentifier, Set<String> allowedIdent
     return name.trim().toLowerCase(Locale.ROOT);
   }
 
-  private boolean permitsName(String name) {
+  private boolean allowsName(String name) {
     return allowedIdentifierNames.contains(normalize(name));
   }
 }
