@@ -151,8 +151,10 @@ public class DynamoDbApprovalRepository implements ApprovalRepository {
   }
 
   @Override
-  public void saveIdentifierPolicy(IdentifierPolicy identifierPolicy) {
-    table.putItem(IdentifierPolicyDao.fromIdentifierPolicy(identifierPolicy).toEnhancedDocument());
+  public void saveIdentifierPolicy(UUID customerIdentifier, IdentifierPolicy identifierPolicy) {
+    table.putItem(
+        IdentifierPolicyDao.fromIdentifierPolicy(customerIdentifier, identifierPolicy)
+            .toEnhancedDocument());
   }
 
   private static <T> List<List<T>> splitToChunks(List<T> list) {

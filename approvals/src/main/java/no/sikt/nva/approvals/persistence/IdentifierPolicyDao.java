@@ -29,9 +29,9 @@ public record IdentifierPolicyDao(UUID customerIdentifier, Set<String> allowedId
     allowedIdentifierNames = isNull(allowedIdentifierNames) ? Set.of() : allowedIdentifierNames;
   }
 
-  public static IdentifierPolicyDao fromIdentifierPolicy(IdentifierPolicy identifierPolicy) {
-    return new IdentifierPolicyDao(
-        identifierPolicy.customerIdentifier(), identifierPolicy.allowedIdentifierNames());
+  public static IdentifierPolicyDao fromIdentifierPolicy(
+      UUID customerIdentifier, IdentifierPolicy identifierPolicy) {
+    return new IdentifierPolicyDao(customerIdentifier, identifierPolicy.allowedIdentifierNames());
   }
 
   public static IdentifierPolicyDao fromJson(String json) {
@@ -52,7 +52,7 @@ public record IdentifierPolicyDao(UUID customerIdentifier, Set<String> allowedId
   }
 
   public IdentifierPolicy toIdentifierPolicy() {
-    return new IdentifierPolicy(customerIdentifier, allowedIdentifierNames);
+    return new IdentifierPolicy(allowedIdentifierNames);
   }
 
   public EnhancedDocument toEnhancedDocument() {

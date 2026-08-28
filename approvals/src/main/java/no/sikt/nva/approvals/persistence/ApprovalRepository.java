@@ -25,5 +25,5 @@ public interface ApprovalRepository {
 
   Optional<IdentifierPolicy> findIdentifierPolicy(UUID customerIdentifier);
 
-  void saveIdentifierPolicy(IdentifierPolicy identifierPolicy);
+  void saveIdentifierPolicy(UUID customerIdentifier, IdentifierPolicy identifierPolicy);
 }

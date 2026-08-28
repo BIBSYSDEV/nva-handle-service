@@ -7,25 +7,21 @@ import static java.util.stream.Collectors.toUnmodifiableSet;
 import java.util.Collection;
 import java.util.Locale;
 import java.util.Set;
-import java.util.UUID;
 import nva.commons.core.StringUtils;
 
-public record IdentifierPolicy(UUID customerIdentifier, Set<String> allowedIdentifierNames) {
+public record IdentifierPolicy(Set<String> allowedIdentifierNames) {
+
+  public static final IdentifierPolicy DENY_ALL = new IdentifierPolicy(Set.of());
 
   private static final String BLANK_NAME_MESSAGE =
       "allowedIdentifierNames must not contain blank names";
 
   public IdentifierPolicy {
-    requireNonNull(customerIdentifier, "customerIdentifier must not be null");
     requireNonNull(allowedIdentifierNames, "allowedIdentifierNames must not be null");
     allowedIdentifierNames =
         requireNonBlankNames(allowedIdentifierNames).stream()
             .map(IdentifierPolicy::normalize)
             .collect(toUnmodifiableSet());
-  }
-
-  public static IdentifierPolicy denyAll(UUID customerIdentifier) {
-    return new IdentifierPolicy(customerIdentifier, Set.of());
   }
 
   public boolean allows(NamedIdentifier namedIdentifier) {

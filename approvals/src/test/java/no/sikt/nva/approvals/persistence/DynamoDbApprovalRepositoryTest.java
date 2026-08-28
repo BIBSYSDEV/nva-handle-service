@@ -285,14 +285,13 @@ class DynamoDbApprovalRepositoryTest {
 
   @Test
   void shouldPersistAndFindIdentifierPolicy() {
+    var customerIdentifier = randomUUID();
     var identifierPolicy = randomIdentifierPolicy();
-    approvalRepository.saveIdentifierPolicy(identifierPolicy);
+    approvalRepository.saveIdentifierPolicy(customerIdentifier, identifierPolicy);
 
     assertEquals(
         identifierPolicy,
-        approvalRepository
-            .findIdentifierPolicy(identifierPolicy.customerIdentifier())
-            .orElseThrow());
+        approvalRepository.findIdentifierPolicy(customerIdentifier).orElseThrow());
   }
 
   @Test
@@ -303,10 +302,10 @@ class DynamoDbApprovalRepositoryTest {
   @Test
   void shouldOverwriteExistingIdentifierPolicy() {
     var customerIdentifier = randomUUID();
-    approvalRepository.saveIdentifierPolicy(new IdentifierPolicy(customerIdentifier, Set.of(DMP)));
-    var updatedPolicy = new IdentifierPolicy(customerIdentifier, Set.of(DMP, CTIS));
+    approvalRepository.saveIdentifierPolicy(customerIdentifier, new IdentifierPolicy(Set.of(DMP)));
+    var updatedPolicy = new IdentifierPolicy(Set.of(DMP, CTIS));
 
-    approvalRepository.saveIdentifierPolicy(updatedPolicy);
+    approvalRepository.saveIdentifierPolicy(customerIdentifier, updatedPolicy);
 
     assertEquals(
         updatedPolicy, approvalRepository.findIdentifierPolicy(customerIdentifier).orElseThrow());
@@ -315,21 +314,20 @@ class DynamoDbApprovalRepositoryTest {
   @Test
   void shouldPersistAndFindIdentifierPolicyWithoutAllowedIdentifierNames() {
     var customerIdentifier = randomUUID();
-    approvalRepository.saveIdentifierPolicy(IdentifierPolicy.denyAll(customerIdentifier));
+    approvalRepository.saveIdentifierPolicy(customerIdentifier, IdentifierPolicy.DENY_ALL);
 
     assertEquals(
-        IdentifierPolicy.denyAll(customerIdentifier),
+        IdentifierPolicy.DENY_ALL,
         approvalRepository.findIdentifierPolicy(customerIdentifier).orElseThrow());
   }
 
   @Test
   void shouldStoreIdentifierPolicyUnderCustomerPartitionKey() {
-    var identifierPolicy = randomIdentifierPolicy();
-    approvalRepository.saveIdentifierPolicy(identifierPolicy);
+    var customerIdentifier = randomUUID();
+    approvalRepository.saveIdentifierPolicy(customerIdentifier, randomIdentifierPolicy());
     var item = scanSingleItem();
 
-    assertEquals(
-        CUSTOMER_PARTITION_KEY.formatted(identifierPolicy.customerIdentifier()), item.get(PK0).s());
+    assertEquals(CUSTOMER_PARTITION_KEY.formatted(customerIdentifier), item.get(PK0).s());
     assertEquals(IDENTIFIER_POLICY_TYPE, item.get(SK0).s());
   }
 
@@ -339,13 +337,15 @@ class DynamoDbApprovalRepositoryTest {
     insertIdentifierPolicyWithoutAllowedIdentifierNames(customerIdentifier);
 
     assertEquals(
-        IdentifierPolicy.denyAll(customerIdentifier),
+        IdentifierPolicy.DENY_ALL,
         approvalRepository.findIdentifierPolicy(customerIdentifier).orElseThrow());
   }
 
   @Test
   void shouldDeserializeIdentifierPolicyAsDatabaseEntry() {
-    var json = IdentifierPolicyDao.fromIdentifierPolicy(randomIdentifierPolicy()).toJsonString();
+    var json =
+        IdentifierPolicyDao.fromIdentifierPolicy(randomUUID(), randomIdentifierPolicy())
+            .toJsonString();
 
     var databaseEntry =
         attempt(() -> JsonUtils.dtoObjectMapper.readValue(json, DatabaseEntry.class)).orElseThrow();
@@ -355,7 +355,7 @@ class DynamoDbApprovalRepositoryTest {
 
   @Test
   void shouldNotIndexIdentifierPolicyInSecondaryIndexes() {
-    approvalRepository.saveIdentifierPolicy(randomIdentifierPolicy());
+    approvalRepository.saveIdentifierPolicy(randomUUID(), randomIdentifierPolicy());
     var item = scanSingleItem();
 
     assertFalse(item.containsKey(PK1));

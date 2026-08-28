@@ -25,7 +25,7 @@ public class IdentifierPolicyServiceImpl implements IdentifierPolicyService {
   public IdentifierPolicy getIdentifierPolicy(UUID customerIdentifier) {
     return approvalRepository
         .findIdentifierPolicy(customerIdentifier)
-        .orElseGet(() -> IdentifierPolicy.denyAll(customerIdentifier));
+        .orElse(IdentifierPolicy.DENY_ALL);
   }
 
   @Override

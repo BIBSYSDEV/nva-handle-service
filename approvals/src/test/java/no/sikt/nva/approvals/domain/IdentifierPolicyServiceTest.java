@@ -34,8 +34,7 @@ class IdentifierPolicyServiceTest {
     when(approvalRepository.findIdentifierPolicy(customerIdentifier)).thenReturn(Optional.empty());
 
     assertEquals(
-        IdentifierPolicy.denyAll(customerIdentifier),
-        identifierPolicyService.getIdentifierPolicy(customerIdentifier));
+        IdentifierPolicy.DENY_ALL, identifierPolicyService.getIdentifierPolicy(customerIdentifier));
   }
 
   @Test
@@ -57,7 +56,7 @@ class IdentifierPolicyServiceTest {
     var customerIdentifier = randomUUID();
     var namedIdentifier = new NamedIdentifier(DMP, randomString());
     when(approvalRepository.findIdentifierPolicy(customerIdentifier))
-        .thenReturn(Optional.of(new IdentifierPolicy(customerIdentifier, Set.of(DMP))));
+        .thenReturn(Optional.of(new IdentifierPolicy(Set.of(DMP))));
 
     assertTrue(
         identifierPolicyService

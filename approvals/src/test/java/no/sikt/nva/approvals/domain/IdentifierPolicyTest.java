@@ -1,6 +1,5 @@
 package no.sikt.nva.approvals.domain;
 
-import static java.util.UUID.randomUUID;
 import static java.util.stream.Collectors.toUnmodifiableSet;
 import static no.sikt.nva.approvals.utils.TestUtils.randomIdentifiers;
 import static no.unit.nva.testutils.RandomDataGenerator.randomString;
@@ -23,35 +22,35 @@ class IdentifierPolicyTest {
 
   @Test
   void shouldAllowIdentifierWithAllowedName() {
-    var identifierPolicy = new IdentifierPolicy(randomUUID(), Set.of(DMP));
+    var identifierPolicy = new IdentifierPolicy(Set.of(DMP));
 
     assertTrue(identifierPolicy.allows(new NamedIdentifier(DMP, randomString())));
   }
 
   @Test
   void shouldAllowIdentifierRegardlessOfCase() {
-    var identifierPolicy = new IdentifierPolicy(randomUUID(), Set.of(DMP));
+    var identifierPolicy = new IdentifierPolicy(Set.of(DMP));
 
     assertTrue(identifierPolicy.allows(new NamedIdentifier("dmp", randomString())));
   }
 
   @Test
   void shouldAllowIdentifierWhenAllowedNameIsPaddedWithWhitespace() {
-    var identifierPolicy = new IdentifierPolicy(randomUUID(), Set.of(PADDED_DMP));
+    var identifierPolicy = new IdentifierPolicy(Set.of(PADDED_DMP));
 
     assertTrue(identifierPolicy.allows(new NamedIdentifier(DMP, randomString())));
   }
 
   @Test
   void shouldAllowIdentifierWhenRequestedNameIsPaddedWithWhitespace() {
-    var identifierPolicy = new IdentifierPolicy(randomUUID(), Set.of(DMP));
+    var identifierPolicy = new IdentifierPolicy(Set.of(DMP));
 
     assertTrue(identifierPolicy.allows(new NamedIdentifier(PADDED_DMP, randomString())));
   }
 
   @Test
   void shouldReturnOnlyDisallowedNames() {
-    var identifierPolicy = new IdentifierPolicy(randomUUID(), Set.of(DMP));
+    var identifierPolicy = new IdentifierPolicy(Set.of(DMP));
     var allowed = new NamedIdentifier(DMP, randomString());
     var disallowed = new NamedIdentifier(CTIS, randomString());
 
@@ -60,7 +59,7 @@ class IdentifierPolicyTest {
 
   @Test
   void shouldReportDisallowedNameOnceWhenSharedBySeveralIdentifiers() {
-    var identifierPolicy = new IdentifierPolicy(randomUUID(), Set.of(DMP));
+    var identifierPolicy = new IdentifierPolicy(Set.of(DMP));
     var namedIdentifiers =
         List.of(
             new NamedIdentifier(CTIS, randomString()), new NamedIdentifier(CTIS, randomString()));
@@ -70,7 +69,7 @@ class IdentifierPolicyTest {
 
   @Test
   void shouldReportDisallowedNameOnceWhenSharedByIdentifiersDifferingOnlyByCase() {
-    var identifierPolicy = new IdentifierPolicy(randomUUID(), Set.of(DMP));
+    var identifierPolicy = new IdentifierPolicy(Set.of(DMP));
     var namedIdentifiers =
         List.of(
             new NamedIdentifier(CTIS, randomString()),
@@ -81,7 +80,7 @@ class IdentifierPolicyTest {
 
   @Test
   void shouldReportSameDisallowedNameRegardlessOfIdentifierOrder() {
-    var identifierPolicy = new IdentifierPolicy(randomUUID(), Set.of(DMP));
+    var identifierPolicy = new IdentifierPolicy(Set.of(DMP));
     var lowerCaseFirst =
         List.of(
             new NamedIdentifier(CTIS.toLowerCase(Locale.ROOT), randomString()),
@@ -99,7 +98,7 @@ class IdentifierPolicyTest {
   @Test
   void shouldTreatAllowedIdentifierNamesDifferingOnlyByCaseAsOne() {
     var allowedIdentifierNames = Set.of(DMP, DMP.toLowerCase(Locale.ROOT));
-    var identifierPolicy = new IdentifierPolicy(randomUUID(), allowedIdentifierNames);
+    var identifierPolicy = new IdentifierPolicy(allowedIdentifierNames);
 
     assertEquals(1, identifierPolicy.allowedIdentifierNames().size());
   }
@@ -107,7 +106,7 @@ class IdentifierPolicyTest {
   @Test
   void shouldRejectEverythingWhenPolicyDeniesAll() {
     var namedIdentifiers = randomIdentifiers(3);
-    var identifierPolicy = IdentifierPolicy.denyAll(randomUUID());
+    var identifierPolicy = IdentifierPolicy.DENY_ALL;
     var expectedNames =
         namedIdentifiers.stream().map(NamedIdentifier::name).collect(toUnmodifiableSet());
 
@@ -115,39 +114,25 @@ class IdentifierPolicyTest {
   }
 
   @Test
-  void shouldThrowExceptionWhenCustomerIdIsNull() {
-    var allowedIdentifierNames = Set.of(DMP);
-
-    assertThrows(
-        NullPointerException.class, () -> new IdentifierPolicy(null, allowedIdentifierNames));
-  }
-
-  @Test
   void shouldThrowExceptionWhenAllowedIdentifierNamesIsNull() {
-    var customerIdentifier = randomUUID();
-
-    assertThrows(NullPointerException.class, () -> new IdentifierPolicy(customerIdentifier, null));
+    assertThrows(NullPointerException.class, () -> new IdentifierPolicy(null));
   }
 
   @Test
   void shouldThrowExceptionWhenAllowedIdentifierNameIsBlank() {
-    var customerIdentifier = randomUUID();
     var allowedIdentifierNames = Set.of(DMP, BLANK_NAME);
 
     assertThrows(
-        IllegalArgumentException.class,
-        () -> new IdentifierPolicy(customerIdentifier, allowedIdentifierNames));
+        IllegalArgumentException.class, () -> new IdentifierPolicy(allowedIdentifierNames));
   }
 
   @Test
   void shouldThrowExceptionWhenAllowedIdentifierNameIsNull() {
-    var customerIdentifier = randomUUID();
     var allowedIdentifierNames = new HashSet<String>();
     allowedIdentifierNames.add(DMP);
     allowedIdentifierNames.add(null);
 
     assertThrows(
-        IllegalArgumentException.class,
-        () -> new IdentifierPolicy(customerIdentifier, allowedIdentifierNames));
+        IllegalArgumentException.class, () -> new IdentifierPolicy(allowedIdentifierNames));
   }
 }
