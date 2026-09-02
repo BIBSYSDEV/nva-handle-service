@@ -75,11 +75,10 @@ public class CreateApprovalHandler extends ApiGatewayHandler<CreateApprovalReque
         () -> createAdditionalApprovalHeaders(approval.identifier(), getApiHost(environment)));
   }
 
-  @SuppressWarnings("PMD.AvoidCatchingGenericException")
   private static void validateInput(CreateApprovalRequest input) throws BadRequestException {
     try {
       input.validate();
-    } catch (Exception exception) {
+    } catch (IllegalArgumentException exception) {
       throw new BadRequestException(exception.getMessage());
     }
   }
