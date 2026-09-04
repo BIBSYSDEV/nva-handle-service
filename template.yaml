@@ -11,6 +11,10 @@ Parameters:
   CognitoAuthorizerUrls:
     Type: AWS::SSM::Parameter::Value<CommaDelimitedList>
     Default: CognitoAuthorizerUrls
+  CognitoAuthorizationUri:
+    Type: "AWS::SSM::Parameter::Value<String>"
+    Description: Cognito authorization URI used when resolving the customer of a client
+    Default: "/NVA/CognitoUri"
   ExternalCognitoAuthorizerArn:
     Type: "AWS::SSM::Parameter::Value<String>"
     Description: Reference to ARN of ExternalUsers UserPool
@@ -311,6 +315,7 @@ Resources:
         - !Ref DynamoDbTableAccessPolicy
       Environment:
         Variables:
+          BACKEND_CLIENT_AUTH_URL: !Ref CognitoAuthorizationUri
           HANDLE_PREFIX: !If [IsProd, !Ref HandlePrefixForApprovals, !Ref HandlePrefix]
           HANDLE_BASE_URI: !Ref HandleBaseUri
           HANDLE_DATABASE_SECRET_NAME: !Ref HandleDatabaseSecretName
@@ -345,6 +350,7 @@ Resources:
         - !Ref DynamoDbTableAccessPolicy
       Environment:
         Variables:
+          BACKEND_CLIENT_AUTH_URL: !Ref CognitoAuthorizationUri
           HANDLE_PREFIX: !If [IsProd, !Ref HandlePrefixForApprovals, !Ref HandlePrefix]
           HANDLE_BASE_URI: !Ref HandleBaseUri
           HANDLE_DATABASE_SECRET_NAME: !Ref HandleDatabaseSecretName

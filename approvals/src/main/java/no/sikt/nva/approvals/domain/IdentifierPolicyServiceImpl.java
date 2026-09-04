@@ -1,7 +1,5 @@
 package no.sikt.nva.approvals.domain;
 
-import java.util.Collection;
-import java.util.Set;
 import java.util.UUID;
 import no.sikt.nva.approvals.persistence.ApprovalRepository;
 import no.sikt.nva.approvals.persistence.DynamoDbApprovalRepository;
@@ -26,11 +24,5 @@ public class IdentifierPolicyServiceImpl implements IdentifierPolicyService {
     return approvalRepository
         .findIdentifierPolicy(customerIdentifier)
         .orElse(IdentifierPolicy.DENY_ALL);
-  }
-
-  @Override
-  public Set<String> findDisallowedIdentifierNames(
-      UUID customerIdentifier, Collection<NamedIdentifier> namedIdentifiers) {
-    return getIdentifierPolicy(customerIdentifier).disallowedNames(namedIdentifiers);
   }
 }

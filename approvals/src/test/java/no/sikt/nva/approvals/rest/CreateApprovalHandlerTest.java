@@ -4,9 +4,15 @@ import static java.net.HttpURLConnection.HTTP_ACCEPTED;
 import static java.net.HttpURLConnection.HTTP_BAD_GATEWAY;
 import static java.net.HttpURLConnection.HTTP_BAD_REQUEST;
 import static java.net.HttpURLConnection.HTTP_CONFLICT;
+import static java.net.HttpURLConnection.HTTP_FORBIDDEN;
 import static no.unit.nva.testutils.RandomDataGenerator.randomString;
 import static no.unit.nva.testutils.RandomDataGenerator.randomUri;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 
 import com.amazonaws.services.lambda.runtime.Context;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -16,6 +22,7 @@ import java.io.InputStream;
 import java.net.URI;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import no.sikt.nva.approvals.domain.ApprovalConflictException;
 import no.sikt.nva.approvals.domain.ApprovalServiceException;
 import no.sikt.nva.approvals.domain.FakeApprovalService;
@@ -33,15 +40,18 @@ import org.zalando.problem.Problem;
 class CreateApprovalHandlerTest {
 
   private static final Context context = new FakeContext();
+  private static final String REK = "REK";
   private CreateApprovalHandler handler;
   private ByteArrayOutputStream output;
   private FakeApprovalService approvalService;
+  private IdentifierAuthorizer identifierAuthorizer;
 
   @BeforeEach
   void setUp() {
     this.output = new ByteArrayOutputStream();
     approvalService = new FakeApprovalService();
-    handler = new CreateApprovalHandler(approvalService, new Environment());
+    identifierAuthorizer = mock(IdentifierAuthorizer.class);
+    handler = new CreateApprovalHandler(approvalService, identifierAuthorizer, new Environment());
   }
 
   @Test
@@ -107,6 +117,7 @@ class CreateApprovalHandlerTest {
     handler =
         new CreateApprovalHandler(
             new FakeApprovalService(new ApprovalConflictException("conflict", Map.of(key, value))),
+            identifierAuthorizer,
             new Environment());
     var request = createRequest(randomApprovalRequest(randomUri()));
 
@@ -125,7 +136,9 @@ class CreateApprovalHandlerTest {
       throws IOException {
     handler =
         new CreateApprovalHandler(
-            new FakeApprovalService(new ApprovalServiceException("error")), new Environment());
+            new FakeApprovalService(new ApprovalServiceException("error")),
+            identifierAuthorizer,
+            new Environment());
     var request = createRequest(randomApprovalRequest(randomUri()));
 
     handler.handleRequest(request, output, context);
@@ -133,6 +146,30 @@ class CreateApprovalHandlerTest {
     var response = GatewayResponse.fromOutputStream(output, Void.class);
 
     assertEquals(HTTP_BAD_GATEWAY, response.getStatusCode());
+  }
+
+  @Test
+  void shouldReturnForbiddenWhenIdentifierNameIsNotAllowedForCustomer() throws Exception {
+    doThrow(new DisallowedIdentifierNamesException(Set.of(REK)))
+        .when(identifierAuthorizer)
+        .authorizeIdentifiers(any(), any());
+    var request = createRequest(randomApprovalRequest(randomUri()));
+
+    handler.handleRequest(request, output, context);
+
+    var response = GatewayResponse.fromOutputStream(output, Problem.class);
+
+    assertEquals(HTTP_FORBIDDEN, response.getStatusCode());
+  }
+
+  @Test
+  void shouldAuthorizeIdentifiersFromRequest() throws Exception {
+    var approvalRequest = randomApprovalRequest(randomUri());
+    var request = createRequest(approvalRequest);
+
+    handler.handleRequest(request, output, context);
+
+    verify(identifierAuthorizer).authorizeIdentifiers(any(), eq(approvalRequest.identifiers()));
   }
 
   private static CreateApprovalRequest randomApprovalRequest(URI source) {

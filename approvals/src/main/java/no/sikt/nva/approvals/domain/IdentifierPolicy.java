@@ -9,9 +9,10 @@ import java.util.Locale;
 import java.util.Set;
 import nva.commons.core.StringUtils;
 
-public record IdentifierPolicy(Set<String> allowedIdentifierNames) {
+public record IdentifierPolicy(Set<String> allowedIdentifierNames, boolean allowsAllNames) {
 
   public static final IdentifierPolicy DENY_ALL = new IdentifierPolicy(Set.of());
+  public static final IdentifierPolicy ALLOW_ALL = new IdentifierPolicy(Set.of(), true);
 
   private static final String BLANK_NAME_MESSAGE =
       "allowedIdentifierNames must not contain blank names";
@@ -24,11 +25,14 @@ public record IdentifierPolicy(Set<String> allowedIdentifierNames) {
             .collect(toUnmodifiableSet());
   }
 
-  public boolean allows(NamedIdentifier namedIdentifier) {
-    return allowsName(namedIdentifier.name());
+  public IdentifierPolicy(Set<String> allowedIdentifierNames) {
+    this(allowedIdentifierNames, false);
   }
 
   public Set<String> disallowedNames(Collection<NamedIdentifier> namedIdentifiers) {
+    if (allowsAllNames) {
+      return Set.of();
+    }
     return Set.copyOf(
         namedIdentifiers.stream()
             .map(NamedIdentifier::name)

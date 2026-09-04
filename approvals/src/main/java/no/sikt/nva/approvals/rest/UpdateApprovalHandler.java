@@ -19,20 +19,36 @@ import nva.commons.core.JacocoGenerated;
 public class UpdateApprovalHandler extends ApiGatewayHandler<UpdateApprovalRequest, Void> {
 
   private final ApprovalService approvalService;
+  private final IdentifierAuthorizer identifierAuthorizer;
 
   @JacocoGenerated
   public UpdateApprovalHandler() {
-    this(ApprovalServiceImpl.defaultInstance(new Environment()));
+    this(new Environment());
   }
 
-  public UpdateApprovalHandler(ApprovalService approvalService) {
-    super(UpdateApprovalRequest.class, new Environment());
+  public UpdateApprovalHandler(
+      ApprovalService approvalService,
+      IdentifierAuthorizer identifierAuthorizer,
+      Environment environment) {
+    super(UpdateApprovalRequest.class, environment);
     this.approvalService = approvalService;
+    this.identifierAuthorizer = identifierAuthorizer;
+  }
+
+  @JacocoGenerated
+  private UpdateApprovalHandler(Environment environment) {
+    this(
+        ApprovalServiceImpl.defaultInstance(environment),
+        IdentifierAuthorizer.defaultInstance(environment),
+        environment);
   }
 
   @Override
   protected void validateRequest(
-      UpdateApprovalRequest updateApprovalRequest, RequestInfo requestInfo, Context context) {}
+      UpdateApprovalRequest updateApprovalRequest, RequestInfo requestInfo, Context context)
+      throws ApiGatewayException {
+    identifierAuthorizer.authorizeIdentifiers(requestInfo, updateApprovalRequest.identifiers());
+  }
 
   @Override
   @SuppressWarnings("PMD.AvoidCatchingGenericException")

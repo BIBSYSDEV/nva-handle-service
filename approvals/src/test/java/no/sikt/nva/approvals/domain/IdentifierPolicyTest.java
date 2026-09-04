@@ -23,29 +23,41 @@ class IdentifierPolicyTest {
   @Test
   void shouldAllowIdentifierWithAllowedName() {
     var identifierPolicy = new IdentifierPolicy(Set.of(DMP));
+    var namedIdentifier = new NamedIdentifier(DMP, randomString());
 
-    assertTrue(identifierPolicy.allows(new NamedIdentifier(DMP, randomString())));
+    assertTrue(identifierPolicy.disallowedNames(List.of(namedIdentifier)).isEmpty());
   }
 
   @Test
   void shouldAllowIdentifierRegardlessOfCase() {
     var identifierPolicy = new IdentifierPolicy(Set.of(DMP));
+    var namedIdentifier = new NamedIdentifier("dmp", randomString());
 
-    assertTrue(identifierPolicy.allows(new NamedIdentifier("dmp", randomString())));
+    assertTrue(identifierPolicy.disallowedNames(List.of(namedIdentifier)).isEmpty());
   }
 
   @Test
   void shouldAllowIdentifierWhenAllowedNameIsPaddedWithWhitespace() {
     var identifierPolicy = new IdentifierPolicy(Set.of(PADDED_DMP));
+    var namedIdentifier = new NamedIdentifier(DMP, randomString());
 
-    assertTrue(identifierPolicy.allows(new NamedIdentifier(DMP, randomString())));
+    assertTrue(identifierPolicy.disallowedNames(List.of(namedIdentifier)).isEmpty());
   }
 
   @Test
   void shouldAllowIdentifierWhenRequestedNameIsPaddedWithWhitespace() {
     var identifierPolicy = new IdentifierPolicy(Set.of(DMP));
+    var namedIdentifier = new NamedIdentifier(PADDED_DMP, randomString());
 
-    assertTrue(identifierPolicy.allows(new NamedIdentifier(PADDED_DMP, randomString())));
+    assertTrue(identifierPolicy.disallowedNames(List.of(namedIdentifier)).isEmpty());
+  }
+
+  @Test
+  void shouldAllowEverythingWhenPolicyAllowsAllNames() {
+    var namedIdentifiers = randomIdentifiers(3);
+    var identifierPolicy = IdentifierPolicy.ALLOW_ALL;
+
+    assertTrue(identifierPolicy.disallowedNames(namedIdentifiers).isEmpty());
   }
 
   @Test

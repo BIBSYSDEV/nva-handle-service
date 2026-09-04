@@ -3,9 +3,15 @@ package no.sikt.nva.approvals.rest;
 import static java.net.HttpURLConnection.HTTP_ACCEPTED;
 import static java.net.HttpURLConnection.HTTP_BAD_GATEWAY;
 import static java.net.HttpURLConnection.HTTP_BAD_REQUEST;
+import static java.net.HttpURLConnection.HTTP_FORBIDDEN;
 import static no.unit.nva.testutils.RandomDataGenerator.randomString;
 import static no.unit.nva.testutils.RandomDataGenerator.randomUri;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 
 import com.amazonaws.services.lambda.runtime.Context;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -15,6 +21,7 @@ import java.io.InputStream;
 import java.net.URI;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import no.sikt.nva.approvals.domain.ApprovalServiceException;
 import no.sikt.nva.approvals.domain.FakeApprovalService;
@@ -32,15 +39,20 @@ class UpdateApprovalHandlerTest {
 
   private static final Context context = new FakeContext();
   private static final String APPROVAL_ID_PATH_PARAMETER = "approvalId";
+  private static final String REK = "REK";
   private UpdateApprovalHandler handler;
   private ByteArrayOutputStream output;
   private UUID approvalId;
+  private IdentifierAuthorizer identifierAuthorizer;
 
   @BeforeEach
   void setUp() {
     this.output = new ByteArrayOutputStream();
     this.approvalId = UUID.randomUUID();
-    handler = new UpdateApprovalHandler(new FakeApprovalService());
+    this.identifierAuthorizer = mock(IdentifierAuthorizer.class);
+    handler =
+        new UpdateApprovalHandler(
+            new FakeApprovalService(), identifierAuthorizer, new Environment());
   }
 
   @Test
@@ -120,7 +132,9 @@ class UpdateApprovalHandlerTest {
   void shouldReturnBadGatewayWhenApprovalNotFoundDuringUpdate() throws IOException {
     handler =
         new UpdateApprovalHandler(
-            new FakeApprovalService(new ApprovalServiceException("not found")));
+            new FakeApprovalService(new ApprovalServiceException("not found")),
+            identifierAuthorizer,
+            new Environment());
     var request = createRequest(randomUpdateApprovalRequest(), approvalId);
 
     handler.handleRequest(request, output, context);
@@ -134,7 +148,10 @@ class UpdateApprovalHandlerTest {
   void shouldReturnBadGatewayWhenApprovalServiceThrowsApprovalServiceException()
       throws IOException {
     handler =
-        new UpdateApprovalHandler(new FakeApprovalService(new ApprovalServiceException("error")));
+        new UpdateApprovalHandler(
+            new FakeApprovalService(new ApprovalServiceException("error")),
+            identifierAuthorizer,
+            new Environment());
     var request = createRequest(randomUpdateApprovalRequest(), approvalId);
 
     handler.handleRequest(request, output, context);
@@ -142,6 +159,31 @@ class UpdateApprovalHandlerTest {
     var response = GatewayResponse.fromOutputStream(output, Void.class);
 
     assertEquals(HTTP_BAD_GATEWAY, response.getStatusCode());
+  }
+
+  @Test
+  void shouldReturnForbiddenWhenIdentifierNameIsNotAllowedForCustomer() throws Exception {
+    doThrow(new DisallowedIdentifierNamesException(Set.of(REK)))
+        .when(identifierAuthorizer)
+        .authorizeIdentifiers(any(), any());
+    var request = createRequest(randomUpdateApprovalRequest(), approvalId);
+
+    handler.handleRequest(request, output, context);
+
+    var response = GatewayResponse.fromOutputStream(output, Void.class);
+
+    assertEquals(HTTP_FORBIDDEN, response.getStatusCode());
+  }
+
+  @Test
+  void shouldAuthorizeIdentifiersFromRequest() throws Exception {
+    var updateApprovalRequest = randomUpdateApprovalRequest();
+    var request = createRequest(updateApprovalRequest, approvalId);
+
+    handler.handleRequest(request, output, context);
+
+    verify(identifierAuthorizer)
+        .authorizeIdentifiers(any(), eq(updateApprovalRequest.identifiers()));
   }
 
   private static String invalidRequestBody(URI source) {

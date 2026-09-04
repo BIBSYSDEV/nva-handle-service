@@ -47,8 +47,19 @@ class IdentifierPolicyServiceTest {
 
     assertEquals(
         expectedNames,
-        identifierPolicyService.findDisallowedIdentifierNames(
-            customerIdentifier, namedIdentifiers));
+        identifierPolicyService
+            .getIdentifierPolicy(customerIdentifier)
+            .disallowedNames(namedIdentifiers));
+  }
+
+  @Test
+  void shouldReturnStoredPolicyWhenCustomerHasPolicy() {
+    var customerIdentifier = randomUUID();
+    var storedPolicy = new IdentifierPolicy(Set.of(DMP));
+    when(approvalRepository.findIdentifierPolicy(customerIdentifier))
+        .thenReturn(Optional.of(storedPolicy));
+
+    assertEquals(storedPolicy, identifierPolicyService.getIdentifierPolicy(customerIdentifier));
   }
 
   @Test
@@ -60,7 +71,8 @@ class IdentifierPolicyServiceTest {
 
     assertTrue(
         identifierPolicyService
-            .findDisallowedIdentifierNames(customerIdentifier, List.of(namedIdentifier))
+            .getIdentifierPolicy(customerIdentifier)
+            .disallowedNames(List.of(namedIdentifier))
             .isEmpty());
   }
 }
