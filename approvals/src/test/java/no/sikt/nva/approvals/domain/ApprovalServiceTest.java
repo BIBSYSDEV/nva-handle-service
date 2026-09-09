@@ -23,6 +23,7 @@ import java.net.URI;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.function.Supplier;
 import no.sikt.nva.approvals.persistence.ApprovalDao;
@@ -236,6 +237,29 @@ class ApprovalServiceTest {
   }
 
   @Test
+  void shouldReportAllConflictingValuesWhenExistingIdentifiersShareSameName() {
+    var name = randomString();
+    var firstIdentifier = new NamedIdentifier(name, randomString());
+    var secondIdentifier = new NamedIdentifier(name, randomString());
+    var identifiers = List.of(firstIdentifier, secondIdentifier);
+
+    when(approvalRepository.findIdentifiers(identifiers))
+        .thenReturn(
+            List.of(
+                toIdentifierQueryObject(firstIdentifier),
+                toIdentifierQueryObject(secondIdentifier)));
+
+    var exception =
+        assertThrows(
+            ApprovalConflictException.class,
+            () -> approvalService.create(identifiers, randomUri()));
+
+    assertEquals(
+        Map.of(name, "%s, %s".formatted(firstIdentifier.value(), secondIdentifier.value())),
+        exception.getConflictingKeys());
+  }
+
+  @Test
   void shouldUpdateApprovalIdentifiersSuccessfully()
       throws ApprovalServiceException, ApprovalConflictException {
     var approval = new Approval(randomUUID(), randomIdentifiers(), randomUri(), randomHandle());
@@ -282,5 +306,31 @@ class ApprovalServiceTest {
         () ->
             approvalService.updateApprovalIdentifiers(
                 approval.identifier(), List.of(newIdentifier)));
+  }
+
+  @Test
+  void shouldReportAllConflictingValuesWhenIdentifiersUsedByOtherApprovalShareSameName() {
+    var approval = new Approval(randomUUID(), randomIdentifiers(), randomUri(), randomHandle());
+    var name = randomString();
+    var firstIdentifier = new NamedIdentifier(name, randomString());
+    var secondIdentifier = new NamedIdentifier(name, randomString());
+    var newIdentifiers = List.of(firstIdentifier, secondIdentifier);
+
+    when(approvalRepository.findByApprovalIdentifier(approval.identifier()))
+        .thenReturn(Optional.of(approval));
+    when(approvalRepository.findIdentifiers(newIdentifiers))
+        .thenReturn(
+            List.of(
+                toIdentifierQueryObject(firstIdentifier),
+                toIdentifierQueryObject(secondIdentifier)));
+
+    var exception =
+        assertThrows(
+            ApprovalConflictException.class,
+            () -> approvalService.updateApprovalIdentifiers(approval.identifier(), newIdentifiers));
+
+    assertEquals(
+        Map.of(name, "%s, %s".formatted(firstIdentifier.value(), secondIdentifier.value())),
+        exception.getConflictingKeys());
   }
 }

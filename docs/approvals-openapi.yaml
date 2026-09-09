@@ -412,7 +412,9 @@ components:
           type: object
           additionalProperties:
             type: string
-          description: Map of conflicting identifier keys and their values (only present on 409 Conflict responses)
+          description: >-
+            Map of conflicting identifier names and their values (only present on 409 Conflict responses).
+            When several conflicting identifiers share the same name, their values are joined with ", ".
     Approval:
       type: object
       description: An approval for associating a persistent handle identifier with a source URI
