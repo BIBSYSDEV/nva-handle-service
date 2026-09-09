@@ -42,6 +42,9 @@ class ApprovalServiceTest {
   private static final String HANDLE_PREFIX = new Environment().readEnv("HANDLE_PREFIX");
   private static final String API_HOST = new Environment().readEnv("API_HOST");
   private static final String APPROVAL_PATH = "approval";
+  private static final String FIRST_VALUE_WHEN_SORTED = "aaa-first";
+  private static final String LAST_VALUE_WHEN_SORTED = "zzz-last";
+  private static final String EXPECTED_JOINED_VALUES = "aaa-first, zzz-last";
   private ApprovalService approvalService;
   private ApprovalRepository approvalRepository;
   private HandleDatabase handleDatabase;
@@ -239,8 +242,8 @@ class ApprovalServiceTest {
   @Test
   void shouldReportAllConflictingValuesWhenExistingIdentifiersShareSameName() {
     var name = randomString();
-    var firstIdentifier = new NamedIdentifier(name, randomString());
-    var secondIdentifier = new NamedIdentifier(name, randomString());
+    var firstIdentifier = new NamedIdentifier(name, LAST_VALUE_WHEN_SORTED);
+    var secondIdentifier = new NamedIdentifier(name, FIRST_VALUE_WHEN_SORTED);
     var identifiers = List.of(firstIdentifier, secondIdentifier);
 
     when(approvalRepository.findIdentifiers(identifiers))
@@ -254,9 +257,7 @@ class ApprovalServiceTest {
             ApprovalConflictException.class,
             () -> approvalService.create(identifiers, randomUri()));
 
-    assertEquals(
-        Map.of(name, "%s, %s".formatted(firstIdentifier.value(), secondIdentifier.value())),
-        exception.getConflictingKeys());
+    assertEquals(Map.of(name, EXPECTED_JOINED_VALUES), exception.getConflictingKeys());
   }
 
   @Test
@@ -312,8 +313,8 @@ class ApprovalServiceTest {
   void shouldReportAllConflictingValuesWhenIdentifiersUsedByOtherApprovalShareSameName() {
     var approval = new Approval(randomUUID(), randomIdentifiers(), randomUri(), randomHandle());
     var name = randomString();
-    var firstIdentifier = new NamedIdentifier(name, randomString());
-    var secondIdentifier = new NamedIdentifier(name, randomString());
+    var firstIdentifier = new NamedIdentifier(name, LAST_VALUE_WHEN_SORTED);
+    var secondIdentifier = new NamedIdentifier(name, FIRST_VALUE_WHEN_SORTED);
     var newIdentifiers = List.of(firstIdentifier, secondIdentifier);
 
     when(approvalRepository.findByApprovalIdentifier(approval.identifier()))
@@ -329,8 +330,6 @@ class ApprovalServiceTest {
             ApprovalConflictException.class,
             () -> approvalService.updateApprovalIdentifiers(approval.identifier(), newIdentifiers));
 
-    assertEquals(
-        Map.of(name, "%s, %s".formatted(firstIdentifier.value(), secondIdentifier.value())),
-        exception.getConflictingKeys());
+    assertEquals(Map.of(name, EXPECTED_JOINED_VALUES), exception.getConflictingKeys());
   }
 }

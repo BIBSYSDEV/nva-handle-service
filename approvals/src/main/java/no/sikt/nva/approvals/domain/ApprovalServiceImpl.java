@@ -8,6 +8,7 @@ import java.sql.Connection;
 import java.util.Collection;
 import java.util.Map;
 import java.util.Optional;
+import java.util.TreeSet;
 import java.util.UUID;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
@@ -137,7 +138,9 @@ public class ApprovalServiceImpl implements ApprovalService {
                 NamedIdentifierQueryObject::name,
                 Collectors.mapping(
                     NamedIdentifierQueryObject::value,
-                    Collectors.joining(CONFLICTING_VALUE_DELIMITER))));
+                    Collectors.collectingAndThen(
+                        Collectors.toCollection(TreeSet::new),
+                        values -> String.join(CONFLICTING_VALUE_DELIMITER, values)))));
   }
 
   private URI createApprovalUri(UUID approvalId) {
