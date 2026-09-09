@@ -6,7 +6,9 @@ import static no.sikt.nva.handle.utils.DatabaseConnectionSupplier.getConnectionS
 import java.net.URI;
 import java.sql.Connection;
 import java.util.Collection;
+import java.util.Map;
 import java.util.Optional;
+import java.util.TreeSet;
 import java.util.UUID;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
@@ -23,6 +25,7 @@ public class ApprovalServiceImpl implements ApprovalService {
   private static final String HANDLE_PREFIX = "HANDLE_PREFIX";
   private static final String API_HOST = "API_HOST";
   private static final String APPROVAL_PATH = "approval";
+  private static final String CONFLICTING_VALUE_DELIMITER = ", ";
   private final HandleDatabase handleDatabase;
   private final ApprovalRepository approvalRepository;
   private final Supplier<Connection> connectionSupplier;
@@ -101,13 +104,8 @@ public class ApprovalServiceImpl implements ApprovalService {
             .toList();
 
     if (!conflictingIdentifiers.isEmpty()) {
-      var message = formatConflictMessage(conflictingIdentifiers);
-      var conflictingKeys =
-          conflictingIdentifiers.stream()
-              .collect(
-                  Collectors.toMap(
-                      NamedIdentifierQueryObject::name, NamedIdentifierQueryObject::value));
-      throw new ApprovalConflictException(message, conflictingKeys);
+      throw new ApprovalConflictException(
+          formatConflictMessage(conflictingIdentifiers), toConflictingKeys(conflictingIdentifiers));
     }
   }
 
@@ -115,13 +113,8 @@ public class ApprovalServiceImpl implements ApprovalService {
       throws ApprovalConflictException {
     var identifiers = approvalRepository.findIdentifiers(namedIdentifiers);
     if (!identifiers.isEmpty()) {
-      var message = formatConflictMessage(identifiers);
-      var conflictingKeys =
-          identifiers.stream()
-              .collect(
-                  Collectors.toMap(
-                      NamedIdentifierQueryObject::name, NamedIdentifierQueryObject::value));
-      throw new ApprovalConflictException(message, conflictingKeys);
+      throw new ApprovalConflictException(
+          formatConflictMessage(identifiers), toConflictingKeys(identifiers));
     }
   }
 
@@ -132,6 +125,19 @@ public class ApprovalServiceImpl implements ApprovalService {
             .toList();
 
     return "Following identifiers already exist: [%s]".formatted(String.join(", ", identifierList));
+  }
+
+  private Map<String, String> toConflictingKeys(
+      Collection<NamedIdentifierQueryObject> conflictingIdentifiers) {
+    return conflictingIdentifiers.stream()
+        .collect(
+            Collectors.groupingBy(
+                NamedIdentifierQueryObject::name,
+                Collectors.mapping(
+                    NamedIdentifierQueryObject::value,
+                    Collectors.collectingAndThen(
+                        Collectors.toCollection(TreeSet::new),
+                        values -> String.join(CONFLICTING_VALUE_DELIMITER, values)))));
   }
 
   private URI createApprovalUri(UUID approvalId) {
