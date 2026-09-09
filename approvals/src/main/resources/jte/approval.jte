@@ -93,10 +93,10 @@
             <p class="metadata-text">${model.studyPeriodStart()} - ${model.studyPeriodEnd()}</p>
           </div>
           @endif
-          @for(var namedIdentifier : model.namedIdentifiers().entrySet())
+          @for(var namedIdentifier : model.namedIdentifiers())
           <div class="metadata-field">
-            <p class="metadata-label">${namedIdentifier.getKey()}</p>
-            <p class="metadata-text">${namedIdentifier.getValue()}</p>
+            <p class="metadata-label">${namedIdentifier.name()}</p>
+            <p class="metadata-text">${namedIdentifier.value()}</p>
           </div>
           @endfor
           <div class="metadata-field">

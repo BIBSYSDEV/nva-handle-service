@@ -37,6 +37,22 @@ class ApprovalHtmlModelTest {
   }
 
   @Test
+  void shouldKeepAllIdentifiersWhenTwoIdentifiersShareSameName() {
+    var firstIdentifier = new NamedIdentifier("apitest-uib", "first-value");
+    var secondIdentifier = new NamedIdentifier("apitest-uib", "second-value");
+    var approval =
+        new Approval(
+            UUID.randomUUID(),
+            List.of(firstIdentifier, secondIdentifier),
+            randomUri(),
+            randomHandle());
+
+    var model = ApprovalHtmlModel.fromApproval(approval);
+
+    assertEquals(List.of(firstIdentifier, secondIdentifier), model.namedIdentifiers());
+  }
+
+  @Test
   void shouldHaveEmptySponsorsAndTrialSites() {
     var approval =
         new Approval(
