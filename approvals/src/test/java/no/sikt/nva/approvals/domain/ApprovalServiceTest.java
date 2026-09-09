@@ -231,6 +231,26 @@ class ApprovalServiceTest {
   }
 
   @Test
+  void shouldRejectCreateWhenIdentifierNamesDifferOnlyByCase() {
+    var value = randomString();
+    var identifiers = List.of(new NamedIdentifier("DMP", value), new NamedIdentifier("dmp", value));
+
+    assertThrows(
+        IllegalArgumentException.class, () -> approvalService.create(identifiers, randomUri()));
+  }
+
+  @Test
+  void shouldRejectUpdateWhenIdentifierNamesDifferOnlyByCase() {
+    var approvalId = randomUUID();
+    var value = randomString();
+    var identifiers = List.of(new NamedIdentifier("DMP", value), new NamedIdentifier("dmp", value));
+
+    assertThrows(
+        IllegalArgumentException.class,
+        () -> approvalService.updateApprovalIdentifiers(approvalId, identifiers));
+  }
+
+  @Test
   void shouldAcceptIdentifiersSharingNameWhenValuesDiffer()
       throws SQLException, ApprovalServiceException, ApprovalConflictException {
     var name = randomString();

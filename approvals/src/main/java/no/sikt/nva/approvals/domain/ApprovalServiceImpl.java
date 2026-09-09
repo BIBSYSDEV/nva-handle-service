@@ -6,7 +6,9 @@ import static no.sikt.nva.handle.utils.DatabaseConnectionSupplier.getConnectionS
 import java.net.URI;
 import java.sql.Connection;
 import java.util.Collection;
-import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.TreeSet;
@@ -103,8 +105,15 @@ public class ApprovalServiceImpl implements ApprovalService {
   private void ensureNoDuplicateIdentifiers(Collection<NamedIdentifier> namedIdentifiers) {
     var duplicates =
         namedIdentifiers.stream()
-            .filter(identifier -> Collections.frequency(namedIdentifiers, identifier) > 1)
-            .distinct()
+            .collect(
+                Collectors.groupingBy(
+                    ApprovalServiceImpl::caseInsensitiveKey,
+                    LinkedHashMap::new,
+                    Collectors.toList()))
+            .values()
+            .stream()
+            .filter(identifiersWithSameKey -> identifiersWithSameKey.size() > 1)
+            .map(List::getFirst)
             .map(identifier -> "%s: %s".formatted(identifier.name(), identifier.value()))
             .toList();
 
@@ -112,6 +121,11 @@ public class ApprovalServiceImpl implements ApprovalService {
       throw new IllegalArgumentException(
           DUPLICATE_IDENTIFIERS_MESSAGE.formatted(String.join(VALUE_DELIMITER, duplicates)));
     }
+  }
+
+  private static String caseInsensitiveKey(NamedIdentifier namedIdentifier) {
+    return "%s#%s"
+        .formatted(namedIdentifier.name().toLowerCase(Locale.ROOT), namedIdentifier.value());
   }
 
   private void ensureIdentifiersAreNotUsedByOtherApproval(
