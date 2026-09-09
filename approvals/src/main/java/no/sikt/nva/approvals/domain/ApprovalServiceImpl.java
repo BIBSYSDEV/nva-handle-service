@@ -8,7 +8,6 @@ import java.sql.Connection;
 import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.TreeSet;
@@ -31,6 +30,9 @@ public class ApprovalServiceImpl implements ApprovalService {
   private static final String VALUE_DELIMITER = ", ";
   private static final String DUPLICATE_IDENTIFIERS_MESSAGE =
       "Identifiers must be unique, but the following were provided more than once: [%s]";
+  private static final String KEY_SEPARATOR = "#";
+  private static final String MALFORMED_IDENTIFIER_NAME_MESSAGE =
+      "Identifier names must not contain '%s', but the following did: [%s]";
   private final HandleDatabase handleDatabase;
   private final ApprovalRepository approvalRepository;
   private final Supplier<Connection> connectionSupplier;
@@ -59,6 +61,7 @@ public class ApprovalServiceImpl implements ApprovalService {
   @Override
   public Approval create(Collection<NamedIdentifier> namedIdentifiers, URI source)
       throws ApprovalServiceException, ApprovalConflictException {
+    ensureIdentifierNamesAreWellFormed(namedIdentifiers);
     ensureNoDuplicateIdentifiers(namedIdentifiers);
     ensureIdentifiersDoesNotExist(namedIdentifiers);
     var approvalId = randomUUID();
@@ -88,6 +91,7 @@ public class ApprovalServiceImpl implements ApprovalService {
   public Approval updateApprovalIdentifiers(
       UUID approvalId, Collection<NamedIdentifier> namedIdentifiers)
       throws ApprovalServiceException, ApprovalConflictException {
+    ensureIdentifierNamesAreWellFormed(namedIdentifiers);
     ensureNoDuplicateIdentifiers(namedIdentifiers);
     var identifiers = approvalRepository.findIdentifiers(namedIdentifiers);
     var approval =
@@ -100,6 +104,21 @@ public class ApprovalServiceImpl implements ApprovalService {
     approvalRepository.updateApprovalIdentifiers(updatedApproval);
 
     return updatedApproval;
+  }
+
+  private void ensureIdentifierNamesAreWellFormed(Collection<NamedIdentifier> namedIdentifiers) {
+    var malformedNames =
+        namedIdentifiers.stream()
+            .map(NamedIdentifier::name)
+            .filter(name -> name.contains(KEY_SEPARATOR))
+            .distinct()
+            .toList();
+
+    if (!malformedNames.isEmpty()) {
+      throw new IllegalArgumentException(
+          MALFORMED_IDENTIFIER_NAME_MESSAGE.formatted(
+              KEY_SEPARATOR, String.join(VALUE_DELIMITER, malformedNames)));
+    }
   }
 
   private void ensureNoDuplicateIdentifiers(Collection<NamedIdentifier> namedIdentifiers) {
@@ -123,9 +142,8 @@ public class ApprovalServiceImpl implements ApprovalService {
     }
   }
 
-  private static String caseInsensitiveKey(NamedIdentifier namedIdentifier) {
-    return "%s#%s"
-        .formatted(namedIdentifier.name().toLowerCase(Locale.ROOT), namedIdentifier.value());
+  private static List<String> caseInsensitiveKey(NamedIdentifier namedIdentifier) {
+    return List.of(namedIdentifier.normalizedName(), namedIdentifier.value());
   }
 
   private void ensureIdentifiersAreNotUsedByOtherApproval(

@@ -251,6 +251,46 @@ class ApprovalServiceTest {
   }
 
   @Test
+  void shouldRejectCreateWhenIdentifierNamesDifferOnlyBySurroundingWhitespace() {
+    var value = randomString();
+    var identifiers =
+        List.of(new NamedIdentifier("DMP", value), new NamedIdentifier("  DMP  ", value));
+
+    assertThrows(
+        IllegalArgumentException.class, () -> approvalService.create(identifiers, randomUri()));
+  }
+
+  @Test
+  void shouldRejectCreateWhenIdentifierNameContainsKeySeparator() {
+    var identifiers = List.of(new NamedIdentifier("a#b", randomString()));
+
+    assertThrows(
+        IllegalArgumentException.class, () -> approvalService.create(identifiers, randomUri()));
+  }
+
+  @Test
+  void shouldRejectUpdateWhenIdentifierNameContainsKeySeparator() {
+    var identifiers = List.of(new NamedIdentifier("a#b", randomString()));
+
+    assertThrows(
+        IllegalArgumentException.class,
+        () -> approvalService.updateApprovalIdentifiers(randomUUID(), identifiers));
+  }
+
+  @Test
+  void shouldAcceptIdentifierValueContainingKeySeparator()
+      throws SQLException, ApprovalServiceException, ApprovalConflictException {
+    var identifiers = List.of(new NamedIdentifier(randomString(), "2023-510166#27-01"));
+    when(approvalRepository.findIdentifiers(identifiers)).thenReturn(List.of());
+    when(handleDatabase.createHandle(any(), any(), any())).thenReturn(randomHandle().value());
+    doNothing().when(approvalRepository).save(any());
+
+    var approval = approvalService.create(identifiers, randomUri());
+
+    assertEquals(identifiers, approval.namedIdentifiers());
+  }
+
+  @Test
   void shouldAcceptIdentifiersSharingNameWhenValuesDiffer()
       throws SQLException, ApprovalServiceException, ApprovalConflictException {
     var name = randomString();
