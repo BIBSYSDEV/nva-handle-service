@@ -4,6 +4,7 @@ import static java.net.HttpURLConnection.HTTP_ACCEPTED;
 import static java.net.HttpURLConnection.HTTP_BAD_GATEWAY;
 import static java.net.HttpURLConnection.HTTP_BAD_REQUEST;
 import static java.net.HttpURLConnection.HTTP_FORBIDDEN;
+import static java.net.HttpURLConnection.HTTP_NOT_FOUND;
 import static no.unit.nva.testutils.RandomDataGenerator.randomString;
 import static no.unit.nva.testutils.RandomDataGenerator.randomUri;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -23,6 +24,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import no.sikt.nva.approvals.domain.ApprovalNotFoundException;
 import no.sikt.nva.approvals.domain.ApprovalServiceException;
 import no.sikt.nva.approvals.domain.FakeApprovalService;
 import no.sikt.nva.approvals.domain.NamedIdentifier;
@@ -129,10 +131,10 @@ class UpdateApprovalHandlerTest {
   }
 
   @Test
-  void shouldReturnBadGatewayWhenApprovalNotFoundDuringUpdate() throws IOException {
+  void shouldReturnNotFoundWhenApprovalDoesNotExistDuringUpdate() throws IOException {
     handler =
         new UpdateApprovalHandler(
-            new FakeApprovalService(new ApprovalServiceException("not found")),
+            new FakeApprovalService(new ApprovalNotFoundException(approvalId)),
             identifierAuthorizer,
             new Environment());
     var request = createRequest(randomUpdateApprovalRequest(), approvalId);
@@ -141,7 +143,7 @@ class UpdateApprovalHandlerTest {
 
     var response = GatewayResponse.fromOutputStream(output, Void.class);
 
-    assertEquals(HTTP_BAD_GATEWAY, response.getStatusCode());
+    assertEquals(HTTP_NOT_FOUND, response.getStatusCode());
   }
 
   @Test

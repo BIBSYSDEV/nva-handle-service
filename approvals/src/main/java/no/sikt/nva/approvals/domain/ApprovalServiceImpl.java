@@ -82,10 +82,7 @@ public class ApprovalServiceImpl implements ApprovalService {
     var identifiers = approvalRepository.findIdentifiers(namedIdentifiers);
     var approval =
         getApprovalByIdentifier(approvalId)
-            .orElseThrow(
-                () ->
-                    new ApprovalServiceException(
-                        "Approval not found for identifier %s".formatted(approvalId)));
+            .orElseThrow(() -> new ApprovalNotFoundException(approvalId));
 
     ensureIdentifiersAreNotUsedByOtherApproval(identifiers, approval);
     var updatedApproval =

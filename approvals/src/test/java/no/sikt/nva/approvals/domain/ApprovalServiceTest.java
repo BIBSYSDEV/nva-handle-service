@@ -252,12 +252,12 @@ class ApprovalServiceTest {
   }
 
   @Test
-  void shouldThrowApprovalServiceExceptionWhenApprovalDoesNotExistDuringUpdate() {
+  void shouldThrowApprovalNotFoundExceptionWhenApprovalDoesNotExistDuringUpdate() {
     var approvalId = randomUUID();
     when(approvalRepository.findByApprovalIdentifier(approvalId)).thenReturn(Optional.empty());
 
     assertThrows(
-        ApprovalServiceException.class,
+        ApprovalNotFoundException.class,
         () -> approvalService.updateApprovalIdentifiers(approvalId, randomIdentifiers()));
   }
 
