@@ -13,6 +13,7 @@ import java.util.Optional;
 import java.util.TreeSet;
 import java.util.UUID;
 import java.util.function.Supplier;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import no.sikt.nva.approvals.persistence.ApprovalRepository;
 import no.sikt.nva.approvals.persistence.DynamoDbApprovalRepository;
@@ -30,9 +31,10 @@ public class ApprovalServiceImpl implements ApprovalService {
   private static final String VALUE_DELIMITER = ", ";
   private static final String DUPLICATE_IDENTIFIERS_MESSAGE =
       "Identifiers must be unique, but the following were provided more than once: [%s]";
-  private static final String KEY_SEPARATOR = "#";
+  private static final Pattern SUPPORTED_IDENTIFIER_NAME = Pattern.compile("[a-z0-9_-]+");
   private static final String MALFORMED_IDENTIFIER_NAME_MESSAGE =
-      "Identifier names must not contain '%s', but the following did: [%s]";
+      "Identifier names may only contain letters, digits, hyphen and underscore, but the following"
+          + " did not: [%s]";
   private final HandleDatabase handleDatabase;
   private final ApprovalRepository approvalRepository;
   private final Supplier<Connection> connectionSupplier;
@@ -110,14 +112,18 @@ public class ApprovalServiceImpl implements ApprovalService {
     var malformedNames =
         namedIdentifiers.stream()
             .map(NamedIdentifier::name)
-            .filter(name -> name.contains(KEY_SEPARATOR))
+            .filter(
+                name ->
+                    !SUPPORTED_IDENTIFIER_NAME
+                        .matcher(NamedIdentifier.normalizeName(name))
+                        .matches())
             .distinct()
             .toList();
 
     if (!malformedNames.isEmpty()) {
       throw new IllegalArgumentException(
           MALFORMED_IDENTIFIER_NAME_MESSAGE.formatted(
-              KEY_SEPARATOR, String.join(VALUE_DELIMITER, malformedNames)));
+              String.join(VALUE_DELIMITER, malformedNames)));
     }
   }
 

@@ -35,6 +35,8 @@ import nva.commons.core.Environment;
 import nva.commons.core.paths.UriWrapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 class ApprovalServiceTest {
 
@@ -260,21 +262,36 @@ class ApprovalServiceTest {
         IllegalArgumentException.class, () -> approvalService.create(identifiers, randomUri()));
   }
 
-  @Test
-  void shouldRejectCreateWhenIdentifierNameContainsKeySeparator() {
-    var identifiers = List.of(new NamedIdentifier("a#b", randomString()));
+  @ParameterizedTest
+  @ValueSource(strings = {"a#b", "REK 2", "rek.2", "rek/2", "rek:2", "æøå", ""})
+  void shouldRejectCreateWhenIdentifierNameContainsUnsupportedCharacters(String name) {
+    var identifiers = List.of(new NamedIdentifier(name, randomString()));
 
     assertThrows(
         IllegalArgumentException.class, () -> approvalService.create(identifiers, randomUri()));
   }
 
   @Test
-  void shouldRejectUpdateWhenIdentifierNameContainsKeySeparator() {
+  void shouldRejectUpdateWhenIdentifierNameContainsUnsupportedCharacters() {
     var identifiers = List.of(new NamedIdentifier("a#b", randomString()));
 
     assertThrows(
         IllegalArgumentException.class,
         () -> approvalService.updateApprovalIdentifiers(randomUUID(), identifiers));
+  }
+
+  @ParameterizedTest
+  @ValueSource(strings = {"DMP", "dmp", "  DMP  ", "apitest-uib", "rek_2", "REK2"})
+  void shouldAcceptSupportedIdentifierNames(String name)
+      throws SQLException, ApprovalServiceException, ApprovalConflictException {
+    var identifiers = List.of(new NamedIdentifier(name, randomString()));
+    when(approvalRepository.findIdentifiers(identifiers)).thenReturn(List.of());
+    when(handleDatabase.createHandle(any(), any(), any())).thenReturn(randomHandle().value());
+    doNothing().when(approvalRepository).save(any());
+
+    var approval = approvalService.create(identifiers, randomUri());
+
+    assertEquals(identifiers, approval.namedIdentifiers());
   }
 
   @Test
