@@ -69,9 +69,10 @@ paths:
         "400":
           description: >-
             Bad Request - invalid body, an identifier name containing anything but letters, digits,
-            hyphen and underscore, or the same identifier provided more than once. Identifier names
-            are compared ignoring case and surrounding whitespace, so "DMP" and " dmp " count as the
-            same name. Identifier values are not restricted.
+            hyphen and underscore, or two identifiers with the same name and the same value.
+            Names are compared ignoring case and surrounding whitespace, so "DMP" and " dmp " count
+            as the same name, while values are compared exactly. Two identifiers sharing a name but
+            holding different values are allowed. Identifier values are not restricted.
           content:
             "application/json":
               schema:
@@ -317,9 +318,10 @@ paths:
         "400":
           description: >-
             Bad Request - invalid body, an identifier name containing anything but letters, digits,
-            hyphen and underscore, or the same identifier provided more than once. Identifier names
-            are compared ignoring case and surrounding whitespace, so "DMP" and " dmp " count as the
-            same name. Identifier values are not restricted.
+            hyphen and underscore, or two identifiers with the same name and the same value.
+            Names are compared ignoring case and surrounding whitespace, so "DMP" and " dmp " count
+            as the same name, while values are compared exactly. Two identifiers sharing a name but
+            holding different values are allowed. Identifier values are not restricted.
           content:
             "application/json":
               schema:

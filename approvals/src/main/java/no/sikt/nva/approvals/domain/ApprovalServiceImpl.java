@@ -132,7 +132,7 @@ public class ApprovalServiceImpl implements ApprovalService {
         namedIdentifiers.stream()
             .collect(
                 Collectors.groupingBy(
-                    ApprovalServiceImpl::caseInsensitiveKey,
+                    ApprovalServiceImpl::duplicateDetectionKey,
                     LinkedHashMap::new,
                     Collectors.toList()))
             .values()
@@ -148,7 +148,7 @@ public class ApprovalServiceImpl implements ApprovalService {
     }
   }
 
-  private static List<String> caseInsensitiveKey(NamedIdentifier namedIdentifier) {
+  private static List<String> duplicateDetectionKey(NamedIdentifier namedIdentifier) {
     return List.of(namedIdentifier.normalizedName(), namedIdentifier.value());
   }
 
