@@ -6,6 +6,7 @@ import static no.sikt.nva.handle.utils.DatabaseConnectionSupplier.getConnectionS
 import java.net.URI;
 import java.sql.Connection;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Map;
 import java.util.Optional;
 import java.util.TreeSet;
@@ -25,7 +26,9 @@ public class ApprovalServiceImpl implements ApprovalService {
   private static final String HANDLE_PREFIX = "HANDLE_PREFIX";
   private static final String API_HOST = "API_HOST";
   private static final String APPROVAL_PATH = "approval";
-  private static final String CONFLICTING_VALUE_DELIMITER = ", ";
+  private static final String VALUE_DELIMITER = ", ";
+  private static final String DUPLICATE_IDENTIFIERS_MESSAGE =
+      "Identifiers must be unique, but the following were provided more than once: [%s]";
   private final HandleDatabase handleDatabase;
   private final ApprovalRepository approvalRepository;
   private final Supplier<Connection> connectionSupplier;
@@ -54,6 +57,7 @@ public class ApprovalServiceImpl implements ApprovalService {
   @Override
   public Approval create(Collection<NamedIdentifier> namedIdentifiers, URI source)
       throws ApprovalServiceException, ApprovalConflictException {
+    ensureNoDuplicateIdentifiers(namedIdentifiers);
     ensureIdentifiersDoesNotExist(namedIdentifiers);
     var approvalId = randomUUID();
     var approvalUri = createApprovalUri(approvalId);
@@ -82,6 +86,7 @@ public class ApprovalServiceImpl implements ApprovalService {
   public Approval updateApprovalIdentifiers(
       UUID approvalId, Collection<NamedIdentifier> namedIdentifiers)
       throws ApprovalServiceException, ApprovalConflictException {
+    ensureNoDuplicateIdentifiers(namedIdentifiers);
     var identifiers = approvalRepository.findIdentifiers(namedIdentifiers);
     var approval =
         getApprovalByIdentifier(approvalId)
@@ -93,6 +98,20 @@ public class ApprovalServiceImpl implements ApprovalService {
     approvalRepository.updateApprovalIdentifiers(updatedApproval);
 
     return updatedApproval;
+  }
+
+  private void ensureNoDuplicateIdentifiers(Collection<NamedIdentifier> namedIdentifiers) {
+    var duplicates =
+        namedIdentifiers.stream()
+            .filter(identifier -> Collections.frequency(namedIdentifiers, identifier) > 1)
+            .distinct()
+            .map(identifier -> "%s: %s".formatted(identifier.name(), identifier.value()))
+            .toList();
+
+    if (!duplicates.isEmpty()) {
+      throw new IllegalArgumentException(
+          DUPLICATE_IDENTIFIERS_MESSAGE.formatted(String.join(VALUE_DELIMITER, duplicates)));
+    }
   }
 
   private void ensureIdentifiersAreNotUsedByOtherApproval(
@@ -137,7 +156,7 @@ public class ApprovalServiceImpl implements ApprovalService {
                     NamedIdentifierQueryObject::value,
                     Collectors.collectingAndThen(
                         Collectors.toCollection(TreeSet::new),
-                        values -> String.join(CONFLICTING_VALUE_DELIMITER, values)))));
+                        values -> String.join(VALUE_DELIMITER, values)))));
   }
 
   private URI createApprovalUri(UUID approvalId) {

@@ -67,7 +67,7 @@ paths:
               schema:
                 type: integer
         "400":
-          description: Bad Request
+          description: Bad Request - invalid body, or the same identifier (name and value) provided more than once
           content:
             "application/json":
               schema:
@@ -311,7 +311,7 @@ paths:
               schema:
                 type: integer
         "400":
-          description: Bad Request
+          description: Bad Request - invalid body, or the same identifier (name and value) provided more than once
           content:
             "application/json":
               schema:

@@ -111,6 +111,22 @@ class CreateApprovalHandlerTest {
   }
 
   @Test
+  void shouldReturnBadRequestWhenApprovalServiceRejectsDuplicateIdentifiers() throws IOException {
+    handler =
+        new CreateApprovalHandler(
+            new FakeApprovalService(new IllegalArgumentException("duplicate")),
+            identifierAuthorizer,
+            new Environment());
+    var request = createRequest(randomApprovalRequest(randomUri()));
+
+    handler.handleRequest(request, output, context);
+
+    var response = GatewayResponse.fromOutputStream(output, Void.class);
+
+    assertEquals(HTTP_BAD_REQUEST, response.getStatusCode());
+  }
+
+  @Test
   void shouldReturnConflictWhenApprovalServiceThrowsConflictException() throws IOException {
     var key = "key";
     var value = "value";

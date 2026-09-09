@@ -210,6 +210,43 @@ class ApprovalServiceTest {
   }
 
   @Test
+  void shouldRejectCreateWhenSameIdentifierIsProvidedTwice() {
+    var identifier = randomIdentifier();
+
+    assertThrows(
+        IllegalArgumentException.class,
+        () -> approvalService.create(List.of(identifier, identifier), randomUri()));
+  }
+
+  @Test
+  void shouldRejectUpdateWhenSameIdentifierIsProvidedTwice() {
+    var approval = new Approval(randomUUID(), randomIdentifiers(), randomUri(), randomHandle());
+    var identifier = randomIdentifier();
+
+    assertThrows(
+        IllegalArgumentException.class,
+        () ->
+            approvalService.updateApprovalIdentifiers(
+                approval.identifier(), List.of(identifier, identifier)));
+  }
+
+  @Test
+  void shouldAcceptIdentifiersSharingNameWhenValuesDiffer()
+      throws SQLException, ApprovalServiceException, ApprovalConflictException {
+    var name = randomString();
+    var identifiers =
+        List.of(
+            new NamedIdentifier(name, randomString()), new NamedIdentifier(name, randomString()));
+    when(approvalRepository.findIdentifiers(identifiers)).thenReturn(List.of());
+    when(handleDatabase.createHandle(any(), any(), any())).thenReturn(randomHandle().value());
+    doNothing().when(approvalRepository).save(any());
+
+    var approval = approvalService.create(identifiers, randomUri());
+
+    assertEquals(identifiers, approval.namedIdentifiers());
+  }
+
+  @Test
   void shouldThrowApprovalConflictExceptionWhenIdentifiersAlreadyExist() {
     var existingIdentifiers = List.of(randomIdentifier(), randomIdentifier());
 
