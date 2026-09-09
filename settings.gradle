@@ -35,5 +35,5 @@ dependencyResolutionManagement {
 }
 
 rootProject.name = 'nva-handle-service'
-include 'operations'
+include 'handle'
 include 'approvals'

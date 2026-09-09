@@ -241,7 +241,7 @@ Resources:
   NvaCreateHandleFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: operations
+      CodeUri: handle
       Handler: no.sikt.nva.handle.CreateHandleHandler::handleRequest
       Policies:
         - AWSLambdaBasicExecutionRole
@@ -274,7 +274,7 @@ Resources:
   NvaUpdateHandleFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: operations
+      CodeUri: handle
       Handler: no.sikt.nva.handle.UpdateHandleHandler::handleRequest
       Policies:
         - AWSLambdaBasicExecutionRole
