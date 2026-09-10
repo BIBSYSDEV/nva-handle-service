@@ -31,7 +31,7 @@ public class ApprovalServiceImpl implements ApprovalService {
   private static final String VALUE_DELIMITER = ", ";
   private static final String DUPLICATE_IDENTIFIERS_MESSAGE =
       "Identifiers must be unique, but the following were provided more than once: [%s]";
-  private static final Pattern SUPPORTED_IDENTIFIER_NAME = Pattern.compile("[a-z0-9_-]+");
+  private static final Pattern SUPPORTED_IDENTIFIER_NAME_REGEX = Pattern.compile("[a-z0-9_-]+");
   private static final String MALFORMED_IDENTIFIER_NAME_MESSAGE =
       "Identifier names may only contain letters, digits, hyphen and underscore, but the following"
           + " did not: [%s]";
@@ -114,7 +114,7 @@ public class ApprovalServiceImpl implements ApprovalService {
             .map(NamedIdentifier::name)
             .filter(
                 name ->
-                    !SUPPORTED_IDENTIFIER_NAME
+                    !SUPPORTED_IDENTIFIER_NAME_REGEX
                         .matcher(NamedIdentifier.normalizeName(name))
                         .matches())
             .distinct()

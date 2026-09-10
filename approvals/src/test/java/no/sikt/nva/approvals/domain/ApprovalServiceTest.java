@@ -26,6 +26,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.function.Supplier;
+import java.util.stream.Stream;
 import no.sikt.nva.approvals.persistence.ApprovalDao;
 import no.sikt.nva.approvals.persistence.ApprovalRepository;
 import no.sikt.nva.approvals.persistence.HandleDao;
@@ -36,6 +37,7 @@ import nva.commons.core.paths.UriWrapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
 class ApprovalServiceTest {
@@ -60,6 +62,10 @@ class ApprovalServiceTest {
     this.approvalService =
         new ApprovalServiceImpl(
             handleDatabase, approvalRepository, () -> connection, new Environment());
+  }
+
+  static Stream<String> unsupportedIdentifierNames() {
+    return Stream.of("a#b", "REK 2", "rek.2", "rek/2", "rek:2", "æøå", "");
   }
 
   @Test
@@ -222,14 +228,13 @@ class ApprovalServiceTest {
 
   @Test
   void shouldRejectUpdateWhenSameIdentifierIsProvidedTwice() {
-    var approval = new Approval(randomUUID(), randomIdentifiers(), randomUri(), randomHandle());
+    var approvalId = randomUUID();
     var identifier = randomIdentifier();
 
     assertThrows(
         IllegalArgumentException.class,
         () ->
-            approvalService.updateApprovalIdentifiers(
-                approval.identifier(), List.of(identifier, identifier)));
+            approvalService.updateApprovalIdentifiers(approvalId, List.of(identifier, identifier)));
   }
 
   @Test
@@ -262,8 +267,20 @@ class ApprovalServiceTest {
         IllegalArgumentException.class, () -> approvalService.create(identifiers, randomUri()));
   }
 
+  @Test
+  void shouldRejectUpdateWhenIdentifierNamesDifferOnlyBySurroundingWhitespace() {
+    var approvalId = randomUUID();
+    var value = randomString();
+    var identifiers =
+        List.of(new NamedIdentifier("DMP", value), new NamedIdentifier("  DMP  ", value));
+
+    assertThrows(
+        IllegalArgumentException.class,
+        () -> approvalService.updateApprovalIdentifiers(approvalId, identifiers));
+  }
+
   @ParameterizedTest
-  @ValueSource(strings = {"a#b", "REK 2", "rek.2", "rek/2", "rek:2", "æøå", ""})
+  @MethodSource("unsupportedIdentifierNames")
   void shouldRejectCreateWhenIdentifierNameContainsUnsupportedCharacters(String name) {
     var identifiers = List.of(new NamedIdentifier(name, randomString()));
 
@@ -271,9 +288,10 @@ class ApprovalServiceTest {
         IllegalArgumentException.class, () -> approvalService.create(identifiers, randomUri()));
   }
 
-  @Test
-  void shouldRejectUpdateWhenIdentifierNameContainsUnsupportedCharacters() {
-    var identifiers = List.of(new NamedIdentifier("a#b", randomString()));
+  @ParameterizedTest
+  @MethodSource("unsupportedIdentifierNames")
+  void shouldRejectUpdateWhenIdentifierNameContainsUnsupportedCharacters(String name) {
+    var identifiers = List.of(new NamedIdentifier(name, randomString()));
 
     assertThrows(
         IllegalArgumentException.class,
