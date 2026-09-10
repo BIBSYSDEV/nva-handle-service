@@ -8,10 +8,8 @@ import static nva.commons.core.StringUtils.isNotBlank;
 import java.net.URI;
 import java.time.LocalDate;
 import java.util.Collection;
-import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
-import java.util.stream.Collectors;
 import no.sikt.nva.approvals.dmp.model.ClinicalTrial;
 import no.sikt.nva.approvals.dmp.model.TrialEvent;
 import no.sikt.nva.approvals.domain.Approval;
@@ -24,7 +22,7 @@ public record ApprovalHtmlModel(
     String handle,
     String studyPeriodStart,
     String studyPeriodEnd,
-    Map<String, String> namedIdentifiers,
+    Collection<NamedIdentifier> namedIdentifiers,
     Collection<Sponsor> sponsors,
     Collection<TrialSite> trialSites) {
 
@@ -34,7 +32,7 @@ public record ApprovalHtmlModel(
   private static final String RESEARCH_PROFILE_PATH = "research-profile";
 
   public static ApprovalHtmlModel fromApproval(Approval approval) {
-    var namedIdentifiers = getNamedIdentifiers(approval);
+    var namedIdentifiers = approval.namedIdentifiers();
     var handleValue = nonNull(approval.handle()) ? approval.handle().toString() : EMPTY_STRING;
 
     return new ApprovalHtmlModel(
@@ -50,7 +48,7 @@ public record ApprovalHtmlModel(
 
   public static ApprovalHtmlModel fromApprovalAndClinicalTrial(
       Approval approval, ClinicalTrial clinicalTrial, String applicationDomain) {
-    var namedIdentifiers = getNamedIdentifiers(approval);
+    var namedIdentifiers = approval.namedIdentifiers();
     var handleValue = nonNull(approval.handle()) ? approval.handle().toString() : EMPTY_STRING;
     var studyPeriodStart = extractStudyPeriodStart(clinicalTrial);
     var sponsors = extractSponsors(clinicalTrial);
@@ -120,11 +118,6 @@ public record ApprovalHtmlModel(
         .addChild(personId)
         .getUri()
         .toString();
-  }
-
-  private static Map<String, String> getNamedIdentifiers(Approval approval) {
-    return approval.namedIdentifiers().stream()
-        .collect(Collectors.toMap(NamedIdentifier::name, NamedIdentifier::value));
   }
 
   public boolean hasStudyPeriod() {
