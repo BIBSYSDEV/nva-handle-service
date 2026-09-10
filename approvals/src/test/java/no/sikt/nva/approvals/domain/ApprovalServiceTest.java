@@ -26,6 +26,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.function.Supplier;
+import java.util.stream.Stream;
 import no.sikt.nva.approvals.persistence.ApprovalDao;
 import no.sikt.nva.approvals.persistence.ApprovalRepository;
 import no.sikt.nva.approvals.persistence.HandleDao;
@@ -35,6 +36,9 @@ import nva.commons.core.Environment;
 import nva.commons.core.paths.UriWrapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.ValueSource;
 
 class ApprovalServiceTest {
 
@@ -58,6 +62,10 @@ class ApprovalServiceTest {
     this.approvalService =
         new ApprovalServiceImpl(
             handleDatabase, approvalRepository, () -> connection, new Environment());
+  }
+
+  static Stream<String> unsupportedIdentifierNames() {
+    return Stream.of("a#b", "REK 2", "rek.2", "rek/2", "rek:2", "æøå", "");
   }
 
   @Test
@@ -207,6 +215,130 @@ class ApprovalServiceTest {
     var result = approvalService.getApprovalByNamedIdentifier(namedIdentifier);
 
     assertTrue(result.isEmpty());
+  }
+
+  @Test
+  void shouldRejectCreateWhenSameIdentifierIsProvidedTwice() {
+    var identifier = randomIdentifier();
+
+    assertThrows(
+        IllegalArgumentException.class,
+        () -> approvalService.create(List.of(identifier, identifier), randomUri()));
+  }
+
+  @Test
+  void shouldRejectUpdateWhenSameIdentifierIsProvidedTwice() {
+    var approvalId = randomUUID();
+    var identifier = randomIdentifier();
+
+    assertThrows(
+        IllegalArgumentException.class,
+        () ->
+            approvalService.updateApprovalIdentifiers(approvalId, List.of(identifier, identifier)));
+  }
+
+  @Test
+  void shouldRejectCreateWhenIdentifierNamesDifferOnlyByCase() {
+    var value = randomString();
+    var identifiers = List.of(new NamedIdentifier("DMP", value), new NamedIdentifier("dmp", value));
+
+    assertThrows(
+        IllegalArgumentException.class, () -> approvalService.create(identifiers, randomUri()));
+  }
+
+  @Test
+  void shouldRejectUpdateWhenIdentifierNamesDifferOnlyByCase() {
+    var approvalId = randomUUID();
+    var value = randomString();
+    var identifiers = List.of(new NamedIdentifier("DMP", value), new NamedIdentifier("dmp", value));
+
+    assertThrows(
+        IllegalArgumentException.class,
+        () -> approvalService.updateApprovalIdentifiers(approvalId, identifiers));
+  }
+
+  @Test
+  void shouldRejectCreateWhenIdentifierNamesDifferOnlyBySurroundingWhitespace() {
+    var value = randomString();
+    var identifiers =
+        List.of(new NamedIdentifier("DMP", value), new NamedIdentifier("  DMP  ", value));
+
+    assertThrows(
+        IllegalArgumentException.class, () -> approvalService.create(identifiers, randomUri()));
+  }
+
+  @Test
+  void shouldRejectUpdateWhenIdentifierNamesDifferOnlyBySurroundingWhitespace() {
+    var approvalId = randomUUID();
+    var value = randomString();
+    var identifiers =
+        List.of(new NamedIdentifier("DMP", value), new NamedIdentifier("  DMP  ", value));
+
+    assertThrows(
+        IllegalArgumentException.class,
+        () -> approvalService.updateApprovalIdentifiers(approvalId, identifiers));
+  }
+
+  @ParameterizedTest
+  @MethodSource("unsupportedIdentifierNames")
+  void shouldRejectCreateWhenIdentifierNameContainsUnsupportedCharacters(String name) {
+    var identifiers = List.of(new NamedIdentifier(name, randomString()));
+
+    assertThrows(
+        IllegalArgumentException.class, () -> approvalService.create(identifiers, randomUri()));
+  }
+
+  @ParameterizedTest
+  @MethodSource("unsupportedIdentifierNames")
+  void shouldRejectUpdateWhenIdentifierNameContainsUnsupportedCharacters(String name) {
+    var identifiers = List.of(new NamedIdentifier(name, randomString()));
+
+    assertThrows(
+        IllegalArgumentException.class,
+        () -> approvalService.updateApprovalIdentifiers(randomUUID(), identifiers));
+  }
+
+  @ParameterizedTest
+  @ValueSource(strings = {"DMP", "dmp", "  DMP  ", "apitest-uib", "rek_2", "REK2"})
+  void shouldAcceptSupportedIdentifierNames(String name)
+      throws SQLException, ApprovalServiceException, ApprovalConflictException {
+    var identifiers = List.of(new NamedIdentifier(name, randomString()));
+    when(approvalRepository.findIdentifiers(identifiers)).thenReturn(List.of());
+    when(handleDatabase.createHandle(any(), any(), any())).thenReturn(randomHandle().value());
+    doNothing().when(approvalRepository).save(any());
+
+    var approval = approvalService.create(identifiers, randomUri());
+
+    assertEquals(identifiers, approval.namedIdentifiers());
+  }
+
+  @Test
+  void shouldAcceptIdentifierValueContainingKeySeparator()
+      throws SQLException, ApprovalServiceException, ApprovalConflictException {
+    var identifiers = List.of(new NamedIdentifier(randomString(), "2023-510166#27-01"));
+    when(approvalRepository.findIdentifiers(identifiers)).thenReturn(List.of());
+    when(handleDatabase.createHandle(any(), any(), any())).thenReturn(randomHandle().value());
+    doNothing().when(approvalRepository).save(any());
+
+    var approval = approvalService.create(identifiers, randomUri());
+
+    assertEquals(identifiers, approval.namedIdentifiers());
+  }
+
+  @Test
+  void shouldAcceptIdentifiersSharingNameWhenValuesDiffer()
+      throws SQLException, ApprovalServiceException, ApprovalConflictException {
+    var name = randomString();
+    var identifiers =
+        List.of(
+            new NamedIdentifier(name, randomString()), new NamedIdentifier(name, randomString()));
+    when(approvalRepository.findIdentifiers(identifiers)).thenReturn(List.of());
+    when(handleDatabase.createHandle(any(), any(), any())).thenReturn(randomHandle().value());
+    doNothing().when(approvalRepository).save(any());
+
+    var approval = approvalService.create(identifiers, randomUri());
+
+    assertEquals(identifiers, approval.namedIdentifiers());
   }
 
   @Test

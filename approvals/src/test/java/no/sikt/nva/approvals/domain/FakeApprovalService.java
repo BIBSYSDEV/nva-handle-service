@@ -72,6 +72,9 @@ public class FakeApprovalService implements ApprovalService {
 
   private void throwExceptionIfConfigured()
       throws ApprovalServiceException, ApprovalConflictException {
+    if (exception instanceof RuntimeException runtimeException) {
+      throw runtimeException;
+    }
     if (exception instanceof ApprovalServiceException approvalServiceException) {
       throw approvalServiceException;
     }

@@ -5,7 +5,6 @@ import static java.util.stream.Collectors.toMap;
 import static java.util.stream.Collectors.toUnmodifiableSet;
 
 import java.util.Collection;
-import java.util.Locale;
 import java.util.Set;
 import nva.commons.core.StringUtils;
 
@@ -57,7 +56,7 @@ public record IdentifierPolicy(Set<String> allowedIdentifierNames, boolean allow
   }
 
   private static String normalize(String name) {
-    return name.trim().toLowerCase(Locale.ROOT);
+    return NamedIdentifier.normalizeName(name);
   }
 
   private boolean allowsName(String name) {
