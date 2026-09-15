@@ -1,6 +1,7 @@
 package no.sikt.nva.approvals.domain;
 
 import static java.util.UUID.randomUUID;
+import static no.sikt.nva.approvals.utils.TestUtils.randomApproval;
 import static no.sikt.nva.approvals.utils.TestUtils.randomHandle;
 import static no.sikt.nva.approvals.utils.TestUtils.randomIdentifier;
 import static no.sikt.nva.approvals.utils.TestUtils.randomIdentifierQueryObject;
@@ -9,6 +10,7 @@ import static no.sikt.nva.approvals.utils.TestUtils.toIdentifierQueryObject;
 import static no.unit.nva.testutils.RandomDataGenerator.randomString;
 import static no.unit.nva.testutils.RandomDataGenerator.randomUri;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -16,12 +18,14 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.net.URI;
 import java.sql.Connection;
 import java.sql.SQLException;
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -150,8 +154,7 @@ class ApprovalServiceTest {
   @Test
   void shouldReturnApprovalWhenFoundByIdentifier() {
     var approvalId = randomUUID();
-    var expectedApproval =
-        new Approval(approvalId, randomIdentifiers(), randomUri(), randomHandle());
+    var expectedApproval = randomApproval(approvalId, randomUri());
     when(approvalRepository.findByApprovalIdentifier(approvalId))
         .thenReturn(Optional.of(expectedApproval));
 
@@ -174,7 +177,7 @@ class ApprovalServiceTest {
   @Test
   void shouldReturnApprovalWhenFoundByHandle() {
     var handle = new Handle(VALID_HANDLE_URI);
-    var expectedApproval = new Approval(randomUUID(), randomIdentifiers(), randomUri(), handle);
+    var expectedApproval = randomApproval(handle);
     when(approvalRepository.findByHandle(handle)).thenReturn(Optional.of(expectedApproval));
 
     var result = approvalService.getApprovalByHandle(handle);
@@ -196,8 +199,7 @@ class ApprovalServiceTest {
   @Test
   void shouldReturnApprovalWhenFoundByNamedIdentifier() {
     var namedIdentifier = new NamedIdentifier(randomString(), randomString());
-    var expectedApproval =
-        new Approval(randomUUID(), List.of(namedIdentifier), randomUri(), randomHandle());
+    var expectedApproval = randomApproval(namedIdentifier);
     when(approvalRepository.findByIdentifier(namedIdentifier))
         .thenReturn(Optional.of(expectedApproval));
 
@@ -395,7 +397,7 @@ class ApprovalServiceTest {
   @Test
   void shouldUpdateApprovalIdentifiersSuccessfully()
       throws ApprovalServiceException, ApprovalConflictException {
-    var approval = new Approval(randomUUID(), randomIdentifiers(), randomUri(), randomHandle());
+    var approval = randomApproval(randomUUID(), randomUri());
     var newIdentifiers = randomIdentifiers(2);
     when(approvalRepository.findByApprovalIdentifier(approval.identifier()))
         .thenReturn(Optional.of(approval));
@@ -406,6 +408,108 @@ class ApprovalServiceTest {
         approvalService.updateApprovalIdentifiers(approval.identifier(), newIdentifiers);
 
     assertEquals(newIdentifiers, updatedApproval.namedIdentifiers());
+  }
+
+  @Test
+  void shouldSetCreatedAndModifiedDateToSameInstantOnCreate()
+      throws SQLException, ApprovalServiceException, ApprovalConflictException {
+    when(handleDatabase.createHandle(eq(HANDLE_PREFIX), any(URI.class), eq(connection)))
+        .thenReturn(randomHandle().value());
+    doNothing().when(approvalRepository).save(any());
+
+    var approval = approvalService.create(randomIdentifiers(), randomUri());
+
+    assertEquals(approval.createdDate(), approval.modifiedDate());
+  }
+
+  @Test
+  void shouldSetCreatedDateOnCreate()
+      throws SQLException, ApprovalServiceException, ApprovalConflictException {
+    var beforeCreation = Instant.now();
+    when(handleDatabase.createHandle(eq(HANDLE_PREFIX), any(URI.class), eq(connection)))
+        .thenReturn(randomHandle().value());
+    doNothing().when(approvalRepository).save(any());
+
+    var approval = approvalService.create(randomIdentifiers(), randomUri());
+
+    assertFalse(approval.createdDate().isBefore(beforeCreation));
+  }
+
+  @Test
+  void shouldKeepCreatedDateAndUpdateModifiedDateOnUpdate()
+      throws ApprovalServiceException, ApprovalConflictException {
+    var approval = randomApproval(randomUUID(), randomUri());
+    var newIdentifiers = randomIdentifiers(2);
+    when(approvalRepository.findByApprovalIdentifier(approval.identifier()))
+        .thenReturn(Optional.of(approval));
+    when(approvalRepository.findIdentifiers(newIdentifiers)).thenReturn(List.of());
+    doNothing().when(approvalRepository).updateApprovalIdentifiers(any());
+
+    var updatedApproval =
+        approvalService.updateApprovalIdentifiers(approval.identifier(), newIdentifiers);
+
+    assertEquals(approval.createdDate(), updatedApproval.createdDate());
+    assertTrue(updatedApproval.modifiedDate().isAfter(approval.modifiedDate()));
+  }
+
+  @Test
+  void shouldNotPersistUpdateWhenIdentifiersAreUnchanged()
+      throws ApprovalServiceException, ApprovalConflictException {
+    var approval = randomApproval(randomUUID(), randomUri());
+    var unchangedIdentifiers = List.copyOf(approval.namedIdentifiers());
+    when(approvalRepository.findByApprovalIdentifier(approval.identifier()))
+        .thenReturn(Optional.of(approval));
+    when(approvalRepository.findIdentifiers(unchangedIdentifiers)).thenReturn(List.of());
+
+    approvalService.updateApprovalIdentifiers(approval.identifier(), unchangedIdentifiers);
+
+    verify(approvalRepository, never()).updateApprovalIdentifiers(any());
+  }
+
+  @Test
+  void shouldReturnUnchangedApprovalWhenIdentifiersAreUnchanged()
+      throws ApprovalServiceException, ApprovalConflictException {
+    var approval = randomApproval(randomUUID(), randomUri());
+    var unchangedIdentifiers = List.copyOf(approval.namedIdentifiers());
+    when(approvalRepository.findByApprovalIdentifier(approval.identifier()))
+        .thenReturn(Optional.of(approval));
+    when(approvalRepository.findIdentifiers(unchangedIdentifiers)).thenReturn(List.of());
+
+    var result =
+        approvalService.updateApprovalIdentifiers(approval.identifier(), unchangedIdentifiers);
+
+    assertEquals(approval, result);
+    assertEquals(approval.modifiedDate(), result.modifiedDate());
+  }
+
+  @Test
+  void shouldNotPersistUpdateWhenOnlyIdentifierOrderDiffers()
+      throws ApprovalServiceException, ApprovalConflictException {
+    var firstIdentifier = randomIdentifier();
+    var secondIdentifier = randomIdentifier();
+    var approval = randomApproval(List.of(firstIdentifier, secondIdentifier), randomUUID());
+    var reorderedIdentifiers = List.of(secondIdentifier, firstIdentifier);
+    when(approvalRepository.findByApprovalIdentifier(approval.identifier()))
+        .thenReturn(Optional.of(approval));
+    when(approvalRepository.findIdentifiers(reorderedIdentifiers)).thenReturn(List.of());
+
+    approvalService.updateApprovalIdentifiers(approval.identifier(), reorderedIdentifiers);
+
+    verify(approvalRepository, never()).updateApprovalIdentifiers(any());
+  }
+
+  @Test
+  void shouldPersistUpdateWhenIdentifiersDiffer()
+      throws ApprovalServiceException, ApprovalConflictException {
+    var approval = randomApproval(randomUUID(), randomUri());
+    var newIdentifiers = randomIdentifiers(2);
+    when(approvalRepository.findByApprovalIdentifier(approval.identifier()))
+        .thenReturn(Optional.of(approval));
+    when(approvalRepository.findIdentifiers(newIdentifiers)).thenReturn(List.of());
+
+    approvalService.updateApprovalIdentifiers(approval.identifier(), newIdentifiers);
+
+    verify(approvalRepository).updateApprovalIdentifiers(any());
   }
 
   @Test
@@ -420,7 +524,7 @@ class ApprovalServiceTest {
 
   @Test
   void shouldThrowApprovalConflictExceptionWhenIdentifiersAreUsedByOtherApproval() {
-    var approval = new Approval(randomUUID(), randomIdentifiers(), randomUri(), randomHandle());
+    var approval = randomApproval(randomUUID(), randomUri());
     var newIdentifier = randomIdentifier();
     var conflictingIdentifier =
         new NamedIdentifierQueryObject(
@@ -443,7 +547,7 @@ class ApprovalServiceTest {
 
   @Test
   void shouldReportAllConflictingValuesWhenIdentifiersUsedByOtherApprovalShareSameName() {
-    var approval = new Approval(randomUUID(), randomIdentifiers(), randomUri(), randomHandle());
+    var approval = randomApproval(randomUUID(), randomUri());
     var name = randomString();
     var firstIdentifier = new NamedIdentifier(name, LAST_VALUE_WHEN_SORTED);
     var secondIdentifier = new NamedIdentifier(name, FIRST_VALUE_WHEN_SORTED);
