@@ -34,7 +34,6 @@ import no.sikt.nva.approvals.dmp.model.Investigator;
 import no.sikt.nva.approvals.dmp.model.Sponsor;
 import no.sikt.nva.approvals.dmp.model.TrialEvent;
 import no.sikt.nva.approvals.dmp.model.TrialSite;
-import no.sikt.nva.approvals.domain.Approval;
 import no.sikt.nva.approvals.domain.FakeApprovalService;
 import no.sikt.nva.approvals.domain.Handle;
 import no.sikt.nva.approvals.domain.NamedIdentifier;
@@ -79,9 +78,7 @@ class FetchApprovalHandlerTest {
   @Test
   void shouldReturnOkResponseWithApprovalOnSuccess() {
     var approvalId = UUID.randomUUID();
-    var approval =
-        new Approval(
-            approvalId, List.of(new NamedIdentifier("test", "value")), randomUri(), randomHandle());
+    var approval = randomApproval(approvalId, randomUri());
     handler =
         new FetchApprovalHandler(
             new FakeApprovalService(List.of(approval)),
@@ -241,12 +238,7 @@ class FetchApprovalHandlerTest {
   @Test
   void shouldReturnHtmlWhenAcceptHeaderIsTextHtml() {
     var approvalId = UUID.randomUUID();
-    var approval =
-        new Approval(
-            approvalId,
-            List.of(new NamedIdentifier("CTIS", "CT-123")),
-            randomUri(),
-            randomHandle());
+    var approval = randomApproval(approvalId, randomUri());
     handler =
         new FetchApprovalHandler(
             new FakeApprovalService(List.of(approval)),
@@ -266,9 +258,7 @@ class FetchApprovalHandlerTest {
   @Test
   void shouldReturnJsonWhenAcceptHeaderIsApplicationJson() {
     var approvalId = UUID.randomUUID();
-    var approval =
-        new Approval(
-            approvalId, List.of(new NamedIdentifier("test", "value")), randomUri(), randomHandle());
+    var approval = randomApproval(approvalId, randomUri());
     handler =
         new FetchApprovalHandler(
             new FakeApprovalService(List.of(approval)),
@@ -287,9 +277,7 @@ class FetchApprovalHandlerTest {
   @Test
   void shouldReturnJsonWhenNoAcceptHeaderProvided() {
     var approvalId = UUID.randomUUID();
-    var approval =
-        new Approval(
-            approvalId, List.of(new NamedIdentifier("test", "value")), randomUri(), randomHandle());
+    var approval = randomApproval(approvalId, randomUri());
     handler =
         new FetchApprovalHandler(
             new FakeApprovalService(List.of(approval)),
@@ -309,9 +297,7 @@ class FetchApprovalHandlerTest {
   void shouldReturnHtmlWhenBrowserAcceptHeaderProvided() {
     var browserAcceptHeader = "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8";
     var approvalId = UUID.randomUUID();
-    var approval =
-        new Approval(
-            approvalId, List.of(new NamedIdentifier("test", "value")), randomUri(), randomHandle());
+    var approval = randomApproval(approvalId, randomUri());
     handler =
         new FetchApprovalHandler(
             new FakeApprovalService(List.of(approval)),
@@ -330,9 +316,7 @@ class FetchApprovalHandlerTest {
   @Test
   void shouldReturnOkWhenQueryParametersAreNull() {
     var approvalId = UUID.randomUUID();
-    var approval =
-        new Approval(
-            approvalId, List.of(new NamedIdentifier("test", "value")), randomUri(), randomHandle());
+    var approval = randomApproval(approvalId, randomUri());
     handler =
         new FetchApprovalHandler(
             new FakeApprovalService(List.of(approval)),
@@ -349,9 +333,7 @@ class FetchApprovalHandlerTest {
   @Test
   void shouldReturnUnsupportedMediaTypeWhenAcceptHeaderIsUnsupported() {
     var approvalId = UUID.randomUUID();
-    var approval =
-        new Approval(
-            approvalId, List.of(new NamedIdentifier("test", "value")), randomUri(), randomHandle());
+    var approval = randomApproval(approvalId, randomUri());
     handler =
         new FetchApprovalHandler(
             new FakeApprovalService(List.of(approval)),
@@ -370,7 +352,7 @@ class FetchApprovalHandlerTest {
     var approvalId = UUID.randomUUID();
     var dmpIdentifier = "2022-500027-76-00";
     var approval =
-        new Approval(
+        randomApproval(
             approvalId,
             List.of(new NamedIdentifier("DMP", dmpIdentifier)),
             randomUri(),
@@ -395,7 +377,7 @@ class FetchApprovalHandlerTest {
   void shouldNotEnrichHtmlWhenNoDmpIdentifierPresent() {
     var approvalId = UUID.randomUUID();
     var approval =
-        new Approval(
+        randomApproval(
             approvalId,
             List.of(new NamedIdentifier("CTIS", "CT-123")),
             randomUri(),
@@ -418,7 +400,7 @@ class FetchApprovalHandlerTest {
     var approvalId = UUID.randomUUID();
     var dmpIdentifier = "2022-500027-76-00";
     var approval =
-        new Approval(
+        randomApproval(
             approvalId,
             List.of(new NamedIdentifier("DMP", dmpIdentifier)),
             randomUri(),
@@ -441,7 +423,7 @@ class FetchApprovalHandlerTest {
     var approvalId = UUID.randomUUID();
     var dmpIdentifier = "2022-500027-76-00";
     var approval =
-        new Approval(
+        randomApproval(
             approvalId,
             List.of(new NamedIdentifier("DMP", dmpIdentifier)),
             randomUri(),

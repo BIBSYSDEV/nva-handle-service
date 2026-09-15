@@ -63,7 +63,7 @@ public class FakeApprovalService implements ApprovalService {
       UUID approvalId, Collection<NamedIdentifier> identifiers)
       throws ApprovalServiceException, ApprovalConflictException {
     throwExceptionIfConfigured();
-    return new Approval(approvalId, identifiers, randomUri(), randomHandle());
+    return randomApproval(approvalId, randomUri());
   }
 
   public Approval getPersistedApproval() {

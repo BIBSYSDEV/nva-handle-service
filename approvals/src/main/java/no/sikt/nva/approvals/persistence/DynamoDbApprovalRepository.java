@@ -171,7 +171,13 @@ public class DynamoDbApprovalRepository implements ApprovalRepository {
     var handle = getHandle(entities);
     var identifiers = getIdentifiers(entities);
     var approvalDao = getApproval(entities);
-    return new Approval(approvalDao.identifier(), identifiers, approvalDao.source(), handle);
+    return new Approval(
+        approvalDao.identifier(),
+        identifiers,
+        approvalDao.source(),
+        handle,
+        approvalDao.createdDate(),
+        approvalDao.modifiedDate());
   }
 
   private static Handle getHandle(List<DatabaseEntry> entities) {
@@ -267,10 +273,11 @@ public class DynamoDbApprovalRepository implements ApprovalRepository {
 
   private void sendTransaction(Approval approval, Iterator<Operation> iterator) {
     var count = 0;
+    var approvalDao = ApprovalDao.fromApproval(approval);
+    var handleDao = HandleDao.fromHandle(approval.handle());
     var requestBuilder = TransactWriteItemsEnhancedRequest.builder();
+    requestBuilder.addPutItem(table, approvalDao.toEnhancedDocument(handleDao));
     while (count < TRANSACT_WRITE_ITEM_LIMIT && iterator.hasNext()) {
-      var approvalDao = ApprovalDao.fromApproval(approval);
-      var handleDao = HandleDao.fromHandle(approval.handle());
       var operation = iterator.next();
       if (DELETE == operation.operation) {
         requestBuilder.addDeleteItem(table, operation.entry().getPrimaryKey());

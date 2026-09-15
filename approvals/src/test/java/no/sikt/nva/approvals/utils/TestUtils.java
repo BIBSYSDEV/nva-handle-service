@@ -1,12 +1,15 @@
 package no.sikt.nva.approvals.utils;
 
+import static java.time.temporal.ChronoUnit.MILLIS;
 import static java.util.UUID.randomUUID;
 import static no.unit.nva.testutils.RandomDataGenerator.randomString;
 import static no.unit.nva.testutils.RandomDataGenerator.randomUri;
 
 import java.net.URI;
+import java.time.Instant;
 import java.util.Collection;
 import java.util.List;
+import java.util.Random;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.IntStream;
@@ -21,25 +24,41 @@ import nva.commons.core.paths.UriWrapper;
 
 public class TestUtils {
 
+  private static final Random RANDOM = new Random();
+  private static final int MAX_TIMESTAMP_AGE_IN_SECONDS = 100_000;
+
   public static Approval randomApproval(UUID identifier, URI source) {
-    return new Approval(identifier, randomIdentifiers(), source, randomHandle());
+    return randomApproval(identifier, randomIdentifiers(), source, randomHandle());
   }
 
   public static Approval randomApproval(
       Collection<NamedIdentifier> namedIdentifiers, UUID identifier) {
-    return new Approval(identifier, namedIdentifiers, randomUri(), randomHandle());
+    return randomApproval(identifier, namedIdentifiers, randomUri(), randomHandle());
   }
 
   public static Approval randomApproval(Handle handle) {
-    return new Approval(randomUUID(), randomIdentifiers(), randomUri(), handle);
+    return randomApproval(randomUUID(), randomIdentifiers(), randomUri(), handle);
   }
 
   public static Approval randomApproval(Handle handle, NamedIdentifier namedIdentifier) {
-    return new Approval(randomUUID(), List.of(namedIdentifier), randomUri(), handle);
+    return randomApproval(randomUUID(), List.of(namedIdentifier), randomUri(), handle);
   }
 
   public static Approval randomApproval(NamedIdentifier namedIdentifier) {
-    return new Approval(randomUUID(), List.of(namedIdentifier), randomUri(), randomHandle());
+    return randomApproval(randomUUID(), List.of(namedIdentifier), randomUri(), randomHandle());
+  }
+
+  public static Approval randomApproval(
+      UUID identifier, Collection<NamedIdentifier> namedIdentifiers, URI source, Handle handle) {
+    var createdDate = randomTimestamp();
+    return new Approval(
+        identifier, namedIdentifiers, source, handle, createdDate, createdDate.plusSeconds(1));
+  }
+
+  public static Instant randomTimestamp() {
+    return Instant.now()
+        .minusSeconds(RANDOM.nextInt(MAX_TIMESTAMP_AGE_IN_SECONDS))
+        .truncatedTo(MILLIS);
   }
 
   public static List<NamedIdentifier> randomIdentifiers() {

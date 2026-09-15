@@ -1,5 +1,6 @@
 package no.sikt.nva.approvals.rest;
 
+import static no.sikt.nva.approvals.utils.TestUtils.randomApproval;
 import static no.sikt.nva.approvals.utils.TestUtils.randomHandle;
 import static no.unit.nva.testutils.RandomDataGenerator.randomUri;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -27,7 +28,7 @@ class ApprovalHtmlModelTest {
     var approvalId = UUID.randomUUID();
     var handle = randomHandle();
     var approval =
-        new Approval(
+        randomApproval(
             approvalId, List.of(new NamedIdentifier("test", "value")), randomUri(), handle);
 
     var model = ApprovalHtmlModel.fromApproval(approval);
@@ -40,12 +41,7 @@ class ApprovalHtmlModelTest {
   void shouldKeepAllIdentifiersWhenTwoIdentifiersShareSameName() {
     var firstIdentifier = new NamedIdentifier("apitest-uib", "first-value");
     var secondIdentifier = new NamedIdentifier("apitest-uib", "second-value");
-    var approval =
-        new Approval(
-            UUID.randomUUID(),
-            List.of(firstIdentifier, secondIdentifier),
-            randomUri(),
-            randomHandle());
+    var approval = randomApproval(List.of(firstIdentifier, secondIdentifier), UUID.randomUUID());
 
     var model = ApprovalHtmlModel.fromApproval(approval);
 
@@ -54,12 +50,7 @@ class ApprovalHtmlModelTest {
 
   @Test
   void shouldHaveEmptySponsorsAndTrialSites() {
-    var approval =
-        new Approval(
-            UUID.randomUUID(),
-            List.of(new NamedIdentifier("test", "value")),
-            randomUri(),
-            randomHandle());
+    var approval = randomApproval(randomHandle());
 
     var model = ApprovalHtmlModel.fromApproval(approval);
 
@@ -69,12 +60,7 @@ class ApprovalHtmlModelTest {
 
   @Test
   void shouldHaveNullStudyPeriodDates() {
-    var approval =
-        new Approval(
-            UUID.randomUUID(),
-            List.of(new NamedIdentifier("test", "value")),
-            randomUri(),
-            randomHandle());
+    var approval = randomApproval(randomHandle());
 
     var model = ApprovalHtmlModel.fromApproval(approval);
 
@@ -85,12 +71,7 @@ class ApprovalHtmlModelTest {
 
   @Test
   void shouldHaveNullPublicTitle() {
-    var approval =
-        new Approval(
-            UUID.randomUUID(),
-            List.of(new NamedIdentifier("test", "value")),
-            randomUri(),
-            randomHandle());
+    var approval = randomApproval(randomHandle());
 
     var model = ApprovalHtmlModel.fromApproval(approval);
 
@@ -227,7 +208,7 @@ class ApprovalHtmlModelTest {
   }
 
   private Approval createApproval() {
-    return new Approval(
+    return randomApproval(
         UUID.randomUUID(),
         List.of(new NamedIdentifier("DMP", "2022-500027-76-00")),
         randomUri(),

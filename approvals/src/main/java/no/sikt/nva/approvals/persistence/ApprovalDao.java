@@ -12,6 +12,7 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.annotation.JsonTypeInfo.Id;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import java.net.URI;
+import java.time.Instant;
 import java.util.UUID;
 import no.sikt.nva.approvals.domain.Approval;
 import nva.commons.core.StringUtils;
@@ -19,10 +20,12 @@ import software.amazon.awssdk.enhanced.dynamodb.document.EnhancedDocument;
 
 @JsonTypeInfo(use = Id.NAME, property = "type")
 @JsonTypeName("Approval")
-public record ApprovalDao(UUID identifier, URI source) implements DatabaseEntry {
+public record ApprovalDao(UUID identifier, URI source, Instant createdDate, Instant modifiedDate)
+    implements DatabaseEntry {
 
   public static ApprovalDao fromApproval(Approval approval) {
-    return new ApprovalDao(approval.identifier(), approval.source());
+    return new ApprovalDao(
+        approval.identifier(), approval.source(), approval.createdDate(), approval.modifiedDate());
   }
 
   @Override
