@@ -278,6 +278,7 @@ class DynamoDbApprovalRepositoryTest {
     var persistedApproval = approvalRepository.findByApprovalIdentifier(approval.identifier());
 
     assertTrue(persistedApproval.orElseThrow().namedIdentifiers().containsAll(finalIdentifiers));
+    assertEquals(updatedApproval.modifiedDate(), persistedApproval.orElseThrow().modifiedDate());
   }
 
   @Test
