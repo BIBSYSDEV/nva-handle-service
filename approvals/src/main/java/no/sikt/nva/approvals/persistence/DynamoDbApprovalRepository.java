@@ -20,7 +20,6 @@ import static software.amazon.awssdk.enhanced.dynamodb.model.QueryConditional.ke
 
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -55,6 +54,7 @@ public class DynamoDbApprovalRepository implements ApprovalRepository {
 
   private static final int BATCH_GET_ITEM_LIMIT = 80;
   private static final int TRANSACT_WRITE_ITEM_LIMIT = 80;
+  private static final int FIRST_CHUNK = 0;
   private final DynamoDbTable<EnhancedDocument> table;
   private final DynamoDbEnhancedClient client;
 
@@ -74,7 +74,8 @@ public class DynamoDbApprovalRepository implements ApprovalRepository {
     if (allDocuments.size() <= TRANSACT_WRITE_ITEM_LIMIT) {
       saveDocumentsInTransaction(allDocuments);
     } else {
-      splitToChunks(allDocuments).forEach(this::saveDocumentsInTransaction);
+      splitToChunks(allDocuments, TRANSACT_WRITE_ITEM_LIMIT)
+          .forEach(this::saveDocumentsInTransaction);
     }
   }
 
@@ -136,7 +137,7 @@ public class DynamoDbApprovalRepository implements ApprovalRepository {
             .map(IdentifierDao::getPrimaryKey)
             .toList();
 
-    return splitToChunks(keys).stream()
+    return splitToChunks(keys, BATCH_GET_ITEM_LIMIT).stream()
         .flatMap(keyBatch -> fetchIdentifiersBatch(keyBatch).stream())
         .distinct()
         .toList();
@@ -157,13 +158,12 @@ public class DynamoDbApprovalRepository implements ApprovalRepository {
             .toEnhancedDocument());
   }
 
-  private static <T> List<List<T>> splitToChunks(List<T> list) {
-    return IntStream.range(0, (list.size() + BATCH_GET_ITEM_LIMIT - 1) / BATCH_GET_ITEM_LIMIT)
+  private static <T> List<List<T>> splitToChunks(List<T> list, int chunkSize) {
+    return IntStream.range(0, (list.size() + chunkSize - 1) / chunkSize)
         .mapToObj(
-            i ->
+            chunkIndex ->
                 list.subList(
-                    i * BATCH_GET_ITEM_LIMIT,
-                    Math.min((i + 1) * BATCH_GET_ITEM_LIMIT, list.size())))
+                    chunkIndex * chunkSize, Math.min((chunkIndex + 1) * chunkSize, list.size())))
         .toList();
   }
 
@@ -171,7 +171,13 @@ public class DynamoDbApprovalRepository implements ApprovalRepository {
     var handle = getHandle(entities);
     var identifiers = getIdentifiers(entities);
     var approvalDao = getApproval(entities);
-    return new Approval(approvalDao.identifier(), identifiers, approvalDao.source(), handle);
+    return new Approval(
+        approvalDao.identifier(),
+        identifiers,
+        approvalDao.source(),
+        handle,
+        approvalDao.createdDate(),
+        approvalDao.modifiedDate());
   }
 
   private static Handle getHandle(List<DatabaseEntry> entities) {
@@ -259,33 +265,42 @@ public class DynamoDbApprovalRepository implements ApprovalRepository {
   }
 
   private void updateIdentifiersForApproval(Approval approval, List<Operation> operations) {
-    var iterator = operations.iterator();
-    while (iterator.hasNext()) {
-      sendTransaction(approval, iterator);
-    }
+    var chunks = splitToChunks(operations, TRANSACT_WRITE_ITEM_LIMIT);
+    IntStream.range(0, chunks.size())
+        .forEach(
+            chunkIndex ->
+                sendTransaction(approval, chunks.get(chunkIndex), chunkIndex == FIRST_CHUNK));
   }
 
-  private void sendTransaction(Approval approval, Iterator<Operation> iterator) {
-    var count = 0;
+  private void sendTransaction(
+      Approval approval, List<Operation> operations, boolean includeApproval) {
+    var approvalDao = ApprovalDao.fromApproval(approval);
+    var handleDao = HandleDao.fromHandle(approval.handle());
     var requestBuilder = TransactWriteItemsEnhancedRequest.builder();
-    while (count < TRANSACT_WRITE_ITEM_LIMIT && iterator.hasNext()) {
-      var approvalDao = ApprovalDao.fromApproval(approval);
-      var handleDao = HandleDao.fromHandle(approval.handle());
-      var operation = iterator.next();
-      if (DELETE == operation.operation) {
-        requestBuilder.addDeleteItem(table, operation.entry().getPrimaryKey());
-      } else {
-        var document = operation.entry().toEnhancedDocument(approvalDao, handleDao);
-        var putRequest =
-            TransactPutItemEnhancedRequest.builder(EnhancedDocument.class)
-                .item(document)
-                .conditionExpression(newDaoCondition())
-                .build();
-        requestBuilder.addPutItem(table, putRequest);
-      }
-      count++;
+    if (includeApproval) {
+      requestBuilder.addPutItem(table, approvalDao.toEnhancedDocument(handleDao));
     }
+    operations.forEach(
+        operation -> addOperation(requestBuilder, operation, approvalDao, handleDao));
     client.transactWriteItems(requestBuilder.build());
+  }
+
+  private void addOperation(
+      TransactWriteItemsEnhancedRequest.Builder requestBuilder,
+      Operation operation,
+      ApprovalDao approvalDao,
+      HandleDao handleDao) {
+    if (DELETE == operation.operation()) {
+      requestBuilder.addDeleteItem(table, operation.entry().getPrimaryKey());
+    } else {
+      var document = operation.entry().toEnhancedDocument(approvalDao, handleDao);
+      requestBuilder.addPutItem(
+          table,
+          TransactPutItemEnhancedRequest.builder(EnhancedDocument.class)
+              .item(document)
+              .conditionExpression(newDaoCondition())
+              .build());
+    }
   }
 
   private List<DatabaseEntry> fetchEntitiesByApprovalIdentifier(String databaseIdentifier) {

@@ -1,5 +1,6 @@
 package no.sikt.nva.approvals.persistence;
 
+import static java.time.temporal.ChronoUnit.MILLIS;
 import static java.util.UUID.randomUUID;
 import static no.sikt.nva.approvals.persistence.DynamoDbConstants.PK0;
 import static no.sikt.nva.approvals.persistence.DynamoDbConstants.PK1;
@@ -19,9 +20,11 @@ import static nva.commons.core.attempt.Try.attempt;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -39,6 +42,7 @@ import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 import software.amazon.awssdk.services.dynamodb.model.PutItemRequest;
 import software.amazon.awssdk.services.dynamodb.model.ScanRequest;
 import software.amazon.awssdk.services.dynamodb.model.TransactionCanceledException;
+import software.amazon.awssdk.services.dynamodb.model.UpdateItemRequest;
 
 class DynamoDbApprovalRepositoryTest {
 
@@ -187,7 +191,13 @@ class DynamoDbApprovalRepositoryTest {
     var allIdentifiers = new java.util.ArrayList<>(initialIdentifiers);
     allIdentifiers.addAll(newIdentifiers);
     var updatedApproval =
-        new Approval(approval.identifier(), allIdentifiers, approval.source(), approval.handle());
+        new Approval(
+            approval.identifier(),
+            allIdentifiers,
+            approval.source(),
+            approval.handle(),
+            approval.createdDate(),
+            Instant.now());
 
     approvalRepository.updateApprovalIdentifiers(updatedApproval);
     var persistedApproval = approvalRepository.findByApprovalIdentifier(approval.identifier());
@@ -204,7 +214,12 @@ class DynamoDbApprovalRepositoryTest {
     var remainingIdentifiers = initialIdentifiers.stream().limit(2).toList();
     var updatedApproval =
         new Approval(
-            approval.identifier(), remainingIdentifiers, approval.source(), approval.handle());
+            approval.identifier(),
+            remainingIdentifiers,
+            approval.source(),
+            approval.handle(),
+            approval.createdDate(),
+            Instant.now());
 
     approvalRepository.updateApprovalIdentifiers(updatedApproval);
     var persistedApproval = approvalRepository.findByApprovalIdentifier(approval.identifier());
@@ -225,7 +240,13 @@ class DynamoDbApprovalRepositoryTest {
     finalIdentifiers.addAll(newIdentifiers);
 
     var updatedApproval =
-        new Approval(approval.identifier(), finalIdentifiers, approval.source(), approval.handle());
+        new Approval(
+            approval.identifier(),
+            finalIdentifiers,
+            approval.source(),
+            approval.handle(),
+            approval.createdDate(),
+            Instant.now());
 
     approvalRepository.updateApprovalIdentifiers(updatedApproval);
     var persistedApproval = approvalRepository.findByApprovalIdentifier(approval.identifier());
@@ -245,12 +266,62 @@ class DynamoDbApprovalRepositoryTest {
     finalIdentifiers.addAll(newIdentifiers);
 
     var updatedApproval =
-        new Approval(approval.identifier(), finalIdentifiers, approval.source(), approval.handle());
+        new Approval(
+            approval.identifier(),
+            finalIdentifiers,
+            approval.source(),
+            approval.handle(),
+            approval.createdDate(),
+            Instant.now());
 
     approvalRepository.updateApprovalIdentifiers(updatedApproval);
     var persistedApproval = approvalRepository.findByApprovalIdentifier(approval.identifier());
 
     assertTrue(persistedApproval.orElseThrow().namedIdentifiers().containsAll(finalIdentifiers));
+    assertEquals(updatedApproval.modifiedDate(), persistedApproval.orElseThrow().modifiedDate());
+  }
+
+  @Test
+  void shouldPersistTimestampsWhenSavingNewApproval() {
+    var approval = randomApproval(randomHandle());
+    approvalRepository.save(approval);
+
+    var persistedApproval = approvalRepository.findByApprovalIdentifier(approval.identifier());
+
+    assertEquals(approval.createdDate(), persistedApproval.orElseThrow().createdDate());
+    assertEquals(approval.modifiedDate(), persistedApproval.orElseThrow().modifiedDate());
+  }
+
+  @Test
+  void shouldPersistModifiedDateWhenUpdatingIdentifiers() {
+    var approval = randomApproval(randomIdentifiers(2), randomUUID());
+    approvalRepository.save(approval);
+    var modifiedDate = Instant.now().truncatedTo(MILLIS);
+
+    approvalRepository.updateApprovalIdentifiers(
+        new Approval(
+            approval.identifier(),
+            randomIdentifiers(3),
+            approval.source(),
+            approval.handle(),
+            approval.createdDate(),
+            modifiedDate));
+    var persistedApproval = approvalRepository.findByApprovalIdentifier(approval.identifier());
+
+    assertEquals(modifiedDate, persistedApproval.orElseThrow().modifiedDate());
+    assertEquals(approval.createdDate(), persistedApproval.orElseThrow().createdDate());
+  }
+
+  @Test
+  void shouldReadAlreadyExistingApprovalWithoutTimestamps() {
+    var approval = randomApproval(randomHandle());
+    approvalRepository.save(approval);
+    removeTimestampsFromApprovalEntity(approval.identifier());
+
+    var persistedApproval = approvalRepository.findByApprovalIdentifier(approval.identifier());
+
+    assertNull(persistedApproval.orElseThrow().createdDate());
+    assertNull(persistedApproval.orElseThrow().modifiedDate());
   }
 
   @Test
@@ -276,7 +347,9 @@ class DynamoDbApprovalRepositoryTest {
             secondApproval.identifier(),
             List.of(sharedIdentifier),
             secondApproval.source(),
-            secondApproval.handle());
+            secondApproval.handle(),
+            secondApproval.createdDate(),
+            Instant.now());
 
     assertThrows(
         TransactionCanceledException.class,
@@ -403,6 +476,23 @@ class DynamoDbApprovalRepositoryTest {
     item.put(PK2, AttributeValue.builder().s(pk2Sk2).build());
     item.put(SK2, AttributeValue.builder().s(pk2Sk2).build());
     return item;
+  }
+
+  private void removeTimestampsFromApprovalEntity(UUID approvalIdentifier) {
+    var databaseIdentifier = ApprovalDao.toDatabaseIdentifier(approvalIdentifier);
+    var key =
+        Map.of(
+            PK0, AttributeValue.builder().s(databaseIdentifier).build(),
+            SK0, AttributeValue.builder().s(databaseIdentifier).build());
+
+    dynamoDbLocal
+        .client()
+        .updateItem(
+            UpdateItemRequest.builder()
+                .tableName(TABLE)
+                .key(key)
+                .updateExpression("REMOVE createdDate, modifiedDate")
+                .build());
   }
 
   private Map<String, AttributeValue> scanSingleItem() {

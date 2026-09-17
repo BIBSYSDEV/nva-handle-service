@@ -5,11 +5,13 @@ import static no.sikt.nva.handle.utils.DatabaseConnectionSupplier.getConnectionS
 
 import java.net.URI;
 import java.sql.Connection;
+import java.time.Instant;
 import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.TreeSet;
 import java.util.UUID;
 import java.util.function.Supplier;
@@ -69,7 +71,8 @@ public class ApprovalServiceImpl implements ApprovalService {
     var approvalId = randomUUID();
     var approvalUri = createApprovalUri(approvalId);
     var handle = createHandle(approvalUri);
-    var approval = new Approval(approvalId, namedIdentifiers, source, handle);
+    var now = Instant.now();
+    var approval = new Approval(approvalId, namedIdentifiers, source, handle, now, now);
     approvalRepository.save(approval);
     return approval;
   }
@@ -101,11 +104,26 @@ public class ApprovalServiceImpl implements ApprovalService {
             .orElseThrow(() -> new ApprovalNotFoundException(approvalId));
 
     ensureIdentifiersAreNotUsedByOtherApproval(identifiers, approval);
+    if (hasSameIdentifiers(approval, namedIdentifiers)) {
+      return approval;
+    }
+
     var updatedApproval =
-        new Approval(approval.identifier(), namedIdentifiers, approval.source(), approval.handle());
+        new Approval(
+            approvalId,
+            namedIdentifiers,
+            approval.source(),
+            approval.handle(),
+            approval.createdDate(),
+            Instant.now());
     approvalRepository.updateApprovalIdentifiers(updatedApproval);
 
     return updatedApproval;
+  }
+
+  private static boolean hasSameIdentifiers(
+      Approval approval, Collection<NamedIdentifier> namedIdentifiers) {
+    return Set.copyOf(approval.namedIdentifiers()).equals(Set.copyOf(namedIdentifiers));
   }
 
   private void ensureIdentifierNamesAreWellFormed(Collection<NamedIdentifier> namedIdentifiers) {
