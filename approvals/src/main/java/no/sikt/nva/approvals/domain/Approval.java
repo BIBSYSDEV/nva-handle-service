@@ -13,6 +13,7 @@ public record Approval(
     Collection<NamedIdentifier> namedIdentifiers,
     URI source,
     Handle handle,
+    URI customerId,
     Instant createdDate,
     Instant modifiedDate) {
 

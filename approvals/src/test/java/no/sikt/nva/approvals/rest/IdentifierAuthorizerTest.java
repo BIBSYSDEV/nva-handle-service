@@ -4,6 +4,7 @@ import static java.net.HttpURLConnection.HTTP_FORBIDDEN;
 import static java.util.UUID.randomUUID;
 import static no.sikt.nva.approvals.utils.TestUtils.randomIdentifiers;
 import static no.unit.nva.testutils.RandomDataGenerator.randomString;
+import static no.unit.nva.testutils.RandomDataGenerator.randomUri;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -101,11 +102,46 @@ class IdentifierAuthorizerTest {
   @Test
   void shouldNotCheckPolicyWhenClientIsInternalBackend() throws Exception {
     var requestInfo = requestInfoWithScope(BACKEND_SCOPE);
+    mockExternalClientWithCustomer(randomUUID());
 
     assertDoesNotThrow(
         () -> identifierAuthorizer.authorizeIdentifiers(requestInfo, randomIdentifiers()));
 
-    verifyNoInteractions(identityServiceClient, identifierPolicyService);
+    verifyNoInteractions(identifierPolicyService);
+  }
+
+  @Test
+  void shouldResolveCustomerIdWhenClientIsInternalBackendClient() throws Exception {
+    var requestInfo = requestInfoWithScope(BACKEND_SCOPE);
+    var customerIdentifier = randomUUID();
+    mockExternalClientWithCustomer(customerIdentifier);
+
+    var customerId = identifierAuthorizer.authorizeIdentifiers(requestInfo, randomIdentifiers());
+
+    assertEquals(customerUri(customerIdentifier), customerId);
+  }
+
+  @Test
+  void shouldThrowUnauthorizedWhenCustomerCannotBeResolvedForInternalBackend() throws Exception {
+    var requestInfo = requestInfoWithScope(BACKEND_SCOPE);
+    when(identityServiceClient.getExternalClientByToken(BEARER_TOKEN))
+        .thenThrow(new NotFoundException("Client not found"));
+
+    assertThrows(
+        UnauthorizedException.class,
+        () -> identifierAuthorizer.authorizeIdentifiers(requestInfo, randomIdentifiers()));
+  }
+
+  @Test
+  void shouldResolveCustomerIdOfAuthenticatedExternalClient() throws Exception {
+    var requestInfo = requestInfoWithScope(THIRD_PARTY_SCOPE);
+    var customerIdentifier = randomUUID();
+    mockExternalClientWithCustomer(customerIdentifier);
+    when(identifierPolicyService.getIdentifierPolicy(any())).thenReturn(IdentifierPolicy.ALLOW_ALL);
+
+    var customerId = identifierAuthorizer.authorizeIdentifiers(requestInfo, randomIdentifiers());
+
+    assertEquals(customerUri(customerIdentifier), customerId);
   }
 
   @Test
@@ -162,6 +198,7 @@ class IdentifierAuthorizerTest {
         new HandlerRequestBuilder<Void>(JsonUtils.dtoObjectMapper)
             .withScope(scope)
             .withHeaders(Map.of(AUTHORIZATION_HEADER, BEARER_TOKEN))
+            .withCurrentCustomer(randomUri())
             .build();
     return RequestInfo.fromRequest(request);
   }
