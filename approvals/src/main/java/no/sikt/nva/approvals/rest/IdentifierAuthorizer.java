@@ -70,11 +70,11 @@ public class IdentifierAuthorizer {
   private Optional<URI> fetchCustomerId(RequestInfo requestInfo) {
     return requestInfo
         .getClientId()
-        .map(this::fetchExternalClientId)
+        .flatMap(this::fetchExternalClient)
         .map(GetExternalClientResponse::getCustomerUri);
   }
 
-  private GetExternalClientResponse fetchExternalClientId(String id) {
-    return attempt(() -> identityServiceClient.getExternalClient(id)).orElseThrow();
+  private Optional<GetExternalClientResponse> fetchExternalClient(String clientId) {
+    return attempt(() -> identityServiceClient.getExternalClient(clientId)).toOptional();
   }
 }

@@ -43,6 +43,7 @@ class IdentifierAuthorizerTest {
   private static final String BEARER_TOKEN = "Bearer token";
   private static final String CUSTOMER_PATH = "customer";
   private static final String REK = "REK";
+  private static final String CLIENT_NOT_FOUND_MESSAGE = "Client not found";
   private IdentityServiceClient identityServiceClient;
   private IdentifierPolicyService identifierPolicyService;
   private IdentifierAuthorizer identifierAuthorizer;
@@ -125,8 +126,7 @@ class IdentifierAuthorizerTest {
   @Test
   void shouldThrowUnauthorizedWhenCustomerCannotBeResolvedForInternalBackend() throws Exception {
     var requestInfo = requestInfoWithScope(BACKEND_SCOPE);
-    when(identityServiceClient.getExternalClientByToken(BEARER_TOKEN))
-        .thenThrow(new NotFoundException("Client not found"));
+    mockMissingExternalClient(requestInfo.getClientId().orElseThrow());
 
     assertThrows(
         UnauthorizedException.class,
@@ -148,8 +148,7 @@ class IdentifierAuthorizerTest {
   @Test
   void shouldThrowUnauthorizedWhenCustomerCannotBeResolvedForClient() throws Exception {
     var requestInfo = requestInfoWithScope(THIRD_PARTY_SCOPE);
-    when(identityServiceClient.getExternalClientByToken(BEARER_TOKEN))
-        .thenThrow(new NotFoundException("Client not found"));
+    mockMissingExternalClient(requestInfo.getClientId().orElseThrow());
 
     assertThrows(
         UnauthorizedException.class,
@@ -159,7 +158,7 @@ class IdentifierAuthorizerTest {
   @Test
   void shouldThrowUnauthorizedWhenClientHasNoCustomer() throws Exception {
     var requestInfo = requestInfoWithScope(THIRD_PARTY_SCOPE);
-    when(identityServiceClient.getExternalClientByToken(BEARER_TOKEN))
+    when(identityServiceClient.getExternalClient(eq(requestInfo.getClientId().orElseThrow())))
         .thenReturn(new GetExternalClientResponse(randomString(), randomString(), null, null));
 
     assertThrows(
@@ -178,6 +177,11 @@ class IdentifierAuthorizerTest {
     assertThrows(
         UnauthorizedException.class,
         () -> identifierAuthorizer.authorizeIdentifiers(requestInfo, randomIdentifiers()));
+  }
+
+  private void mockMissingExternalClient(String clientId) throws NotFoundException {
+    when(identityServiceClient.getExternalClient(eq(clientId)))
+        .thenThrow(new NotFoundException(CLIENT_NOT_FOUND_MESSAGE));
   }
 
   private void mockExternalClientWithCustomer(UUID customerIdentifier, String clientId)
