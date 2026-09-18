@@ -4,7 +4,6 @@ import static java.net.HttpURLConnection.HTTP_ACCEPTED;
 import static no.sikt.nva.approvals.utils.RequestUtils.createAdditionalApprovalHeaders;
 import static no.sikt.nva.approvals.utils.RequestUtils.getApiHost;
 import static no.sikt.nva.approvals.utils.RequestUtils.handleException;
-import static nva.commons.core.attempt.Try.attempt;
 
 import com.amazonaws.services.lambda.runtime.Context;
 import no.sikt.nva.approvals.domain.Approval;
@@ -16,12 +15,9 @@ import nva.commons.apigateway.exceptions.ApiGatewayException;
 import nva.commons.apigateway.exceptions.BadRequestException;
 import nva.commons.core.Environment;
 import nva.commons.core.JacocoGenerated;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 public class CreateApprovalHandler extends ApiGatewayHandler<CreateApprovalRequest, Void> {
 
-  private static final Logger logger = LoggerFactory.getLogger(CreateApprovalHandler.class);
   private final ApprovalService approvalService;
   private final IdentifierAuthorizer identifierAuthorizer;
 
@@ -59,8 +55,6 @@ public class CreateApprovalHandler extends ApiGatewayHandler<CreateApprovalReque
   protected Void processInput(
       CreateApprovalRequest request, RequestInfo requestInfo, Context context)
       throws ApiGatewayException {
-    logger.info("Backend client customerId {}",
-                attempt(requestInfo::getCurrentCustomer).orElse(failure -> null));
     var customerId = identifierAuthorizer.authorizeIdentifiers(requestInfo, request.identifiers());
     try {
       var approval = approvalService.create(request.identifiers(), request.source(), customerId);

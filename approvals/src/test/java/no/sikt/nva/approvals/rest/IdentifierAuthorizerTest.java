@@ -10,6 +10,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -58,7 +59,7 @@ class IdentifierAuthorizerTest {
   void shouldAllowIdentifiersWhenAllNamesAreAllowedForCustomer() throws Exception {
     var requestInfo = requestInfoWithScope(THIRD_PARTY_SCOPE);
     var namedIdentifier = new NamedIdentifier(REK, randomString());
-    mockExternalClientWithCustomer(randomUUID());
+    mockExternalClientWithCustomer(randomUUID(), requestInfo.getClientId().orElseThrow());
     when(identifierPolicyService.getIdentifierPolicy(any()))
         .thenReturn(new IdentifierPolicy(Set.of(REK)));
 
@@ -70,7 +71,7 @@ class IdentifierAuthorizerTest {
   void shouldRejectIdentifiersWhenNameIsNotAllowedForCustomer() throws Exception {
     var requestInfo = requestInfoWithScope(THIRD_PARTY_SCOPE);
     var namedIdentifier = new NamedIdentifier(REK, randomString());
-    mockExternalClientWithCustomer(randomUUID());
+    mockExternalClientWithCustomer(randomUUID(), requestInfo.getClientId().orElseThrow());
     when(identifierPolicyService.getIdentifierPolicy(any())).thenReturn(IdentifierPolicy.DENY_ALL);
 
     var exception =
@@ -87,7 +88,7 @@ class IdentifierAuthorizerTest {
     var requestInfo = requestInfoWithScope(THIRD_PARTY_SCOPE);
     var customerIdentifier = randomUUID();
     var namedIdentifier = new NamedIdentifier(REK, randomString());
-    mockExternalClientWithCustomer(customerIdentifier);
+    mockExternalClientWithCustomer(customerIdentifier, requestInfo.getClientId().orElseThrow());
     when(identifierPolicyService.getIdentifierPolicy(customerIdentifier))
         .thenReturn(IdentifierPolicy.DENY_ALL);
 
@@ -102,7 +103,7 @@ class IdentifierAuthorizerTest {
   @Test
   void shouldNotCheckPolicyWhenClientIsInternalBackend() throws Exception {
     var requestInfo = requestInfoWithScope(BACKEND_SCOPE);
-    mockExternalClientWithCustomer(randomUUID());
+    mockExternalClientWithCustomer(randomUUID(), requestInfo.getClientId().orElseThrow());
 
     assertDoesNotThrow(
         () -> identifierAuthorizer.authorizeIdentifiers(requestInfo, randomIdentifiers()));
@@ -114,7 +115,7 @@ class IdentifierAuthorizerTest {
   void shouldResolveCustomerIdWhenClientIsInternalBackendClient() throws Exception {
     var requestInfo = requestInfoWithScope(BACKEND_SCOPE);
     var customerIdentifier = randomUUID();
-    mockExternalClientWithCustomer(customerIdentifier);
+    mockExternalClientWithCustomer(customerIdentifier, requestInfo.getClientId().orElseThrow());
 
     var customerId = identifierAuthorizer.authorizeIdentifiers(requestInfo, randomIdentifiers());
 
@@ -136,7 +137,7 @@ class IdentifierAuthorizerTest {
   void shouldResolveCustomerIdOfAuthenticatedExternalClient() throws Exception {
     var requestInfo = requestInfoWithScope(THIRD_PARTY_SCOPE);
     var customerIdentifier = randomUUID();
-    mockExternalClientWithCustomer(customerIdentifier);
+    mockExternalClientWithCustomer(customerIdentifier, requestInfo.getClientId().orElseThrow());
     when(identifierPolicyService.getIdentifierPolicy(any())).thenReturn(IdentifierPolicy.ALLOW_ALL);
 
     var customerId = identifierAuthorizer.authorizeIdentifiers(requestInfo, randomIdentifiers());
@@ -179,8 +180,9 @@ class IdentifierAuthorizerTest {
         () -> identifierAuthorizer.authorizeIdentifiers(requestInfo, randomIdentifiers()));
   }
 
-  private void mockExternalClientWithCustomer(UUID customerIdentifier) throws NotFoundException {
-    when(identityServiceClient.getExternalClientByToken(BEARER_TOKEN))
+  private void mockExternalClientWithCustomer(UUID customerIdentifier, String clientId)
+      throws NotFoundException {
+    when(identityServiceClient.getExternalClient(eq(clientId)))
         .thenReturn(
             new GetExternalClientResponse(
                 randomString(), randomString(), customerUri(customerIdentifier), null));
@@ -199,6 +201,7 @@ class IdentifierAuthorizerTest {
             .withScope(scope)
             .withHeaders(Map.of(AUTHORIZATION_HEADER, BEARER_TOKEN))
             .withCurrentCustomer(randomUri())
+            .withClientId(randomString())
             .build();
     return RequestInfo.fromRequest(request);
   }

@@ -3,7 +3,6 @@ package no.sikt.nva.approvals.rest;
 import static nva.commons.core.attempt.Try.attempt;
 
 import java.net.URI;
-import java.net.http.HttpClient;
 import java.util.Collection;
 import java.util.Optional;
 import java.util.UUID;
@@ -38,8 +37,7 @@ public class IdentifierAuthorizer {
   @JacocoGenerated
   public static IdentifierAuthorizer defaultInstance(Environment environment) {
     return new IdentifierAuthorizer(
-        new IdentityServiceClient(HttpClient.newBuilder().build(), environment),
-        IdentifierPolicyServiceImpl.defaultInstance(environment));
+        IdentityServiceClient.prepare(), IdentifierPolicyServiceImpl.defaultInstance(environment));
   }
 
   public URI authorizeIdentifiers(
@@ -70,9 +68,13 @@ public class IdentifierAuthorizer {
   }
 
   private Optional<URI> fetchCustomerId(RequestInfo requestInfo) {
-    return attempt(
-            () -> identityServiceClient.getExternalClientByToken(requestInfo.getAuthHeader()))
-        .map(GetExternalClientResponse::getCustomerUri)
-        .toOptional();
+    return requestInfo
+        .getClientId()
+        .map(this::fetchExternalClientId)
+        .map(GetExternalClientResponse::getCustomerUri);
+  }
+
+  private GetExternalClientResponse fetchExternalClientId(String id) {
+    return attempt(() -> identityServiceClient.getExternalClient(id)).orElseThrow();
   }
 }
