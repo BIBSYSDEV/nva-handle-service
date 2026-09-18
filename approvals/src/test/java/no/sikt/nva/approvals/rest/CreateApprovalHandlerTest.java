@@ -13,6 +13,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import com.amazonaws.services.lambda.runtime.Context;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -186,6 +187,17 @@ class CreateApprovalHandlerTest {
     handler.handleRequest(request, output, context);
 
     verify(identifierAuthorizer).authorizeIdentifiers(any(), eq(approvalRequest.identifiers()));
+  }
+
+  @Test
+  void shouldPersistCustomerIdResolvedByAuthorizer() throws Exception {
+    var customerId = randomUri();
+    when(identifierAuthorizer.authorizeIdentifiers(any(), any())).thenReturn(customerId);
+    var request = createRequest(randomApprovalRequest(randomUri()));
+
+    handler.handleRequest(request, output, context);
+
+    assertEquals(customerId, approvalService.getPersistedApproval().customerId());
   }
 
   private static CreateApprovalRequest randomApprovalRequest(URI source) {

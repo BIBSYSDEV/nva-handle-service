@@ -63,7 +63,7 @@ public class ApprovalServiceImpl implements ApprovalService {
   }
 
   @Override
-  public Approval create(Collection<NamedIdentifier> namedIdentifiers, URI source)
+  public Approval create(Collection<NamedIdentifier> namedIdentifiers, URI source, URI customerId)
       throws ApprovalServiceException, ApprovalConflictException {
     ensureIdentifierNamesAreWellFormed(namedIdentifiers);
     ensureNoDuplicateIdentifiers(namedIdentifiers);
@@ -72,7 +72,7 @@ public class ApprovalServiceImpl implements ApprovalService {
     var approvalUri = createApprovalUri(approvalId);
     var handle = createHandle(approvalUri);
     var now = Instant.now();
-    var approval = new Approval(approvalId, namedIdentifiers, source, handle, now, now);
+    var approval = new Approval(approvalId, namedIdentifiers, source, handle, customerId, now, now);
     approvalRepository.save(approval);
     return approval;
   }
@@ -114,6 +114,7 @@ public class ApprovalServiceImpl implements ApprovalService {
             namedIdentifiers,
             approval.source(),
             approval.handle(),
+            approval.customerId(),
             approval.createdDate(),
             Instant.now());
     approvalRepository.updateApprovalIdentifiers(updatedApproval);

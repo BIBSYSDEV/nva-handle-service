@@ -48,7 +48,6 @@ public class CreateApprovalHandler extends ApiGatewayHandler<CreateApprovalReque
       CreateApprovalRequest input, RequestInfo requestInfo, Context context)
       throws ApiGatewayException {
     validateInput(input);
-    identifierAuthorizer.authorizeIdentifiers(requestInfo, input.identifiers());
   }
 
   @Override
@@ -56,8 +55,9 @@ public class CreateApprovalHandler extends ApiGatewayHandler<CreateApprovalReque
   protected Void processInput(
       CreateApprovalRequest request, RequestInfo requestInfo, Context context)
       throws ApiGatewayException {
+    var customerId = identifierAuthorizer.authorizeIdentifiers(requestInfo, request.identifiers());
     try {
-      var approval = approvalService.create(request.identifiers(), request.source());
+      var approval = approvalService.create(request.identifiers(), request.source(), customerId);
       addHeaders(approval);
     } catch (Exception e) {
       handleException(e);
