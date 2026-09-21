@@ -1,5 +1,6 @@
 package no.sikt.nva.approvals.domain;
 
+import static java.util.UUID.randomUUID;
 import static no.sikt.nva.approvals.utils.TestUtils.randomApproval;
 import static no.sikt.nva.approvals.utils.TestUtils.randomHandle;
 import static no.unit.nva.testutils.RandomDataGenerator.randomUri;
@@ -31,10 +32,11 @@ public class FakeApprovalService implements ApprovalService {
   }
 
   @Override
-  public Approval create(Collection<NamedIdentifier> namedIdentifiers, URI source)
+  public Approval create(Collection<NamedIdentifier> namedIdentifiers, URI source, URI customerId)
       throws ApprovalServiceException, ApprovalConflictException {
     throwExceptionIfConfigured();
-    var approval = randomApproval(randomHandle());
+    var approval =
+        randomApproval(randomUUID(), namedIdentifiers, source, randomHandle(), customerId);
     approvals.add(approval);
     return approval;
   }

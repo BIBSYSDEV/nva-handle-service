@@ -78,7 +78,7 @@ class ApprovalServiceTest {
 
     assertThrows(
         ApprovalServiceException.class,
-        () -> approvalService.create(randomIdentifiers(), randomUri()));
+        () -> approvalService.create(randomIdentifiers(), randomUri(), randomUri()));
   }
 
   @Test
@@ -93,7 +93,7 @@ class ApprovalServiceTest {
 
     assertThrows(
         ApprovalServiceException.class,
-        () -> serviceWithFailingConnection.create(randomIdentifiers(), randomUri()));
+        () -> serviceWithFailingConnection.create(randomIdentifiers(), randomUri(), randomUri()));
   }
 
   @Test
@@ -104,7 +104,7 @@ class ApprovalServiceTest {
         .thenReturn(handle);
     doNothing().when(approvalRepository).save(any());
 
-    var approval = approvalService.create(randomIdentifiers(), randomUri());
+    var approval = approvalService.create(randomIdentifiers(), randomUri(), randomUri());
 
     assertEquals(handle, approval.handle().value());
   }
@@ -117,7 +117,7 @@ class ApprovalServiceTest {
         .thenReturn(randomHandle().value());
     doNothing().when(approvalRepository).save(any());
 
-    var approval = approvalService.create(randomIdentifiers(), source);
+    var approval = approvalService.create(randomIdentifiers(), source, randomUri());
 
     assertEquals(source, approval.source());
   }
@@ -129,7 +129,7 @@ class ApprovalServiceTest {
         .thenReturn(randomHandle().value());
     doNothing().when(approvalRepository).save(any());
 
-    var approval = approvalService.create(randomIdentifiers(), randomUri());
+    var approval = approvalService.create(randomIdentifiers(), randomUri(), randomUri());
 
     var expectedApprovalUri =
         UriWrapper.fromHost(API_HOST)
@@ -146,7 +146,7 @@ class ApprovalServiceTest {
     doNothing().when(approvalRepository).save(any());
 
     var identifiers = randomIdentifiers();
-    var approval = approvalService.create(identifiers, randomUri());
+    var approval = approvalService.create(identifiers, randomUri(), randomUri());
 
     assertEquals(identifiers, approval.namedIdentifiers());
   }
@@ -225,7 +225,7 @@ class ApprovalServiceTest {
 
     assertThrows(
         IllegalArgumentException.class,
-        () -> approvalService.create(List.of(identifier, identifier), randomUri()));
+        () -> approvalService.create(List.of(identifier, identifier), randomUri(), randomUri()));
   }
 
   @Test
@@ -245,7 +245,8 @@ class ApprovalServiceTest {
     var identifiers = List.of(new NamedIdentifier("DMP", value), new NamedIdentifier("dmp", value));
 
     assertThrows(
-        IllegalArgumentException.class, () -> approvalService.create(identifiers, randomUri()));
+        IllegalArgumentException.class,
+        () -> approvalService.create(identifiers, randomUri(), randomUri()));
   }
 
   @Test
@@ -266,7 +267,8 @@ class ApprovalServiceTest {
         List.of(new NamedIdentifier("DMP", value), new NamedIdentifier("  DMP  ", value));
 
     assertThrows(
-        IllegalArgumentException.class, () -> approvalService.create(identifiers, randomUri()));
+        IllegalArgumentException.class,
+        () -> approvalService.create(identifiers, randomUri(), randomUri()));
   }
 
   @Test
@@ -287,7 +289,8 @@ class ApprovalServiceTest {
     var identifiers = List.of(new NamedIdentifier(name, randomString()));
 
     assertThrows(
-        IllegalArgumentException.class, () -> approvalService.create(identifiers, randomUri()));
+        IllegalArgumentException.class,
+        () -> approvalService.create(identifiers, randomUri(), randomUri()));
   }
 
   @ParameterizedTest
@@ -309,7 +312,7 @@ class ApprovalServiceTest {
     when(handleDatabase.createHandle(any(), any(), any())).thenReturn(randomHandle().value());
     doNothing().when(approvalRepository).save(any());
 
-    var approval = approvalService.create(identifiers, randomUri());
+    var approval = approvalService.create(identifiers, randomUri(), randomUri());
 
     assertEquals(identifiers, approval.namedIdentifiers());
   }
@@ -322,7 +325,7 @@ class ApprovalServiceTest {
     when(handleDatabase.createHandle(any(), any(), any())).thenReturn(randomHandle().value());
     doNothing().when(approvalRepository).save(any());
 
-    var approval = approvalService.create(identifiers, randomUri());
+    var approval = approvalService.create(identifiers, randomUri(), randomUri());
 
     assertEquals(identifiers, approval.namedIdentifiers());
   }
@@ -338,7 +341,7 @@ class ApprovalServiceTest {
     when(handleDatabase.createHandle(any(), any(), any())).thenReturn(randomHandle().value());
     doNothing().when(approvalRepository).save(any());
 
-    var approval = approvalService.create(identifiers, randomUri());
+    var approval = approvalService.create(identifiers, randomUri(), randomUri());
 
     assertEquals(identifiers, approval.namedIdentifiers());
   }
@@ -352,7 +355,7 @@ class ApprovalServiceTest {
 
     assertThrows(
         ApprovalConflictException.class,
-        () -> approvalService.create(existingIdentifiers, randomUri()));
+        () -> approvalService.create(existingIdentifiers, randomUri(), randomUri()));
   }
 
   @Test
@@ -366,7 +369,7 @@ class ApprovalServiceTest {
     var exception =
         assertThrows(
             ApprovalConflictException.class,
-            () -> approvalService.create(identifiers, randomUri()));
+            () -> approvalService.create(identifiers, randomUri(), randomUri()));
     assertEquals(
         "Following identifiers already exist: [%s: %s]"
             .formatted(existingIdentifier.name(), existingIdentifier.value()),
@@ -389,7 +392,7 @@ class ApprovalServiceTest {
     var exception =
         assertThrows(
             ApprovalConflictException.class,
-            () -> approvalService.create(identifiers, randomUri()));
+            () -> approvalService.create(identifiers, randomUri(), randomUri()));
 
     assertEquals(Map.of(name, EXPECTED_JOINED_VALUES), exception.getConflictingKeys());
   }
@@ -417,7 +420,7 @@ class ApprovalServiceTest {
         .thenReturn(randomHandle().value());
     doNothing().when(approvalRepository).save(any());
 
-    var approval = approvalService.create(randomIdentifiers(), randomUri());
+    var approval = approvalService.create(randomIdentifiers(), randomUri(), randomUri());
 
     assertEquals(approval.createdDate(), approval.modifiedDate());
   }
@@ -430,7 +433,7 @@ class ApprovalServiceTest {
         .thenReturn(randomHandle().value());
     doNothing().when(approvalRepository).save(any());
 
-    var approval = approvalService.create(randomIdentifiers(), randomUri());
+    var approval = approvalService.create(randomIdentifiers(), randomUri(), randomUri());
 
     assertFalse(approval.createdDate().isBefore(beforeCreation));
   }
@@ -567,5 +570,33 @@ class ApprovalServiceTest {
             () -> approvalService.updateApprovalIdentifiers(approval.identifier(), newIdentifiers));
 
     assertEquals(Map.of(name, EXPECTED_JOINED_VALUES), exception.getConflictingKeys());
+  }
+
+  @Test
+  void shouldSetCustomerIdOnCreate()
+      throws SQLException, ApprovalServiceException, ApprovalConflictException {
+    var customerId = randomUri();
+    when(handleDatabase.createHandle(eq(HANDLE_PREFIX), any(URI.class), eq(connection)))
+        .thenReturn(randomHandle().value());
+    doNothing().when(approvalRepository).save(any());
+
+    var approval = approvalService.create(randomIdentifiers(), randomUri(), customerId);
+
+    assertEquals(customerId, approval.customerId());
+  }
+
+  @Test
+  void shouldKeepCustomerIdOnUpdate() throws ApprovalServiceException, ApprovalConflictException {
+    var approval = randomApproval(randomUUID(), randomUri());
+    var newIdentifiers = randomIdentifiers(2);
+    when(approvalRepository.findByApprovalIdentifier(approval.identifier()))
+        .thenReturn(Optional.of(approval));
+    when(approvalRepository.findIdentifiers(newIdentifiers)).thenReturn(List.of());
+    doNothing().when(approvalRepository).updateApprovalIdentifiers(any());
+
+    var updatedApproval =
+        approvalService.updateApprovalIdentifiers(approval.identifier(), newIdentifiers);
+
+    assertEquals(approval.customerId(), updatedApproval.customerId());
   }
 }

@@ -196,6 +196,7 @@ class DynamoDbApprovalRepositoryTest {
             allIdentifiers,
             approval.source(),
             approval.handle(),
+            approval.customerId(),
             approval.createdDate(),
             Instant.now());
 
@@ -218,6 +219,7 @@ class DynamoDbApprovalRepositoryTest {
             remainingIdentifiers,
             approval.source(),
             approval.handle(),
+            approval.customerId(),
             approval.createdDate(),
             Instant.now());
 
@@ -245,6 +247,7 @@ class DynamoDbApprovalRepositoryTest {
             finalIdentifiers,
             approval.source(),
             approval.handle(),
+            approval.customerId(),
             approval.createdDate(),
             Instant.now());
 
@@ -271,6 +274,7 @@ class DynamoDbApprovalRepositoryTest {
             finalIdentifiers,
             approval.source(),
             approval.handle(),
+            approval.customerId(),
             approval.createdDate(),
             Instant.now());
 
@@ -279,6 +283,16 @@ class DynamoDbApprovalRepositoryTest {
 
     assertTrue(persistedApproval.orElseThrow().namedIdentifiers().containsAll(finalIdentifiers));
     assertEquals(updatedApproval.modifiedDate(), persistedApproval.orElseThrow().modifiedDate());
+  }
+
+  @Test
+  void shouldPersistCustomerIdWhenSavingNewApproval() {
+    var approval = randomApproval(randomHandle());
+    approvalRepository.save(approval);
+
+    var persistedApproval = approvalRepository.findByApprovalIdentifier(approval.identifier());
+
+    assertEquals(approval.customerId(), persistedApproval.orElseThrow().customerId());
   }
 
   @Test
@@ -304,6 +318,7 @@ class DynamoDbApprovalRepositoryTest {
             randomIdentifiers(3),
             approval.source(),
             approval.handle(),
+            approval.customerId(),
             approval.createdDate(),
             modifiedDate));
     var persistedApproval = approvalRepository.findByApprovalIdentifier(approval.identifier());
@@ -348,6 +363,7 @@ class DynamoDbApprovalRepositoryTest {
             List.of(sharedIdentifier),
             secondApproval.source(),
             secondApproval.handle(),
+            secondApproval.customerId(),
             secondApproval.createdDate(),
             Instant.now());
 
