@@ -10,7 +10,6 @@ dependencies {
     api(nvaCatalog.aws.sdk2.dynamodbenhanced)
     api(nvaCatalog.jackson.annotations)
     api(nvaLibs.apigateway)
-    api(nvaLibs.clients)
     api(nvaLibs.core)
     api(nvaLibs.json)
     api(project(":handle"))

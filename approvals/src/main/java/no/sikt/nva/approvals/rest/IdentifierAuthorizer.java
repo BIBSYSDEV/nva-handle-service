@@ -1,49 +1,35 @@
 package no.sikt.nva.approvals.rest;
 
-import static nva.commons.core.attempt.Try.attempt;
-
 import java.net.URI;
 import java.util.Collection;
-import java.util.Optional;
 import java.util.UUID;
 import no.sikt.nva.approvals.domain.IdentifierPolicy;
 import no.sikt.nva.approvals.domain.IdentifierPolicyService;
 import no.sikt.nva.approvals.domain.IdentifierPolicyServiceImpl;
 import no.sikt.nva.approvals.domain.NamedIdentifier;
-import no.unit.nva.clients.GetExternalClientResponse;
-import no.unit.nva.clients.IdentityServiceClient;
 import nva.commons.apigateway.RequestInfo;
 import nva.commons.apigateway.exceptions.ApiGatewayException;
-import nva.commons.apigateway.exceptions.UnauthorizedException;
 import nva.commons.core.Environment;
 import nva.commons.core.JacocoGenerated;
 import nva.commons.core.paths.UriWrapper;
 
 public class IdentifierAuthorizer {
 
-  private static final String UNRESOLVED_CUSTOMER_MESSAGE =
-      "Could not resolve customer for the authenticated client";
-
-  private final IdentityServiceClient identityServiceClient;
   private final IdentifierPolicyService identifierPolicyService;
 
-  public IdentifierAuthorizer(
-      IdentityServiceClient identityServiceClient,
-      IdentifierPolicyService identifierPolicyService) {
-    this.identityServiceClient = identityServiceClient;
+  public IdentifierAuthorizer(IdentifierPolicyService identifierPolicyService) {
     this.identifierPolicyService = identifierPolicyService;
   }
 
   @JacocoGenerated
   public static IdentifierAuthorizer defaultInstance(Environment environment) {
-    return new IdentifierAuthorizer(
-        IdentityServiceClient.prepare(), IdentifierPolicyServiceImpl.defaultInstance(environment));
+    return new IdentifierAuthorizer(IdentifierPolicyServiceImpl.defaultInstance(environment));
   }
 
   public URI authorizeIdentifiers(
       RequestInfo requestInfo, Collection<NamedIdentifier> namedIdentifiers)
       throws ApiGatewayException {
-    var customerId = resolveCustomerId(requestInfo);
+    var customerId = requestInfo.getCurrentCustomer();
     var disallowedIdentifierNames =
         resolveIdentifierPolicy(requestInfo, customerId).disallowedNames(namedIdentifiers);
     if (!disallowedIdentifierNames.isEmpty()) {
@@ -60,21 +46,5 @@ public class IdentifierAuthorizer {
 
   private static UUID toCustomerIdentifier(URI customerUri) {
     return UUID.fromString(UriWrapper.fromUri(customerUri).getLastPathElement());
-  }
-
-  private URI resolveCustomerId(RequestInfo requestInfo) throws UnauthorizedException {
-    return fetchCustomerId(requestInfo)
-        .orElseThrow(() -> new UnauthorizedException(UNRESOLVED_CUSTOMER_MESSAGE));
-  }
-
-  private Optional<URI> fetchCustomerId(RequestInfo requestInfo) {
-    return requestInfo
-        .getClientId()
-        .flatMap(this::fetchExternalClient)
-        .map(GetExternalClientResponse::getCustomerUri);
-  }
-
-  private Optional<GetExternalClientResponse> fetchExternalClient(String clientId) {
-    return attempt(() -> identityServiceClient.getExternalClient(clientId)).toOptional();
   }
 }
