@@ -296,6 +296,34 @@ paths:
           application/json:
             schema:
               $ref: "#/components/schemas/UpdateApprovalRequest"
+            examples:
+              writableStateOnly:
+                summary: Identifiers and source only
+                value:
+                  identifiers:
+                    - type: Identifier
+                      name: REK
+                      value: "2024/123"
+                    - type: Identifier
+                      name: DMP
+                      value: dmp-456
+                  source: https://example.com/source/12345
+              documentFromGet:
+                summary: Document returned by GET, submitted unchanged
+                value:
+                  "@context": https://api.nva.unit.no/approval/context
+                  type: Approval
+                  id: https://api.nva.unit.no/approval/6ff5f1b5-97c1-40f0-86ad-2cbd9006eee2
+                  identifier: 6ff5f1b5-97c1-40f0-86ad-2cbd9006eee2
+                  identifiers:
+                    - type: Identifier
+                      name: REK
+                      value: "2024/123"
+                    - type: Identifier
+                      name: DMP
+                      value: dmp-456
+                  source: https://example.com/source/12345
+                  handle: https://hdl.handle.net/11250.1/98765
       security:
         - CognitoUserPool:
             ["https://api.nva.unit.no/scopes/third-party/approval-upsert", "https://api.nva.unit.no/scopes/backend"]
@@ -416,22 +444,17 @@ components:
             "@context":
               type: string
               format: uri
-              description: >
-                Optional JSON-LD context. Ignored by the update operation. This
-                field is accepted to allow a representation returned by GET to be
-                submitted unchanged.
+              description: Server-assigned. Ignored.
             id:
               type: string
               format: uri
               description: >
-                Optional immutable resource URI. If supplied, it must identify the
-                approval addressed by the `{approvalId}` path parameter.
+                Server-assigned. If sent, must address the approval in the path.
             identifier:
               type: string
               format: uuid
               description: >
-                Optional immutable approval resource UUID. If supplied, it must
-                equal the `{approvalId}` path parameter.
+                Server-assigned. If sent, must equal the `{approvalId}` path parameter.
             handle:
               type: string
               format: uri
@@ -450,10 +473,7 @@ components:
         being updated. `handle`, `@context` and `type` are ignored.
 
       example:
-        "@context": https://api.nva.unit.no/approval/context
         type: Approval
-        id: https://api.nva.unit.no/approval/6ff5f1b5-97c1-40f0-86ad-2cbd9006eee2
-        identifier: 6ff5f1b5-97c1-40f0-86ad-2cbd9006eee2
         identifiers:
           - type: Identifier
             name: REK
@@ -462,7 +482,6 @@ components:
             name: DMP
             value: dmp-456
         source: https://example.com/source/12345
-        handle: https://hdl.handle.net/11250.1/98765
     Problem:
       type: object
       description: NVA error reporting object
