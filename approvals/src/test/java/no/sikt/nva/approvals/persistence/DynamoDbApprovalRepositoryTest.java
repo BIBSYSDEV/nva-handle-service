@@ -515,6 +515,21 @@ class DynamoDbApprovalRepositoryTest {
     assertTrue(scanSingleItem().containsKey(CREATED_DATE_FIELD));
   }
 
+  @Test
+  void shouldKeepOriginalCreatedDateWhenOverwritingIdentifierPolicy() {
+    var customerIdentifier = randomUUID();
+    approvalRepository.saveIdentifierPolicy(customerIdentifier, randomIdentifierPolicy());
+    var originalCreatedDate = scanSingleItem().get(CREATED_DATE_FIELD);
+
+    var updatedIdentifierPolicy = randomIdentifierPolicy();
+    approvalRepository.saveIdentifierPolicy(customerIdentifier, updatedIdentifierPolicy);
+
+    assertEquals(originalCreatedDate, scanSingleItem().get(CREATED_DATE_FIELD));
+    assertEquals(
+        updatedIdentifierPolicy,
+        approvalRepository.findIdentifierPolicy(customerIdentifier).orElseThrow());
+  }
+
   private void insertIdentifierPolicyWithoutAllowedIdentifierNames(UUID customerIdentifier) {
     var item = new HashMap<String, AttributeValue>();
     item.put(

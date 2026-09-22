@@ -145,17 +145,17 @@ public class DynamoDbApprovalRepository implements ApprovalRepository {
 
   @Override
   public Optional<IdentifierPolicy> findIdentifierPolicy(UUID customerIdentifier) {
-    return Optional.ofNullable(table.getItem(IdentifierPolicyDao.primaryKey(customerIdentifier)))
-        .map(EnhancedDocument::toJson)
-        .map(IdentifierPolicyDao::fromJson)
-        .map(IdentifierPolicyDao::toIdentifierPolicy);
+    return fetchIdentifierPolicy(customerIdentifier).map(IdentifierPolicyDao::toIdentifierPolicy);
   }
 
   @Override
   public void saveIdentifierPolicy(UUID customerIdentifier, IdentifierPolicy identifierPolicy) {
+    var createdDate =
+        fetchIdentifierPolicy(customerIdentifier)
+            .map(IdentifierPolicyDao::createdDate)
+            .orElseGet(Instant::now);
     table.putItem(
-        IdentifierPolicyDao.fromIdentifierPolicy(
-                customerIdentifier, identifierPolicy, Instant.now())
+        IdentifierPolicyDao.fromIdentifierPolicy(customerIdentifier, identifierPolicy, createdDate)
             .toEnhancedDocument());
   }
 
@@ -248,6 +248,12 @@ public class DynamoDbApprovalRepository implements ApprovalRepository {
     return namedIdentifiers.stream()
         .filter(namedIdentifier -> !otherIdentifiers.contains(namedIdentifier))
         .toList();
+  }
+
+  private Optional<IdentifierPolicyDao> fetchIdentifierPolicy(UUID customerIdentifier) {
+    return Optional.ofNullable(table.getItem(IdentifierPolicyDao.primaryKey(customerIdentifier)))
+        .map(EnhancedDocument::toJson)
+        .map(IdentifierPolicyDao::fromJson);
   }
 
   private List<NamedIdentifierQueryObject> fetchIdentifiersBatch(List<Key> keys) {
