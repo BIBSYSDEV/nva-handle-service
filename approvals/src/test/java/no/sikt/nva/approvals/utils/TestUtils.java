@@ -59,15 +59,7 @@ public class TestUtils {
       URI source,
       Handle handle,
       URI customerId) {
-    var createdDate = randomTimestamp();
-    return new Approval(
-        identifier,
-        namedIdentifiers,
-        source,
-        handle,
-        customerId,
-        createdDate,
-        createdDate.plusSeconds(1));
+    return new Approval(identifier, namedIdentifiers, source, handle, customerId);
   }
 
   public static Instant randomTimestamp() {
@@ -93,7 +85,7 @@ public class TestUtils {
         randomString(),
         randomString(),
         ApprovalDao.toDatabaseIdentifier(randomUUID()),
-        HandleDao.fromHandle(randomHandle()).getDatabaseIdentifier());
+        HandleDao.toDatabaseIdentifier(randomHandle()));
   }
 
   public static NamedIdentifierQueryObject toIdentifierQueryObject(NamedIdentifier identifier) {
@@ -101,7 +93,7 @@ public class TestUtils {
         identifier.name(),
         identifier.value(),
         ApprovalDao.toDatabaseIdentifier(randomUUID()),
-        HandleDao.fromHandle(randomHandle()).getDatabaseIdentifier());
+        HandleDao.toDatabaseIdentifier(randomHandle()));
   }
 
   public static Handle randomHandle() {

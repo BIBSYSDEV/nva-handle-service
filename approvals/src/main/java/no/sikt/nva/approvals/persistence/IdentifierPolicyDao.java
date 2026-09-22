@@ -9,6 +9,7 @@ import static nva.commons.core.attempt.Try.attempt;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.annotation.JsonTypeInfo.Id;
 import com.fasterxml.jackson.annotation.JsonTypeName;
+import java.time.Instant;
 import java.util.Set;
 import java.util.UUID;
 import no.sikt.nva.approvals.domain.IdentifierPolicy;
@@ -18,7 +19,8 @@ import software.amazon.awssdk.enhanced.dynamodb.document.EnhancedDocument;
 
 @JsonTypeInfo(use = Id.NAME, property = "type")
 @JsonTypeName("IdentifierPolicy")
-public record IdentifierPolicyDao(UUID customerIdentifier, Set<String> allowedIdentifierNames)
+public record IdentifierPolicyDao(
+    UUID customerIdentifier, Set<String> allowedIdentifierNames, Instant createdDate)
     implements DatabaseEntry {
 
   private static final String CUSTOMER_KEY = "Customer:%s";
@@ -30,8 +32,9 @@ public record IdentifierPolicyDao(UUID customerIdentifier, Set<String> allowedId
   }
 
   public static IdentifierPolicyDao fromIdentifierPolicy(
-      UUID customerIdentifier, IdentifierPolicy identifierPolicy) {
-    return new IdentifierPolicyDao(customerIdentifier, identifierPolicy.allowedIdentifierNames());
+      UUID customerIdentifier, IdentifierPolicy identifierPolicy, Instant createdDate) {
+    return new IdentifierPolicyDao(
+        customerIdentifier, identifierPolicy.allowedIdentifierNames(), createdDate);
   }
 
   public static IdentifierPolicyDao fromJson(String json) {

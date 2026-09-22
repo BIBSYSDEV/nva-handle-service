@@ -18,6 +18,7 @@ import static software.amazon.awssdk.enhanced.dynamodb.AttributeValueType.S;
 import static software.amazon.awssdk.enhanced.dynamodb.TableMetadata.primaryIndexName;
 import static software.amazon.awssdk.enhanced.dynamodb.model.QueryConditional.keyEqualTo;
 
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -55,6 +56,7 @@ public class DynamoDbApprovalRepository implements ApprovalRepository {
   private static final int BATCH_GET_ITEM_LIMIT = 80;
   private static final int TRANSACT_WRITE_ITEM_LIMIT = 80;
   private static final int FIRST_CHUNK = 0;
+  private static final String APPROVAL_NOT_FOUND_MESSAGE = "Approval not found: %s";
   private final DynamoDbTable<EnhancedDocument> table;
   private final DynamoDbEnhancedClient client;
 
@@ -70,7 +72,7 @@ public class DynamoDbApprovalRepository implements ApprovalRepository {
 
   @Override
   public void save(Approval approval) {
-    var allDocuments = createDocuments(approval);
+    var allDocuments = createDocuments(approval, Instant.now());
     if (allDocuments.size() <= TRANSACT_WRITE_ITEM_LIMIT) {
       saveDocumentsInTransaction(allDocuments);
     } else {
@@ -81,16 +83,21 @@ public class DynamoDbApprovalRepository implements ApprovalRepository {
 
   @Override
   public void updateApprovalIdentifiers(Approval approval) {
-    var databaseVersion =
-        findByApprovalIdentifier(approval.identifier())
-            .orElseThrow(
-                () ->
-                    new IllegalStateException(
-                        "Approval not found: %s".formatted(approval.identifier())));
+    var entities = fetchEntitiesByApprovalIdentifier(toDatabaseIdentifier(approval.identifier()));
+    if (entities.isEmpty()) {
+      throw new IllegalStateException(APPROVAL_NOT_FOUND_MESSAGE.formatted(approval.identifier()));
+    }
+    var storedIdentifiers = getIdentifiers(entities);
+    var createdDate = getApproval(entities).createdDate();
+    var modifiedDate = Instant.now();
+
     var operations = new ArrayList<Operation>();
-    operations.addAll(getOperations(databaseVersion, approval, DELETE));
-    operations.addAll(getOperations(approval, databaseVersion, CREATE));
-    updateIdentifiersForApproval(approval, operations);
+    operations.addAll(getOperations(storedIdentifiers, approval.namedIdentifiers(), DELETE));
+    operations.addAll(getOperations(approval.namedIdentifiers(), storedIdentifiers, CREATE));
+
+    var approvalDao = ApprovalDao.fromApproval(approval, createdDate, modifiedDate);
+    var handleDao = HandleDao.fromHandle(approval.handle(), createdDate);
+    updateIdentifiersForApproval(approvalDao, handleDao, operations);
   }
 
   @Override
@@ -101,7 +108,7 @@ public class DynamoDbApprovalRepository implements ApprovalRepository {
 
   @Override
   public Optional<Approval> findByHandle(Handle handle) {
-    var databaseIdentifier = HandleDao.fromHandle(handle).getDatabaseIdentifier();
+    var databaseIdentifier = HandleDao.toDatabaseIdentifier(handle);
     var entities =
         table
             .index(GSI2)
@@ -117,7 +124,7 @@ public class DynamoDbApprovalRepository implements ApprovalRepository {
 
   @Override
   public Optional<Approval> findByIdentifier(NamedIdentifier namedIdentifier) {
-    var primaryKey = IdentifierDao.fromIdentifier(namedIdentifier).getPrimaryKey();
+    var primaryKey = IdentifierDao.primaryKey(namedIdentifier);
     return Optional.ofNullable(table.getItem(primaryKey))
         .map(item -> item.getString(PK1))
         .map(this::fetchEntitiesByApprovalIdentifier)
@@ -131,11 +138,7 @@ public class DynamoDbApprovalRepository implements ApprovalRepository {
     if (namedIdentifiers.isEmpty()) {
       return List.of();
     }
-    var keys =
-        namedIdentifiers.stream()
-            .map(IdentifierDao::fromIdentifier)
-            .map(IdentifierDao::getPrimaryKey)
-            .toList();
+    var keys = namedIdentifiers.stream().map(IdentifierDao::primaryKey).toList();
 
     return splitToChunks(keys, BATCH_GET_ITEM_LIMIT).stream()
         .flatMap(keyBatch -> fetchIdentifiersBatch(keyBatch).stream())
@@ -154,7 +157,8 @@ public class DynamoDbApprovalRepository implements ApprovalRepository {
   @Override
   public void saveIdentifierPolicy(UUID customerIdentifier, IdentifierPolicy identifierPolicy) {
     table.putItem(
-        IdentifierPolicyDao.fromIdentifierPolicy(customerIdentifier, identifierPolicy)
+        IdentifierPolicyDao.fromIdentifierPolicy(
+                customerIdentifier, identifierPolicy, Instant.now())
             .toEnhancedDocument());
   }
 
@@ -176,9 +180,7 @@ public class DynamoDbApprovalRepository implements ApprovalRepository {
         identifiers,
         approvalDao.source(),
         handle,
-        approvalDao.customerId(),
-        approvalDao.createdDate(),
-        approvalDao.modifiedDate());
+        approvalDao.customerId());
   }
 
   private static Handle getHandle(List<DatabaseEntry> entities) {
@@ -226,10 +228,12 @@ public class DynamoDbApprovalRepository implements ApprovalRepository {
   }
 
   private static List<Operation> getOperations(
-      Approval approval, Approval existingApproval, DatabaseOperation operation) {
-    return approval.namedIdentifiers().stream()
-        .filter(id -> !existingApproval.namedIdentifiers().contains(id))
-        .map(identifier -> new Operation(operation, IdentifierDao.fromIdentifier(identifier)))
+      Collection<NamedIdentifier> namedIdentifiers,
+      Collection<NamedIdentifier> existingNamedIdentifiers,
+      DatabaseOperation operation) {
+    return namedIdentifiers.stream()
+        .filter(identifier -> !existingNamedIdentifiers.contains(identifier))
+        .map(identifier -> new Operation(operation, identifier))
         .toList();
   }
 
@@ -265,18 +269,21 @@ public class DynamoDbApprovalRepository implements ApprovalRepository {
     client.transactWriteItems(requestBuilder.build());
   }
 
-  private void updateIdentifiersForApproval(Approval approval, List<Operation> operations) {
+  private void updateIdentifiersForApproval(
+      ApprovalDao approvalDao, HandleDao handleDao, List<Operation> operations) {
     var chunks = splitToChunks(operations, TRANSACT_WRITE_ITEM_LIMIT);
     IntStream.range(0, chunks.size())
         .forEach(
             chunkIndex ->
-                sendTransaction(approval, chunks.get(chunkIndex), chunkIndex == FIRST_CHUNK));
+                sendTransaction(
+                    approvalDao, handleDao, chunks.get(chunkIndex), chunkIndex == FIRST_CHUNK));
   }
 
   private void sendTransaction(
-      Approval approval, List<Operation> operations, boolean includeApproval) {
-    var approvalDao = ApprovalDao.fromApproval(approval);
-    var handleDao = HandleDao.fromHandle(approval.handle());
+      ApprovalDao approvalDao,
+      HandleDao handleDao,
+      List<Operation> operations,
+      boolean includeApproval) {
     var requestBuilder = TransactWriteItemsEnhancedRequest.builder();
     if (includeApproval) {
       requestBuilder.addPutItem(table, approvalDao.toEnhancedDocument(handleDao));
@@ -292,9 +299,11 @@ public class DynamoDbApprovalRepository implements ApprovalRepository {
       ApprovalDao approvalDao,
       HandleDao handleDao) {
     if (DELETE == operation.operation()) {
-      requestBuilder.addDeleteItem(table, operation.entry().getPrimaryKey());
+      requestBuilder.addDeleteItem(table, IdentifierDao.primaryKey(operation.namedIdentifier()));
     } else {
-      var document = operation.entry().toEnhancedDocument(approvalDao, handleDao);
+      var document =
+          IdentifierDao.fromIdentifier(operation.namedIdentifier(), approvalDao.modifiedDate())
+              .toEnhancedDocument(approvalDao, handleDao);
       requestBuilder.addPutItem(
           table,
           TransactPutItemEnhancedRequest.builder(EnhancedDocument.class)
@@ -321,38 +330,28 @@ public class DynamoDbApprovalRepository implements ApprovalRepository {
         .orElseThrow();
   }
 
-  private List<EnhancedDocument> createDocuments(Approval approval) {
+  private List<EnhancedDocument> createDocuments(Approval approval, Instant createdDate) {
+    var approvalDao = ApprovalDao.fromApproval(approval, createdDate, createdDate);
+    var handleDao = HandleDao.fromHandle(approval.handle(), createdDate);
+
     var documents = new ArrayList<EnhancedDocument>();
-    documents.add(createHandleEntity(approval));
-    documents.add(createApprovalEntity(approval));
-    documents.addAll(createIdentifiersEntities(approval));
+    documents.add(handleDao.toEnhancedDocument(approvalDao));
+    documents.add(approvalDao.toEnhancedDocument(handleDao));
+    documents.addAll(createIdentifierDocuments(approval, approvalDao, handleDao, createdDate));
     return documents;
   }
 
-  private EnhancedDocument createApprovalEntity(Approval approval) {
-    var handleDao = HandleDao.fromHandle(approval.handle());
-    return ApprovalDao.fromApproval(approval).toEnhancedDocument(handleDao);
-  }
-
-  private List<EnhancedDocument> createIdentifiersEntities(Approval approval) {
+  private List<EnhancedDocument> createIdentifierDocuments(
+      Approval approval, ApprovalDao approvalDao, HandleDao handleDao, Instant createdDate) {
     return approval.namedIdentifiers().stream()
-        .map(identifier -> createIdentifierDocument(identifier, approval))
+        .map(
+            namedIdentifier ->
+                IdentifierDao.fromIdentifier(namedIdentifier, createdDate)
+                    .toEnhancedDocument(approvalDao, handleDao))
         .toList();
   }
 
-  private EnhancedDocument createIdentifierDocument(
-      NamedIdentifier namedIdentifier, Approval approval) {
-    var handleDao = HandleDao.fromHandle(approval.handle());
-    var approvalDao = ApprovalDao.fromApproval(approval);
-    return IdentifierDao.fromIdentifier(namedIdentifier).toEnhancedDocument(approvalDao, handleDao);
-  }
-
-  private EnhancedDocument createHandleEntity(Approval approval) {
-    var approvalDao = ApprovalDao.fromApproval(approval);
-    return HandleDao.fromHandle(approval.handle()).toEnhancedDocument(approvalDao);
-  }
-
-  public record Operation(DatabaseOperation operation, IdentifierDao entry) {
+  public record Operation(DatabaseOperation operation, NamedIdentifier namedIdentifier) {
 
     public enum DatabaseOperation {
       CREATE,

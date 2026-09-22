@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.annotation.JsonTypeInfo.Id;
+import java.time.Instant;
 import no.unit.nva.commons.json.JsonSerializable;
 
 @JsonTypeInfo(use = Id.NAME, property = "type")
@@ -13,9 +14,10 @@ import no.unit.nva.commons.json.JsonSerializable;
   @JsonSubTypes.Type(ApprovalDao.class),
   @JsonSubTypes.Type(IdentifierPolicyDao.class)
 })
-@SuppressWarnings("PMD.ImplicitFunctionalInterface")
 public interface DatabaseEntry extends JsonSerializable {
 
   @JsonIgnore
   String getDatabaseIdentifier();
+
+  Instant createdDate();
 }
