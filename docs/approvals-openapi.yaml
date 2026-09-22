@@ -278,7 +278,10 @@ paths:
         - external
       operationId: updateApproval
       summary: Update Approval
-      description: Update approval
+      description: >
+        Replaces the writable state of an existing approval. The submitted identifiers and
+        source overwrite the stored values. The handle and the approval identifier are
+        assigned on creation and cannot be changed.
       parameters:
         - name: approvalId
           in: path
@@ -316,12 +319,15 @@ paths:
               schema:
                 type: integer
         "400":
-          description: >-
-            Bad Request - invalid body, an identifier name containing anything but letters, digits,
-            hyphen and underscore, or two identifiers with the same name and the same value.
-            Names are compared ignoring case and surrounding whitespace, so "DMP" and " dmp " count
-            as the same name, while values are compared exactly. Two identifiers sharing a name but
-            holding different values are allowed. Identifier values are not restricted.
+          description: |-
+            Bad Request. The request is rejected when:
+            * the body is invalid
+            * an identifier is invalid
+            * two identifiers share the same name and the same value. Names are compared ignoring
+              case and surrounding whitespace, so `DMP` and ` dmp ` count as the same name, while
+              values are compared exactly. Two identifiers sharing a name but holding different
+              values are allowed, and identifier values are not restricted
+            * `id` or `identifier` in the body does not address the approval in the request URI
           content:
             "application/json":
               schema:
@@ -345,7 +351,9 @@ paths:
               schema:
                 $ref: "#/components/schemas/Problem"
         "409":
-          description: Conflict
+          description: >-
+            Conflict - one or more of the submitted identifiers already belong to another
+            approval.
           content:
             "application/json":
               schema:
@@ -358,25 +366,38 @@ paths:
                 $ref: "#/components/schemas/Problem"
 components:
   schemas:
-    CreateApprovalRequest:
+    ApprovalWritableState:
       type: object
+      description: Fields that a client may set when creating or replacing an approval.
       required:
         - identifiers
         - source
       properties:
         type:
           type: string
+          enum:
+            - Approval
           default: Approval
+          description: Optional JSON-LD type discriminator.
         identifiers:
           type: array
+          minItems: 1
+          description: >
+            Complete list of named identifiers for the approval. On update, this
+            list replaces the stored list.
           items:
             $ref: "#/components/schemas/Identifier"
-          minItems: 1
-          description: List of identifiers for the approval
         source:
           type: string
           format: uri
-          description: URI of the source approval
+          description: URI of the source approval.
+    CreateApprovalRequest:
+      allOf:
+        - $ref: "#/components/schemas/ApprovalWritableState"
+      description: >
+        Request to create an approval. The server assigns the approval
+        identifier and persistent `handle`.
+
       example:
         type: Approval
         identifiers:
@@ -385,19 +406,63 @@ components:
             value: "2024/123"
           - type: Identifier
             name: DMP
-            value: "dmp-456"
+            value: dmp-456
         source: https://example.com/source/12345
     UpdateApprovalRequest:
-      type: object
-      required:
-        - identifiers
-      properties:
+      allOf:
+        - $ref: "#/components/schemas/ApprovalWritableState"
+        - type: object
+          properties:
+            "@context":
+              type: string
+              format: uri
+              description: >
+                Optional JSON-LD context. Ignored by the update operation. This
+                field is accepted to allow a representation returned by GET to be
+                submitted unchanged.
+            id:
+              type: string
+              format: uri
+              description: >
+                Optional immutable resource URI. If supplied, it must identify the
+                approval addressed by the `{approvalId}` path parameter.
+            identifier:
+              type: string
+              format: uuid
+              description: >
+                Optional immutable approval resource UUID. If supplied, it must
+                equal the `{approvalId}` path parameter.
+            handle:
+              type: string
+              format: uri
+              description: >
+                Optional immutable persistent handle URI. Ignored by the update
+                operation. This field is accepted to allow a representation returned
+                by GET to be submitted unchanged.
+      description: >
+        Full replacement of an approval's writable state. `identifiers` and
+        `source` are required and replace the stored values; omitted writable
+        fields are not preserved.
+
+        The server-assigned fields `id`, `identifier`, and `handle` cannot be
+        changed. They are optional only to support GET-to-PUT round-tripping.
+        When present, `id` and `identifier` are validated against the approval
+        being updated. `handle`, `@context` and `type` are ignored.
+
+      example:
+        "@context": https://api.nva.unit.no/approval/context
+        type: Approval
+        id: https://api.nva.unit.no/approval/6ff5f1b5-97c1-40f0-86ad-2cbd9006eee2
+        identifier: 6ff5f1b5-97c1-40f0-86ad-2cbd9006eee2
         identifiers:
-          type: array
-          items:
-            $ref: "#/components/schemas/Identifier"
-          minItems: 1
-          description: List of identifiers for the approval
+          - type: Identifier
+            name: REK
+            value: "2024/123"
+          - type: Identifier
+            name: DMP
+            value: dmp-456
+        source: https://example.com/source/12345
+        handle: https://hdl.handle.net/11250.1/98765
     Problem:
       type: object
       description: NVA error reporting object

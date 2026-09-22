@@ -61,8 +61,8 @@ public class FakeApprovalService implements ApprovalService {
   }
 
   @Override
-  public Approval updateApprovalIdentifiers(
-      UUID approvalId, Collection<NamedIdentifier> identifiers)
+  public Approval updateApproval(
+      UUID approvalId, Collection<NamedIdentifier> identifiers, URI source)
       throws ApprovalServiceException, ApprovalConflictException {
     throwExceptionIfConfigured();
     return randomApproval(approvalId, randomUri());
