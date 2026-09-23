@@ -3,6 +3,7 @@ package no.sikt.nva.approvals.rest;
 import static java.util.Objects.isNull;
 import static java.util.Objects.nonNull;
 import static no.sikt.nva.approvals.utils.ValidationUtils.shouldNotBeEmpty;
+import static nva.commons.core.attempt.Try.attempt;
 
 import java.net.URI;
 import java.util.Collection;
@@ -38,7 +39,13 @@ public record UpdateApprovalRequest(
     }
   }
 
-  private boolean addressesApproval(UUID approvalIdentifier) {
-    return approvalIdentifier.toString().equals(UriWrapper.fromUri(id).getLastPathElement());
+  private boolean addressesApproval(UUID approvalIdentifier) throws BadRequestException {
+    return approvalIdentifier.toString().equals(getIdentifierFromId());
+  }
+
+  private String getIdentifierFromId() throws BadRequestException {
+    return attempt(() -> UriWrapper.fromUri(id))
+        .map(UriWrapper::getLastPathElement)
+        .orElseThrow(failure -> new BadRequestException("Provided id is invalid %s".formatted(id)));
   }
 }

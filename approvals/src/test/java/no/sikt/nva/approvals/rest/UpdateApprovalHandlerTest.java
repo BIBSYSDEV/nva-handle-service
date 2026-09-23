@@ -56,6 +56,8 @@ class UpdateApprovalHandlerTest {
   private static final String ID_MISMATCH_MESSAGE = "Provided id %s does not address approval %s";
   private static final String IDENTIFIER_MISMATCH_MESSAGE =
       "Provided identifier %s does not match approval %s";
+  private static final String INVALID_ID_MESSAGE = "Provided id is invalid %s";
+  private static final String OPAQUE_URI_TEMPLATE = "urn:uuid:%s";
   private static final String INVALID_APPROVAL_ID_MESSAGE =
       "Provided approval identifier is not valid!";
   private UpdateApprovalHandler handler;
@@ -175,6 +177,19 @@ class UpdateApprovalHandlerTest {
 
     assertEquals(HTTP_BAD_REQUEST, response.getStatusCode());
     assertEquals(ID_MISMATCH_MESSAGE.formatted(unrelatedUri, approvalId), problemDetail(response));
+  }
+
+  @Test
+  void shouldReturnBadRequestWhenIdIsInvalidUri() throws IOException {
+    var invalidId = URI.create(OPAQUE_URI_TEMPLATE.formatted(approvalId));
+    var request = createRequest(updateApprovalRequest(invalidId, null, null), approvalId);
+
+    handler.handleRequest(request, output, context);
+
+    var response = GatewayResponse.fromOutputStream(output, Problem.class);
+
+    assertEquals(HTTP_BAD_REQUEST, response.getStatusCode());
+    assertEquals(INVALID_ID_MESSAGE.formatted(invalidId), problemDetail(response));
   }
 
   @Test
