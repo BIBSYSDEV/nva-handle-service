@@ -80,7 +80,7 @@ public class DynamoDbApprovalRepository implements ApprovalRepository {
   }
 
   @Override
-  public void updateApprovalIdentifiers(Approval approval) {
+  public void updateApproval(Approval approval) {
     var databaseVersion =
         findByApprovalIdentifier(approval.identifier())
             .orElseThrow(
@@ -267,6 +267,10 @@ public class DynamoDbApprovalRepository implements ApprovalRepository {
 
   private void updateIdentifiersForApproval(Approval approval, List<Operation> operations) {
     var chunks = splitToChunks(operations, TRANSACT_WRITE_ITEM_LIMIT);
+    if (chunks.isEmpty()) {
+      sendTransaction(approval, List.of(), true);
+      return;
+    }
     IntStream.range(0, chunks.size())
         .forEach(
             chunkIndex ->

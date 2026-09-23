@@ -10,6 +10,7 @@ import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.TreeSet;
@@ -93,8 +94,8 @@ public class ApprovalServiceImpl implements ApprovalService {
   }
 
   @Override
-  public Approval updateApprovalIdentifiers(
-      UUID approvalId, Collection<NamedIdentifier> namedIdentifiers)
+  public Approval updateApproval(
+      UUID approvalId, Collection<NamedIdentifier> namedIdentifiers, URI source)
       throws ApprovalServiceException, ApprovalConflictException {
     ensureIdentifierNamesAreWellFormed(namedIdentifiers);
     ensureNoDuplicateIdentifiers(namedIdentifiers);
@@ -104,7 +105,7 @@ public class ApprovalServiceImpl implements ApprovalService {
             .orElseThrow(() -> new ApprovalNotFoundException(approvalId));
 
     ensureIdentifiersAreNotUsedByOtherApproval(identifiers, approval);
-    if (hasSameIdentifiers(approval, namedIdentifiers)) {
+    if (isUnchanged(approval, namedIdentifiers, source)) {
       return approval;
     }
 
@@ -112,12 +113,12 @@ public class ApprovalServiceImpl implements ApprovalService {
         new Approval(
             approvalId,
             namedIdentifiers,
-            approval.source(),
+            source,
             approval.handle(),
             approval.customerId(),
             approval.createdDate(),
             Instant.now());
-    approvalRepository.updateApprovalIdentifiers(updatedApproval);
+    approvalRepository.updateApproval(updatedApproval);
 
     return updatedApproval;
   }
@@ -125,6 +126,12 @@ public class ApprovalServiceImpl implements ApprovalService {
   private static boolean hasSameIdentifiers(
       Approval approval, Collection<NamedIdentifier> namedIdentifiers) {
     return Set.copyOf(approval.namedIdentifiers()).equals(Set.copyOf(namedIdentifiers));
+  }
+
+  private static boolean isUnchanged(
+      Approval approval, Collection<NamedIdentifier> namedIdentifiers, URI source) {
+    return hasSameIdentifiers(approval, namedIdentifiers)
+        && Objects.equals(approval.source(), source);
   }
 
   private void ensureIdentifierNamesAreWellFormed(Collection<NamedIdentifier> namedIdentifiers) {

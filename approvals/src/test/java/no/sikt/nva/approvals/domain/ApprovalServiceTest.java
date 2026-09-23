@@ -236,7 +236,8 @@ class ApprovalServiceTest {
     assertThrows(
         IllegalArgumentException.class,
         () ->
-            approvalService.updateApprovalIdentifiers(approvalId, List.of(identifier, identifier)));
+            approvalService.updateApproval(
+                approvalId, List.of(identifier, identifier), randomUri()));
   }
 
   @Test
@@ -257,7 +258,7 @@ class ApprovalServiceTest {
 
     assertThrows(
         IllegalArgumentException.class,
-        () -> approvalService.updateApprovalIdentifiers(approvalId, identifiers));
+        () -> approvalService.updateApproval(approvalId, identifiers, randomUri()));
   }
 
   @Test
@@ -280,7 +281,7 @@ class ApprovalServiceTest {
 
     assertThrows(
         IllegalArgumentException.class,
-        () -> approvalService.updateApprovalIdentifiers(approvalId, identifiers));
+        () -> approvalService.updateApproval(approvalId, identifiers, randomUri()));
   }
 
   @ParameterizedTest
@@ -300,7 +301,7 @@ class ApprovalServiceTest {
 
     assertThrows(
         IllegalArgumentException.class,
-        () -> approvalService.updateApprovalIdentifiers(randomUUID(), identifiers));
+        () -> approvalService.updateApproval(randomUUID(), identifiers, randomUri()));
   }
 
   @ParameterizedTest
@@ -405,10 +406,10 @@ class ApprovalServiceTest {
     when(approvalRepository.findByApprovalIdentifier(approval.identifier()))
         .thenReturn(Optional.of(approval));
     when(approvalRepository.findIdentifiers(newIdentifiers)).thenReturn(List.of());
-    doNothing().when(approvalRepository).updateApprovalIdentifiers(any());
+    doNothing().when(approvalRepository).updateApproval(any());
 
     var updatedApproval =
-        approvalService.updateApprovalIdentifiers(approval.identifier(), newIdentifiers);
+        approvalService.updateApproval(approval.identifier(), newIdentifiers, approval.source());
 
     assertEquals(newIdentifiers, updatedApproval.namedIdentifiers());
   }
@@ -446,10 +447,10 @@ class ApprovalServiceTest {
     when(approvalRepository.findByApprovalIdentifier(approval.identifier()))
         .thenReturn(Optional.of(approval));
     when(approvalRepository.findIdentifiers(newIdentifiers)).thenReturn(List.of());
-    doNothing().when(approvalRepository).updateApprovalIdentifiers(any());
+    doNothing().when(approvalRepository).updateApproval(any());
 
     var updatedApproval =
-        approvalService.updateApprovalIdentifiers(approval.identifier(), newIdentifiers);
+        approvalService.updateApproval(approval.identifier(), newIdentifiers, approval.source());
 
     assertEquals(approval.createdDate(), updatedApproval.createdDate());
     assertTrue(updatedApproval.modifiedDate().isAfter(approval.modifiedDate()));
@@ -464,9 +465,9 @@ class ApprovalServiceTest {
         .thenReturn(Optional.of(approval));
     when(approvalRepository.findIdentifiers(unchangedIdentifiers)).thenReturn(List.of());
 
-    approvalService.updateApprovalIdentifiers(approval.identifier(), unchangedIdentifiers);
+    approvalService.updateApproval(approval.identifier(), unchangedIdentifiers, approval.source());
 
-    verify(approvalRepository, never()).updateApprovalIdentifiers(any());
+    verify(approvalRepository, never()).updateApproval(any());
   }
 
   @Test
@@ -479,7 +480,8 @@ class ApprovalServiceTest {
     when(approvalRepository.findIdentifiers(unchangedIdentifiers)).thenReturn(List.of());
 
     var result =
-        approvalService.updateApprovalIdentifiers(approval.identifier(), unchangedIdentifiers);
+        approvalService.updateApproval(
+            approval.identifier(), unchangedIdentifiers, approval.source());
 
     assertEquals(approval, result);
     assertEquals(approval.modifiedDate(), result.modifiedDate());
@@ -496,9 +498,9 @@ class ApprovalServiceTest {
         .thenReturn(Optional.of(approval));
     when(approvalRepository.findIdentifiers(reorderedIdentifiers)).thenReturn(List.of());
 
-    approvalService.updateApprovalIdentifiers(approval.identifier(), reorderedIdentifiers);
+    approvalService.updateApproval(approval.identifier(), reorderedIdentifiers, approval.source());
 
-    verify(approvalRepository, never()).updateApprovalIdentifiers(any());
+    verify(approvalRepository, never()).updateApproval(any());
   }
 
   @Test
@@ -510,9 +512,53 @@ class ApprovalServiceTest {
         .thenReturn(Optional.of(approval));
     when(approvalRepository.findIdentifiers(newIdentifiers)).thenReturn(List.of());
 
-    approvalService.updateApprovalIdentifiers(approval.identifier(), newIdentifiers);
+    approvalService.updateApproval(approval.identifier(), newIdentifiers, approval.source());
 
-    verify(approvalRepository).updateApprovalIdentifiers(any());
+    verify(approvalRepository).updateApproval(any());
+  }
+
+  @Test
+  void shouldPersistUpdateWhenOnlySourceDiffers()
+      throws ApprovalServiceException, ApprovalConflictException {
+    var approval = randomApproval(randomUUID(), randomUri());
+    var unchangedIdentifiers = List.copyOf(approval.namedIdentifiers());
+    when(approvalRepository.findByApprovalIdentifier(approval.identifier()))
+        .thenReturn(Optional.of(approval));
+    when(approvalRepository.findIdentifiers(unchangedIdentifiers)).thenReturn(List.of());
+
+    approvalService.updateApproval(approval.identifier(), unchangedIdentifiers, randomUri());
+
+    verify(approvalRepository).updateApproval(any());
+  }
+
+  @Test
+  void shouldReturnApprovalWithUpdatedSource()
+      throws ApprovalServiceException, ApprovalConflictException {
+    var approval = randomApproval(randomUUID(), randomUri());
+    var newSource = randomUri();
+    var unchangedIdentifiers = List.copyOf(approval.namedIdentifiers());
+    when(approvalRepository.findByApprovalIdentifier(approval.identifier()))
+        .thenReturn(Optional.of(approval));
+    when(approvalRepository.findIdentifiers(unchangedIdentifiers)).thenReturn(List.of());
+
+    var updatedApproval =
+        approvalService.updateApproval(approval.identifier(), unchangedIdentifiers, newSource);
+
+    assertEquals(newSource, updatedApproval.source());
+  }
+
+  @Test
+  void shouldNotPersistUpdateWhenIdentifiersAndSourceAreUnchanged()
+      throws ApprovalServiceException, ApprovalConflictException {
+    var approval = randomApproval(randomUUID(), randomUri());
+    var unchangedIdentifiers = List.copyOf(approval.namedIdentifiers());
+    when(approvalRepository.findByApprovalIdentifier(approval.identifier()))
+        .thenReturn(Optional.of(approval));
+    when(approvalRepository.findIdentifiers(unchangedIdentifiers)).thenReturn(List.of());
+
+    approvalService.updateApproval(approval.identifier(), unchangedIdentifiers, approval.source());
+
+    verify(approvalRepository, never()).updateApproval(any());
   }
 
   @Test
@@ -522,7 +568,7 @@ class ApprovalServiceTest {
 
     assertThrows(
         ApprovalNotFoundException.class,
-        () -> approvalService.updateApprovalIdentifiers(approvalId, randomIdentifiers()));
+        () -> approvalService.updateApproval(approvalId, randomIdentifiers(), randomUri()));
   }
 
   @Test
@@ -544,8 +590,8 @@ class ApprovalServiceTest {
     assertThrows(
         ApprovalConflictException.class,
         () ->
-            approvalService.updateApprovalIdentifiers(
-                approval.identifier(), List.of(newIdentifier)));
+            approvalService.updateApproval(
+                approval.identifier(), List.of(newIdentifier), approval.source()));
   }
 
   @Test
@@ -567,7 +613,9 @@ class ApprovalServiceTest {
     var exception =
         assertThrows(
             ApprovalConflictException.class,
-            () -> approvalService.updateApprovalIdentifiers(approval.identifier(), newIdentifiers));
+            () ->
+                approvalService.updateApproval(
+                    approval.identifier(), newIdentifiers, approval.source()));
 
     assertEquals(Map.of(name, EXPECTED_JOINED_VALUES), exception.getConflictingKeys());
   }
@@ -592,10 +640,10 @@ class ApprovalServiceTest {
     when(approvalRepository.findByApprovalIdentifier(approval.identifier()))
         .thenReturn(Optional.of(approval));
     when(approvalRepository.findIdentifiers(newIdentifiers)).thenReturn(List.of());
-    doNothing().when(approvalRepository).updateApprovalIdentifiers(any());
+    doNothing().when(approvalRepository).updateApproval(any());
 
     var updatedApproval =
-        approvalService.updateApprovalIdentifiers(approval.identifier(), newIdentifiers);
+        approvalService.updateApproval(approval.identifier(), newIdentifiers, approval.source());
 
     assertEquals(approval.customerId(), updatedApproval.customerId());
   }
