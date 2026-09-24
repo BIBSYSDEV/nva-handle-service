@@ -7,7 +7,6 @@ import java.util.UUID;
 import no.sikt.nva.approvals.domain.ApprovalConflictException;
 import no.sikt.nva.approvals.domain.ApprovalNotFoundException;
 import no.sikt.nva.approvals.domain.CustomerMismatchException;
-import no.sikt.nva.approvals.rest.ForbiddenOperationException;
 import nva.commons.apigateway.RequestInfo;
 import nva.commons.apigateway.exceptions.BadGatewayException;
 import nva.commons.apigateway.exceptions.BadRequestException;
@@ -52,7 +51,7 @@ public final class RequestUtils {
       throws BadGatewayException,
           BadRequestException,
           ConflictException,
-             ForbiddenException,
+          ForbiddenException,
           NotFoundException {
     switch (exception) {
       case ApprovalNotFoundException notFoundException ->

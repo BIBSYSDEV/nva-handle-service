@@ -131,7 +131,7 @@ public class ApprovalServiceImpl implements ApprovalService {
   private static void ensureCustomerOwnsApproval(Approval approval, UUID customerIdentifier)
       throws CustomerMismatchException {
     if (!customerIdentifier.equals(approval.customerIdentifier())) {
-      throw new CustomerMismatchException(approval.identifier());
+      throw new CustomerMismatchException();
     }
   }
 

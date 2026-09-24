@@ -60,7 +60,7 @@ class UpdateApprovalHandlerTest {
   private static final String INVALID_ID_MESSAGE = "Provided id is invalid %s";
   private static final String OPAQUE_URI_TEMPLATE = "urn:uuid:%s";
   private static final String CUSTOMER_MISMATCH_MESSAGE =
-      "Customer is not allowed to update approval %s";
+      "Customer id does not match requested approval customer id";
   private static final String INVALID_APPROVAL_ID_MESSAGE =
       "Provided approval identifier is not valid!";
   private UpdateApprovalHandler handler;
@@ -271,16 +271,18 @@ class UpdateApprovalHandlerTest {
 
     handler.handleRequest(request, output, context);
 
-    var response = GatewayResponse.fromOutputStream(output, Void.class);
+    var response = GatewayResponse.fromOutputStream(output, Problem.class);
 
     assertEquals(HTTP_FORBIDDEN, response.getStatusCode());
+    assertEquals(
+        "Identifier names not allowed for customer: [%s]".formatted(REK), problemDetail(response));
   }
 
   @Test
   void shouldReturnForbiddenWhenCustomerIdentifierDoesNotMatchApprovalCustomer() throws Exception {
     handler =
         new UpdateApprovalHandler(
-            new FakeApprovalService(new CustomerMismatchException(approvalId)),
+            new FakeApprovalService(new CustomerMismatchException()),
             identifierAuthorizer,
             new Environment());
     var request = createRequest(randomUpdateApprovalRequest(), approvalId);
@@ -290,7 +292,7 @@ class UpdateApprovalHandlerTest {
     var response = GatewayResponse.fromOutputStream(output, Problem.class);
 
     assertEquals(HTTP_FORBIDDEN, response.getStatusCode());
-    assertEquals(CUSTOMER_MISMATCH_MESSAGE.formatted(approvalId), problemDetail(response));
+    assertEquals(CUSTOMER_MISMATCH_MESSAGE, problemDetail(response));
   }
 
   @Test
