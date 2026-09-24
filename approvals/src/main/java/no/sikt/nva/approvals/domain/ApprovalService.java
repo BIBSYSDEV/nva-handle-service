@@ -16,6 +16,6 @@ public interface ApprovalService {
 
   Optional<Approval> getApprovalByNamedIdentifier(NamedIdentifier namedIdentifier);
 
-  Approval updateApprovalIdentifiers(UUID approvalId, Collection<NamedIdentifier> namedIdentifiers)
+  Approval updateApproval(UUID approvalId, Collection<NamedIdentifier> namedIdentifiers, URI source)
       throws ApprovalServiceException, ApprovalConflictException;
 }

@@ -79,7 +79,7 @@ public class DynamoDbApprovalRepository implements ApprovalRepository {
   }
 
   @Override
-  public void updateApprovalIdentifiers(Approval approval) {
+  public void updateApproval(Approval approval) {
     var entities = fetchEntitiesByApprovalIdentifier(toDatabaseIdentifier(approval.identifier()));
     if (entities.isEmpty()) {
       throw new IllegalStateException(APPROVAL_NOT_FOUND_MESSAGE.formatted(approval.identifier()));
@@ -291,6 +291,10 @@ public class DynamoDbApprovalRepository implements ApprovalRepository {
   private void updateIdentifiersForApproval(
       ApprovalDao approvalDao, HandleDao handleDao, List<Operation> operations) {
     var chunks = splitToChunks(operations, TRANSACT_WRITE_ITEM_LIMIT);
+    if (chunks.isEmpty()) {
+      sendTransaction(approvalDao, handleDao, List.of(), true);
+      return;
+    }
     IntStream.range(0, chunks.size())
         .forEach(
             chunkIndex ->

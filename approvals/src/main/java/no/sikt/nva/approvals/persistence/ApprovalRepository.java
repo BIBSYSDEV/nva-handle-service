@@ -13,7 +13,7 @@ public interface ApprovalRepository {
 
   void save(Approval approval);
 
-  void updateApprovalIdentifiers(Approval approval);
+  void updateApproval(Approval approval);
 
   Optional<Approval> findByApprovalIdentifier(UUID approvalIdentifier);
 
