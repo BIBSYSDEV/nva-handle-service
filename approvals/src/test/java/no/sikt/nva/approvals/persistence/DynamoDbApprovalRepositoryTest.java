@@ -196,7 +196,7 @@ class DynamoDbApprovalRepositoryTest {
             allIdentifiers,
             approval.source(),
             approval.handle(),
-            approval.customerId(),
+            approval.customerIdentifier(),
             approval.createdDate(),
             Instant.now());
 
@@ -219,7 +219,7 @@ class DynamoDbApprovalRepositoryTest {
             remainingIdentifiers,
             approval.source(),
             approval.handle(),
-            approval.customerId(),
+            approval.customerIdentifier(),
             approval.createdDate(),
             Instant.now());
 
@@ -247,7 +247,7 @@ class DynamoDbApprovalRepositoryTest {
             finalIdentifiers,
             approval.source(),
             approval.handle(),
-            approval.customerId(),
+            approval.customerIdentifier(),
             approval.createdDate(),
             Instant.now());
 
@@ -274,7 +274,7 @@ class DynamoDbApprovalRepositoryTest {
             finalIdentifiers,
             approval.source(),
             approval.handle(),
-            approval.customerId(),
+            approval.customerIdentifier(),
             approval.createdDate(),
             Instant.now());
 
@@ -292,7 +292,8 @@ class DynamoDbApprovalRepositoryTest {
 
     var persistedApproval = approvalRepository.findByApprovalIdentifier(approval.identifier());
 
-    assertEquals(approval.customerId(), persistedApproval.orElseThrow().customerId());
+    assertEquals(
+        approval.customerIdentifier(), persistedApproval.orElseThrow().customerIdentifier());
   }
 
   @Test
@@ -318,7 +319,7 @@ class DynamoDbApprovalRepositoryTest {
             randomIdentifiers(3),
             approval.source(),
             approval.handle(),
-            approval.customerId(),
+            approval.customerIdentifier(),
             approval.createdDate(),
             modifiedDate));
     var persistedApproval = approvalRepository.findByApprovalIdentifier(approval.identifier());
@@ -351,7 +352,7 @@ class DynamoDbApprovalRepositoryTest {
             approval.namedIdentifiers(),
             newSource,
             approval.handle(),
-            approval.customerId(),
+            approval.customerIdentifier(),
             approval.createdDate(),
             Instant.now()));
 
@@ -383,7 +384,7 @@ class DynamoDbApprovalRepositoryTest {
             List.of(sharedIdentifier),
             secondApproval.source(),
             secondApproval.handle(),
-            secondApproval.customerId(),
+            secondApproval.customerIdentifier(),
             secondApproval.createdDate(),
             Instant.now());
 

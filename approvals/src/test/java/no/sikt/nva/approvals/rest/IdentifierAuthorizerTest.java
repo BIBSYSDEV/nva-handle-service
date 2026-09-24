@@ -99,9 +99,9 @@ class IdentifierAuthorizerTest {
     var customerIdentifier = randomUUID();
     var requestInfo = requestInfo(BACKEND_SCOPE, customerUri(customerIdentifier));
 
-    var customerId = identifierAuthorizer.authorizeIdentifiers(requestInfo, randomIdentifiers());
-
-    assertEquals(customerUri(customerIdentifier), customerId);
+    assertEquals(
+        customerIdentifier,
+        identifierAuthorizer.authorizeIdentifiers(requestInfo, randomIdentifiers()));
   }
 
   @Test
@@ -110,9 +110,9 @@ class IdentifierAuthorizerTest {
     var requestInfo = requestInfo(THIRD_PARTY_SCOPE, customerUri(customerIdentifier));
     when(identifierPolicyService.getIdentifierPolicy(any())).thenReturn(IdentifierPolicy.ALLOW_ALL);
 
-    var customerId = identifierAuthorizer.authorizeIdentifiers(requestInfo, randomIdentifiers());
-
-    assertEquals(customerUri(customerIdentifier), customerId);
+    assertEquals(
+        customerIdentifier,
+        identifierAuthorizer.authorizeIdentifiers(requestInfo, randomIdentifiers()));
   }
 
   @Test

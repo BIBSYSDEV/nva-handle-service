@@ -32,11 +32,12 @@ public class FakeApprovalService implements ApprovalService {
   }
 
   @Override
-  public Approval create(Collection<NamedIdentifier> namedIdentifiers, URI source, URI customerId)
+  public Approval create(
+      Collection<NamedIdentifier> namedIdentifiers, URI source, UUID customerIdentifier)
       throws ApprovalServiceException, ApprovalConflictException {
     throwExceptionIfConfigured();
     var approval =
-        randomApproval(randomUUID(), namedIdentifiers, source, randomHandle(), customerId);
+        randomApproval(randomUUID(), namedIdentifiers, source, randomHandle(), customerIdentifier);
     approvals.add(approval);
     return approval;
   }
@@ -62,7 +63,7 @@ public class FakeApprovalService implements ApprovalService {
 
   @Override
   public Approval updateApproval(
-      UUID approvalId, Collection<NamedIdentifier> identifiers, URI source)
+      UUID approvalId, Collection<NamedIdentifier> identifiers, URI source, UUID customerIdentifier)
       throws ApprovalServiceException, ApprovalConflictException {
     throwExceptionIfConfigured();
     return randomApproval(approvalId, randomUri());
