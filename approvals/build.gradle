@@ -51,6 +51,9 @@ sourceSets {
 }
 
 test {
+    // DynamoDBLocal loads the native sqlite4java library via System.load,
+    // which JDK 24+ (JEP 472) blocks unless native access is granted.
+    jvmArgs '--enable-native-access=ALL-UNNAMED'
     environment("API_HOST", "localhost")
     environment("BACKEND_CLIENT_AUTH_URL", "localhost")
     environment("COGNITO_AUTHORIZER_URLS", "urls")
