@@ -176,7 +176,7 @@ public class DynamoDbApprovalRepository implements ApprovalRepository {
         identifiers,
         approvalDao.source(),
         handle,
-        approvalDao.customerId(),
+        approvalDao.customerIdentifier(),
         approvalDao.createdDate(),
         approvalDao.modifiedDate());
   }

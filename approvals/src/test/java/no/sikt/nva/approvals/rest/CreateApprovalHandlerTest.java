@@ -24,6 +24,7 @@ import java.net.URI;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 import no.sikt.nva.approvals.domain.ApprovalConflictException;
 import no.sikt.nva.approvals.domain.ApprovalServiceException;
 import no.sikt.nva.approvals.domain.FakeApprovalService;
@@ -191,13 +192,13 @@ class CreateApprovalHandlerTest {
 
   @Test
   void shouldPersistCustomerIdResolvedByAuthorizer() throws Exception {
-    var customerId = randomUri();
-    when(identifierAuthorizer.authorizeIdentifiers(any(), any())).thenReturn(customerId);
+    var customerIdentifier = UUID.randomUUID();
+    when(identifierAuthorizer.authorizeIdentifiers(any(), any())).thenReturn(customerIdentifier);
     var request = createRequest(randomApprovalRequest(randomUri()));
 
     handler.handleRequest(request, output, context);
 
-    assertEquals(customerId, approvalService.getPersistedApproval().customerId());
+    assertEquals(customerIdentifier, approvalService.getPersistedApproval().customerIdentifier());
   }
 
   private static CreateApprovalRequest randomApprovalRequest(URI source) {

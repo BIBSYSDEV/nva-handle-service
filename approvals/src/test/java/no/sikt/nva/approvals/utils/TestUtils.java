@@ -50,7 +50,7 @@ public class TestUtils {
 
   public static Approval randomApproval(
       UUID identifier, Collection<NamedIdentifier> namedIdentifiers, URI source, Handle handle) {
-    return randomApproval(identifier, namedIdentifiers, source, handle, randomUri());
+    return randomApproval(identifier, namedIdentifiers, source, handle, randomUUID());
   }
 
   public static Approval randomApproval(
@@ -58,14 +58,14 @@ public class TestUtils {
       Collection<NamedIdentifier> namedIdentifiers,
       URI source,
       Handle handle,
-      URI customerId) {
+      UUID customerIdentifier) {
     var createdDate = randomTimestamp();
     return new Approval(
         identifier,
         namedIdentifiers,
         source,
         handle,
-        customerId,
+        customerIdentifier,
         createdDate,
         createdDate.plusSeconds(1));
   }

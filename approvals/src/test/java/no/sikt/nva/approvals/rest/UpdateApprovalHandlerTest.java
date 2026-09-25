@@ -31,6 +31,7 @@ import java.util.UUID;
 import no.sikt.nva.approvals.domain.ApprovalNotFoundException;
 import no.sikt.nva.approvals.domain.ApprovalService;
 import no.sikt.nva.approvals.domain.ApprovalServiceException;
+import no.sikt.nva.approvals.domain.CustomerMismatchException;
 import no.sikt.nva.approvals.domain.FakeApprovalService;
 import no.sikt.nva.approvals.domain.NamedIdentifier;
 import no.unit.nva.commons.json.JsonUtils;
@@ -58,6 +59,8 @@ class UpdateApprovalHandlerTest {
       "Provided identifier %s does not match approval %s";
   private static final String INVALID_ID_MESSAGE = "Provided id is invalid %s";
   private static final String OPAQUE_URI_TEMPLATE = "urn:uuid:%s";
+  private static final String CUSTOMER_MISMATCH_MESSAGE =
+      "Customer id does not match requested approval customer id";
   private static final String INVALID_APPROVAL_ID_MESSAGE =
       "Provided approval identifier is not valid!";
   private UpdateApprovalHandler handler;
@@ -268,16 +271,37 @@ class UpdateApprovalHandlerTest {
 
     handler.handleRequest(request, output, context);
 
-    var response = GatewayResponse.fromOutputStream(output, Void.class);
+    var response = GatewayResponse.fromOutputStream(output, Problem.class);
 
     assertEquals(HTTP_FORBIDDEN, response.getStatusCode());
+    assertEquals(
+        "Identifier names not allowed for customer: [%s]".formatted(REK), problemDetail(response));
+  }
+
+  @Test
+  void shouldReturnForbiddenWhenCustomerIdentifierDoesNotMatchApprovalCustomer() throws Exception {
+    handler =
+        new UpdateApprovalHandler(
+            new FakeApprovalService(new CustomerMismatchException()),
+            identifierAuthorizer,
+            new Environment());
+    var request = createRequest(randomUpdateApprovalRequest(), approvalId);
+
+    handler.handleRequest(request, output, context);
+
+    var response = GatewayResponse.fromOutputStream(output, Problem.class);
+
+    assertEquals(HTTP_FORBIDDEN, response.getStatusCode());
+    assertEquals(CUSTOMER_MISMATCH_MESSAGE, problemDetail(response));
   }
 
   @Test
   void shouldPassSourceFromRequestToApprovalService() throws Exception {
     var approvalService = mock(ApprovalService.class);
-    when(approvalService.updateApproval(any(), any(), any()))
+    when(approvalService.updateApproval(any(), any(), any(), any()))
         .thenReturn(randomApproval(approvalId, randomUri()));
+    var customerIdentifier = UUID.randomUUID();
+    when(identifierAuthorizer.authorizeIdentifiers(any(), any())).thenReturn(customerIdentifier);
     handler = new UpdateApprovalHandler(approvalService, identifierAuthorizer, new Environment());
     var updateApprovalRequest = randomUpdateApprovalRequest();
 
@@ -287,7 +311,8 @@ class UpdateApprovalHandlerTest {
         .updateApproval(
             eq(approvalId),
             eq(updateApprovalRequest.identifiers()),
-            eq(updateApprovalRequest.source()));
+            eq(updateApprovalRequest.source()),
+            eq(customerIdentifier));
   }
 
   @Test

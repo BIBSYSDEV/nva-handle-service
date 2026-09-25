@@ -64,7 +64,8 @@ public class ApprovalServiceImpl implements ApprovalService {
   }
 
   @Override
-  public Approval create(Collection<NamedIdentifier> namedIdentifiers, URI source, URI customerId)
+  public Approval create(
+      Collection<NamedIdentifier> namedIdentifiers, URI source, UUID customerIdentifier)
       throws ApprovalServiceException, ApprovalConflictException {
     ensureIdentifierNamesAreWellFormed(namedIdentifiers);
     ensureNoDuplicateIdentifiers(namedIdentifiers);
@@ -73,7 +74,8 @@ public class ApprovalServiceImpl implements ApprovalService {
     var approvalUri = createApprovalUri(approvalId);
     var handle = createHandle(approvalUri);
     var now = Instant.now();
-    var approval = new Approval(approvalId, namedIdentifiers, source, handle, customerId, now, now);
+    var approval =
+        new Approval(approvalId, namedIdentifiers, source, handle, customerIdentifier, now, now);
     approvalRepository.save(approval);
     return approval;
   }
@@ -95,7 +97,10 @@ public class ApprovalServiceImpl implements ApprovalService {
 
   @Override
   public Approval updateApproval(
-      UUID approvalId, Collection<NamedIdentifier> namedIdentifiers, URI source)
+      UUID approvalId,
+      Collection<NamedIdentifier> namedIdentifiers,
+      URI source,
+      UUID customerIdentifier)
       throws ApprovalServiceException, ApprovalConflictException {
     ensureIdentifierNamesAreWellFormed(namedIdentifiers);
     ensureNoDuplicateIdentifiers(namedIdentifiers);
@@ -103,7 +108,7 @@ public class ApprovalServiceImpl implements ApprovalService {
     var approval =
         getApprovalByIdentifier(approvalId)
             .orElseThrow(() -> new ApprovalNotFoundException(approvalId));
-
+    ensureCustomerOwnsApproval(approval, customerIdentifier);
     ensureIdentifiersAreNotUsedByOtherApproval(identifiers, approval);
     if (isUnchanged(approval, namedIdentifiers, source)) {
       return approval;
@@ -115,12 +120,19 @@ public class ApprovalServiceImpl implements ApprovalService {
             namedIdentifiers,
             source,
             approval.handle(),
-            approval.customerId(),
+            approval.customerIdentifier(),
             approval.createdDate(),
             Instant.now());
     approvalRepository.updateApproval(updatedApproval);
 
     return updatedApproval;
+  }
+
+  private static void ensureCustomerOwnsApproval(Approval approval, UUID customerIdentifier)
+      throws CustomerMismatchException {
+    if (!customerIdentifier.equals(approval.customerIdentifier())) {
+      throw new CustomerMismatchException();
+    }
   }
 
   private static boolean hasSameIdentifiers(
