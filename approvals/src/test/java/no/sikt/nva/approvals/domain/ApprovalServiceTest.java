@@ -10,7 +10,6 @@ import static no.sikt.nva.approvals.utils.TestUtils.toIdentifierQueryObject;
 import static no.unit.nva.testutils.RandomDataGenerator.randomString;
 import static no.unit.nva.testutils.RandomDataGenerator.randomUri;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -25,7 +24,6 @@ import static org.mockito.Mockito.when;
 import java.net.URI;
 import java.sql.Connection;
 import java.sql.SQLException;
-import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -415,48 +413,6 @@ class ApprovalServiceTest {
   }
 
   @Test
-  void shouldSetCreatedAndModifiedDateToSameInstantOnCreate()
-      throws SQLException, ApprovalServiceException, ApprovalConflictException {
-    when(handleDatabase.createHandle(eq(HANDLE_PREFIX), any(URI.class), eq(connection)))
-        .thenReturn(randomHandle().value());
-    doNothing().when(approvalRepository).save(any());
-
-    var approval = approvalService.create(randomIdentifiers(), randomUri(), randomUri());
-
-    assertEquals(approval.createdDate(), approval.modifiedDate());
-  }
-
-  @Test
-  void shouldSetCreatedDateOnCreate()
-      throws SQLException, ApprovalServiceException, ApprovalConflictException {
-    var beforeCreation = Instant.now();
-    when(handleDatabase.createHandle(eq(HANDLE_PREFIX), any(URI.class), eq(connection)))
-        .thenReturn(randomHandle().value());
-    doNothing().when(approvalRepository).save(any());
-
-    var approval = approvalService.create(randomIdentifiers(), randomUri(), randomUri());
-
-    assertFalse(approval.createdDate().isBefore(beforeCreation));
-  }
-
-  @Test
-  void shouldKeepCreatedDateAndUpdateModifiedDateOnUpdate()
-      throws ApprovalServiceException, ApprovalConflictException {
-    var approval = randomApproval(randomUUID(), randomUri());
-    var newIdentifiers = randomIdentifiers(2);
-    when(approvalRepository.findByApprovalIdentifier(approval.identifier()))
-        .thenReturn(Optional.of(approval));
-    when(approvalRepository.findIdentifiers(newIdentifiers)).thenReturn(List.of());
-    doNothing().when(approvalRepository).updateApproval(any());
-
-    var updatedApproval =
-        approvalService.updateApproval(approval.identifier(), newIdentifiers, approval.source());
-
-    assertEquals(approval.createdDate(), updatedApproval.createdDate());
-    assertTrue(updatedApproval.modifiedDate().isAfter(approval.modifiedDate()));
-  }
-
-  @Test
   void shouldNotPersistUpdateWhenIdentifiersAreUnchanged()
       throws ApprovalServiceException, ApprovalConflictException {
     var approval = randomApproval(randomUUID(), randomUri());
@@ -484,7 +440,6 @@ class ApprovalServiceTest {
             approval.identifier(), unchangedIdentifiers, approval.source());
 
     assertEquals(approval, result);
-    assertEquals(approval.modifiedDate(), result.modifiedDate());
   }
 
   @Test
@@ -580,7 +535,7 @@ class ApprovalServiceTest {
             newIdentifier.name(),
             newIdentifier.value(),
             ApprovalDao.toDatabaseIdentifier(randomUUID()),
-            HandleDao.fromHandle(randomHandle()).getDatabaseIdentifier());
+            HandleDao.toDatabaseIdentifier(randomHandle()));
 
     when(approvalRepository.findByApprovalIdentifier(approval.identifier()))
         .thenReturn(Optional.of(approval));
