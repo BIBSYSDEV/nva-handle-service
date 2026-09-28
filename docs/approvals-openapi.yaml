@@ -220,6 +220,73 @@ paths:
             text/turtle:
               schema:
                 type: string
+  /events:
+    post:
+      tags:
+        - Approval
+        - external
+      operationId: receiveApprovalEvent
+      summary: Notify that the source of an approval has changed
+      description: |
+        Receives a change notification as a CloudEvent (version 1.0, structured JSON mode) telling
+        NVA that the source of an approval has changed.
+      parameters:
+        - name: Content-Type
+          in: header
+          required: true
+          schema:
+            type: string
+            enum:
+              - application/cloudevents+json
+            default: application/cloudevents+json
+      requestBody:
+        required: true
+        content:
+          application/cloudevents+json:
+            schema:
+              $ref: "#/components/schemas/SourceChangedEvent"
+      security:
+        - CognitoUserPool:
+            ["https://api.nva.unit.no/scopes/third-party/approval-upsert", "https://api.nva.unit.no/scopes/backend"]
+      x-amazon-apigateway-integration:
+        uri:
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${NvaReceiveEventFunction.Arn}/invocations
+        responses: {}
+        httpMethod: POST
+        type: AWS_PROXY
+      responses:
+        "202":
+          description: Notification accepted.
+        "400":
+          description: Bad Request
+          content:
+            "application/json":
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "401":
+          description: Unauthorized
+          content:
+            "application/json":
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "403":
+          description: Forbidden
+          content:
+            "application/json":
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "404":
+          description: Approval not found
+          content:
+            "application/json":
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "502":
+          description: Bad gateway
+          content:
+            "application/json":
+              schema:
+                $ref: "#/components/schemas/Problem"
   /{approvalId}:
     get:
       tags:
@@ -482,6 +549,50 @@ components:
             name: DMP
             value: dmp-456
         source: https://example.com/source/12345
+    SourceChangedEvent:
+      type: object
+      description: >
+        CloudEvent (version 1.0, structured JSON mode) telling NVA that the source of an approval
+        has changed.
+      required:
+        - specversion
+        - id
+        - source
+        - type
+        - subject
+      properties:
+        specversion:
+          type: string
+          enum:
+            - "1.0"
+          description: CloudEvents specification version.
+        id:
+          type: string
+          pattern: "^[A-Za-z0-9_=-]{1,128}$"
+        source:
+          type: string
+          format: uri
+          description: The source of the approval
+        type:
+          type: string
+          enum:
+            - no.sikt.nva.approval.source.changed
+          description: Event type. Only source changes are supported.
+        subject:
+          type: string
+          format: uri
+          description: Handle of the approval whose source has changed.
+        time:
+          type: string
+          format: date-time
+          description: Optional time the change happened, as reported by the sender.
+      example:
+        specversion: "1.0"
+        id: 5c1e2b0a-7f41-4a55-9d0e-3b2f8a61c9d4
+        source: https://example.com/source/12345
+        type: no.sikt.nva.approval.source.changed
+        subject: https://hdl.handle.net/11250.1/98765
+        time: "2026-09-28T10:15:30Z"
     Problem:
       type: object
       description: NVA error reporting object
