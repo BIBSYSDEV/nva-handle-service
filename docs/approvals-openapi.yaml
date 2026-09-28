@@ -21,9 +21,6 @@ x-amazon-apigateway-request-validators:
   validate_body:
     validateRequestBody: true
     validateRequestParameters: false
-  validate_in_handler:
-    validateRequestBody: false
-    validateRequestParameters: false
 paths:
   /:
     post:
@@ -241,16 +238,11 @@ paths:
             type: string
             enum:
               - application/cloudevents+json
-              - application/json
             default: application/cloudevents+json
-      x-amazon-apigateway-request-validator: validate_in_handler
       requestBody:
         required: true
         content:
           application/cloudevents+json:
-            schema:
-              $ref: "#/components/schemas/SourceChangedEvent"
-          application/json:
             schema:
               $ref: "#/components/schemas/SourceChangedEvent"
       security:
