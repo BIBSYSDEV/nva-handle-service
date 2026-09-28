@@ -5,7 +5,6 @@ import static no.sikt.nva.handle.utils.DatabaseConnectionSupplier.getConnectionS
 
 import java.net.URI;
 import java.sql.Connection;
-import java.time.Instant;
 import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -72,8 +71,7 @@ public class ApprovalServiceImpl implements ApprovalService {
     var approvalId = randomUUID();
     var approvalUri = createApprovalUri(approvalId);
     var handle = createHandle(approvalUri);
-    var now = Instant.now();
-    var approval = new Approval(approvalId, namedIdentifiers, source, handle, customerId, now, now);
+    var approval = new Approval(approvalId, namedIdentifiers, source, handle, customerId);
     approvalRepository.save(approval);
     return approval;
   }
@@ -111,13 +109,7 @@ public class ApprovalServiceImpl implements ApprovalService {
 
     var updatedApproval =
         new Approval(
-            approvalId,
-            namedIdentifiers,
-            source,
-            approval.handle(),
-            approval.customerId(),
-            approval.createdDate(),
-            Instant.now());
+            approvalId, namedIdentifiers, source, approval.handle(), approval.customerId());
     approvalRepository.updateApproval(updatedApproval);
 
     return updatedApproval;

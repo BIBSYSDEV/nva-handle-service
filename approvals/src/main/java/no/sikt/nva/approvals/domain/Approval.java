@@ -3,7 +3,6 @@ package no.sikt.nva.approvals.domain;
 import static no.sikt.nva.approvals.utils.ValidationUtils.shouldNotBeEmpty;
 
 import java.net.URI;
-import java.time.Instant;
 import java.util.Collection;
 import java.util.Objects;
 import java.util.UUID;
@@ -13,9 +12,7 @@ public record Approval(
     Collection<NamedIdentifier> namedIdentifiers,
     URI source,
     Handle handle,
-    URI customerId,
-    Instant createdDate,
-    Instant modifiedDate) {
+    URI customerId) {
 
   public Approval {
     Objects.requireNonNull(source, "Source is mandatory for approval creation");

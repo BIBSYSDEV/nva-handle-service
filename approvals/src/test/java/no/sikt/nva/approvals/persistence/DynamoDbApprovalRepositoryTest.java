@@ -14,13 +14,13 @@ import static no.sikt.nva.approvals.utils.TestUtils.randomHandle;
 import static no.sikt.nva.approvals.utils.TestUtils.randomIdentifier;
 import static no.sikt.nva.approvals.utils.TestUtils.randomIdentifierPolicy;
 import static no.sikt.nva.approvals.utils.TestUtils.randomIdentifiers;
+import static no.sikt.nva.approvals.utils.TestUtils.randomTimestamp;
 import static no.unit.nva.testutils.RandomDataGenerator.randomString;
 import static no.unit.nva.testutils.RandomDataGenerator.randomUri;
 import static nva.commons.core.attempt.Try.attempt;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
-import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -31,6 +31,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import no.sikt.nva.approvals.domain.Approval;
 import no.sikt.nva.approvals.domain.IdentifierPolicy;
 import no.unit.nva.commons.json.JsonUtils;
@@ -38,6 +40,7 @@ import nva.commons.core.Environment;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import software.amazon.awssdk.enhanced.dynamodb.document.EnhancedDocument;
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 import software.amazon.awssdk.services.dynamodb.model.PutItemRequest;
 import software.amazon.awssdk.services.dynamodb.model.ScanRequest;
@@ -54,6 +57,8 @@ class DynamoDbApprovalRepositoryTest {
   private static final String IDENTIFIER_POLICY_TYPE = "IdentifierPolicy";
   private static final String TYPE_FIELD = "type";
   private static final String CUSTOMER_IDENTIFIER_FIELD = "customerIdentifier";
+  private static final String CREATED_DATE_FIELD = "createdDate";
+
   private ApprovalRepository approvalRepository;
   private DynamoDbLocal dynamoDbLocal;
 
@@ -196,9 +201,7 @@ class DynamoDbApprovalRepositoryTest {
             allIdentifiers,
             approval.source(),
             approval.handle(),
-            approval.customerId(),
-            approval.createdDate(),
-            Instant.now());
+            approval.customerId());
 
     approvalRepository.updateApproval(updatedApproval);
     var persistedApproval = approvalRepository.findByApprovalIdentifier(approval.identifier());
@@ -219,9 +222,7 @@ class DynamoDbApprovalRepositoryTest {
             remainingIdentifiers,
             approval.source(),
             approval.handle(),
-            approval.customerId(),
-            approval.createdDate(),
-            Instant.now());
+            approval.customerId());
 
     approvalRepository.updateApproval(updatedApproval);
     var persistedApproval = approvalRepository.findByApprovalIdentifier(approval.identifier());
@@ -247,9 +248,7 @@ class DynamoDbApprovalRepositoryTest {
             finalIdentifiers,
             approval.source(),
             approval.handle(),
-            approval.customerId(),
-            approval.createdDate(),
-            Instant.now());
+            approval.customerId());
 
     approvalRepository.updateApproval(updatedApproval);
     var persistedApproval = approvalRepository.findByApprovalIdentifier(approval.identifier());
@@ -274,15 +273,12 @@ class DynamoDbApprovalRepositoryTest {
             finalIdentifiers,
             approval.source(),
             approval.handle(),
-            approval.customerId(),
-            approval.createdDate(),
-            Instant.now());
+            approval.customerId());
 
     approvalRepository.updateApproval(updatedApproval);
     var persistedApproval = approvalRepository.findByApprovalIdentifier(approval.identifier());
 
     assertTrue(persistedApproval.orElseThrow().namedIdentifiers().containsAll(finalIdentifiers));
-    assertEquals(updatedApproval.modifiedDate(), persistedApproval.orElseThrow().modifiedDate());
   }
 
   @Test
@@ -297,20 +293,21 @@ class DynamoDbApprovalRepositoryTest {
 
   @Test
   void shouldPersistTimestampsWhenSavingNewApproval() {
+    var beforeSave = Instant.now().truncatedTo(MILLIS);
     var approval = randomApproval(randomHandle());
     approvalRepository.save(approval);
 
-    var persistedApproval = approvalRepository.findByApprovalIdentifier(approval.identifier());
+    var persistedApproval = storedApproval(approval.identifier());
 
-    assertEquals(approval.createdDate(), persistedApproval.orElseThrow().createdDate());
-    assertEquals(approval.modifiedDate(), persistedApproval.orElseThrow().modifiedDate());
+    assertEquals(persistedApproval.createdDate(), persistedApproval.modifiedDate());
+    assertFalse(persistedApproval.createdDate().isBefore(beforeSave));
   }
 
   @Test
   void shouldPersistModifiedDateWhenUpdatingIdentifiers() {
     var approval = randomApproval(randomIdentifiers(2), randomUUID());
     approvalRepository.save(approval);
-    var modifiedDate = Instant.now().truncatedTo(MILLIS);
+    var createdDate = storedApproval(approval.identifier()).createdDate();
 
     approvalRepository.updateApproval(
         new Approval(
@@ -318,13 +315,11 @@ class DynamoDbApprovalRepositoryTest {
             randomIdentifiers(3),
             approval.source(),
             approval.handle(),
-            approval.customerId(),
-            approval.createdDate(),
-            modifiedDate));
-    var persistedApproval = approvalRepository.findByApprovalIdentifier(approval.identifier());
+            approval.customerId()));
+    var persistedApproval = storedApproval(approval.identifier());
 
-    assertEquals(modifiedDate, persistedApproval.orElseThrow().modifiedDate());
-    assertEquals(approval.createdDate(), persistedApproval.orElseThrow().createdDate());
+    assertEquals(createdDate, persistedApproval.createdDate());
+    assertTrue(persistedApproval.modifiedDate().isAfter(createdDate));
   }
 
   @Test
@@ -335,8 +330,7 @@ class DynamoDbApprovalRepositoryTest {
 
     var persistedApproval = approvalRepository.findByApprovalIdentifier(approval.identifier());
 
-    assertNull(persistedApproval.orElseThrow().createdDate());
-    assertNull(persistedApproval.orElseThrow().modifiedDate());
+    assertEquals(approval, persistedApproval.orElseThrow());
   }
 
   @Test
@@ -351,9 +345,7 @@ class DynamoDbApprovalRepositoryTest {
             approval.namedIdentifiers(),
             newSource,
             approval.handle(),
-            approval.customerId(),
-            approval.createdDate(),
-            Instant.now()));
+            approval.customerId()));
 
     var persistedApproval = approvalRepository.findByApprovalIdentifier(approval.identifier());
 
@@ -383,9 +375,7 @@ class DynamoDbApprovalRepositoryTest {
             List.of(sharedIdentifier),
             secondApproval.source(),
             secondApproval.handle(),
-            secondApproval.customerId(),
-            secondApproval.createdDate(),
-            Instant.now());
+            secondApproval.customerId());
 
     assertThrows(
         TransactionCanceledException.class,
@@ -453,7 +443,8 @@ class DynamoDbApprovalRepositoryTest {
   @Test
   void shouldDeserializeIdentifierPolicyAsDatabaseEntry() {
     var json =
-        IdentifierPolicyDao.fromIdentifierPolicy(randomUUID(), randomIdentifierPolicy())
+        IdentifierPolicyDao.fromIdentifierPolicy(
+                randomUUID(), randomIdentifierPolicy(), randomTimestamp())
             .toJsonString();
 
     var databaseEntry =
@@ -469,6 +460,92 @@ class DynamoDbApprovalRepositoryTest {
 
     assertFalse(item.containsKey(PK1));
     assertFalse(item.containsKey(PK2));
+  }
+
+  @Test
+  void shouldPersistCreatedDateOnHandleWhenSavingApproval() {
+    var handle = randomHandle();
+    var approval = randomApproval(handle);
+    approvalRepository.save(approval);
+
+    var databaseEntry = getDatabaseEntry(HandleDao.toDatabaseIdentifier(handle));
+
+    assertEquals(storedApproval(approval.identifier()).createdDate(), databaseEntry.createdDate());
+  }
+
+  @Test
+  void shouldPersistCreatedDateOnIdentifierWhenSavingApproval() {
+    var namedIdentifier = randomIdentifier();
+    var approval = randomApproval(randomHandle(), namedIdentifier);
+    approvalRepository.save(approval);
+
+    var databaseEntry = getDatabaseEntry(IdentifierDao.toDatabaseIdentifier(namedIdentifier));
+
+    assertEquals(storedApproval(approval.identifier()).createdDate(), databaseEntry.createdDate());
+  }
+
+  @Test
+  void shouldPersistSameCreatedDateForAllDaosWhenSavingApproval() {
+    var handle = randomHandle();
+    var namedIdentifier = randomIdentifier();
+    var approval = randomApproval(handle, namedIdentifier);
+    approvalRepository.save(approval);
+
+    var handleCreatedDate = getDatabaseEntry(HandleDao.toDatabaseIdentifier(handle)).createdDate();
+    var approvalCreatedDate =
+        getDatabaseEntry(ApprovalDao.toDatabaseIdentifier(approval.identifier())).createdDate();
+    var identifierCreatedDate =
+        getDatabaseEntry(IdentifierDao.toDatabaseIdentifier(namedIdentifier)).createdDate();
+
+    var distinctCreatedDates =
+        Stream.of(handleCreatedDate, approvalCreatedDate, identifierCreatedDate)
+            .collect(Collectors.toSet());
+
+    assertEquals(Set.of(approvalCreatedDate), distinctCreatedDates);
+  }
+
+  @Test
+  void shouldSetCreatedDateOnNewIdentifierWhenUpdatingApprovalIdentifiers() {
+    var existingIdentifier = randomIdentifier();
+    var approval = randomApproval(existingIdentifier);
+    approvalRepository.save(approval);
+    var newIdentifier = randomIdentifier();
+
+    approvalRepository.updateApproval(
+        new Approval(
+            approval.identifier(),
+            List.of(existingIdentifier, newIdentifier),
+            approval.source(),
+            approval.handle(),
+            approval.customerId()));
+
+    var approvalModifiedDate = storedApproval(approval.identifier()).modifiedDate();
+    var newIdentifierPersistedCreatedDate =
+        getDatabaseEntry(IdentifierDao.toDatabaseIdentifier(newIdentifier)).createdDate();
+
+    assertEquals(approvalModifiedDate, newIdentifierPersistedCreatedDate);
+  }
+
+  @Test
+  void shouldPersistCreatedDateOnIdentifierPolicy() {
+    approvalRepository.saveIdentifierPolicy(randomUUID(), randomIdentifierPolicy());
+
+    assertTrue(scanSingleItem().containsKey(CREATED_DATE_FIELD));
+  }
+
+  @Test
+  void shouldKeepOriginalCreatedDateWhenOverwritingIdentifierPolicy() {
+    var customerIdentifier = randomUUID();
+    approvalRepository.saveIdentifierPolicy(customerIdentifier, randomIdentifierPolicy());
+    var originalCreatedDate = scanSingleItem().get(CREATED_DATE_FIELD);
+
+    var updatedIdentifierPolicy = randomIdentifierPolicy();
+    approvalRepository.saveIdentifierPolicy(customerIdentifier, updatedIdentifierPolicy);
+
+    assertEquals(originalCreatedDate, scanSingleItem().get(CREATED_DATE_FIELD));
+    assertEquals(
+        updatedIdentifierPolicy,
+        approvalRepository.findIdentifierPolicy(customerIdentifier).orElseThrow());
   }
 
   private void insertIdentifierPolicyWithoutAllowedIdentifierNames(UUID customerIdentifier) {
@@ -529,6 +606,31 @@ class DynamoDbApprovalRepositoryTest {
                 .key(key)
                 .updateExpression("REMOVE createdDate, modifiedDate")
                 .build());
+  }
+
+  private List<Map<String, AttributeValue>> scanItems() {
+    return dynamoDbLocal.client().scan(ScanRequest.builder().tableName(TABLE).build()).items();
+  }
+
+  private DatabaseEntry getDatabaseEntry(String identifier) {
+    return scanItems().stream()
+        .filter(item -> identifier.equals(item.get(PK0).s()))
+        .findFirst()
+        .map(DynamoDbApprovalRepositoryTest::toDatabaseEntry)
+        .orElseThrow();
+  }
+
+  private ApprovalDao storedApproval(UUID approvalIdentifier) {
+    return assertInstanceOf(
+        ApprovalDao.class, getDatabaseEntry(ApprovalDao.toDatabaseIdentifier(approvalIdentifier)));
+  }
+
+  private static DatabaseEntry toDatabaseEntry(Map<String, AttributeValue> item) {
+    return attempt(
+            () ->
+                JsonUtils.dtoObjectMapper.readValue(
+                    EnhancedDocument.fromAttributeValueMap(item).toJson(), DatabaseEntry.class))
+        .orElseThrow();
   }
 
   private Map<String, AttributeValue> scanSingleItem() {
