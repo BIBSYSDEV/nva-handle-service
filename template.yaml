@@ -65,6 +65,12 @@ Parameters:
     Type: String
     Description: Name of the secret containing DMP API client credentials
     Default: DmpClientCredentials
+  SourceSystems:
+    Type: String
+    Description: >-
+      JSON list of the source systems approval sources may belong to, each an object with an id
+      and a baseUri, e.g. [{"id":"rek","baseUri":"https://rek.example.com/api/approvals/"}]
+    Default: "[]"
 
 Conditions:
   IsProd: !Equals [!Ref ApiDomain, "api.nva.unit.no"]
@@ -138,6 +144,23 @@ Resources:
       Tags:
         - Key: IncludedInBackup
           Value: "true"
+
+  ApprovalPullDeadLetterQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      FifoQueue: true
+      MessageRetentionPeriod: 1209600
+
+  ApprovalPullQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      FifoQueue: true
+      ContentBasedDeduplication: false
+      MessageRetentionPeriod: 1209600
+      VisibilityTimeout: 900
+      RedrivePolicy:
+        deadLetterTargetArn: !GetAtt ApprovalPullDeadLetterQueue.Arn
+        maxReceiveCount: 3
 
   ReadHandleDatabaseSecretsManagedPolicy:
     Type: AWS::IAM::ManagedPolicy
@@ -447,6 +470,16 @@ Resources:
     Properties:
       CodeUri: approvals
       Handler: no.sikt.nva.approvals.rest.ReceiveEventHandler::handleRequest
+      Policies:
+        - !Ref DynamoDbTableAccessPolicy
+        - SQSSendMessagePolicy:
+            QueueName: !GetAtt ApprovalPullQueue.QueueName
+      Environment:
+        Variables:
+          BACKEND_CLIENT_AUTH_URL: !Ref CognitoAuthorizationUri
+          TABLE: !Ref ApprovalsTable
+          PULL_QUEUE_URL: !Ref ApprovalPullQueue
+          SOURCE_SYSTEMS: !Ref SourceSystems
       Events:
         ReceiveEvent:
           Type: Api

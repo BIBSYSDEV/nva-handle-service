@@ -8,6 +8,7 @@ import no.sikt.nva.approvals.domain.Approval;
 import no.sikt.nva.approvals.domain.Handle;
 import no.sikt.nva.approvals.domain.IdentifierPolicy;
 import no.sikt.nva.approvals.domain.NamedIdentifier;
+import no.sikt.nva.approvals.events.ApprovalEvent;
 
 public interface ApprovalRepository {
 
@@ -26,4 +27,12 @@ public interface ApprovalRepository {
   Optional<IdentifierPolicy> findIdentifierPolicy(UUID customerIdentifier);
 
   void saveIdentifierPolicy(UUID customerIdentifier, IdentifierPolicy identifierPolicy);
+
+  /**
+   * Stores the event together with a pending marker for its pull, unless an event with the same key
+   * is already stored.
+   *
+   * @return true when the event was stored, false when it had been stored before
+   */
+  boolean saveEventIfAbsent(ApprovalEvent approvalEvent);
 }

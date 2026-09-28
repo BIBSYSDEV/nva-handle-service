@@ -29,6 +29,7 @@ import no.sikt.nva.approvals.domain.Approval;
 import no.sikt.nva.approvals.domain.Handle;
 import no.sikt.nva.approvals.domain.IdentifierPolicy;
 import no.sikt.nva.approvals.domain.NamedIdentifier;
+import no.sikt.nva.approvals.events.ApprovalEvent;
 import no.sikt.nva.approvals.persistence.DynamoDbApprovalRepository.Operation.DatabaseOperation;
 import no.unit.nva.commons.json.JsonUtils;
 import nva.commons.core.Environment;
@@ -47,6 +48,8 @@ import software.amazon.awssdk.enhanced.dynamodb.model.ReadBatch;
 import software.amazon.awssdk.enhanced.dynamodb.model.TransactPutItemEnhancedRequest;
 import software.amazon.awssdk.enhanced.dynamodb.model.TransactWriteItemsEnhancedRequest;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
+import software.amazon.awssdk.services.dynamodb.model.CancellationReason;
+import software.amazon.awssdk.services.dynamodb.model.TransactionCanceledException;
 
 // FIXME: Suppressing warning in order to upgrade PMD version
 @SuppressWarnings("PMD.CouplingBetweenObjects")
@@ -55,6 +58,7 @@ public class DynamoDbApprovalRepository implements ApprovalRepository {
   private static final int BATCH_GET_ITEM_LIMIT = 80;
   private static final int TRANSACT_WRITE_ITEM_LIMIT = 80;
   private static final int FIRST_CHUNK = 0;
+  private static final String CONDITIONAL_CHECK_FAILED = "ConditionalCheckFailed";
   private final DynamoDbTable<EnhancedDocument> table;
   private final DynamoDbEnhancedClient client;
 
@@ -156,6 +160,37 @@ public class DynamoDbApprovalRepository implements ApprovalRepository {
     table.putItem(
         IdentifierPolicyDao.fromIdentifierPolicy(customerIdentifier, identifierPolicy)
             .toEnhancedDocument());
+  }
+
+  @Override
+  public boolean saveEventIfAbsent(ApprovalEvent approvalEvent) {
+    var eventDocument = EventDao.fromApprovalEvent(approvalEvent).toEnhancedDocument();
+    var pendingDocument = PendingDao.fromApprovalEvent(approvalEvent).toEnhancedDocument();
+    var request =
+        TransactWriteItemsEnhancedRequest.builder()
+            .addPutItem(
+                table,
+                TransactPutItemEnhancedRequest.builder(EnhancedDocument.class)
+                    .item(eventDocument)
+                    .conditionExpression(newDaoCondition())
+                    .build())
+            .addPutItem(table, pendingDocument)
+            .build();
+    try {
+      client.transactWriteItems(request);
+      return true;
+    } catch (TransactionCanceledException exception) {
+      if (isConditionalCheckFailure(exception)) {
+        return false;
+      }
+      throw exception;
+    }
+  }
+
+  private static boolean isConditionalCheckFailure(TransactionCanceledException exception) {
+    return exception.cancellationReasons().stream()
+        .map(CancellationReason::code)
+        .anyMatch(CONDITIONAL_CHECK_FAILED::equals);
   }
 
   private static <T> List<List<T>> splitToChunks(List<T> list, int chunkSize) {
