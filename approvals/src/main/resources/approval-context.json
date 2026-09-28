@@ -1,15 +1,15 @@
 {
   "@context": {
-    "@vocab": "https://nva.unit.no/approval#",
+    "@vocab": "__ONTOLOGY_NAMESPACE__",
     "xsd": "http://www.w3.org/2001/XMLSchema#",
     "type": "@type",
     "id": "@id",
     "identifier": {
-      "@id": "https://nva.unit.no/approval#approvalId",
+      "@id": "__ONTOLOGY_NAMESPACE__approvalId",
       "@type": "xsd:string"
     },
     "identifiers": {
-      "@id": "https://nva.unit.no/approval#identifier",
+      "@id": "__ONTOLOGY_NAMESPACE__identifier",
       "@container": "@set"
     },
     "source": {
