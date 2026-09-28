@@ -90,7 +90,7 @@ Code quality requirements:
 - The OpenAPI files are linted with Spectral (`.spectral.yaml`)
 - Tests tagged `RemoteTest`, `integrationTest` and `KarateTest` are excluded from the regular `test` run
 
-Java 21 (Corretto) is provisioned by Gradle through the foojay toolchain resolver.
+Java 25 (Corretto) is provisioned by Gradle through the foojay toolchain resolver.
 
 ## Deploy
 

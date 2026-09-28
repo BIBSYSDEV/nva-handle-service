@@ -24,13 +24,14 @@ public record ApprovalDao(
     UUID identifier, URI source, UUID customerIdentifier, Instant createdDate, Instant modifiedDate)
     implements DatabaseEntry {
 
-  public static ApprovalDao fromApproval(Approval approval) {
+  public static ApprovalDao fromApproval(
+      Approval approval, Instant createdDate, Instant modifiedDate) {
     return new ApprovalDao(
         approval.identifier(),
         approval.source(),
         approval.customerIdentifier(),
-        approval.createdDate(),
-        approval.modifiedDate());
+        createdDate,
+        modifiedDate);
   }
 
   @Override
