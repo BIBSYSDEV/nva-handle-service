@@ -436,6 +436,25 @@ Resources:
             Method: get
             RestApiId: !Ref NvaApprovalsApi
 
+  NvaReceiveEventFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub "/aws/lambda/${NvaReceiveEventFunction}"
+      RetentionInDays: 90
+
+  NvaReceiveEventFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: approvals
+      Handler: no.sikt.nva.approvals.rest.ReceiveEventHandler::handleRequest
+      Events:
+        ReceiveEvent:
+          Type: Api
+          Properties:
+            Path: /events
+            Method: post
+            RestApiId: !Ref NvaApprovalsApi
+
   NvaCreateHandleBasePathMapping:
     Type: AWS::ApiGateway::BasePathMapping
     Properties:

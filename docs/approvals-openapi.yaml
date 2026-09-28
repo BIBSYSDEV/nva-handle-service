@@ -21,6 +21,9 @@ x-amazon-apigateway-request-validators:
   validate_body:
     validateRequestBody: true
     validateRequestParameters: false
+  validate_in_handler:
+    validateRequestBody: false
+    validateRequestParameters: false
 paths:
   /:
     post:
@@ -220,6 +223,104 @@ paths:
             text/turtle:
               schema:
                 type: string
+  /events:
+    post:
+      tags:
+        - Approval
+        - external
+      operationId: receiveApprovalEvent
+      summary: Notify that the source of an approval has changed
+      description: |
+        Receives a change notification as a CloudEvent (version 1.0, structured JSON mode) telling
+        NVA that the source of an approval has changed. The event carries no data; NVA fetches the
+        source itself.
+
+        The approval is addressed by its handle in `subject`, and `source` must equal the source of
+        that approval and belong to a registered source system.
+
+        Notifications are idempotent: a notification with a `source` and `id` that NVA has received
+        before is accepted again without triggering another fetch, however long after the first.
+        The `id` is only used to recognise repeated notifications and is never exposed by NVA as a
+        key or URI.
+
+        The body is validated by the service rather than by API Gateway, so every rejected request
+        is answered with a problem document.
+      parameters:
+        - name: Content-Type
+          in: header
+          required: true
+          schema:
+            type: string
+            enum:
+              - application/cloudevents+json
+              - application/json
+            default: application/cloudevents+json
+      x-amazon-apigateway-request-validator: validate_in_handler
+      requestBody:
+        required: true
+        content:
+          application/cloudevents+json:
+            schema:
+              $ref: "#/components/schemas/SourceChangedEvent"
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SourceChangedEvent"
+      security:
+        - CognitoUserPool:
+            ["https://api.nva.unit.no/scopes/third-party/approval-upsert", "https://api.nva.unit.no/scopes/backend"]
+      x-amazon-apigateway-integration:
+        uri:
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${NvaReceiveEventFunction.Arn}/invocations
+        responses: {}
+        httpMethod: POST
+        type: AWS_PROXY
+      responses:
+        "202":
+          description: >-
+            Notification accepted. A fetch of the approval source has been scheduled, or the
+            notification had been received before and nothing more is done.
+        "400":
+          description: |-
+            Bad Request. The notification is rejected when:
+            * the body is missing or is not valid JSON
+            * `specversion` is not `1.0`
+            * `type` is not `no.sikt.nva.approval.source.changed`
+            * `id` does not match `^[A-Za-z0-9_=-]{1,128}$`
+            * `source` is missing, does not equal the source of the approval, or does not belong to
+              a registered source system
+            * `subject` is not a handle
+            * `data` or `data_base64` is present
+          content:
+            "application/json":
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "401":
+          description: >-
+            Unauthorized - missing or invalid token, the token carries no client id, or the
+            customer of the authenticated client could not be resolved
+          content:
+            "application/json":
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "403":
+          description: >-
+            Forbidden - the client has neither the approval-upsert scope nor the backend scope
+          content:
+            "application/json":
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "404":
+          description: No approval has the handle given in `subject`
+          content:
+            "application/json":
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "502":
+          description: Bad gateway - the notification could not be stored or the fetch not scheduled
+          content:
+            "application/json":
+              schema:
+                $ref: "#/components/schemas/Problem"
   /{approvalId}:
     get:
       tags:
@@ -482,6 +583,56 @@ components:
             name: DMP
             value: dmp-456
         source: https://example.com/source/12345
+    SourceChangedEvent:
+      type: object
+      description: >
+        CloudEvent (version 1.0, structured JSON mode) telling NVA that the source of an approval
+        has changed. Other CloudEvents attributes and extension attributes are accepted and
+        ignored. The event must not carry `data` or `data_base64`.
+      required:
+        - specversion
+        - id
+        - source
+        - type
+        - subject
+      properties:
+        specversion:
+          type: string
+          enum:
+            - "1.0"
+          description: CloudEvents specification version.
+        id:
+          type: string
+          pattern: "^[A-Za-z0-9_=-]{1,128}$"
+          description: >
+            Identifier of the notification, chosen by the sender. A notification with the same
+            `source` and `id` as one received before is treated as a repetition.
+        source:
+          type: string
+          format: uri
+          description: >
+            The source of the approval, equal to the `source` stored on the approval and belonging
+            to a registered source system.
+        type:
+          type: string
+          enum:
+            - no.sikt.nva.approval.source.changed
+          description: Event type. Only source changes are supported.
+        subject:
+          type: string
+          format: uri
+          description: Handle of the approval whose source has changed.
+        time:
+          type: string
+          format: date-time
+          description: Optional time the change happened, as reported by the sender.
+      example:
+        specversion: "1.0"
+        id: 5c1e2b0a-7f41-4a55-9d0e-3b2f8a61c9d4
+        source: https://example.com/source/12345
+        type: no.sikt.nva.approval.source.changed
+        subject: https://hdl.handle.net/11250.1/98765
+        time: "2026-09-28T10:15:30Z"
     Problem:
       type: object
       description: NVA error reporting object
