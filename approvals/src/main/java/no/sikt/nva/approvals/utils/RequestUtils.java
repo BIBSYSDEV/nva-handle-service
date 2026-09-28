@@ -6,10 +6,12 @@ import java.util.Map;
 import java.util.UUID;
 import no.sikt.nva.approvals.domain.ApprovalConflictException;
 import no.sikt.nva.approvals.domain.ApprovalNotFoundException;
+import no.sikt.nva.approvals.domain.CustomerMismatchException;
 import nva.commons.apigateway.RequestInfo;
 import nva.commons.apigateway.exceptions.BadGatewayException;
 import nva.commons.apigateway.exceptions.BadRequestException;
 import nva.commons.apigateway.exceptions.ConflictException;
+import nva.commons.apigateway.exceptions.ForbiddenException;
 import nva.commons.apigateway.exceptions.NotFoundException;
 import nva.commons.core.Environment;
 import nva.commons.core.paths.UriWrapper;
@@ -46,10 +48,16 @@ public final class RequestUtils {
   }
 
   public static void handleException(Exception exception)
-      throws BadGatewayException, BadRequestException, ConflictException, NotFoundException {
+      throws BadGatewayException,
+          BadRequestException,
+          ConflictException,
+          ForbiddenException,
+          NotFoundException {
     switch (exception) {
       case ApprovalNotFoundException notFoundException ->
           throw new NotFoundException(notFoundException.getMessage());
+      case CustomerMismatchException customerMismatchException ->
+          throw new ForbiddenException(customerMismatchException.getMessage());
       case ApprovalConflictException conflictException ->
           throw new ConflictException(
               conflictException.getMessage(), conflictException.getConflictingKeys());

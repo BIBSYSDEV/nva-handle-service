@@ -201,7 +201,7 @@ class DynamoDbApprovalRepositoryTest {
             allIdentifiers,
             approval.source(),
             approval.handle(),
-            approval.customerId());
+            approval.customerIdentifier());
 
     approvalRepository.updateApproval(updatedApproval);
     var persistedApproval = approvalRepository.findByApprovalIdentifier(approval.identifier());
@@ -222,7 +222,7 @@ class DynamoDbApprovalRepositoryTest {
             remainingIdentifiers,
             approval.source(),
             approval.handle(),
-            approval.customerId());
+            approval.customerIdentifier());
 
     approvalRepository.updateApproval(updatedApproval);
     var persistedApproval = approvalRepository.findByApprovalIdentifier(approval.identifier());
@@ -248,7 +248,7 @@ class DynamoDbApprovalRepositoryTest {
             finalIdentifiers,
             approval.source(),
             approval.handle(),
-            approval.customerId());
+            approval.customerIdentifier());
 
     approvalRepository.updateApproval(updatedApproval);
     var persistedApproval = approvalRepository.findByApprovalIdentifier(approval.identifier());
@@ -273,7 +273,7 @@ class DynamoDbApprovalRepositoryTest {
             finalIdentifiers,
             approval.source(),
             approval.handle(),
-            approval.customerId());
+            approval.customerIdentifier());
 
     approvalRepository.updateApproval(updatedApproval);
     var persistedApproval = approvalRepository.findByApprovalIdentifier(approval.identifier());
@@ -288,7 +288,8 @@ class DynamoDbApprovalRepositoryTest {
 
     var persistedApproval = approvalRepository.findByApprovalIdentifier(approval.identifier());
 
-    assertEquals(approval.customerId(), persistedApproval.orElseThrow().customerId());
+    assertEquals(
+        approval.customerIdentifier(), persistedApproval.orElseThrow().customerIdentifier());
   }
 
   @Test
@@ -315,7 +316,7 @@ class DynamoDbApprovalRepositoryTest {
             randomIdentifiers(3),
             approval.source(),
             approval.handle(),
-            approval.customerId()));
+            approval.customerIdentifier()));
     var persistedApproval = storedApproval(approval.identifier());
 
     assertEquals(createdDate, persistedApproval.createdDate());
@@ -345,7 +346,7 @@ class DynamoDbApprovalRepositoryTest {
             approval.namedIdentifiers(),
             newSource,
             approval.handle(),
-            approval.customerId()));
+            approval.customerIdentifier()));
 
     var persistedApproval = approvalRepository.findByApprovalIdentifier(approval.identifier());
 
@@ -375,7 +376,7 @@ class DynamoDbApprovalRepositoryTest {
             List.of(sharedIdentifier),
             secondApproval.source(),
             secondApproval.handle(),
-            secondApproval.customerId());
+            secondApproval.customerIdentifier());
 
     assertThrows(
         TransactionCanceledException.class,
@@ -517,7 +518,7 @@ class DynamoDbApprovalRepositoryTest {
             List.of(existingIdentifier, newIdentifier),
             approval.source(),
             approval.handle(),
-            approval.customerId()));
+            approval.customerIdentifier()));
 
     var approvalModifiedDate = storedApproval(approval.identifier()).modifiedDate();
     var newIdentifierPersistedCreatedDate =

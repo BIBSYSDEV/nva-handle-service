@@ -21,13 +21,17 @@ import software.amazon.awssdk.enhanced.dynamodb.document.EnhancedDocument;
 @JsonTypeInfo(use = Id.NAME, property = "type")
 @JsonTypeName("Approval")
 public record ApprovalDao(
-    UUID identifier, URI source, URI customerId, Instant createdDate, Instant modifiedDate)
+    UUID identifier, URI source, UUID customerIdentifier, Instant createdDate, Instant modifiedDate)
     implements DatabaseEntry {
 
   public static ApprovalDao fromApproval(
       Approval approval, Instant createdDate, Instant modifiedDate) {
     return new ApprovalDao(
-        approval.identifier(), approval.source(), approval.customerId(), createdDate, modifiedDate);
+        approval.identifier(),
+        approval.source(),
+        approval.customerIdentifier(),
+        createdDate,
+        modifiedDate);
   }
 
   @Override

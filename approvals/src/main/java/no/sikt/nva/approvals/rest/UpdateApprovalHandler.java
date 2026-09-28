@@ -49,7 +49,6 @@ public class UpdateApprovalHandler extends ApiGatewayHandler<UpdateApprovalReque
       throws ApiGatewayException {
     var approvalIdentifier = getApprovalIdentifier(requestInfo);
     updateApprovalRequest.validate(approvalIdentifier);
-    identifierAuthorizer.authorizeIdentifiers(requestInfo, updateApprovalRequest.identifiers());
   }
 
   @Override
@@ -57,10 +56,13 @@ public class UpdateApprovalHandler extends ApiGatewayHandler<UpdateApprovalReque
   protected Void processInput(
       UpdateApprovalRequest request, RequestInfo requestInfo, Context context)
       throws ApiGatewayException {
+    var identifier = getApprovalIdentifier(requestInfo);
+    var customerIdentifier =
+        identifierAuthorizer.authorizeIdentifiers(requestInfo, request.identifiers());
     try {
-      var identifier = getApprovalIdentifier(requestInfo);
       var approval =
-          approvalService.updateApproval(identifier, request.identifiers(), request.source());
+          approvalService.updateApproval(
+              identifier, request.identifiers(), request.source(), customerIdentifier);
       addHeaders(approval);
     } catch (Exception exception) {
       handleException(exception);

@@ -177,7 +177,7 @@ public class DynamoDbApprovalRepository implements ApprovalRepository {
         identifiers,
         approvalDao.source(),
         handle,
-        approvalDao.customerId());
+        approvalDao.customerIdentifier());
   }
 
   private static Handle getHandle(List<DatabaseEntry> entities) {
