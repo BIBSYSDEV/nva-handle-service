@@ -281,8 +281,14 @@ paths:
             "application/json":
               schema:
                 $ref: "#/components/schemas/Problem"
-        "502":
-          description: Bad gateway
+        "415":
+          description: Unsupported Media Type
+          content:
+            "application/json":
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "500":
+          description: Internal Server Error
           content:
             "application/json":
               schema:
@@ -329,6 +335,12 @@ paths:
                 $ref: "#/components/schemas/Problem"
         "404":
           description: Approval not found
+          content:
+            "application/json":
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "406":
+          description: Not Acceptable
           content:
             "application/json":
               schema:
