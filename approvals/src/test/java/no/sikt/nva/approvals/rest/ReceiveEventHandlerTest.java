@@ -20,11 +20,13 @@ import com.amazonaws.services.lambda.runtime.Context;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.net.HttpURLConnection;
 import java.net.URI;
 import java.time.Instant;
 import java.util.Map;
 import no.sikt.nva.approvals.domain.ApprovalNotFoundException;
 import no.sikt.nva.approvals.domain.ApprovalServiceException;
+import no.sikt.nva.approvals.domain.SourceMismatchException;
 import no.sikt.nva.approvals.events.CloudEvent;
 import no.sikt.nva.approvals.events.EventService;
 import no.sikt.nva.approvals.events.EventServiceImpl;
@@ -44,23 +46,23 @@ class ReceiveEventHandlerTest {
   private static final Environment ENVIRONMENT = new Environment();
   private static final String SPEC_VERSION = "1.0";
   private static final URI CUSTOMER_ID =
-      UriWrapper.fromUri("https://example.com/customer/")
+      UriWrapper.fromUri("https://api.nva.unit.no/customer/")
           .addChild(randomUUID().toString())
           .getUri();
   private static final String APPROVAL_NOT_FOUND_MESSAGE = "Approval not found for handle %s";
   private static final String INTERNAL_SERVER_ERROR_MESSAGE =
-      "Internal server error. Contact application administrator.";
+      "Internal server error. Contact application " + "administrator.";
   private static final String CONTENT_TYPE_HEADER = "Content-Type";
   private static final String CLOUD_EVENTS_CONTENT_TYPE = "application/cloudevents+json";
   private static final String SUPPORTED_CLOUD_EVENT_TYPE = "no.sikt.nva.approval.source.changed";
-
   private ByteArrayOutputStream output;
   private ReceiveEventHandler handler;
+  private EventService eventService;
 
   @BeforeEach
   void setUp() throws ApprovalServiceException {
     output = new ByteArrayOutputStream();
-    var eventService = mock(EventService.class);
+    eventService = mock(EventService.class);
     doNothing().when(eventService).receive(any());
     handler = new ReceiveEventHandler(eventService, ENVIRONMENT);
   }
@@ -70,6 +72,60 @@ class ReceiveEventHandlerTest {
     var response = send(validEvent());
 
     assertEquals(HTTP_ACCEPTED, response.getStatusCode());
+  }
+
+  @Test
+  void shouldReturnUnsupportedMediaTypeWhenContentTypeIsMissing() throws IOException {
+    var request =
+        new HandlerRequestBuilder<CloudEvent>(JsonUtils.dtoObjectMapper)
+            .withBody(validEvent())
+            .withCurrentCustomer(CUSTOMER_ID)
+            .build();
+
+    handler.handleRequest(request, output, CONTEXT);
+
+    assertProblem(
+        GatewayResponse.fromOutputStream(output, Problem.class),
+        HTTP_UNSUPPORTED_TYPE,
+        "Content-Type header is missing");
+  }
+
+  @Test
+  void shouldReturnBadRequestWhenCloudEventIsInvalid() throws IOException {
+    var response = send(event(randomUUID().toString(), null, randomHandle().value()));
+
+    assertEquals(HTTP_BAD_REQUEST, response.getStatusCode());
+  }
+
+  @Test
+  void shouldReturnBadRequestWhenRequestBodyIsMissing() throws IOException {
+    var response = send(null);
+
+    assertProblem(response, HTTP_BAD_REQUEST, "Request body is missing");
+  }
+
+  @Test
+  void shouldReturnUnauthorizedWhenCustomerOfClientCannotBeResolved() throws IOException {
+    var request =
+        new HandlerRequestBuilder<CloudEvent>(JsonUtils.dtoObjectMapper)
+            .withBody(validEvent())
+            .withHeaders(Map.of(CONTENT_TYPE_HEADER, CLOUD_EVENTS_CONTENT_TYPE))
+            .build();
+
+    handler.handleRequest(request, output, CONTEXT);
+
+    assertEquals(
+        HTTP_UNAUTHORIZED, GatewayResponse.fromOutputStream(output, Problem.class).getStatusCode());
+  }
+
+  @Test
+  void shouldReturnForbiddenWhenCustomerIsEmittingEventForHandleTheyDoNotOwn()
+      throws IOException, ApprovalServiceException {
+    doThrow(SourceMismatchException.class).when(eventService).receive(any());
+
+    var response = send(validEvent());
+
+    assertEquals(HttpURLConnection.HTTP_FORBIDDEN, response.getStatusCode());
   }
 
   @Test
@@ -103,45 +159,12 @@ class ReceiveEventHandlerTest {
         "Unsupported media type. Supported media type is application/cloudevents+json");
   }
 
-  @Test
-  void shouldReturnUnsupportedMediaTypeWhenContentTypeIsMissing() throws IOException {
-    var request =
-        new HandlerRequestBuilder<CloudEvent>(JsonUtils.dtoObjectMapper)
-            .withBody(validEvent())
-            .withCurrentCustomer(CUSTOMER_ID)
-            .build();
-
-    handler.handleRequest(request, output, CONTEXT);
-
-    assertProblem(
-        GatewayResponse.fromOutputStream(output, Problem.class),
-        HTTP_UNSUPPORTED_TYPE,
-        "Content-Type header is missing");
+  private static void assertProblem(
+      GatewayResponse<Problem> response, int expectedStatus, String expectedDetail)
+      throws JsonProcessingException {
+    assertEquals(expectedStatus, response.getStatusCode());
+    assertEquals(expectedDetail, response.getBodyObject(Problem.class).getDetail());
   }
-
-  @Test
-  void shouldReturnBadRequestWhenCloudEventIsInvalid() throws IOException {
-    var response = send(event(randomUUID().toString(), null, randomHandle().value()));
-
-    assertEquals(HTTP_BAD_REQUEST, response.getStatusCode());
-  }
-
-  @Test
-  void shouldReturnUnauthorizedWhenCustomerOfClientCannotBeResolved() throws IOException {
-    var request =
-        new HandlerRequestBuilder<CloudEvent>(JsonUtils.dtoObjectMapper)
-            .withBody(validEvent())
-            .withHeaders(Map.of(CONTENT_TYPE_HEADER, CLOUD_EVENTS_CONTENT_TYPE))
-            .build();
-
-    handler.handleRequest(request, output, CONTEXT);
-
-    assertEquals(
-        HTTP_UNAUTHORIZED, GatewayResponse.fromOutputStream(output, Problem.class).getStatusCode());
-  }
-
-  @Test
-  void shouldReturnForbiddenWhenCustomerIsEmittingEventForHandleTheyDoNotOwn() {}
 
   private static CloudEvent validEvent() {
     return event(randomUUID().toString(), randomUri(), randomHandle().value());
@@ -157,13 +180,6 @@ class ReceiveEventHandlerTest {
     var eventService = mock(EventServiceImpl.class);
     doThrow(exception).when(eventService).receive(any());
     return new ReceiveEventHandler(eventService, ENVIRONMENT);
-  }
-
-  private static void assertProblem(
-      GatewayResponse<Problem> response, int expectedStatus, String expectedDetail)
-      throws JsonProcessingException {
-    assertEquals(expectedStatus, response.getStatusCode());
-    assertEquals(expectedDetail, response.getBodyObject(Problem.class).getDetail());
   }
 
   private static HandlerRequestBuilder<CloudEvent> authorizedRequestBuilder() {
