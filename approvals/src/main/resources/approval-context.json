@@ -5,11 +5,11 @@
     "type": "@type",
     "id": "@id",
     "identifier": {
-      "@id": "__ONTOLOGY_NAMESPACE__approvalId",
+      "@id": "approvalId",
       "@type": "xsd:string"
     },
     "identifiers": {
-      "@id": "__ONTOLOGY_NAMESPACE__identifier",
+      "@id": "identifier",
       "@container": "@set"
     },
     "source": {
