@@ -69,7 +69,7 @@ public class ReceiveEventHandler extends ApiGatewayHandler<CloudEvent, Void> {
         requestInfo
             .getHeaderOptional(CONTENT_TYPE_HEADER)
             .orElseThrow(() -> new UnsupportedMediaTypeException(CONTENT_TYPE_MISSING));
-    if (!MediaType.parse(contentType).equals(CLOUD_EVENTS_JSON)) {
+    if (!MediaType.parse(contentType).matches(CLOUD_EVENTS_JSON)) {
       throw new UnsupportedMediaTypeException(
           UNSUPPORTED_MEDIA_TYPE_MESSAGE.formatted(CLOUD_EVENTS_JSON));
     }
