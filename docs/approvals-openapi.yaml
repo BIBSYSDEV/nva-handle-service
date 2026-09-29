@@ -181,8 +181,11 @@ paths:
         - Approval
         - external
       operationId: getContext
-      summary: Get JSON-LD Context
-      description: Returns the JSON-LD context for the Approval API
+      summary: Get current JSON-LD Context
+      description: |
+        Returns the current version of the JSON-LD context for the Approval API. The `Content-Location`
+        header points to the versioned context that was returned. Approval responses always reference
+        a versioned context, see `GET /context/{version}`.
       x-amazon-apigateway-integration:
         uri:
           Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${NvaFetchContextFunction.Arn}/invocations
@@ -191,22 +194,41 @@ paths:
         type: AWS_PROXY
       responses:
         "200":
-          description: JSON-LD context
-          content:
-            application/ld+json:
-              schema:
-                type: object
-            application/json:
-              schema:
-                type: object
+          $ref: "#/components/responses/Context"
+  /context/{version}:
+    get:
+      tags:
+        - Approval
+        - external
+      operationId: getContextVersion
+      summary: Get a specific version of the JSON-LD Context
+      description: |
+        Returns a specific version of the JSON-LD context. A published context version never changes.
+        Changes that only add terms are made to the current version, while breaking changes are
+        published as a new major version (`v2`, `v3`, ...).
+      parameters:
+        - $ref: "#/components/parameters/ContextVersion"
+      x-amazon-apigateway-integration:
+        uri:
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${NvaFetchContextFunction.Arn}/invocations
+        responses: {}
+        httpMethod: POST
+        type: AWS_PROXY
+      responses:
+        "200":
+          $ref: "#/components/responses/Context"
+        "404":
+          $ref: "#/components/responses/VersionNotFound"
   /ontology:
     get:
       tags:
         - Approval
         - external
       operationId: getOntology
-      summary: Get RDF Ontology
-      description: Returns the RDF ontology (Turtle format) for the Approval API
+      summary: Get latest RDF Ontology
+      description: |
+        Returns the latest version of the RDF ontology (Turtle format) for the Approval API. The
+        `Content-Location` header points to the versioned ontology that was returned.
       x-amazon-apigateway-integration:
         uri:
           Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${NvaFetchOntologyFunction.Arn}/invocations
@@ -215,11 +237,31 @@ paths:
         type: AWS_PROXY
       responses:
         "200":
-          description: RDF ontology in Turtle format
-          content:
-            text/turtle:
-              schema:
-                type: string
+          $ref: "#/components/responses/Ontology"
+  /ontology/{version}:
+    get:
+      tags:
+        - Approval
+        - external
+      operationId: getOntologyVersion
+      summary: Get a specific version of the RDF Ontology
+      description: |
+        Returns a specific version of the RDF ontology. The ontology uses semantic versioning and is
+        identified by `owl:versionIRI`. The namespace and term IRIs are stable across versions; a
+        published version never changes.
+      parameters:
+        - $ref: "#/components/parameters/OntologyVersion"
+      x-amazon-apigateway-integration:
+        uri:
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${NvaFetchOntologyFunction.Arn}/invocations
+        responses: {}
+        httpMethod: POST
+        type: AWS_PROXY
+      responses:
+        "200":
+          $ref: "#/components/responses/Ontology"
+        "404":
+          $ref: "#/components/responses/VersionNotFound"
   /events:
     post:
       tags:
@@ -378,7 +420,7 @@ paths:
               documentFromGet:
                 summary: Document returned by GET, submitted unchanged
                 value:
-                  "@context": https://api.nva.unit.no/approval/context
+                  "@context": https://api.nva.unit.no/approval/context/v1
                   type: Approval
                   id: https://api.nva.unit.no/approval/6ff5f1b5-97c1-40f0-86ad-2cbd9006eee2
                   identifier: 6ff5f1b5-97c1-40f0-86ad-2cbd9006eee2
@@ -628,7 +670,7 @@ components:
         "@context":
           type: string
           format: uri
-          description: JSON-LD context URI for this resource
+          description: Versioned JSON-LD context URI for this resource
         type:
           type: string
           default: Approval
@@ -655,7 +697,7 @@ components:
           format: uri
           description: The full handle URI (e.g., https://hdl.handle.net/11250.1/12345)
       example:
-        "@context": https://api.nva.unit.no/approval/context
+        "@context": https://api.nva.unit.no/approval/context/v1
         type: Approval
         id: https://api.nva.unit.no/approval/6ff5f1b5-97c1-40f0-86ad-2cbd9006eee2
         identifier: 6ff5f1b5-97c1-40f0-86ad-2cbd9006eee2
@@ -667,7 +709,10 @@ components:
         handle: https://hdl.handle.net/11250.1/98765
     Identifier:
       type: object
-      description: A named identifier that can be used to look up or reference an approval
+      description: >-
+        An identifier that can be used to look up or reference an approval, consisting of a namespace
+        (`name`) and a value. A value is unique within its namespace across all approvals, while the
+        same value may exist in another namespace.
       required:
         - type
         - name
@@ -679,10 +724,65 @@ components:
           description: The type discriminator for this object
         name:
           type: string
-          description: The name or category of the identifier (e.g., 'doi', 'isbn')
+          description: >-
+            The namespace the value belongs to (e.g., 'REK', 'DMP'). Mapped to the ontology term `namespace`
+            in the JSON-LD context.
         value:
           type: string
-          description: The actual identifier value
+          description: The identifier value, unique within its namespace
+  parameters:
+    ContextVersion:
+      name: version
+      in: path
+      required: true
+      description: Major version of the JSON-LD context
+      schema:
+        type: string
+        pattern: "^v[0-9]+$"
+        example: v1
+    OntologyVersion:
+      name: version
+      in: path
+      required: true
+      description: Semantic version of the RDF ontology
+      schema:
+        type: string
+        pattern: "^[0-9]+\\.[0-9]+\\.[0-9]+$"
+        example: 1.0.0
+  responses:
+    Context:
+      description: JSON-LD context
+      headers:
+        Content-Location:
+          description: URI of the versioned context that was returned
+          schema:
+            type: string
+            format: uri
+      content:
+        application/ld+json:
+          schema:
+            type: object
+        application/json:
+          schema:
+            type: object
+    Ontology:
+      description: RDF ontology in Turtle format
+      headers:
+        Content-Location:
+          description: URI of the versioned ontology that was returned
+          schema:
+            type: string
+            format: uri
+      content:
+        text/turtle:
+          schema:
+            type: string
+    VersionNotFound:
+      description: The requested version does not exist
+      content:
+        "application/json":
+          schema:
+            $ref: "#/components/schemas/Problem"
   securitySchemes:
     CognitoUserPool:
       type: apiKey

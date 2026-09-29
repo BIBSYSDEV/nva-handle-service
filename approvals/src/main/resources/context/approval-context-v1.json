@@ -1,6 +1,6 @@
 {
   "@context": {
-    "@vocab": "__ONTOLOGY_NAMESPACE__",
+    "@vocab": "__ONTOLOGY_IRI__#",
     "xsd": "http://www.w3.org/2001/XMLSchema#",
     "type": "@type",
     "id": "@id",
@@ -9,7 +9,6 @@
       "@type": "xsd:string"
     },
     "identifiers": {
-      "@id": "identifier",
       "@container": "@set"
     },
     "source": {
@@ -19,6 +18,7 @@
       "@type": "@id"
     },
     "name": {
+      "@id": "namespace",
       "@type": "xsd:string"
     },
     "value": {

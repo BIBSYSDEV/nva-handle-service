@@ -24,7 +24,6 @@ public record ApprovalResponse(
     String handle) {
 
   private static final String APPROVAL_PATH = "approval";
-  private static final String CONTEXT_PATH = "context";
 
   public static ApprovalResponse fromApproval(Approval approval, String apiHost) {
     var id = buildId(apiHost, approval.identifier());
@@ -50,6 +49,10 @@ public record ApprovalResponse(
   }
 
   private static URI buildContextUri(String apiHost) {
-    return UriWrapper.fromHost(apiHost).addChild(APPROVAL_PATH).addChild(CONTEXT_PATH).getUri();
+    return UriWrapper.fromHost(apiHost)
+        .addChild(APPROVAL_PATH)
+        .addChild(FetchContextHandler.CONTEXT_PATH)
+        .addChild(FetchContextHandler.CURRENT_CONTEXT_VERSION)
+        .getUri();
   }
 }
