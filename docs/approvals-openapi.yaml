@@ -21,6 +21,9 @@ x-amazon-apigateway-request-validators:
   validate_body:
     validateRequestBody: true
     validateRequestParameters: false
+  no_validation:
+    validateRequestBody: false
+    validateRequestParameters: false
 paths:
   /:
     post:
@@ -230,6 +233,7 @@ paths:
       description: |
         Receives a change notification as a CloudEvent (version 1.0, structured JSON mode) telling
         NVA that the source of an approval has changed.
+      x-amazon-apigateway-request-validator: no_validation
       parameters:
         - name: Content-Type
           in: header
