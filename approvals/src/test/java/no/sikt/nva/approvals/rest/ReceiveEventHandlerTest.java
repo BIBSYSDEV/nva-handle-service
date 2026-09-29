@@ -25,7 +25,7 @@ import java.time.Instant;
 import java.util.Map;
 import no.sikt.nva.approvals.domain.ApprovalNotFoundException;
 import no.sikt.nva.approvals.events.CloudEvent;
-import no.sikt.nva.approvals.events.EventService;
+import no.sikt.nva.approvals.events.EventServiceImpl;
 import no.unit.nva.commons.json.JsonUtils;
 import no.unit.nva.stubs.FakeContext;
 import no.unit.nva.testutils.HandlerRequestBuilder;
@@ -58,7 +58,7 @@ class ReceiveEventHandlerTest {
   @BeforeEach
   void setUp() throws ApprovalNotFoundException {
     output = new ByteArrayOutputStream();
-    var eventService = mock(EventService.class);
+    var eventService = mock(EventServiceImpl.class);
     doNothing().when(eventService).receive(any());
     handler = new ReceiveEventHandler(eventService, ENVIRONMENT);
   }
@@ -152,7 +152,7 @@ class ReceiveEventHandlerTest {
 
   private static ReceiveEventHandler handlerWithFailingService(Exception exception)
       throws ApprovalNotFoundException {
-    var eventService = mock(EventService.class);
+    var eventService = mock(EventServiceImpl.class);
     doThrow(exception).when(eventService).receive(any());
     return new ReceiveEventHandler(eventService, ENVIRONMENT);
   }

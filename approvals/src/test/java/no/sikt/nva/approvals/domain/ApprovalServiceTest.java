@@ -100,7 +100,7 @@ class ApprovalServiceTest {
     var handle = randomHandle().value();
     when(handleDatabase.createHandle(eq(HANDLE_PREFIX), any(URI.class), eq(connection)))
         .thenReturn(handle);
-    doNothing().when(approvalRepository).save(any());
+    doNothing().when(approvalRepository).save((Approval) any());
 
     var approval = approvalService.create(randomIdentifiers(), randomUri(), randomUUID());
 
@@ -113,7 +113,7 @@ class ApprovalServiceTest {
     var source = randomUri();
     when(handleDatabase.createHandle(eq(HANDLE_PREFIX), any(URI.class), eq(connection)))
         .thenReturn(randomHandle().value());
-    doNothing().when(approvalRepository).save(any());
+    doNothing().when(approvalRepository).save((Approval) any());
 
     var approval = approvalService.create(randomIdentifiers(), source, randomUUID());
 
@@ -125,7 +125,7 @@ class ApprovalServiceTest {
       throws SQLException, ApprovalServiceException, ApprovalConflictException {
     when(handleDatabase.createHandle(eq(HANDLE_PREFIX), any(URI.class), eq(connection)))
         .thenReturn(randomHandle().value());
-    doNothing().when(approvalRepository).save(any());
+    doNothing().when(approvalRepository).save((Approval) any());
 
     var approval = approvalService.create(randomIdentifiers(), randomUri(), randomUUID());
 
@@ -141,7 +141,7 @@ class ApprovalServiceTest {
   void shouldCreateApprovalWithIdentifiersProvidedInInput()
       throws SQLException, ApprovalServiceException, ApprovalConflictException {
     when(handleDatabase.createHandle(any(), any(), any())).thenReturn(randomHandle().value());
-    doNothing().when(approvalRepository).save(any());
+    doNothing().when(approvalRepository).save((Approval) any());
 
     var identifiers = randomIdentifiers();
     var approval = approvalService.create(identifiers, randomUri(), randomUUID());
@@ -309,7 +309,7 @@ class ApprovalServiceTest {
     var identifiers = List.of(new NamedIdentifier(name, randomString()));
     when(approvalRepository.findIdentifiers(identifiers)).thenReturn(List.of());
     when(handleDatabase.createHandle(any(), any(), any())).thenReturn(randomHandle().value());
-    doNothing().when(approvalRepository).save(any());
+    doNothing().when(approvalRepository).save((Approval) any());
 
     var approval = approvalService.create(identifiers, randomUri(), randomUUID());
 
@@ -322,7 +322,7 @@ class ApprovalServiceTest {
     var identifiers = List.of(new NamedIdentifier(randomString(), "2023-510166#27-01"));
     when(approvalRepository.findIdentifiers(identifiers)).thenReturn(List.of());
     when(handleDatabase.createHandle(any(), any(), any())).thenReturn(randomHandle().value());
-    doNothing().when(approvalRepository).save(any());
+    doNothing().when(approvalRepository).save((Approval) any());
 
     var approval = approvalService.create(identifiers, randomUri(), randomUUID());
 
@@ -338,7 +338,7 @@ class ApprovalServiceTest {
             new NamedIdentifier(name, randomString()), new NamedIdentifier(name, randomString()));
     when(approvalRepository.findIdentifiers(identifiers)).thenReturn(List.of());
     when(handleDatabase.createHandle(any(), any(), any())).thenReturn(randomHandle().value());
-    doNothing().when(approvalRepository).save(any());
+    doNothing().when(approvalRepository).save((Approval) any());
 
     var approval = approvalService.create(identifiers, randomUri(), randomUUID());
 
@@ -627,7 +627,7 @@ class ApprovalServiceTest {
     var customerIdentifier = randomUUID();
     when(handleDatabase.createHandle(eq(HANDLE_PREFIX), any(URI.class), eq(connection)))
         .thenReturn(randomHandle().value());
-    doNothing().when(approvalRepository).save(any());
+    doNothing().when(approvalRepository).save((Approval) any());
 
     var approval = approvalService.create(randomIdentifiers(), randomUri(), customerIdentifier);
 

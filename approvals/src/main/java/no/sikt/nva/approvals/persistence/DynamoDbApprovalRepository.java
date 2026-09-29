@@ -28,6 +28,7 @@ import no.sikt.nva.approvals.domain.Approval;
 import no.sikt.nva.approvals.domain.Handle;
 import no.sikt.nva.approvals.domain.IdentifierPolicy;
 import no.sikt.nva.approvals.domain.NamedIdentifier;
+import no.sikt.nva.approvals.events.SourceChangedEvent;
 import no.unit.nva.commons.json.JsonUtils;
 import nva.commons.core.Environment;
 import nva.commons.core.JacocoGenerated;
@@ -41,10 +42,12 @@ import software.amazon.awssdk.enhanced.dynamodb.document.DocumentTableSchema;
 import software.amazon.awssdk.enhanced.dynamodb.document.EnhancedDocument;
 import software.amazon.awssdk.enhanced.dynamodb.model.BatchGetItemEnhancedRequest;
 import software.amazon.awssdk.enhanced.dynamodb.model.Page;
+import software.amazon.awssdk.enhanced.dynamodb.model.PutItemEnhancedRequest;
 import software.amazon.awssdk.enhanced.dynamodb.model.ReadBatch;
 import software.amazon.awssdk.enhanced.dynamodb.model.TransactPutItemEnhancedRequest;
 import software.amazon.awssdk.enhanced.dynamodb.model.TransactWriteItemsEnhancedRequest;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
+import software.amazon.awssdk.services.dynamodb.model.ConditionalCheckFailedException;
 
 // FIXME: Suppressing warning in order to upgrade PMD version
 @SuppressWarnings("PMD.CouplingBetweenObjects")
@@ -75,6 +78,19 @@ public class DynamoDbApprovalRepository implements ApprovalRepository {
     } else {
       splitToChunks(allDocuments, TRANSACT_WRITE_ITEM_LIMIT)
           .forEach(this::saveDocumentsInTransaction);
+    }
+  }
+
+  @Override
+  public void save(SourceChangedEvent event) {
+    var request =
+        PutItemEnhancedRequest.builder(EnhancedDocument.class)
+            .item(EventDao.fromEvent(event, Instant.now()).toEnhancedDocument())
+            .conditionExpression(newDaoCondition())
+            .build();
+    try {
+      table.putItem(request);
+    } catch (ConditionalCheckFailedException ignored) {
     }
   }
 

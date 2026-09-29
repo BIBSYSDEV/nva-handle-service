@@ -2,8 +2,7 @@ package no.sikt.nva.approvals.events;
 
 import no.sikt.nva.approvals.domain.ApprovalNotFoundException;
 
-@SuppressWarnings("PMD.ImplicitFunctionalInterface")
-public interface EventService {
+public sealed interface EventService permits EventServiceImpl {
 
   void receive(SourceChangedEvent event) throws ApprovalNotFoundException;
 }
