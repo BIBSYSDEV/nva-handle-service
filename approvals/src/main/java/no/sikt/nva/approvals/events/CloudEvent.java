@@ -15,7 +15,7 @@ public record CloudEvent(
 
   private static final String SUPPORTED_CLOUD_EVENT_TYPE = "no.sikt.nva.approval.source.changed";
   private static final String SUPPORTED_SPEC_VERSION = "1.0";
-  private static final Pattern EVENT_ID_PATTERN = Pattern.compile("^[A-Za-z0-9_=-]{1,128}$");
+  private static final Pattern EVENT_ID_PATTERN = Pattern.compile("^[A-Za-z0-9_-]{1,128}$");
   private static final String UNSUPPORTED_SPEC_VERSION_MESSAGE =
       "Unsupported specversion %s, only 1.0 is supported";
   private static final String UNSUPPORTED_TYPE_MESSAGE = "Unsupported event type %s";
@@ -41,7 +41,7 @@ public record CloudEvent(
   }
 
   public SourceChangedEvent toSourceChangedEvent(UUID customerIdentifier) {
-    return new SourceChangedEvent(id, source, new Handle(subject), time, customerIdentifier);
+    return new SourceChangedEvent(id, source, handle(), time, customerIdentifier);
   }
 
   private static boolean isHandle(URI uri) {

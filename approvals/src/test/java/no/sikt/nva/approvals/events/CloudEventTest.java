@@ -21,7 +21,7 @@ class CloudEventTest {
       "Unsupported specversion %s, only 1.0 is supported";
   private static final String UNSUPPORTED_TYPE_MESSAGE = "Unsupported event type %s";
   private static final String INVALID_EVENT_ID_MESSAGE =
-      "Event id must match ^[A-Za-z0-9_=-]{1,128}$";
+      "Event id must match ^[A-Za-z0-9_-]{1,128}$";
   private static final String SOURCE_IS_MISSING_MESSAGE = "Event source is missing";
   private static final String SUBJECT_NOT_HANDLE_MESSAGE =
       "Event subject must be the handle of an approval";

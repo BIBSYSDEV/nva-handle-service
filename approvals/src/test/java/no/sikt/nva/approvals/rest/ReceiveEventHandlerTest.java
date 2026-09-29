@@ -125,6 +125,13 @@ class ReceiveEventHandlerTest {
   }
 
   @Test
+  void shouldReturnBadRequestWhenRequestBodyIsMissing() throws IOException {
+    var response = send(null);
+
+    assertProblem(response, HTTP_BAD_REQUEST, "Request body is missing");
+  }
+
+  @Test
   void shouldReturnUnauthorizedWhenCustomerOfClientCannotBeResolved() throws IOException {
     var request =
         new HandlerRequestBuilder<CloudEvent>(JsonUtils.dtoObjectMapper)

@@ -1,6 +1,7 @@
 package no.sikt.nva.approvals.rest;
 
 import static java.net.HttpURLConnection.HTTP_ACCEPTED;
+import static java.util.Objects.isNull;
 import static no.sikt.nva.approvals.utils.RequestUtils.getCustomerIdentifier;
 import static no.sikt.nva.approvals.utils.RequestUtils.handleException;
 
@@ -12,6 +13,7 @@ import nva.commons.apigateway.ApiGatewayHandler;
 import nva.commons.apigateway.MediaType;
 import nva.commons.apigateway.RequestInfo;
 import nva.commons.apigateway.exceptions.ApiGatewayException;
+import nva.commons.apigateway.exceptions.BadRequestException;
 import nva.commons.apigateway.exceptions.UnsupportedMediaTypeException;
 import nva.commons.core.Environment;
 import nva.commons.core.JacocoGenerated;
@@ -42,6 +44,9 @@ public class ReceiveEventHandler extends ApiGatewayHandler<CloudEvent, Void> {
       throws ApiGatewayException {
     getCustomerIdentifier(requestInfo);
     validateContentType(requestInfo);
+    if (isNull(cloudEvent)) {
+      throw new BadRequestException("Request body is missing");
+    }
     cloudEvent.validate();
   }
 
