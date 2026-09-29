@@ -6,6 +6,7 @@ import com.amazonaws.services.lambda.runtime.Context;
 import java.net.HttpURLConnection;
 import java.nio.file.Path;
 import java.util.List;
+import no.sikt.nva.approvals.utils.RequestUtils;
 import nva.commons.apigateway.ApiGatewayHandler;
 import nva.commons.apigateway.MediaType;
 import nva.commons.apigateway.RequestInfo;
@@ -16,8 +17,9 @@ import nva.commons.core.ioutils.IoUtils;
 
 public class FetchContextHandler extends ApiGatewayHandler<Void, String> {
 
-  private static final String CONTEXT =
+  private static final String CONTEXT_TEMPLATE =
       IoUtils.stringFromResources(Path.of("approval-context.json"));
+  private final String approvalContext;
 
   @JacocoGenerated
   public FetchContextHandler() {
@@ -26,12 +28,14 @@ public class FetchContextHandler extends ApiGatewayHandler<Void, String> {
 
   public FetchContextHandler(Environment environment) {
     super(Void.class, environment);
+    this.approvalContext =
+        OntologyNamespace.resolve(CONTEXT_TEMPLATE, RequestUtils.getApiHost(environment));
   }
 
   @Override
   protected String processInput(Void input, RequestInfo requestInfo, Context context)
       throws ApiGatewayException {
-    return CONTEXT;
+    return approvalContext;
   }
 
   @Override

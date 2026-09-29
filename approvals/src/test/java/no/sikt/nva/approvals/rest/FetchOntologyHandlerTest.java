@@ -2,6 +2,7 @@ package no.sikt.nva.approvals.rest;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.core.Is.is;
+import static org.hamcrest.core.IsNot.not;
 import static org.hamcrest.core.StringContains.containsString;
 
 import com.amazonaws.services.lambda.runtime.Context;
@@ -21,8 +22,12 @@ import org.junit.jupiter.api.Test;
 
 class FetchOntologyHandlerTest {
 
+  private static final String ONTOLOGY_NAMESPACE = "https://localhost/approval/ontology#";
+  private static final String ONTOLOGY_NAMESPACE_PLACEHOLDER = "__ONTOLOGY_NAMESPACE__";
+  private static final String LEGACY_NAMESPACE = "https://nva.unit.no/approval#";
   private static final String EXPECTED_ONTOLOGY =
-      IoUtils.stringFromResources(Path.of("approval-ontology.ttl"));
+      IoUtils.stringFromResources(Path.of("approval-ontology.ttl"))
+          .replace(ONTOLOGY_NAMESPACE_PLACEHOLDER, ONTOLOGY_NAMESPACE);
   private static final Context CONTEXT = new FakeContext();
   private FetchOntologyHandler handler;
   private ByteArrayOutputStream outputStream;
@@ -43,7 +48,19 @@ class FetchOntologyHandlerTest {
     assertThat(response.getStatusCode(), is(HttpURLConnection.HTTP_OK));
     assertThat(response.getBody(), containsString("@prefix"));
     assertThat(response.getBody(), containsString("rdfs:label"));
-    assertThat(response.getBody(), containsString("https://nva.unit.no/approval#"));
+    assertThat(
+        response.getBody(), containsString("@prefix : <%s> .".formatted(ONTOLOGY_NAMESPACE)));
+  }
+
+  @Test
+  void shouldNotReturnUnresolvableNamespaceOrPlaceholder() throws IOException {
+    var inputStream = createRequest();
+
+    handler.handleRequest(inputStream, outputStream, CONTEXT);
+
+    var response = GatewayResponse.fromOutputStream(outputStream, String.class);
+    assertThat(response.getBody(), not(containsString(LEGACY_NAMESPACE)));
+    assertThat(response.getBody(), not(containsString(ONTOLOGY_NAMESPACE_PLACEHOLDER)));
   }
 
   @Test
