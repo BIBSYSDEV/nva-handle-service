@@ -9,6 +9,7 @@ import com.amazonaws.services.lambda.runtime.Context;
 import no.sikt.nva.approvals.domain.ApprovalNotFoundException;
 import no.sikt.nva.approvals.events.CloudEvent;
 import no.sikt.nva.approvals.events.EventService;
+import no.sikt.nva.approvals.events.EventServiceImpl;
 import nva.commons.apigateway.ApiGatewayHandler;
 import nva.commons.apigateway.MediaType;
 import nva.commons.apigateway.RequestInfo;
@@ -28,15 +29,19 @@ public class ReceiveEventHandler extends ApiGatewayHandler<CloudEvent, Void> {
       "Unsupported media type. Supported media type is %s";
   private final EventService eventService;
 
-  // TODO: Replace null with production service
   @JacocoGenerated
   public ReceiveEventHandler() {
-    this(null, new Environment());
+    this(new Environment());
   }
 
   public ReceiveEventHandler(EventService approvalEventService, Environment environment) {
     super(CloudEvent.class, environment);
     this.eventService = approvalEventService;
+  }
+
+  @JacocoGenerated
+  private ReceiveEventHandler(Environment environment) {
+    this(EventServiceImpl.defaultInstance(environment), environment);
   }
 
   @Override

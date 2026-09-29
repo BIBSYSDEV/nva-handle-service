@@ -445,6 +445,11 @@ Resources:
     Properties:
       CodeUri: approvals
       Handler: no.sikt.nva.approvals.rest.ReceiveEventHandler::handleRequest
+      Policies:
+        - !Ref DynamoDbTableAccessPolicy
+      Environment:
+        Variables:
+          TABLE: !Ref ApprovalsTable
       Events:
         ReceiveEvent:
           Type: Api
