@@ -62,6 +62,10 @@ public class TestUtils {
     return new Approval(identifier, namedIdentifiers, source, handle, customerIdentifier);
   }
 
+  public static Approval randomApproval(URI source, Handle handle, UUID customerIdentifier) {
+    return new Approval(randomUUID(), randomIdentifiers(), source, handle, customerIdentifier);
+  }
+
   public static Instant randomTimestamp() {
     return Instant.now()
         .minusSeconds(RANDOM.nextInt(MAX_TIMESTAMP_AGE_IN_SECONDS))

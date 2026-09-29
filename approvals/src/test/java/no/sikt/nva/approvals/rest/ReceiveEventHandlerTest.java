@@ -24,7 +24,9 @@ import java.net.URI;
 import java.time.Instant;
 import java.util.Map;
 import no.sikt.nva.approvals.domain.ApprovalNotFoundException;
+import no.sikt.nva.approvals.domain.ApprovalServiceException;
 import no.sikt.nva.approvals.events.CloudEvent;
+import no.sikt.nva.approvals.events.EventService;
 import no.sikt.nva.approvals.events.EventServiceImpl;
 import no.unit.nva.commons.json.JsonUtils;
 import no.unit.nva.stubs.FakeContext;
@@ -42,7 +44,7 @@ class ReceiveEventHandlerTest {
   private static final Environment ENVIRONMENT = new Environment();
   private static final String SPEC_VERSION = "1.0";
   private static final URI CUSTOMER_ID =
-      UriWrapper.fromUri("https://api.nva.unit.no/customer/")
+      UriWrapper.fromUri("https://example.com/customer/")
           .addChild(randomUUID().toString())
           .getUri();
   private static final String APPROVAL_NOT_FOUND_MESSAGE = "Approval not found for handle %s";
@@ -56,9 +58,9 @@ class ReceiveEventHandlerTest {
   private ReceiveEventHandler handler;
 
   @BeforeEach
-  void setUp() throws ApprovalNotFoundException {
+  void setUp() throws ApprovalServiceException {
     output = new ByteArrayOutputStream();
-    var eventService = mock(EventServiceImpl.class);
+    var eventService = mock(EventService.class);
     doNothing().when(eventService).receive(any());
     handler = new ReceiveEventHandler(eventService, ENVIRONMENT);
   }
@@ -72,7 +74,7 @@ class ReceiveEventHandlerTest {
 
   @Test
   void shouldReturnNotFoundWhenServiceFindsNoApprovalForHandle()
-      throws IOException, ApprovalNotFoundException {
+      throws IOException, ApprovalServiceException {
     var unknownHandle = randomHandle();
     handler = handlerWithFailingService(new ApprovalNotFoundException(unknownHandle));
 
@@ -83,7 +85,7 @@ class ReceiveEventHandlerTest {
 
   @Test
   void shouldReturnInternalServerErrorWhenServiceFails()
-      throws IOException, ApprovalNotFoundException {
+      throws IOException, ApprovalServiceException {
     handler = handlerWithFailingService(new IllegalStateException(randomString()));
 
     var response = send(validEvent());
@@ -158,7 +160,7 @@ class ReceiveEventHandlerTest {
   }
 
   private static ReceiveEventHandler handlerWithFailingService(Exception exception)
-      throws ApprovalNotFoundException {
+      throws ApprovalServiceException {
     var eventService = mock(EventServiceImpl.class);
     doThrow(exception).when(eventService).receive(any());
     return new ReceiveEventHandler(eventService, ENVIRONMENT);
