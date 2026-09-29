@@ -24,14 +24,14 @@ public class EventServiceImpl implements EventService {
 
   @Override
   public void receive(SourceChangedEvent event) throws ApprovalServiceException {
-    var approval = approvalRepository.findByHandle(event.handle());
-    if (approval.isEmpty()) {
-      throw new ApprovalNotFoundException(event.handle());
-    }
-    if (!approval.orElseThrow().customerIdentifier().equals(event.customerIdentifier())) {
+    var approval =
+        approvalRepository
+            .findByHandle(event.handle())
+            .orElseThrow(() -> new ApprovalNotFoundException(event.handle()));
+    if (!approval.customerIdentifier().equals(event.customerIdentifier())) {
       throw new CustomerMismatchException();
     }
-    if (!approval.orElseThrow().source().equals(event.source())) {
+    if (!approval.source().equals(event.source())) {
       throw new SourceMismatchException();
     }
 

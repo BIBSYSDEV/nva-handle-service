@@ -26,10 +26,10 @@ import java.time.Instant;
 import java.util.Map;
 import no.sikt.nva.approvals.domain.ApprovalNotFoundException;
 import no.sikt.nva.approvals.domain.ApprovalServiceException;
+import no.sikt.nva.approvals.domain.CustomerMismatchException;
 import no.sikt.nva.approvals.domain.SourceMismatchException;
 import no.sikt.nva.approvals.events.CloudEvent;
 import no.sikt.nva.approvals.events.EventService;
-import no.sikt.nva.approvals.events.EventServiceImpl;
 import no.unit.nva.commons.json.JsonUtils;
 import no.unit.nva.stubs.FakeContext;
 import no.unit.nva.testutils.HandlerRequestBuilder;
@@ -51,10 +51,11 @@ class ReceiveEventHandlerTest {
           .getUri();
   private static final String APPROVAL_NOT_FOUND_MESSAGE = "Approval not found for handle %s";
   private static final String INTERNAL_SERVER_ERROR_MESSAGE =
-      "Internal server error. Contact application " + "administrator.";
+      "Internal server error. Contact application administrator.";
   private static final String CONTENT_TYPE_HEADER = "Content-Type";
   private static final String CLOUD_EVENTS_CONTENT_TYPE = "application/cloudevents+json";
   private static final String SUPPORTED_CLOUD_EVENT_TYPE = "no.sikt.nva.approval.source.changed";
+
   private ByteArrayOutputStream output;
   private ReceiveEventHandler handler;
   private EventService eventService;
@@ -72,6 +73,37 @@ class ReceiveEventHandlerTest {
     var response = send(validEvent());
 
     assertEquals(HTTP_ACCEPTED, response.getStatusCode());
+  }
+
+  @Test
+  void shouldReturnNotFoundWhenServiceFindsNoApprovalForHandle()
+      throws IOException, ApprovalServiceException {
+    var unknownHandle = randomHandle();
+    handler = handlerWithFailingService(new ApprovalNotFoundException(unknownHandle));
+
+    var response = send(event(randomUUID().toString(), randomUri(), unknownHandle.value()));
+
+    assertProblem(response, HTTP_NOT_FOUND, APPROVAL_NOT_FOUND_MESSAGE.formatted(unknownHandle));
+  }
+
+  @Test
+  void shouldReturnInternalServerErrorWhenServiceFails()
+      throws IOException, ApprovalServiceException {
+    handler = handlerWithFailingService(new IllegalStateException(randomString()));
+
+    var response = send(validEvent());
+
+    assertProblem(response, HTTP_INTERNAL_ERROR, INTERNAL_SERVER_ERROR_MESSAGE);
+  }
+
+  @Test
+  void shouldReturnUnsupportedMediaTypeWhenContentTypeHeaderIsNotCloudEvents() throws IOException {
+    var response = sendWithContentType(validEvent(), randomString());
+
+    assertProblem(
+        response,
+        HTTP_UNSUPPORTED_TYPE,
+        "Unsupported media type. Supported media type is application/cloudevents+json");
   }
 
   @Test
@@ -121,7 +153,7 @@ class ReceiveEventHandlerTest {
   @Test
   void shouldReturnForbiddenWhenCustomerIsEmittingEventForHandleTheyDoNotOwn()
       throws IOException, ApprovalServiceException {
-    doThrow(SourceMismatchException.class).when(eventService).receive(any());
+    doThrow(CustomerMismatchException.class).when(eventService).receive(any());
 
     var response = send(validEvent());
 
@@ -129,41 +161,14 @@ class ReceiveEventHandlerTest {
   }
 
   @Test
-  void shouldReturnNotFoundWhenServiceFindsNoApprovalForHandle()
-      throws IOException, ApprovalServiceException {
-    var unknownHandle = randomHandle();
-    handler = handlerWithFailingService(new ApprovalNotFoundException(unknownHandle));
-
-    var response = send(event(randomUUID().toString(), randomUri(), unknownHandle.value()));
-
-    assertProblem(response, HTTP_NOT_FOUND, APPROVAL_NOT_FOUND_MESSAGE.formatted(unknownHandle));
-  }
-
-  @Test
-  void shouldReturnInternalServerErrorWhenServiceFails()
-      throws IOException, ApprovalServiceException {
-    handler = handlerWithFailingService(new IllegalStateException(randomString()));
+  void
+      shouldReturnForbiddenWhenCustomerIsEmittingEventForSourceThatMismatchApprovalSourceForProvidedHandle()
+          throws IOException, ApprovalServiceException {
+    doThrow(SourceMismatchException.class).when(eventService).receive(any());
 
     var response = send(validEvent());
 
-    assertProblem(response, HTTP_INTERNAL_ERROR, INTERNAL_SERVER_ERROR_MESSAGE);
-  }
-
-  @Test
-  void shouldReturnUnsupportedMediaTypeWhenContentTypeHeaderIsNotCloudEvents() throws IOException {
-    var response = sendWithContentType(validEvent(), randomString());
-
-    assertProblem(
-        response,
-        HTTP_UNSUPPORTED_TYPE,
-        "Unsupported media type. Supported media type is application/cloudevents+json");
-  }
-
-  private static void assertProblem(
-      GatewayResponse<Problem> response, int expectedStatus, String expectedDetail)
-      throws JsonProcessingException {
-    assertEquals(expectedStatus, response.getStatusCode());
-    assertEquals(expectedDetail, response.getBodyObject(Problem.class).getDetail());
+    assertEquals(HttpURLConnection.HTTP_FORBIDDEN, response.getStatusCode());
   }
 
   private static CloudEvent validEvent() {
@@ -177,9 +182,16 @@ class ReceiveEventHandlerTest {
 
   private static ReceiveEventHandler handlerWithFailingService(Exception exception)
       throws ApprovalServiceException {
-    var eventService = mock(EventServiceImpl.class);
+    var eventService = mock(EventService.class);
     doThrow(exception).when(eventService).receive(any());
     return new ReceiveEventHandler(eventService, ENVIRONMENT);
+  }
+
+  private static void assertProblem(
+      GatewayResponse<Problem> response, int expectedStatus, String expectedDetail)
+      throws JsonProcessingException {
+    assertEquals(expectedStatus, response.getStatusCode());
+    assertEquals(expectedDetail, response.getBodyObject(Problem.class).getDetail());
   }
 
   private static HandlerRequestBuilder<CloudEvent> authorizedRequestBuilder() {
