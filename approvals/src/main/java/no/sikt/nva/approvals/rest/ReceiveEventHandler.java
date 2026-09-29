@@ -22,6 +22,8 @@ public class ReceiveEventHandler extends ApiGatewayHandler<CloudEvent, Void> {
   private static final MediaType CLOUD_EVENTS_JSON =
       MediaType.create("application", "cloudevents+json");
   private static final String CONTENT_TYPE_MISSING = "Content-Type header is missing";
+  private static final String UNSUPPORTED_MEDIA_TYPE_MESSAGE =
+      "Unsupported media type. Supported media type is %s";
   private final EventService eventService;
 
   // TODO: Replace null with production service
@@ -69,7 +71,7 @@ public class ReceiveEventHandler extends ApiGatewayHandler<CloudEvent, Void> {
             .orElseThrow(() -> new UnsupportedMediaTypeException(CONTENT_TYPE_MISSING));
     if (!MediaType.parse(contentType).equals(CLOUD_EVENTS_JSON)) {
       throw new UnsupportedMediaTypeException(
-          "Unsupported media type. Supported media type is %s".formatted(CLOUD_EVENTS_JSON));
+          UNSUPPORTED_MEDIA_TYPE_MESSAGE.formatted(CLOUD_EVENTS_JSON));
     }
   }
 }

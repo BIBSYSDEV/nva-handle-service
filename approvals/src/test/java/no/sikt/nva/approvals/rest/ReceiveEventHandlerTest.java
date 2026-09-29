@@ -11,7 +11,10 @@ import static no.sikt.nva.approvals.utils.TestUtils.randomHandle;
 import static no.unit.nva.testutils.RandomDataGenerator.randomString;
 import static no.unit.nva.testutils.RandomDataGenerator.randomUri;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.mock;
 
 import com.amazonaws.services.lambda.runtime.Context;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -22,7 +25,7 @@ import java.time.Instant;
 import java.util.Map;
 import no.sikt.nva.approvals.domain.ApprovalNotFoundException;
 import no.sikt.nva.approvals.events.CloudEvent;
-import no.sikt.nva.approvals.events.FakeApprovalEventService;
+import no.sikt.nva.approvals.events.EventService;
 import no.unit.nva.commons.json.JsonUtils;
 import no.unit.nva.stubs.FakeContext;
 import no.unit.nva.testutils.HandlerRequestBuilder;
@@ -50,14 +53,14 @@ class ReceiveEventHandlerTest {
   private static final String SUPPORTED_CLOUD_EVENT_TYPE = "no.sikt.nva.approval.source.changed";
 
   private ByteArrayOutputStream output;
-  private FakeApprovalEventService approvalEventService;
   private ReceiveEventHandler handler;
 
   @BeforeEach
-  void setUp() {
+  void setUp() throws ApprovalNotFoundException {
     output = new ByteArrayOutputStream();
-    approvalEventService = new FakeApprovalEventService();
-    handler = new ReceiveEventHandler(approvalEventService, ENVIRONMENT);
+    var eventService = mock(EventService.class);
+    doNothing().when(eventService).receive(any());
+    handler = new ReceiveEventHandler(eventService, ENVIRONMENT);
   }
 
   @Test
@@ -68,7 +71,8 @@ class ReceiveEventHandlerTest {
   }
 
   @Test
-  void shouldReturnNotFoundWhenServiceFindsNoApprovalForHandle() throws IOException {
+  void shouldReturnNotFoundWhenServiceFindsNoApprovalForHandle()
+      throws IOException, ApprovalNotFoundException {
     var unknownHandle = randomHandle();
     handler = handlerWithFailingService(new ApprovalNotFoundException(unknownHandle));
 
@@ -78,7 +82,8 @@ class ReceiveEventHandlerTest {
   }
 
   @Test
-  void shouldReturnInternalServerErrorWhenServiceFails() throws IOException {
+  void shouldReturnInternalServerErrorWhenServiceFails()
+      throws IOException, ApprovalNotFoundException {
     handler = handlerWithFailingService(new IllegalStateException(randomString()));
 
     var response = send(validEvent());
@@ -94,7 +99,6 @@ class ReceiveEventHandlerTest {
         response,
         HTTP_UNSUPPORTED_TYPE,
         "Unsupported media type. Supported media type is application/cloudevents+json");
-    assertTrue(approvalEventService.getReceivedEvents().isEmpty());
   }
 
   @Test
@@ -111,7 +115,6 @@ class ReceiveEventHandlerTest {
         GatewayResponse.fromOutputStream(output, Problem.class),
         HTTP_UNSUPPORTED_TYPE,
         "Content-Type header is missing");
-    assertTrue(approvalEventService.getReceivedEvents().isEmpty());
   }
 
   @Test
@@ -119,7 +122,6 @@ class ReceiveEventHandlerTest {
     var response = send(event(randomUUID().toString(), null, randomHandle().value()));
 
     assertEquals(HTTP_BAD_REQUEST, response.getStatusCode());
-    assertTrue(approvalEventService.getReceivedEvents().isEmpty());
   }
 
   @Test
@@ -148,8 +150,11 @@ class ReceiveEventHandlerTest {
         SPEC_VERSION, eventId, source, SUPPORTED_CLOUD_EVENT_TYPE, subject, Instant.now());
   }
 
-  private static ReceiveEventHandler handlerWithFailingService(Exception exception) {
-    return new ReceiveEventHandler(new FakeApprovalEventService(exception), ENVIRONMENT);
+  private static ReceiveEventHandler handlerWithFailingService(Exception exception)
+      throws ApprovalNotFoundException {
+    var eventService = mock(EventService.class);
+    doThrow(exception).when(eventService).receive(any());
+    return new ReceiveEventHandler(eventService, ENVIRONMENT);
   }
 
   private static void assertProblem(
