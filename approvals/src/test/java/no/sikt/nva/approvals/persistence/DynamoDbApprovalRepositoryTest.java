@@ -44,7 +44,6 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import software.amazon.awssdk.enhanced.dynamodb.document.EnhancedDocument;
-import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 import software.amazon.awssdk.services.dynamodb.model.PutItemRequest;
 import software.amazon.awssdk.services.dynamodb.model.ScanRequest;
@@ -65,13 +64,11 @@ class DynamoDbApprovalRepositoryTest {
 
   private ApprovalRepository approvalRepository;
   private DynamoDbLocal dynamoDbLocal;
-  private DynamoDbClient client;
 
   @BeforeEach
   void setUp() {
     dynamoDbLocal = dynamoDBLocal(TABLE);
-    client = dynamoDbLocal.client();
-    approvalRepository = new DynamoDbApprovalRepository(client, ENVIRONMENT);
+    approvalRepository = new DynamoDbApprovalRepository(dynamoDbLocal.client(), ENVIRONMENT);
   }
 
   @AfterEach

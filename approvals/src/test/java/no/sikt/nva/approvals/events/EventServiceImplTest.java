@@ -11,9 +11,14 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.net.URI;
 import java.time.Instant;
 import java.util.Optional;
+import java.util.UUID;
 import no.sikt.nva.approvals.domain.ApprovalNotFoundException;
+import no.sikt.nva.approvals.domain.ApprovalServiceException;
+import no.sikt.nva.approvals.domain.CustomerMismatchException;
+import no.sikt.nva.approvals.domain.SourceMismatchException;
 import no.sikt.nva.approvals.persistence.ApprovalRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -30,10 +35,12 @@ class EventServiceImplTest {
   }
 
   @Test
-  void shouldPersistEventWhenApprovalExistsForHandle() throws ApprovalNotFoundException {
-    var event = randomEvent();
+  void shouldPersistEventWhenApprovalExistsForHandle() throws ApprovalServiceException {
+    var customerIdentifier = randomUUID();
+    var source = randomUri();
+    var event = randomEvent(customerIdentifier, source);
     when(approvalRepository.findByHandle(event.handle()))
-        .thenReturn(Optional.of(randomApproval(event.handle())));
+        .thenReturn(Optional.of(randomApproval(source, event.handle(), customerIdentifier)));
 
     eventService.receive(event);
 
@@ -42,15 +49,38 @@ class EventServiceImplTest {
 
   @Test
   void shouldThrowNotFoundAndNotPersistEventWhenApprovalDoesNotExistForHandle() {
-    var event = randomEvent();
+    var event = randomEvent(randomUUID(), randomUri());
     when(approvalRepository.findByHandle(event.handle())).thenReturn(Optional.empty());
 
     assertThrows(ApprovalNotFoundException.class, () -> eventService.receive(event));
     verify(approvalRepository, never()).save((SourceChangedEvent) any());
   }
 
-  private static SourceChangedEvent randomEvent() {
+  @Test
+  void shouldThrowCustomerMismatchExceptionAndNotPersistEventWhenCustomerDoesNotOwnApproval() {
+    var customerIdentifier = randomUUID();
+    var event = randomEvent(customerIdentifier, randomUri());
+
+    when(approvalRepository.findByHandle(event.handle()))
+        .thenReturn(Optional.of(randomApproval(event.source(), event.handle(), randomUUID())));
+
+    assertThrows(CustomerMismatchException.class, () -> eventService.receive(event));
+  }
+
+  @Test
+  void
+      shouldThrowApprovalServiceExceptionAndNotPersistEventWhenSourceDifferFromSourceAssignedToApproval() {
+    var customerIdentifier = randomUUID();
+    var event = randomEvent(customerIdentifier, randomUri());
+
+    when(approvalRepository.findByHandle(event.handle()))
+        .thenReturn(Optional.of(randomApproval(randomUri(), event.handle(), customerIdentifier)));
+
+    assertThrows(SourceMismatchException.class, () -> eventService.receive(event));
+  }
+
+  private static SourceChangedEvent randomEvent(UUID customerIdentifier, URI source) {
     return new SourceChangedEvent(
-        randomUUID().toString(), randomUri(), randomHandle(), Instant.now(), randomUUID());
+        randomUUID().toString(), source, randomHandle(), Instant.now(), customerIdentifier);
   }
 }

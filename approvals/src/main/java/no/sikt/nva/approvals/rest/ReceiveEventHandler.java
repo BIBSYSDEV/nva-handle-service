@@ -5,7 +5,7 @@ import static no.sikt.nva.approvals.utils.RequestUtils.getCustomerIdentifier;
 import static no.sikt.nva.approvals.utils.RequestUtils.handleException;
 
 import com.amazonaws.services.lambda.runtime.Context;
-import no.sikt.nva.approvals.domain.ApprovalNotFoundException;
+import no.sikt.nva.approvals.domain.ApprovalServiceException;
 import no.sikt.nva.approvals.events.CloudEvent;
 import no.sikt.nva.approvals.events.EventService;
 import no.sikt.nva.approvals.events.EventServiceImpl;
@@ -57,7 +57,7 @@ public class ReceiveEventHandler extends ApiGatewayHandler<CloudEvent, Void> {
       var customerIdentifier = getCustomerIdentifier(requestInfo);
       var event = cloudEvent.toSourceChangedEvent(customerIdentifier);
       eventService.receive(event);
-    } catch (ApprovalNotFoundException exception) {
+    } catch (ApprovalServiceException exception) {
       handleException(exception);
     }
     return null;

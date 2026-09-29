@@ -7,6 +7,7 @@ import java.util.UUID;
 import no.sikt.nva.approvals.domain.ApprovalConflictException;
 import no.sikt.nva.approvals.domain.ApprovalNotFoundException;
 import no.sikt.nva.approvals.domain.CustomerMismatchException;
+import no.sikt.nva.approvals.domain.SourceMismatchException;
 import nva.commons.apigateway.RequestInfo;
 import nva.commons.apigateway.exceptions.BadGatewayException;
 import nva.commons.apigateway.exceptions.BadRequestException;
@@ -67,6 +68,8 @@ public final class RequestUtils {
           throw new NotFoundException(notFoundException.getMessage());
       case CustomerMismatchException customerMismatchException ->
           throw new ForbiddenException(customerMismatchException.getMessage());
+      case SourceMismatchException sourceMismatchException ->
+          throw new ForbiddenException(sourceMismatchException.getMessage());
       case ApprovalConflictException conflictException ->
           throw new ConflictException(
               conflictException.getMessage(), conflictException.getConflictingKeys());
