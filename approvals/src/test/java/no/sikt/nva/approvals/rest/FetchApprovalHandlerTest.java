@@ -22,6 +22,7 @@ import gg.jte.resolve.ResourceCodeResolver;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.HttpURLConnection;
 import java.net.URI;
 import java.time.LocalDate;
 import java.util.List;
@@ -331,7 +332,7 @@ class FetchApprovalHandlerTest {
   }
 
   @Test
-  void shouldReturnUnsupportedMediaTypeWhenAcceptHeaderIsUnsupported() {
+  void shouldReturnNotAcceptableWhenAcceptHeaderIsUnsupported() {
     var approvalId = UUID.randomUUID();
     var approval = randomApproval(approvalId, randomUri());
     handler =
@@ -344,7 +345,7 @@ class FetchApprovalHandlerTest {
 
     var response = handleRequest(request);
 
-    assertEquals(415, response.getStatusCode());
+    assertEquals(HttpURLConnection.HTTP_NOT_ACCEPTABLE, response.getStatusCode());
   }
 
   @Test

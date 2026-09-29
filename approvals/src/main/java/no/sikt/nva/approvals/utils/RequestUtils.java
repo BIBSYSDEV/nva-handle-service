@@ -13,6 +13,7 @@ import nva.commons.apigateway.exceptions.BadRequestException;
 import nva.commons.apigateway.exceptions.ConflictException;
 import nva.commons.apigateway.exceptions.ForbiddenException;
 import nva.commons.apigateway.exceptions.NotFoundException;
+import nva.commons.apigateway.exceptions.UnauthorizedException;
 import nva.commons.core.Environment;
 import nva.commons.core.paths.UriWrapper;
 
@@ -33,6 +34,14 @@ public final class RequestUtils {
         .map(UUID::fromString)
         .orElseThrow(
             failure -> new BadRequestException("Provided approval identifier is not valid!"));
+  }
+
+  public static UUID getCustomerIdentifier(RequestInfo requestInfo) throws UnauthorizedException {
+    var customerId = requestInfo.getCurrentCustomer();
+    return attempt(() -> UriWrapper.fromUri(customerId))
+        .map(UriWrapper::getLastPathElement)
+        .map(UUID::fromString)
+        .orElseThrow();
   }
 
   public static String getApiHost(Environment environment) {
