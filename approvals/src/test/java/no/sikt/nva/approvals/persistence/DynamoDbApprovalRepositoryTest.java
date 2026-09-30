@@ -2,6 +2,8 @@ package no.sikt.nva.approvals.persistence;
 
 import static java.time.temporal.ChronoUnit.MILLIS;
 import static java.util.UUID.randomUUID;
+import static no.sikt.nva.approvals.domain.ApprovalActivity.CREATE_APPROVAL;
+import static no.sikt.nva.approvals.domain.ApprovalActivity.UPDATE_APPROVAL;
 import static no.sikt.nva.approvals.persistence.DynamoDbConstants.PK0;
 import static no.sikt.nva.approvals.persistence.DynamoDbConstants.PK1;
 import static no.sikt.nva.approvals.persistence.DynamoDbConstants.PK2;
@@ -14,6 +16,7 @@ import static no.sikt.nva.approvals.utils.TestUtils.randomHandle;
 import static no.sikt.nva.approvals.utils.TestUtils.randomIdentifier;
 import static no.sikt.nva.approvals.utils.TestUtils.randomIdentifierPolicy;
 import static no.sikt.nva.approvals.utils.TestUtils.randomIdentifiers;
+import static no.sikt.nva.approvals.utils.TestUtils.randomRevision;
 import static no.sikt.nva.approvals.utils.TestUtils.randomTimestamp;
 import static no.unit.nva.testutils.RandomDataGenerator.randomString;
 import static no.unit.nva.testutils.RandomDataGenerator.randomUri;
@@ -26,8 +29,10 @@ import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.net.URI;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -36,7 +41,9 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import no.sikt.nva.approvals.domain.Approval;
+import no.sikt.nva.approvals.domain.ApprovalRevision;
 import no.sikt.nva.approvals.domain.IdentifierPolicy;
+import no.sikt.nva.approvals.domain.NamedIdentifier;
 import no.sikt.nva.approvals.events.SourceChangedEvent;
 import no.unit.nva.commons.json.JsonUtils;
 import nva.commons.core.Environment;
@@ -61,6 +68,9 @@ class DynamoDbApprovalRepositoryTest {
   private static final String TYPE_FIELD = "type";
   private static final String CUSTOMER_IDENTIFIER_FIELD = "customerIdentifier";
   private static final String CREATED_DATE_FIELD = "createdDate";
+  private static final String CHANGE_KEY = "Change:%s";
+  private static final String APPROVAL_REVISION_TYPE = "ApprovalRevision";
+  private static final String OTHER_CHANGE_TYPE = "SourceSnapshot";
 
   private ApprovalRepository approvalRepository;
   private DynamoDbLocal dynamoDbLocal;
@@ -79,7 +89,7 @@ class DynamoDbApprovalRepositoryTest {
   @Test
   void shouldPersistApproval() {
     var approval = randomApproval(randomHandle());
-    approvalRepository.save(approval);
+    saveApproval(approval);
     var persistedApproval = approvalRepository.findByApprovalIdentifier(approval.identifier());
 
     assertEquals(approval, persistedApproval.orElseThrow());
@@ -89,28 +99,27 @@ class DynamoDbApprovalRepositoryTest {
   void shouldThrowExceptionWhenPersistingApprovalWithExistingIdentifier() {
     var identifier = randomIdentifier();
     var approval = randomApproval(identifier);
-    approvalRepository.save(approval);
+    saveApproval(approval);
 
-    assertThrows(Exception.class, () -> approvalRepository.save(randomApproval(identifier)));
+    assertThrows(Exception.class, () -> saveApproval(randomApproval(identifier)));
   }
 
   @Test
   void shouldThrowExceptionWhenPersistingApprovalWithExistingHandle() {
     var handle = randomHandle();
     var approval = randomApproval(handle);
-    approvalRepository.save(approval);
+    saveApproval(approval);
 
-    assertThrows(Exception.class, () -> approvalRepository.save(randomApproval(handle)));
+    assertThrows(Exception.class, () -> saveApproval(randomApproval(handle)));
   }
 
   @Test
   void shouldThrowExceptionWhenPersistingApprovalWithExistingApprovalIdentifier() {
     var identifier = randomUUID();
     var approval = randomApproval(identifier, randomUri());
-    approvalRepository.save(approval);
+    saveApproval(approval);
 
-    assertThrows(
-        Exception.class, () -> approvalRepository.save(randomApproval(identifier, randomUri())));
+    assertThrows(Exception.class, () -> saveApproval(randomApproval(identifier, randomUri())));
   }
 
   @Test
@@ -146,7 +155,7 @@ class DynamoDbApprovalRepositoryTest {
   void shouldFindByHandle() {
     var handle = randomHandle();
     var approval = randomApproval(handle);
-    approvalRepository.save(approval);
+    saveApproval(approval);
     var persistedApproval = approvalRepository.findByHandle(handle);
 
     assertEquals(approval, persistedApproval.orElseThrow());
@@ -156,7 +165,7 @@ class DynamoDbApprovalRepositoryTest {
   void shouldFindByApprovalIdentifier() {
     var identifier = randomIdentifier();
     var approval = randomApproval(identifier);
-    approvalRepository.save(approval);
+    saveApproval(approval);
     var persistedApproval = approvalRepository.findByIdentifier(identifier);
 
     assertEquals(approval, persistedApproval.orElseThrow());
@@ -171,7 +180,7 @@ class DynamoDbApprovalRepositoryTest {
   void shouldFindIdentifiers() {
     var identifiers = randomIdentifiers();
     var approval = randomApproval(identifiers, randomUUID());
-    approvalRepository.save(approval);
+    saveApproval(approval);
     var persistedIdentifiers = approvalRepository.findIdentifiers(identifiers);
 
     assertEquals(
@@ -183,7 +192,7 @@ class DynamoDbApprovalRepositoryTest {
   void shouldSaveAndFindIdentifiersWhenMoreThan100Provided() {
     var identifiers = randomIdentifiers(110);
     var approval = randomApproval(identifiers, randomUUID());
-    approvalRepository.save(approval);
+    saveApproval(approval);
     var persistedIdentifiers = approvalRepository.findIdentifiers(identifiers);
 
     assertEquals(identifiers.size(), persistedIdentifiers.size());
@@ -193,7 +202,7 @@ class DynamoDbApprovalRepositoryTest {
   void shouldUpdateApprovalIdentifiersByAddingNewIdentifiers() {
     var initialIdentifiers = randomIdentifiers(2);
     var approval = randomApproval(initialIdentifiers, randomUUID());
-    approvalRepository.save(approval);
+    saveApproval(approval);
 
     var newIdentifiers = randomIdentifiers(3);
     var allIdentifiers = new java.util.ArrayList<>(initialIdentifiers);
@@ -206,7 +215,7 @@ class DynamoDbApprovalRepositoryTest {
             approval.handle(),
             approval.customerIdentifier());
 
-    approvalRepository.updateApproval(updatedApproval);
+    updateApproval(updatedApproval);
     var persistedApproval = approvalRepository.findByApprovalIdentifier(approval.identifier());
 
     assertTrue(persistedApproval.orElseThrow().namedIdentifiers().containsAll(allIdentifiers));
@@ -216,7 +225,7 @@ class DynamoDbApprovalRepositoryTest {
   void shouldUpdateApprovalIdentifiersByRemovingIdentifiers() {
     var initialIdentifiers = randomIdentifiers(5);
     var approval = randomApproval(initialIdentifiers, randomUUID());
-    approvalRepository.save(approval);
+    saveApproval(approval);
 
     var remainingIdentifiers = initialIdentifiers.stream().limit(2).toList();
     var updatedApproval =
@@ -227,7 +236,7 @@ class DynamoDbApprovalRepositoryTest {
             approval.handle(),
             approval.customerIdentifier());
 
-    approvalRepository.updateApproval(updatedApproval);
+    updateApproval(updatedApproval);
     var persistedApproval = approvalRepository.findByApprovalIdentifier(approval.identifier());
 
     assertTrue(
@@ -238,7 +247,7 @@ class DynamoDbApprovalRepositoryTest {
   void shouldUpdateApprovalIdentifiersByAddingAndRemovingIdentifiers() {
     var initialIdentifiers = randomIdentifiers(3);
     var approval = randomApproval(initialIdentifiers, randomUUID());
-    approvalRepository.save(approval);
+    saveApproval(approval);
 
     var keptIdentifiers = initialIdentifiers.stream().limit(1).toList();
     var newIdentifiers = randomIdentifiers(2);
@@ -253,7 +262,7 @@ class DynamoDbApprovalRepositoryTest {
             approval.handle(),
             approval.customerIdentifier());
 
-    approvalRepository.updateApproval(updatedApproval);
+    updateApproval(updatedApproval);
     var persistedApproval = approvalRepository.findByApprovalIdentifier(approval.identifier());
 
     assertTrue(persistedApproval.orElseThrow().namedIdentifiers().containsAll(finalIdentifiers));
@@ -263,7 +272,7 @@ class DynamoDbApprovalRepositoryTest {
   void shouldUpdateApprovalIdentifiersWhenMoreThen80ItemsToModifyInTransaction() {
     var initialIdentifiers = randomIdentifiers(50);
     var approval = randomApproval(initialIdentifiers, randomUUID());
-    approvalRepository.save(approval);
+    saveApproval(approval);
 
     var keptIdentifiers = initialIdentifiers.stream().limit(10).toList();
     var newIdentifiers = randomIdentifiers(60);
@@ -278,7 +287,7 @@ class DynamoDbApprovalRepositoryTest {
             approval.handle(),
             approval.customerIdentifier());
 
-    approvalRepository.updateApproval(updatedApproval);
+    updateApproval(updatedApproval);
     var persistedApproval = approvalRepository.findByApprovalIdentifier(approval.identifier());
 
     assertTrue(persistedApproval.orElseThrow().namedIdentifiers().containsAll(finalIdentifiers));
@@ -287,7 +296,7 @@ class DynamoDbApprovalRepositoryTest {
   @Test
   void shouldPersistCustomerIdWhenSavingNewApproval() {
     var approval = randomApproval(randomHandle());
-    approvalRepository.save(approval);
+    saveApproval(approval);
 
     var persistedApproval = approvalRepository.findByApprovalIdentifier(approval.identifier());
 
@@ -299,7 +308,7 @@ class DynamoDbApprovalRepositoryTest {
   void shouldPersistTimestampsWhenSavingNewApproval() {
     var beforeSave = Instant.now().truncatedTo(MILLIS);
     var approval = randomApproval(randomHandle());
-    approvalRepository.save(approval);
+    saveApproval(approval);
 
     var persistedApproval = storedApproval(approval.identifier());
 
@@ -310,10 +319,10 @@ class DynamoDbApprovalRepositoryTest {
   @Test
   void shouldPersistModifiedDateWhenUpdatingIdentifiers() {
     var approval = randomApproval(randomIdentifiers(2), randomUUID());
-    approvalRepository.save(approval);
+    saveApproval(approval);
     var createdDate = storedApproval(approval.identifier()).createdDate();
 
-    approvalRepository.updateApproval(
+    updateApproval(
         new Approval(
             approval.identifier(),
             randomIdentifiers(3),
@@ -329,7 +338,7 @@ class DynamoDbApprovalRepositoryTest {
   @Test
   void shouldReadAlreadyExistingApprovalWithoutTimestamps() {
     var approval = randomApproval(randomHandle());
-    approvalRepository.save(approval);
+    saveApproval(approval);
     removeTimestampsFromApprovalEntity(approval.identifier());
 
     var persistedApproval = approvalRepository.findByApprovalIdentifier(approval.identifier());
@@ -340,10 +349,10 @@ class DynamoDbApprovalRepositoryTest {
   @Test
   void shouldPersistSourceWhenNoIdentifiersChanged() {
     var approval = randomApproval(randomIdentifiers(2), randomUUID());
-    approvalRepository.save(approval);
+    saveApproval(approval);
     var newSource = randomUri();
 
-    approvalRepository.updateApproval(
+    updateApproval(
         new Approval(
             approval.identifier(),
             approval.namedIdentifiers(),
@@ -360,7 +369,7 @@ class DynamoDbApprovalRepositoryTest {
   void shouldThrowExceptionWhenUpdatingNonExistentApproval() {
     var approval = randomApproval(randomHandle());
 
-    assertThrows(IllegalStateException.class, () -> approvalRepository.updateApproval(approval));
+    assertThrows(IllegalStateException.class, () -> updateApproval(approval));
   }
 
   @Test
@@ -368,10 +377,10 @@ class DynamoDbApprovalRepositoryTest {
       shouldThrowTransactionCanceledExceptionWhenAddingIdentifierThatAlreadyExistsInAnotherApproval() {
     var sharedIdentifier = randomIdentifier();
     var firstApproval = randomApproval(sharedIdentifier);
-    approvalRepository.save(firstApproval);
+    saveApproval(firstApproval);
 
     var secondApproval = randomApproval(randomHandle());
-    approvalRepository.save(secondApproval);
+    saveApproval(secondApproval);
 
     var updatedSecondApproval =
         new Approval(
@@ -381,9 +390,7 @@ class DynamoDbApprovalRepositoryTest {
             secondApproval.handle(),
             secondApproval.customerIdentifier());
 
-    assertThrows(
-        TransactionCanceledException.class,
-        () -> approvalRepository.updateApproval(updatedSecondApproval));
+    assertThrows(TransactionCanceledException.class, () -> updateApproval(updatedSecondApproval));
   }
 
   @Test
@@ -470,7 +477,7 @@ class DynamoDbApprovalRepositoryTest {
   void shouldPersistCreatedDateOnHandleWhenSavingApproval() {
     var handle = randomHandle();
     var approval = randomApproval(handle);
-    approvalRepository.save(approval);
+    saveApproval(approval);
 
     var databaseEntry = getDatabaseEntry(HandleDao.toDatabaseIdentifier(handle));
 
@@ -481,7 +488,7 @@ class DynamoDbApprovalRepositoryTest {
   void shouldPersistCreatedDateOnIdentifierWhenSavingApproval() {
     var namedIdentifier = randomIdentifier();
     var approval = randomApproval(randomHandle(), namedIdentifier);
-    approvalRepository.save(approval);
+    saveApproval(approval);
 
     var databaseEntry = getDatabaseEntry(IdentifierDao.toDatabaseIdentifier(namedIdentifier));
 
@@ -493,7 +500,7 @@ class DynamoDbApprovalRepositoryTest {
     var handle = randomHandle();
     var namedIdentifier = randomIdentifier();
     var approval = randomApproval(handle, namedIdentifier);
-    approvalRepository.save(approval);
+    saveApproval(approval);
 
     var handleCreatedDate = getDatabaseEntry(HandleDao.toDatabaseIdentifier(handle)).createdDate();
     var approvalCreatedDate =
@@ -512,10 +519,10 @@ class DynamoDbApprovalRepositoryTest {
   void shouldSetCreatedDateOnNewIdentifierWhenUpdatingApprovalIdentifiers() {
     var existingIdentifier = randomIdentifier();
     var approval = randomApproval(existingIdentifier);
-    approvalRepository.save(approval);
+    saveApproval(approval);
     var newIdentifier = randomIdentifier();
 
-    approvalRepository.updateApproval(
+    updateApproval(
         new Approval(
             approval.identifier(),
             List.of(existingIdentifier, newIdentifier),
@@ -550,6 +557,212 @@ class DynamoDbApprovalRepositoryTest {
     assertEquals(
         updatedIdentifierPolicy,
         approvalRepository.findIdentifierPolicy(customerIdentifier).orElseThrow());
+  }
+
+  @Test
+  void shouldPersistExactlyOneRevisionWhenSavingApproval() {
+    var approval = randomApproval(randomHandle());
+    var revision = randomRevision(approval, CREATE_APPROVAL);
+
+    approvalRepository.save(revision);
+
+    assertEquals(List.of(revision), approvalRepository.findRevisions(approval.identifier()));
+  }
+
+  @Test
+  void shouldPersistExactlyOneNewRevisionWhenUpdatingApproval() {
+    var approval = randomApproval(randomIdentifiers(2), randomUUID());
+    var createRevision = randomRevision(approval, CREATE_APPROVAL);
+    approvalRepository.save(createRevision);
+    var updateRevision =
+        randomRevision(withIdentifiers(approval, randomIdentifiers(3)), UPDATE_APPROVAL);
+
+    approvalRepository.updateApproval(updateRevision);
+
+    assertEquals(
+        List.of(createRevision, updateRevision),
+        approvalRepository.findRevisions(approval.identifier()));
+  }
+
+  @Test
+  void shouldReturnRevisionsInTimeOrder() {
+    var approval = randomApproval(randomIdentifiers(2), randomUUID());
+    saveApproval(approval);
+    updateApproval(withIdentifiers(approval, randomIdentifiers(1)));
+    updateApproval(withSource(approval, randomUri()));
+
+    var activities =
+        approvalRepository.findRevisions(approval.identifier()).stream()
+            .map(ApprovalRevision::activity)
+            .toList();
+
+    assertEquals(List.of(CREATE_APPROVAL, UPDATE_APPROVAL, UPDATE_APPROVAL), activities);
+  }
+
+  @Test
+  void shouldPersistExactlyOneRevisionWhenSavingApprovalWithMoreThan80Identifiers() {
+    var approval = randomApproval(randomIdentifiers(110), randomUUID());
+
+    saveApproval(approval);
+
+    assertEquals(1, approvalRepository.findRevisions(approval.identifier()).size());
+  }
+
+  @Test
+  void shouldPersistExactlyOneNewRevisionWhenMoreThan80ItemsToModifyInTransaction() {
+    var approval = randomApproval(randomIdentifiers(50), randomUUID());
+    saveApproval(approval);
+
+    updateApproval(withIdentifiers(approval, randomIdentifiers(60)));
+
+    assertEquals(2, approvalRepository.findRevisions(approval.identifier()).size());
+  }
+
+  @Test
+  void shouldNotSaveApprovalWhenRevisionWriteFails() {
+    var approval = randomApproval(randomHandle());
+    var revision = randomRevision(approval, CREATE_APPROVAL);
+    insertConflictingChangeItem(revision);
+
+    assertThrows(TransactionCanceledException.class, () -> approvalRepository.save(revision));
+    assertTrue(approvalRepository.findByApprovalIdentifier(approval.identifier()).isEmpty());
+  }
+
+  @Test
+  void shouldNotUpdateApprovalWhenRevisionWriteFails() {
+    var approval = randomApproval(randomIdentifiers(2), randomUUID());
+    saveApproval(approval);
+    var revision = randomRevision(withIdentifiers(approval, randomIdentifiers(3)), UPDATE_APPROVAL);
+    insertConflictingChangeItem(revision);
+
+    assertThrows(
+        TransactionCanceledException.class, () -> approvalRepository.updateApproval(revision));
+    var persistedApproval =
+        approvalRepository.findByApprovalIdentifier(approval.identifier()).orElseThrow();
+    assertEquals(
+        Set.copyOf(approval.namedIdentifiers()), Set.copyOf(persistedApproval.namedIdentifiers()));
+  }
+
+  @Test
+  void shouldReleaseRemovedIdentifierAndKeepItInEarlierRevision() {
+    var keptIdentifier = randomIdentifier();
+    var removedIdentifier = randomIdentifier();
+    var approval = randomApproval(List.of(keptIdentifier, removedIdentifier), randomUUID());
+    saveApproval(approval);
+
+    updateApproval(withIdentifiers(approval, List.of(keptIdentifier)));
+    var otherApproval = randomApproval(List.of(removedIdentifier), randomUUID());
+    saveApproval(otherApproval);
+
+    var firstRevision = approvalRepository.findRevisions(approval.identifier()).getFirst();
+    assertTrue(firstRevision.approval().namedIdentifiers().contains(removedIdentifier));
+    assertEquals(
+        otherApproval, approvalRepository.findByIdentifier(removedIdentifier).orElseThrow());
+  }
+
+  @Test
+  void shouldNotIndexRevisionInSecondaryIndexes() {
+    var approval = randomApproval(randomHandle());
+    var revision = randomRevision(approval, CREATE_APPROVAL);
+    approvalRepository.save(revision);
+
+    var item = scanItem(changeKey(revision));
+
+    assertFalse(item.containsKey(PK1));
+    assertFalse(item.containsKey(PK2));
+  }
+
+  @Test
+  void shouldStoreRevisionUnderApprovalPartitionKey() {
+    var approval = randomApproval(randomHandle());
+    var revision = randomRevision(approval, CREATE_APPROVAL);
+    approvalRepository.save(revision);
+
+    var item = scanItem(changeKey(revision));
+
+    assertEquals(ApprovalDao.toDatabaseIdentifier(approval.identifier()), item.get(PK0).s());
+    assertEquals(APPROVAL_REVISION_TYPE, item.get(TYPE_FIELD).s());
+  }
+
+  @Test
+  void shouldNotReturnOtherChangeTypesAsRevisions() {
+    var approval = randomApproval(randomHandle());
+    saveApproval(approval);
+    insertChangeItemOfOtherType(approval.identifier());
+
+    assertEquals(1, approvalRepository.findRevisions(approval.identifier()).size());
+  }
+
+  @Test
+  void shouldUseGeneratedAtTimeAsCreatedDateOfRevision() {
+    var revision = randomRevision(randomApproval(randomHandle()), CREATE_APPROVAL);
+    approvalRepository.save(revision);
+
+    var databaseEntry = toDatabaseEntry(scanItem(changeKey(revision)));
+
+    assertEquals(revision.generatedAtTime(), databaseEntry.createdDate());
+  }
+
+  @Test
+  void shouldReturnEmptyListWhenApprovalHasNoRevisions() {
+    assertTrue(approvalRepository.findRevisions(randomUUID()).isEmpty());
+  }
+
+  private void saveApproval(Approval approval) {
+    approvalRepository.save(randomRevision(approval, CREATE_APPROVAL));
+  }
+
+  private void updateApproval(Approval approval) {
+    approvalRepository.updateApproval(randomRevision(approval, UPDATE_APPROVAL));
+  }
+
+  private static Approval withIdentifiers(
+      Approval approval, Collection<NamedIdentifier> namedIdentifiers) {
+    return new Approval(
+        approval.identifier(),
+        namedIdentifiers,
+        approval.source(),
+        approval.handle(),
+        approval.customerIdentifier());
+  }
+
+  private static Approval withSource(Approval approval, URI source) {
+    return new Approval(
+        approval.identifier(),
+        approval.namedIdentifiers(),
+        source,
+        approval.handle(),
+        approval.customerIdentifier());
+  }
+
+  private static String changeKey(ApprovalRevision revision) {
+    return CHANGE_KEY.formatted(revision.changeId());
+  }
+
+  private void insertConflictingChangeItem(ApprovalRevision revision) {
+    insertChangeItem(revision.approval().identifier(), changeKey(revision), APPROVAL_REVISION_TYPE);
+  }
+
+  private void insertChangeItemOfOtherType(UUID approvalIdentifier) {
+    insertChangeItem(approvalIdentifier, CHANGE_KEY.formatted(randomString()), OTHER_CHANGE_TYPE);
+  }
+
+  private void insertChangeItem(UUID approvalIdentifier, String sortKey, String type) {
+    var item = new HashMap<String, AttributeValue>();
+    item.put(
+        PK0,
+        AttributeValue.builder().s(ApprovalDao.toDatabaseIdentifier(approvalIdentifier)).build());
+    item.put(SK0, AttributeValue.builder().s(sortKey).build());
+    item.put(TYPE_FIELD, AttributeValue.builder().s(type).build());
+
+    dynamoDbLocal.client().putItem(PutItemRequest.builder().tableName(TABLE).item(item).build());
+  }
+
+  private Map<String, AttributeValue> scanItem(String sortKey) {
+    return scanItems().stream()
+        .filter(item -> sortKey.equals(item.get(SK0).s()))
+        .findFirst()
+        .orElseThrow();
   }
 
   private void insertIdentifierPolicyWithoutAllowedIdentifierNames(UUID customerIdentifier) {

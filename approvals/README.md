@@ -151,6 +151,21 @@ A single DynamoDB table with `PK0`/`SK0` plus two global secondary indexes (`GSI
 by named identifier in addition to lookup by approval id. Point-in-time recovery is enabled and the table is tagged for
 backup.
 
+Every create and update of an approval also writes an immutable `ApprovalRevision` in the same `TransactWriteItems` as
+the approval item (the first chunk when the write is split at 80 items), so a failed revision write rolls back the
+approval write. An update that changes nothing writes no revision.
+
+| Item               | `PK0`             | `SK0`               | `PK1`/`PK2` |
+| ------------------ | ----------------- | ------------------- | ----------- |
+| `ApprovalRevision` | `Approval:<uuid>` | `Change:<changeId>` | not set     |
+
+- `changeId` is `<UTC timestamp with fixed width, microseconds>_<random uuid>`, e.g.
+  `2026-09-30T10:15:30.123456Z_3f2a…`, so it sorts by time as a string.
+- The item holds a copy of the record (`identifiers`, `source`, `handle`) together with `generatedAtTime`, `activity`
+  (`CreateApproval` / `UpdateApproval`), `customerId`, `context` and `ontology`.
+- Revisions for one approval are listed in time order with a query on `PK0 = Approval:<uuid>` and
+  `SK0 begins_with Change:`, filtered on `type = ApprovalRevision`.
+
 ## Endpoints
 
 | Method | Path            | OperationId          | Scope                                                        | Success | Description                                             |
