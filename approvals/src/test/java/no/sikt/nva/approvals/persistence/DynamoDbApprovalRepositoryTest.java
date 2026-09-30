@@ -586,17 +586,19 @@ class DynamoDbApprovalRepositoryTest {
 
   @Test
   void shouldReturnRevisionsInTimeOrder() {
-    var approval = randomApproval(randomIdentifiers(2), randomUUID());
-    saveApproval(approval);
-    updateApproval(withIdentifiers(approval, randomIdentifiers(1)));
-    updateApproval(withSource(approval, randomUri()));
+    var createdApproval = randomApproval(randomIdentifiers(2), randomUUID());
+    var firstUpdate = withIdentifiers(createdApproval, randomIdentifiers(1));
+    var secondUpdate = withSource(firstUpdate, randomUri());
+    saveApproval(createdApproval);
+    updateApproval(firstUpdate);
+    updateApproval(secondUpdate);
 
-    var activities =
-        approvalRepository.findRevisions(approval.identifier()).stream()
-            .map(ApprovalRevision::activity)
+    var approvalSnapshots =
+        approvalRepository.findRevisions(createdApproval.identifier()).stream()
+            .map(ApprovalRevision::approval)
             .toList();
 
-    assertEquals(List.of(CREATE_APPROVAL, UPDATE_APPROVAL, UPDATE_APPROVAL), activities);
+    assertEquals(List.of(createdApproval, firstUpdate, secondUpdate), approvalSnapshots);
   }
 
   @Test
