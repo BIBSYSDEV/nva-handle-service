@@ -21,4 +21,16 @@ public record Approval(
     Objects.requireNonNull(namedIdentifiers, "List is mandatory for approval creation");
     shouldNotBeEmpty(namedIdentifiers, "Identifiers are mandatory for approval creation");
   }
+
+  public void ensureOwnedBy(UUID requestedCustomerIdentifier) throws CustomerMismatchException {
+    if (!requestedCustomerIdentifier.equals(customerIdentifier)) {
+      throw new CustomerMismatchException();
+    }
+  }
+
+  public void ensureSourceIs(URI requestedSource) throws SourceMismatchException {
+    if (!requestedSource.equals(source)) {
+      throw new SourceMismatchException();
+    }
+  }
 }

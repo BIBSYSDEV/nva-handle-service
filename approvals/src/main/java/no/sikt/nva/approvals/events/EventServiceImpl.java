@@ -2,8 +2,6 @@ package no.sikt.nva.approvals.events;
 
 import no.sikt.nva.approvals.domain.ApprovalNotFoundException;
 import no.sikt.nva.approvals.domain.ApprovalServiceException;
-import no.sikt.nva.approvals.domain.CustomerMismatchException;
-import no.sikt.nva.approvals.domain.SourceMismatchException;
 import no.sikt.nva.approvals.persistence.ApprovalRepository;
 import no.sikt.nva.approvals.persistence.DynamoDbApprovalRepository;
 import nva.commons.core.Environment;
@@ -28,12 +26,8 @@ public class EventServiceImpl implements EventService {
         approvalRepository
             .findByHandle(event.handle())
             .orElseThrow(() -> new ApprovalNotFoundException(event.handle()));
-    if (!approval.customerIdentifier().equals(event.customerIdentifier())) {
-      throw new CustomerMismatchException();
-    }
-    if (!approval.source().equals(event.source())) {
-      throw new SourceMismatchException();
-    }
+    approval.ensureOwnedBy(event.customerIdentifier());
+    approval.ensureSourceIs(event.source());
 
     approvalRepository.save(event);
   }
