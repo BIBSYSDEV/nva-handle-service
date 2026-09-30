@@ -58,8 +58,8 @@ class ApprovalServiceTest {
   private static final String FIRST_VALUE_WHEN_SORTED = "aaa-first";
   private static final String LAST_VALUE_WHEN_SORTED = "zzz-last";
   private static final String EXPECTED_JOINED_VALUES = "aaa-first, zzz-last";
-  private static final String CONTEXT_PATH = "context";
-  private static final String ONTOLOGY_PATH = "ontology";
+  private static final URI RELATIVE_CONTEXT_URI = URI.create("approval/context");
+  private static final URI RELATIVE_ONTOLOGY_URI = URI.create("approval/ontology");
   private static final Pattern CHANGE_ID_PATTERN =
       Pattern.compile(
           "\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{6}Z"
@@ -710,9 +710,21 @@ class ApprovalServiceTest {
     approvalService.create(randomIdentifiers(), randomUri(), randomUUID());
 
     var revision = capturedSavedRevision();
-    assertEquals(approvalPathUri(CONTEXT_PATH), revision.context());
-    assertEquals(approvalPathUri(ONTOLOGY_PATH), revision.ontology());
+    assertEquals(RELATIVE_CONTEXT_URI, revision.context());
+    assertEquals(RELATIVE_ONTOLOGY_URI, revision.ontology());
     assertFalse(revision.generatedAtTime().isBefore(beforeCreate));
+  }
+
+  @Test
+  void shouldNotPersistEnvironmentSpecificHostOnRevision()
+      throws SQLException, ApprovalServiceException, ApprovalConflictException {
+    when(handleDatabase.createHandle(any(), any(), any())).thenReturn(randomHandle().value());
+
+    approvalService.create(randomIdentifiers(), randomUri(), randomUUID());
+
+    var revision = capturedSavedRevision();
+    assertFalse(revision.context().isAbsolute());
+    assertFalse(revision.ontology().isAbsolute());
   }
 
   @Test
@@ -738,9 +750,5 @@ class ApprovalServiceTest {
     var captor = ArgumentCaptor.forClass(ApprovalRevision.class);
     verify(approvalRepository).updateApproval(captor.capture());
     return captor.getValue();
-  }
-
-  private static URI approvalPathUri(String childPath) {
-    return UriWrapper.fromHost(API_HOST).addChild(APPROVAL_PATH).addChild(childPath).getUri();
   }
 }

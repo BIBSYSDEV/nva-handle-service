@@ -33,8 +33,8 @@ public class ApprovalServiceImpl implements ApprovalService {
   private static final String HANDLE_PREFIX = "HANDLE_PREFIX";
   private static final String API_HOST = "API_HOST";
   private static final String APPROVAL_PATH = "approval";
-  private static final String CONTEXT_PATH = "context";
-  private static final String ONTOLOGY_PATH = "ontology";
+  private static final URI CONTEXT_PATH = URI.create("approval/context");
+  private static final URI ONTOLOGY_PATH = URI.create("approval/ontology");
   private static final String VALUE_DELIMITER = ", ";
   private static final String DUPLICATE_IDENTIFIERS_MESSAGE =
       "Identifiers must be unique, but the following were provided more than once: [%s]";
@@ -225,21 +225,15 @@ public class ApprovalServiceImpl implements ApprovalService {
   }
 
   private ApprovalRevision createRevision(Approval approval, ApprovalActivity activity) {
-    return ApprovalRevision.create(
-        approval,
-        activity,
-        createApprovalPathUri(CONTEXT_PATH),
-        createApprovalPathUri(ONTOLOGY_PATH),
-        Instant.now());
+    return ApprovalRevision.create(approval, activity, CONTEXT_PATH, ONTOLOGY_PATH, Instant.now());
   }
 
   private URI createApprovalUri(UUID approvalId) {
-    return createApprovalPathUri(approvalId.toString());
-  }
-
-  private URI createApprovalPathUri(String childPath) {
     var apiHost = environment.readEnv(API_HOST);
-    return UriWrapper.fromHost(apiHost).addChild(APPROVAL_PATH).addChild(childPath).getUri();
+    return UriWrapper.fromHost(apiHost)
+        .addChild(APPROVAL_PATH)
+        .addChild(approvalId.toString())
+        .getUri();
   }
 
   @SuppressWarnings("PMD.AvoidCatchingGenericException")
