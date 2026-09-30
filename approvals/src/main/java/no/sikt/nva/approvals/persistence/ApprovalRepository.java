@@ -9,12 +9,15 @@ import no.sikt.nva.approvals.domain.Handle;
 import no.sikt.nva.approvals.domain.IdentifierPolicy;
 import no.sikt.nva.approvals.domain.NamedIdentifier;
 import no.sikt.nva.approvals.events.SourceChangedEvent;
+import no.sikt.nva.approvals.snapshot.SourceSnapshot;
 
 public interface ApprovalRepository {
 
   void save(Approval approval);
 
   void save(SourceChangedEvent event, UUID approvalIdentifier);
+
+  void save(SourceSnapshot snapshot);
 
   void updateApproval(Approval approval);
 

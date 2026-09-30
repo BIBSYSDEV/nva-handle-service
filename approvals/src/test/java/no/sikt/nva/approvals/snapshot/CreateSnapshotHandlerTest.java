@@ -4,27 +4,37 @@ import static java.util.UUID.randomUUID;
 import static no.sikt.nva.approvals.utils.TestUtils.randomHandle;
 import static no.unit.nva.testutils.RandomDataGenerator.randomString;
 import static no.unit.nva.testutils.RandomDataGenerator.randomUri;
-import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 
 import com.amazonaws.services.lambda.runtime.events.SQSEvent;
 import com.amazonaws.services.lambda.runtime.events.SQSEvent.SQSMessage;
 import java.time.Instant;
 import java.util.List;
 import no.unit.nva.stubs.FakeContext;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 class CreateSnapshotHandlerTest {
 
-  private final CreateSnapshotHandler handler = new CreateSnapshotHandler();
+  private SnapshotService snapshotService;
+  private CreateSnapshotHandler handler;
+
+  @BeforeEach
+  void setUp() {
+    snapshotService = mock(SnapshotService.class);
+    handler = new CreateSnapshotHandler(snapshotService);
+  }
 
   @Test
-  void shouldAcceptSourceChangedMessage() {
+  void shouldCreateSnapshotForSourceChangeInMessage() {
     var sourceChangedMessage =
         new SourceChangedMessage(
             randomString(), randomUUID(), randomHandle().value(), randomUri(), Instant.now());
-    var event = sqsEvent(sourceChangedMessage.toJsonString());
 
-    assertDoesNotThrow(() -> handler.handleRequest(event, new FakeContext()));
+    handler.handleRequest(sqsEvent(sourceChangedMessage.toJsonString()), new FakeContext());
+
+    verify(snapshotService).createSnapshot(sourceChangedMessage.toSourceChange());
   }
 
   private static SQSEvent sqsEvent(String body) {

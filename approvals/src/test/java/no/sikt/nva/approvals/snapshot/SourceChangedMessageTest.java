@@ -27,7 +27,7 @@ class SourceChangedMessageTest {
 
   @Test
   void shouldThrowWithBodyInMessageWhenJsonIsInvalid() {
-    var invalidJson = "not json";
+    var invalidJson = randomString();
     var exception =
         assertThrows(
             IllegalArgumentException.class, () -> SourceChangedMessage.fromString(invalidJson));

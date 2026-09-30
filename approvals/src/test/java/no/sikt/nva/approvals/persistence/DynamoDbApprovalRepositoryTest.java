@@ -14,6 +14,7 @@ import static no.sikt.nva.approvals.utils.TestUtils.randomHandle;
 import static no.sikt.nva.approvals.utils.TestUtils.randomIdentifier;
 import static no.sikt.nva.approvals.utils.TestUtils.randomIdentifierPolicy;
 import static no.sikt.nva.approvals.utils.TestUtils.randomIdentifiers;
+import static no.sikt.nva.approvals.utils.TestUtils.randomSourceChange;
 import static no.sikt.nva.approvals.utils.TestUtils.randomTimestamp;
 import static no.unit.nva.testutils.RandomDataGenerator.randomString;
 import static no.unit.nva.testutils.RandomDataGenerator.randomUri;
@@ -38,6 +39,7 @@ import java.util.stream.Stream;
 import no.sikt.nva.approvals.domain.Approval;
 import no.sikt.nva.approvals.domain.IdentifierPolicy;
 import no.sikt.nva.approvals.events.SourceChangedEvent;
+import no.sikt.nva.approvals.snapshot.SourceSnapshot;
 import no.unit.nva.commons.json.JsonUtils;
 import nva.commons.core.Environment;
 import org.junit.jupiter.api.AfterEach;
@@ -674,6 +676,51 @@ class DynamoDbApprovalRepositoryTest {
     var persistedAfterSecondInvocation = storedEvent(event);
 
     assertThat(persisted.createdDate(), equalTo(persistedAfterSecondInvocation.createdDate()));
+  }
+
+  @Test
+  void shouldNotFindApprovalWhenOnlySnapshotExistsForApprovalIdentifier() {
+    var snapshot = SourceSnapshot.create(randomSourceChange(), Instant.now());
+    approvalRepository.save(snapshot);
+
+    var approval = approvalRepository.findByApprovalIdentifier(snapshot.approvalIdentifier());
+
+    assertThat(approval.isEmpty(), equalTo(true));
+  }
+
+  @Test
+  void shouldPersistSnapshot() {
+    var snapshot = SourceSnapshot.create(randomSourceChange(), Instant.now());
+    approvalRepository.save(snapshot);
+
+    var persisted = storedSnapshot(snapshot);
+
+    assertThat(persisted, equalTo(SourceSnapshotDao.fromSourceSnapshot(snapshot)));
+  }
+
+  @Test
+  void shouldNotOverwriteSnapshotWhenSameEventIsSavedAgain() {
+    var sourceChange = randomSourceChange();
+    var snapshot = SourceSnapshot.create(sourceChange, Instant.now());
+    approvalRepository.save(snapshot);
+    var redelivered = SourceSnapshot.create(sourceChange, snapshot.timestamp().plusSeconds(1));
+
+    approvalRepository.save(redelivered);
+
+    assertThat(storedSnapshot(snapshot).createdDate(), equalTo(snapshot.timestamp()));
+  }
+
+  private SourceSnapshotDao storedSnapshot(SourceSnapshot snapshot) {
+    var databaseIdentifier = SourceSnapshotDao.fromSourceSnapshot(snapshot).getDatabaseIdentifier();
+    return scanItems().stream()
+        .filter(item -> databaseIdentifier.equals(item.get(SK0).s()))
+        .findFirst()
+        .map(item -> EnhancedDocument.fromAttributeValueMap(item).toJson())
+        .map(
+            json ->
+                attempt(() -> JsonUtils.dtoObjectMapper.readValue(json, SourceSnapshotDao.class)))
+        .orElseThrow()
+        .orElseThrow();
   }
 
   private static SourceChangedEvent randomEvent() {

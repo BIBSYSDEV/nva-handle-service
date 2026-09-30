@@ -20,6 +20,7 @@ import no.sikt.nva.approvals.domain.NamedIdentifier;
 import no.sikt.nva.approvals.persistence.ApprovalDao;
 import no.sikt.nva.approvals.persistence.HandleDao;
 import no.sikt.nva.approvals.persistence.NamedIdentifierQueryObject;
+import no.sikt.nva.approvals.snapshot.SourceChange;
 import nva.commons.core.paths.UriWrapper;
 
 public class TestUtils {
@@ -98,6 +99,14 @@ public class TestUtils {
         identifier.value(),
         ApprovalDao.toDatabaseIdentifier(randomUUID()),
         HandleDao.toDatabaseIdentifier(randomHandle()));
+  }
+
+  public static SourceChange randomSourceChange() {
+    return randomSourceChange(randomUUID(), randomString());
+  }
+
+  public static SourceChange randomSourceChange(UUID approvalIdentifier, String eventIdentifier) {
+    return new SourceChange(approvalIdentifier, eventIdentifier, randomUri());
   }
 
   public static Handle randomHandle() {
