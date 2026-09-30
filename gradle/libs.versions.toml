@@ -1,8 +1,12 @@
 [versions]
 postgres = { strictly = '42.7.13' }
 jte = { strictly = '3.2.4' }
+jakarta-validation-api = { strictly = '3.1.1' }
+apache-bval = { strictly = '3.1.0' }
 
 [libraries]
+jakarta-validation-api = { group = 'jakarta.validation', name = 'jakarta.validation-api', version.ref = 'jakarta-validation-api' }
+apache-bval = { group = 'org.apache.bval', name = 'bval-jsr', version.ref = 'apache-bval' }
 postgres = { group = 'org.postgresql', name = 'postgresql', version.ref = 'postgres' }
 jte = { group = 'gg.jte', name = 'jte', version.ref = 'jte' }
 jte-runtime = { group = 'gg.jte', name = 'jte-runtime', version.ref = 'jte' }

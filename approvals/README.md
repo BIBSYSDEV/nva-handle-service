@@ -152,8 +152,9 @@ by named identifier in addition to lookup by approval id. Point-in-time recovery
 backup.
 
 Every create and update of an approval also writes an immutable `ApprovalRevision` in the same `TransactWriteItems` as
-the approval item (the first chunk when the write is split at 80 items), so a failed revision write rolls back the
-approval write. An update that changes nothing writes no revision.
+the approval item, so a failed revision write rolls back the approval write. An update that changes nothing writes no
+revision. Since an approval holds at most 20 identifiers (see [Validation](#validation)), a create writes at most 23
+items and an update at most 42, so every write fits in one transaction.
 
 | Item               | `PK0`             | `SK0`                       | `PK1`/`PK2` |
 | ------------------ | ----------------- | --------------------------- | ----------- |
@@ -184,8 +185,44 @@ approval write. An update that changes nothing writes no revision.
 | GET    | `/context`      | `getContext`         | open                                                         | `200`   | JSON-LD context                                         |
 | GET    | `/ontology`     | `getOntology`        | open                                                         | `200`   | RDF ontology (Turtle)                                   |
 
-Error codes: `400`, `401` (missing or invalid token), `403` (missing scope), `404`, `409` (identifier already in use,
-with `conflictingKeys`), `502`.
+Error codes: `400` (invalid request, with `errors`), `401` (missing or invalid token), `403` (missing scope), `404`,
+`409` (identifier already in use, with `conflictingKeys`), `502`.
+
+## Validation
+
+Requests are validated in the Lambda with Jakarta Bean Validation annotations on the request records, with Apache BVal
+as provider. The limits live as constants in `RequestConstraints`. API Gateway body validation is turned off
+(`no_validation`) for `POST /`, `PUT /{approvalId}` and `POST /events`, so every invalid request gets the same problem
+response.
+
+| Field                | Rule                                                                 |
+| -------------------- | -------------------------------------------------------------------- |
+| `identifiers`        | mandatory, 1 to 20 identifiers, no two with the same name and value  |
+| identifier `name`    | mandatory, at most 100 characters, only letters, digits, `-` and `_` |
+| identifier `value`   | mandatory, at most 1000 characters                                   |
+| `source`             | mandatory, at most 1024 characters                                   |
+| `handle` / `subject` | a handle URI of at most 1024 characters                              |
+| `?name=` / `?value=` | same length and name rules as an identifier                          |
+
+Names are compared ignoring case and surrounding whitespace when looking for duplicates, values are compared exactly.
+
+A `400` lists every invalid field in `errors`, sorted by pointer. The pointer is a JSON pointer into the request body,
+or the parameter name for query parameters:
+
+```json
+{
+  "title": "Bad Request",
+  "status": 400,
+  "detail": "/identifiers/3/value: Must be at most 1000 characters long; /source: Is mandatory",
+  "errors": [
+    {
+      "detail": "Must be at most 1000 characters long",
+      "pointer": "/identifiers/3/value"
+    },
+    { "detail": "Is mandatory", "pointer": "/source" }
+  ]
+}
+```
 
 Query parameters on `GET /` must be URL-encoded, and you supply either `handle` or both `name` and `value`:
 
@@ -251,6 +288,7 @@ src/main/
 │   ├── persistence/   # ApprovalRepository, DynamoDbApprovalRepository, DAOs, query objects
 │   ├── rest/          # Create/Update/Fetch handlers, request and response models, ApprovalHtmlModel
 │   ├── dmp/           # DmpClient, OAuth2TokenService and clinical trial models
+│   ├── validation/    # RequestValidator, RequestConstraints and custom constraints
 │   └── utils/         # RequestUtils, ValidationUtils
 └── resources/jte/     # HTML templates (approval.jte)
 ```

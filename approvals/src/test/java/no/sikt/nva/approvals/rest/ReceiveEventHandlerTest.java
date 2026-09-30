@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.net.URI;
 import java.time.Instant;
+import java.util.List;
 import java.util.Map;
 import no.sikt.nva.approvals.domain.ApprovalNotFoundException;
 import no.sikt.nva.approvals.domain.ApprovalServiceException;
@@ -55,6 +56,11 @@ class ReceiveEventHandlerTest {
   private static final String CONTENT_TYPE_HEADER = "Content-Type";
   private static final String CLOUD_EVENTS_CONTENT_TYPE = "application/cloudevents+json";
   private static final String SUPPORTED_CLOUD_EVENT_TYPE = "no.sikt.nva.approval.source.changed";
+  private static final String MANDATORY_MESSAGE = "Is mandatory";
+  private static final String SOURCE_POINTER = "/source";
+  private static final String ERRORS_PARAMETER = "errors";
+  private static final String DETAIL_FIELD = "detail";
+  private static final String POINTER_FIELD = "pointer";
 
   private ByteArrayOutputStream output;
   private ReceiveEventHandler handler;
@@ -127,6 +133,9 @@ class ReceiveEventHandlerTest {
     var response = send(event(randomUUID().toString(), null, randomHandle().value()));
 
     assertEquals(HTTP_BAD_REQUEST, response.getStatusCode());
+    assertEquals(
+        List.of(Map.of(DETAIL_FIELD, MANDATORY_MESSAGE, POINTER_FIELD, SOURCE_POINTER)),
+        response.getBodyObject(Problem.class).getParameters().get(ERRORS_PARAMETER));
   }
 
   @Test

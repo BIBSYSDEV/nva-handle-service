@@ -6,10 +6,13 @@ import static java.net.HttpURLConnection.HTTP_BAD_REQUEST;
 import static java.net.HttpURLConnection.HTTP_FORBIDDEN;
 import static java.net.HttpURLConnection.HTTP_NOT_FOUND;
 import static no.sikt.nva.approvals.utils.TestUtils.randomApproval;
+import static no.sikt.nva.approvals.utils.TestUtils.randomIdentifier;
+import static no.sikt.nva.approvals.utils.TestUtils.randomIdentifiers;
+import static no.sikt.nva.approvals.validation.RequestConstraints.MAX_IDENTIFIERS;
+import static no.sikt.nva.approvals.validation.RequestConstraints.MAX_IDENTIFIER_VALUE_LENGTH;
 import static no.unit.nva.testutils.RandomDataGenerator.randomString;
 import static no.unit.nva.testutils.RandomDataGenerator.randomUri;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
@@ -24,6 +27,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -51,9 +55,18 @@ class UpdateApprovalHandlerTest {
   private static final String APPROVAL_PATH = "approval";
   private static final String API_HOST = "API_HOST";
   private static final String REK = "REK";
-  private static final String IDENTIFIERS_MANDATORY_MESSAGE =
-      "At least one identifier is mandatory for approval update";
-  private static final String SOURCE_MANDATORY_MESSAGE = "Source is mandatory for approval update";
+  private static final String MANDATORY_MESSAGE = "Is mandatory";
+  private static final String SOURCE_MANDATORY_DETAIL = "/source: Is mandatory";
+  private static final String IDENTIFIERS_SIZE_MESSAGE =
+      "Between 1 and 20 identifiers are required";
+  private static final String VALUE_TOO_LONG_MESSAGE = "Must be at most 1000 characters long";
+  private static final String IDENTIFIERS_POINTER = "/identifiers";
+  private static final String SOURCE_POINTER = "/source";
+  private static final String IDENTIFIER_POINTER = "/identifier";
+  private static final String ERRORS_PARAMETER = "errors";
+  private static final String DETAIL_FIELD = "detail";
+  private static final String POINTER_FIELD = "pointer";
+  private static final String CHARACTER = "a";
   private static final String ID_MISMATCH_MESSAGE = "Provided id %s does not address approval %s";
   private static final String IDENTIFIER_MISMATCH_MESSAGE =
       "Provided identifier %s does not match approval %s";
@@ -125,7 +138,7 @@ class UpdateApprovalHandlerTest {
     var response = GatewayResponse.fromOutputStream(output, Problem.class);
 
     assertEquals(HTTP_BAD_REQUEST, response.getStatusCode());
-    assertTrue(problemDetail(response).contains(IDENTIFIERS_MANDATORY_MESSAGE));
+    assertEquals(List.of(error(MANDATORY_MESSAGE, IDENTIFIERS_POINTER)), problemErrors(response));
   }
 
   @Test
@@ -137,7 +150,50 @@ class UpdateApprovalHandlerTest {
     var response = GatewayResponse.fromOutputStream(output, Problem.class);
 
     assertEquals(HTTP_BAD_REQUEST, response.getStatusCode());
-    assertEquals(SOURCE_MANDATORY_MESSAGE, problemDetail(response));
+    assertEquals(SOURCE_MANDATORY_DETAIL, problemDetail(response));
+    assertEquals(List.of(error(MANDATORY_MESSAGE, SOURCE_POINTER)), problemErrors(response));
+  }
+
+  @Test
+  void shouldAcceptMaximumNumberOfIdentifiers() throws IOException {
+    var request =
+        createRequest(requestWithIdentifiers(randomIdentifiers(MAX_IDENTIFIERS)), approvalId);
+
+    handler.handleRequest(request, output, context);
+
+    var response = GatewayResponse.fromOutputStream(output, Void.class);
+
+    assertEquals(HTTP_ACCEPTED, response.getStatusCode());
+  }
+
+  @Test
+  void shouldReturnBadRequestWhenMoreThanMaximumNumberOfIdentifiers() throws IOException {
+    var request =
+        createRequest(requestWithIdentifiers(randomIdentifiers(MAX_IDENTIFIERS + 1)), approvalId);
+
+    handler.handleRequest(request, output, context);
+
+    var response = GatewayResponse.fromOutputStream(output, Problem.class);
+
+    assertEquals(HTTP_BAD_REQUEST, response.getStatusCode());
+    assertEquals(
+        List.of(error(IDENTIFIERS_SIZE_MESSAGE, IDENTIFIERS_POINTER)), problemErrors(response));
+    verifyNoInteractions(identifierAuthorizer);
+  }
+
+  @Test
+  void shouldReturnBadRequestPointingToIdentifierValueThatIsTooLong() throws IOException {
+    var tooLongValue = CHARACTER.repeat(MAX_IDENTIFIER_VALUE_LENGTH + 1);
+    var identifiers = List.of(randomIdentifier(), new NamedIdentifier(REK, tooLongValue));
+    var request = createRequest(requestWithIdentifiers(identifiers), approvalId);
+
+    handler.handleRequest(request, output, context);
+
+    var response = GatewayResponse.fromOutputStream(output, Problem.class);
+
+    assertEquals(HTTP_BAD_REQUEST, response.getStatusCode());
+    assertEquals(
+        List.of(error(VALUE_TOO_LONG_MESSAGE, "/identifiers/1/value")), problemErrors(response));
   }
 
   @Test
@@ -150,9 +206,9 @@ class UpdateApprovalHandlerTest {
     var response = GatewayResponse.fromOutputStream(output, Problem.class);
 
     assertEquals(HTTP_BAD_REQUEST, response.getStatusCode());
-    assertEquals(
-        IDENTIFIER_MISMATCH_MESSAGE.formatted(otherIdentifier, approvalId),
-        problemDetail(response));
+    var expectedMessage = IDENTIFIER_MISMATCH_MESSAGE.formatted(otherIdentifier, approvalId);
+    assertEquals(expectedMessage, problemDetail(response));
+    assertEquals(List.of(error(expectedMessage, IDENTIFIER_POINTER)), problemErrors(response));
   }
 
   @Test
@@ -359,6 +415,20 @@ class UpdateApprovalHandlerTest {
   private static String problemDetail(GatewayResponse<Problem> response)
       throws JsonProcessingException {
     return response.getBodyObject(Problem.class).getDetail();
+  }
+
+  private static Object problemErrors(GatewayResponse<Problem> response)
+      throws JsonProcessingException {
+    return response.getBodyObject(Problem.class).getParameters().get(ERRORS_PARAMETER);
+  }
+
+  private static Map<String, String> error(String detail, String pointer) {
+    return Map.of(DETAIL_FIELD, detail, POINTER_FIELD, pointer);
+  }
+
+  private static UpdateApprovalRequest requestWithIdentifiers(
+      Collection<NamedIdentifier> namedIdentifiers) {
+    return new UpdateApprovalRequest(null, null, namedIdentifiers, randomUri(), null);
   }
 
   private static String requestBodyWithIdentifiersAndSourceOnly() {

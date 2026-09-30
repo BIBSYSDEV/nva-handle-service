@@ -5,6 +5,8 @@ import static java.net.HttpURLConnection.HTTP_BAD_GATEWAY;
 import static java.net.HttpURLConnection.HTTP_BAD_REQUEST;
 import static java.net.HttpURLConnection.HTTP_CONFLICT;
 import static java.net.HttpURLConnection.HTTP_FORBIDDEN;
+import static no.sikt.nva.approvals.utils.TestUtils.randomIdentifiers;
+import static no.sikt.nva.approvals.validation.RequestConstraints.MAX_IDENTIFIERS;
 import static no.unit.nva.testutils.RandomDataGenerator.randomString;
 import static no.unit.nva.testutils.RandomDataGenerator.randomUri;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -13,6 +15,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import com.amazonaws.services.lambda.runtime.Context;
@@ -43,6 +46,12 @@ class CreateApprovalHandlerTest {
 
   private static final Context context = new FakeContext();
   private static final String REK = "REK";
+  private static final String MANDATORY_MESSAGE = "Is mandatory";
+  private static final String IDENTIFIERS_SIZE_MESSAGE =
+      "Between 1 and 20 identifiers are required";
+  private static final String ERRORS_PARAMETER = "errors";
+  private static final String DETAIL_FIELD = "detail";
+  private static final String POINTER_FIELD = "pointer";
   private CreateApprovalHandler handler;
   private ByteArrayOutputStream output;
   private FakeApprovalService approvalService;
@@ -113,10 +122,11 @@ class CreateApprovalHandlerTest {
   }
 
   @Test
-  void shouldReturnBadRequestWhenApprovalServiceRejectsDuplicateIdentifiers() throws IOException {
+  void shouldReturnBadRequestWhenApprovalServiceThrowsIllegalArgumentException()
+      throws IOException {
     handler =
         new CreateApprovalHandler(
-            new FakeApprovalService(new IllegalArgumentException("duplicate")),
+            new FakeApprovalService(new IllegalArgumentException("invalid")),
             identifierAuthorizer,
             new Environment());
     var request = createRequest(randomApprovalRequest(randomUri()));
@@ -199,6 +209,48 @@ class CreateApprovalHandlerTest {
     handler.handleRequest(request, output, context);
 
     assertEquals(customerIdentifier, approvalService.getPersistedApproval().customerIdentifier());
+  }
+
+  @Test
+  void shouldAcceptMaximumNumberOfIdentifiers() throws IOException {
+    var request =
+        createRequest(new CreateApprovalRequest(randomIdentifiers(MAX_IDENTIFIERS), randomUri()));
+
+    handler.handleRequest(request, output, context);
+
+    var response = GatewayResponse.fromOutputStream(output, Void.class);
+
+    assertEquals(HTTP_ACCEPTED, response.getStatusCode());
+  }
+
+  @Test
+  void shouldReturnBadRequestWithErrorPerFieldWhenRequestIsInvalid() throws Exception {
+    var request =
+        createRequest(new CreateApprovalRequest(randomIdentifiers(MAX_IDENTIFIERS + 1), null));
+
+    handler.handleRequest(request, output, context);
+
+    var response = GatewayResponse.fromOutputStream(output, Problem.class);
+    var problem = response.getBodyObject(Problem.class);
+
+    assertEquals(HTTP_BAD_REQUEST, response.getStatusCode());
+    assertEquals(
+        List.of(
+            Map.of(DETAIL_FIELD, IDENTIFIERS_SIZE_MESSAGE, POINTER_FIELD, "/identifiers"),
+            Map.of(DETAIL_FIELD, MANDATORY_MESSAGE, POINTER_FIELD, "/source")),
+        problem.getParameters().get(ERRORS_PARAMETER));
+    verifyNoInteractions(identifierAuthorizer);
+  }
+
+  @Test
+  void shouldReturnBadRequestWhenRequestBodyIsMissing() throws IOException {
+    var request = new HandlerRequestBuilder<Void>(JsonUtils.dtoObjectMapper).build();
+
+    handler.handleRequest(request, output, context);
+
+    var response = GatewayResponse.fromOutputStream(output, Problem.class);
+
+    assertEquals(HTTP_BAD_REQUEST, response.getStatusCode());
   }
 
   private static CreateApprovalRequest randomApprovalRequest(URI source) {
