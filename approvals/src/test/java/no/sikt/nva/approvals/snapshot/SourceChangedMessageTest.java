@@ -1,5 +1,6 @@
 package no.sikt.nva.approvals.snapshot;
 
+import static java.util.UUID.randomUUID;
 import static no.sikt.nva.approvals.utils.TestUtils.randomHandle;
 import static no.unit.nva.testutils.RandomDataGenerator.randomString;
 import static no.unit.nva.testutils.RandomDataGenerator.randomUri;
@@ -17,7 +18,7 @@ class SourceChangedMessageTest {
   void shouldParseSourceChangedMessageFromJson() {
     var expected =
         new SourceChangedMessage(
-            randomString(), randomHandle().value(), randomUri(), Instant.now());
+            randomString(), randomUUID(), randomHandle().value(), randomUri(), Instant.now());
 
     var actual = SourceChangedMessage.fromString(expected.toJsonString());
 

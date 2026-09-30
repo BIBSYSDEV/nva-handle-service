@@ -39,12 +39,12 @@ class EventServiceImplTest {
     var customerIdentifier = randomUUID();
     var source = randomUri();
     var event = randomEvent(customerIdentifier, source);
-    when(approvalRepository.findByHandle(event.handle()))
-        .thenReturn(Optional.of(randomApproval(source, event.handle(), customerIdentifier)));
+    var approval = randomApproval(source, event.handle(), customerIdentifier);
+    when(approvalRepository.findByHandle(event.handle())).thenReturn(Optional.of(approval));
 
     eventService.receive(event);
 
-    verify(approvalRepository).save(event);
+    verify(approvalRepository).save(event, approval.identifier());
   }
 
   @Test
@@ -53,7 +53,7 @@ class EventServiceImplTest {
     when(approvalRepository.findByHandle(event.handle())).thenReturn(Optional.empty());
 
     assertThrows(ApprovalNotFoundException.class, () -> eventService.receive(event));
-    verify(approvalRepository, never()).save((SourceChangedEvent) any());
+    verify(approvalRepository, never()).save(any(), any());
   }
 
   @Test

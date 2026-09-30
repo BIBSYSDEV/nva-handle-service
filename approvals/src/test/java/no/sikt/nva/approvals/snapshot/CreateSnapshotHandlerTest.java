@@ -1,5 +1,6 @@
 package no.sikt.nva.approvals.snapshot;
 
+import static java.util.UUID.randomUUID;
 import static no.sikt.nva.approvals.utils.TestUtils.randomHandle;
 import static no.unit.nva.testutils.RandomDataGenerator.randomString;
 import static no.unit.nva.testutils.RandomDataGenerator.randomUri;
@@ -20,7 +21,7 @@ class CreateSnapshotHandlerTest {
   void shouldAcceptSourceChangedMessage() {
     var sourceChangedMessage =
         new SourceChangedMessage(
-            randomString(), randomHandle().value(), randomUri(), Instant.now());
+            randomString(), randomUUID(), randomHandle().value(), randomUri(), Instant.now());
     var event = sqsEvent(sourceChangedMessage.toJsonString());
 
     assertDoesNotThrow(() -> handler.handleRequest(event, new FakeContext()));

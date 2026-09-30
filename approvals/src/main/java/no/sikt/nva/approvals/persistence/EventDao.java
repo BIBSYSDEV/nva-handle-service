@@ -22,18 +22,21 @@ public record EventDao(
     URI handle,
     Instant timestamp,
     UUID customerIdentifier,
+    UUID approvalIdentifier,
     Instant createdDate)
     implements JsonSerializable, DatabaseEntry {
 
   private static final String EVENT_KEY = "Event:%s:Handle:%s:Customer:%s";
 
-  public static EventDao fromEvent(SourceChangedEvent event, Instant createdDate) {
+  public static EventDao fromEvent(
+      SourceChangedEvent event, UUID approvalIdentifier, Instant createdDate) {
     return new EventDao(
         event.eventId(),
         event.source(),
         event.handle().value(),
         event.timestamp(),
         event.customerIdentifier(),
+        approvalIdentifier,
         createdDate);
   }
 

@@ -29,6 +29,6 @@ public class EventServiceImpl implements EventService {
     approval.ensureOwnedBy(event.customerIdentifier());
     approval.ensureSourceIs(event.source());
 
-    approvalRepository.save(event);
+    approvalRepository.save(event, approval.identifier());
   }
 }
