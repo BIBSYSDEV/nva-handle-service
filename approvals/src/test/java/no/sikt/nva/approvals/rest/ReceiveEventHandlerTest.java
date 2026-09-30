@@ -20,10 +20,14 @@ import com.amazonaws.services.lambda.runtime.Context;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.net.HttpURLConnection;
 import java.net.URI;
 import java.time.Instant;
 import java.util.Map;
 import no.sikt.nva.approvals.domain.ApprovalNotFoundException;
+import no.sikt.nva.approvals.domain.ApprovalServiceException;
+import no.sikt.nva.approvals.domain.CustomerMismatchException;
+import no.sikt.nva.approvals.domain.SourceMismatchException;
 import no.sikt.nva.approvals.events.CloudEvent;
 import no.sikt.nva.approvals.events.EventService;
 import no.unit.nva.commons.json.JsonUtils;
@@ -54,11 +58,12 @@ class ReceiveEventHandlerTest {
 
   private ByteArrayOutputStream output;
   private ReceiveEventHandler handler;
+  private EventService eventService;
 
   @BeforeEach
-  void setUp() throws ApprovalNotFoundException {
+  void setUp() throws ApprovalServiceException {
     output = new ByteArrayOutputStream();
-    var eventService = mock(EventService.class);
+    eventService = mock(EventService.class);
     doNothing().when(eventService).receive(any());
     handler = new ReceiveEventHandler(eventService, ENVIRONMENT);
   }
@@ -72,7 +77,7 @@ class ReceiveEventHandlerTest {
 
   @Test
   void shouldReturnNotFoundWhenServiceFindsNoApprovalForHandle()
-      throws IOException, ApprovalNotFoundException {
+      throws IOException, ApprovalServiceException {
     var unknownHandle = randomHandle();
     handler = handlerWithFailingService(new ApprovalNotFoundException(unknownHandle));
 
@@ -83,7 +88,7 @@ class ReceiveEventHandlerTest {
 
   @Test
   void shouldReturnInternalServerErrorWhenServiceFails()
-      throws IOException, ApprovalNotFoundException {
+      throws IOException, ApprovalServiceException {
     handler = handlerWithFailingService(new IllegalStateException(randomString()));
 
     var response = send(validEvent());
@@ -146,7 +151,25 @@ class ReceiveEventHandlerTest {
   }
 
   @Test
-  void shouldReturnForbiddenWhenCustomerIsEmittingEventForHandleTheyDoNotOwn() {}
+  void shouldReturnForbiddenWhenCustomerIsEmittingEventForHandleTheyDoNotOwn()
+      throws IOException, ApprovalServiceException {
+    doThrow(CustomerMismatchException.class).when(eventService).receive(any());
+
+    var response = send(validEvent());
+
+    assertEquals(HttpURLConnection.HTTP_FORBIDDEN, response.getStatusCode());
+  }
+
+  @Test
+  void
+      shouldReturnForbiddenWhenCustomerIsEmittingEventForSourceThatMismatchApprovalSourceForProvidedHandle()
+          throws IOException, ApprovalServiceException {
+    doThrow(SourceMismatchException.class).when(eventService).receive(any());
+
+    var response = send(validEvent());
+
+    assertEquals(HttpURLConnection.HTTP_FORBIDDEN, response.getStatusCode());
+  }
 
   private static CloudEvent validEvent() {
     return event(randomUUID().toString(), randomUri(), randomHandle().value());
@@ -158,7 +181,7 @@ class ReceiveEventHandlerTest {
   }
 
   private static ReceiveEventHandler handlerWithFailingService(Exception exception)
-      throws ApprovalNotFoundException {
+      throws ApprovalServiceException {
     var eventService = mock(EventService.class);
     doThrow(exception).when(eventService).receive(any());
     return new ReceiveEventHandler(eventService, ENVIRONMENT);

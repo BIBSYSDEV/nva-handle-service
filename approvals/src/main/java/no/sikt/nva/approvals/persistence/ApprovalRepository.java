@@ -8,10 +8,13 @@ import no.sikt.nva.approvals.domain.Approval;
 import no.sikt.nva.approvals.domain.Handle;
 import no.sikt.nva.approvals.domain.IdentifierPolicy;
 import no.sikt.nva.approvals.domain.NamedIdentifier;
+import no.sikt.nva.approvals.events.SourceChangedEvent;
 
 public interface ApprovalRepository {
 
   void save(Approval approval);
+
+  void save(SourceChangedEvent event);
 
   void updateApproval(Approval approval);
 

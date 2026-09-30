@@ -18,6 +18,8 @@ import static no.sikt.nva.approvals.utils.TestUtils.randomTimestamp;
 import static no.unit.nva.testutils.RandomDataGenerator.randomString;
 import static no.unit.nva.testutils.RandomDataGenerator.randomUri;
 import static nva.commons.core.attempt.Try.attempt;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
@@ -35,6 +37,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import no.sikt.nva.approvals.domain.Approval;
 import no.sikt.nva.approvals.domain.IdentifierPolicy;
+import no.sikt.nva.approvals.events.SourceChangedEvent;
 import no.unit.nva.commons.json.JsonUtils;
 import nva.commons.core.Environment;
 import org.junit.jupiter.api.AfterEach;
@@ -611,6 +614,71 @@ class DynamoDbApprovalRepositoryTest {
 
   private List<Map<String, AttributeValue>> scanItems() {
     return dynamoDbLocal.client().scan(ScanRequest.builder().tableName(TABLE).build()).items();
+  }
+
+  @Test
+  void shouldPersistEventWithProvidedSource() {
+    var event = randomEvent();
+    approvalRepository.save(event);
+
+    var persisted = storedEvent(event);
+
+    assertEquals(event.source(), persisted.source());
+  }
+
+  @Test
+  void shouldPersistEventWithProvidedHandle() {
+    var event = randomEvent();
+    approvalRepository.save(event);
+
+    var persisted = storedEvent(event);
+
+    assertEquals(event.handle().value(), persisted.handle());
+  }
+
+  @Test
+  void shouldPersistEventWithProvidedCustomerIdentifier() {
+    var event = randomEvent();
+    approvalRepository.save(event);
+
+    var persisted = storedEvent(event);
+
+    assertEquals(event.customerIdentifier(), persisted.customerIdentifier());
+  }
+
+  @Test
+  void shouldNotUpdateEventWhenEventWithSameHandleIdentifierAndCustomerAlreadyExists() {
+    var event = randomEvent();
+    approvalRepository.save(event);
+    var persisted = storedEvent(event);
+    var duplicate =
+        new SourceChangedEvent(
+            event.eventId(),
+            event.source(),
+            event.handle(),
+            event.timestamp().plusSeconds(1),
+            event.customerIdentifier());
+
+    approvalRepository.save(duplicate);
+    var persistedAfterSecondInvocation = storedEvent(event);
+
+    assertThat(persisted.createdDate(), equalTo(persistedAfterSecondInvocation.createdDate()));
+  }
+
+  private static SourceChangedEvent randomEvent() {
+    return new SourceChangedEvent(
+        randomUUID().toString(), randomUri(), randomHandle(), Instant.now(), randomUUID());
+  }
+
+  private EventDao storedEvent(SourceChangedEvent event) {
+    var databaseIdentifier = EventDao.fromEvent(event, null).getDatabaseIdentifier();
+    return scanItems().stream()
+        .filter(item -> databaseIdentifier.equals(item.get(PK0).s()))
+        .findFirst()
+        .map(item -> EnhancedDocument.fromAttributeValueMap(item).toJson())
+        .map(json -> attempt(() -> JsonUtils.dtoObjectMapper.readValue(json, EventDao.class)))
+        .orElseThrow()
+        .orElseThrow();
   }
 
   private DatabaseEntry getDatabaseEntry(String identifier) {
