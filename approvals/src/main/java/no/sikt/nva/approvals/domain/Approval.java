@@ -22,14 +22,14 @@ public record Approval(
     shouldNotBeEmpty(namedIdentifiers, "Identifiers are mandatory for approval creation");
   }
 
-  public void ensureOwnedBy(UUID requestedCustomerIdentifier) throws CustomerMismatchException {
-    if (!requestedCustomerIdentifier.equals(customerIdentifier)) {
+  public void ensureOwnedBy(UUID customerIdentifier) throws CustomerMismatchException {
+    if (!customerIdentifier.equals(this.customerIdentifier)) {
       throw new CustomerMismatchException();
     }
   }
 
-  public void ensureSourceIs(URI requestedSource) throws SourceMismatchException {
-    if (!requestedSource.equals(source)) {
+  public void ensureSourceIs(URI source) throws SourceMismatchException {
+    if (!source.equals(this.source)) {
       throw new SourceMismatchException();
     }
   }

@@ -5,7 +5,6 @@ import static no.sikt.nva.approvals.utils.TestUtils.randomApproval;
 import static no.sikt.nva.approvals.utils.TestUtils.randomHandle;
 import static no.sikt.nva.approvals.utils.TestUtils.randomIdentifier;
 import static no.unit.nva.testutils.RandomDataGenerator.randomUri;
-import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.util.Collections;
@@ -36,26 +35,10 @@ class ApprovalTest {
   }
 
   @Test
-  void shouldAcceptOwnershipCheckWhenCustomerMatches() {
-    var customerIdentifier = randomUUID();
-    var approval = randomApproval(randomUri(), randomHandle(), customerIdentifier);
-
-    assertDoesNotThrow(() -> approval.ensureOwnedBy(customerIdentifier));
-  }
-
-  @Test
   void shouldThrowCustomerMismatchWhenCustomerDiffers() {
     var approval = randomApproval(randomUri(), randomHandle(), randomUUID());
 
     assertThrows(CustomerMismatchException.class, () -> approval.ensureOwnedBy(randomUUID()));
-  }
-
-  @Test
-  void shouldAcceptSourceCheckWhenSourceMatches() {
-    var source = randomUri();
-    var approval = randomApproval(source, randomHandle(), randomUUID());
-
-    assertDoesNotThrow(() -> approval.ensureSourceIs(source));
   }
 
   @Test

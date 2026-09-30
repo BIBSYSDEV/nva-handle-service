@@ -25,7 +25,7 @@ public record EventDao(
     Instant createdDate)
     implements JsonSerializable, DatabaseEntry {
 
-  private static final String EVENT_KEY = "Identifier:%s:Handle:%s:Customer:%s";
+  private static final String EVENT_KEY = "Event:%s:Handle:%s:Customer:%s";
 
   public static EventDao fromEvent(SourceChangedEvent event, Instant createdDate) {
     return new EventDao(
