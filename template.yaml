@@ -141,28 +141,28 @@ Resources:
         - Key: IncludedInBackup
           Value: "true"
 
-  SourceChangedQueue:
+  CreateSnapshotQueue:
     Type: AWS::SQS::Queue
     Properties:
       FifoQueue: true
       ContentBasedDeduplication: false
       VisibilityTimeout: 1800
       RedrivePolicy:
-        deadLetterTargetArn: !GetAtt SourceChangedDlq.Arn
+        deadLetterTargetArn: !GetAtt CreateSnapshotDlq.Arn
         maxReceiveCount: 3
 
-  SourceChangedDlq:
+  CreateSnapshotDlq:
     Type: AWS::SQS::Queue
     Properties:
       FifoQueue: true
       MessageRetentionPeriod: 1209600
 
-  SourceChangedStreamDlq:
+  SourceChangedPipeDlq:
     Type: AWS::SQS::Queue
     Properties:
       MessageRetentionPeriod: 1209600
 
-  SourceChangedDlqAlarm:
+  CreateSnapshotDlqAlarm:
     Type: AWS::CloudWatch::Alarm
     Properties:
       AlarmDescription: Source changed messages failed processing
@@ -170,7 +170,7 @@ Resources:
       MetricName: ApproximateNumberOfMessagesVisible
       Dimensions:
         - Name: QueueName
-          Value: !GetAtt SourceChangedDlq.QueueName
+          Value: !GetAtt CreateSnapshotDlq.QueueName
       Statistic: Maximum
       Period: 300
       EvaluationPeriods: 1
@@ -178,7 +178,7 @@ Resources:
       ComparisonOperator: GreaterThanThreshold
       TreatMissingData: notBreaching
 
-  SourceChangedStreamDlqAlarm:
+  SourceChangedPipeDlqAlarm:
     Type: AWS::CloudWatch::Alarm
     Properties:
       AlarmDescription: Event stream records could not be forwarded to the source changed queue
@@ -186,7 +186,7 @@ Resources:
       MetricName: ApproximateNumberOfMessagesVisible
       Dimensions:
         - Name: QueueName
-          Value: !GetAtt SourceChangedStreamDlq.QueueName
+          Value: !GetAtt SourceChangedPipeDlq.QueueName
       Statistic: Maximum
       Period: 300
       EvaluationPeriods: 1
@@ -223,8 +223,8 @@ Resources:
                 Action:
                   - sqs:SendMessage
                 Resource:
-                  - !GetAtt SourceChangedQueue.Arn
-                  - !GetAtt SourceChangedStreamDlq.Arn
+                  - !GetAtt CreateSnapshotQueue.Arn
+                  - !GetAtt SourceChangedPipeDlq.Arn
 
   SourceChangedPipe:
     Type: AWS::Pipes::Pipe
@@ -239,11 +239,11 @@ Resources:
           MaximumRetryAttempts: 10
           OnPartialBatchItemFailure: AUTOMATIC_BISECT
           DeadLetterConfig:
-            Arn: !GetAtt SourceChangedStreamDlq.Arn
+            Arn: !GetAtt SourceChangedPipeDlq.Arn
         FilterCriteria:
           Filters:
             - Pattern: '{"eventName": ["INSERT"], "dynamodb": {"NewImage": {"PK0": {"S": [{"prefix": "Event:"}]}}}}'
-      Target: !GetAtt SourceChangedQueue.Arn
+      Target: !GetAtt CreateSnapshotQueue.Arn
       TargetParameters:
         InputTemplate: '{"eventIdentifier": "<$.dynamodb.NewImage.PK0.S>", "handle": "<$.dynamodb.NewImage.handle.S>", "source": "<$.dynamodb.NewImage.source.S>", "timestamp": "<$.dynamodb.NewImage.timestamp.S>"}'
         SqsQueueParameters:
@@ -585,7 +585,7 @@ Resources:
         SourceChanged:
           Type: SQS
           Properties:
-            Queue: !GetAtt SourceChangedQueue.Arn
+            Queue: !GetAtt CreateSnapshotQueue.Arn
             BatchSize: 1
 
   NvaCreateHandleBasePathMapping:
