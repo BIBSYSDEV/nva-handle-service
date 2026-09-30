@@ -6,6 +6,7 @@ plugins {
 dependencies {
     api(libs.jte.runtime)
     api(nvaCatalog.aws.lambda.core)
+    api(nvaCatalog.aws.lambda.events)
     api(nvaCatalog.aws.sdk2.dynamo)
     api(nvaCatalog.aws.sdk2.dynamodbenhanced)
     api(nvaCatalog.jackson.annotations)

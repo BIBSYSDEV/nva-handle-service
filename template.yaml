@@ -135,9 +135,120 @@ Resources:
             ProjectionType: ALL
       PointInTimeRecoverySpecification:
         PointInTimeRecoveryEnabled: true
+      StreamSpecification:
+        StreamViewType: NEW_IMAGE
       Tags:
         - Key: IncludedInBackup
           Value: "true"
+
+  CreateSnapshotQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      FifoQueue: true
+      ContentBasedDeduplication: false
+      VisibilityTimeout: 1800
+      RedrivePolicy:
+        deadLetterTargetArn: !GetAtt CreateSnapshotDlq.Arn
+        maxReceiveCount: 3
+
+  CreateSnapshotDlq:
+    Type: AWS::SQS::Queue
+    Properties:
+      FifoQueue: true
+      MessageRetentionPeriod: 1209600
+
+  SourceChangedPipeDlq:
+    Type: AWS::SQS::Queue
+    Properties:
+      MessageRetentionPeriod: 1209600
+
+  CreateSnapshotDlqAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmDescription: Source changed messages failed processing
+      Namespace: AWS/SQS
+      MetricName: ApproximateNumberOfMessagesVisible
+      Dimensions:
+        - Name: QueueName
+          Value: !GetAtt CreateSnapshotDlq.QueueName
+      Statistic: Maximum
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 0
+      ComparisonOperator: GreaterThanThreshold
+      TreatMissingData: notBreaching
+
+  SourceChangedPipeDlqAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmDescription: Event stream records could not be forwarded to the source changed queue
+      Namespace: AWS/SQS
+      MetricName: ApproximateNumberOfMessagesVisible
+      Dimensions:
+        - Name: QueueName
+          Value: !GetAtt SourceChangedPipeDlq.QueueName
+      Statistic: Maximum
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 0
+      ComparisonOperator: GreaterThanThreshold
+      TreatMissingData: notBreaching
+
+  SourceChangedPipeRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: pipes.amazonaws.com
+            Action: sts:AssumeRole
+            Condition:
+              StringEquals:
+                aws:SourceAccount: !Ref AWS::AccountId
+      Policies:
+        - PolicyName: SourceChangedPipePolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - dynamodb:DescribeStream
+                  - dynamodb:GetRecords
+                  - dynamodb:GetShardIterator
+                  - dynamodb:ListStreams
+                Resource: !GetAtt ApprovalsTable.StreamArn
+              - Effect: Allow
+                Action:
+                  - sqs:SendMessage
+                Resource:
+                  - !GetAtt CreateSnapshotQueue.Arn
+                  - !GetAtt SourceChangedPipeDlq.Arn
+
+  SourceChangedPipe:
+    Type: AWS::Pipes::Pipe
+    Properties:
+      RoleArn: !GetAtt SourceChangedPipeRole.Arn
+      Source: !GetAtt ApprovalsTable.StreamArn
+      SourceParameters:
+        DynamoDBStreamParameters:
+          StartingPosition: LATEST
+          ParallelizationFactor: 1
+          MaximumRecordAgeInSeconds: 86400
+          MaximumRetryAttempts: 10
+          OnPartialBatchItemFailure: AUTOMATIC_BISECT
+          DeadLetterConfig:
+            Arn: !GetAtt SourceChangedPipeDlq.Arn
+        FilterCriteria:
+          Filters:
+            - Pattern: '{"eventName": ["INSERT"], "dynamodb": {"NewImage": {"PK0": {"S": [{"prefix": "Event:"}]}}}}'
+      Target: !GetAtt CreateSnapshotQueue.Arn
+      TargetParameters:
+        InputTemplate: '{"eventIdentifier": "<$.dynamodb.NewImage.identifier.S>", "handle": "<$.dynamodb.NewImage.handle.S>", "source": "<$.dynamodb.NewImage.source.S>", "timestamp": "<$.dynamodb.NewImage.timestamp.S>"}'
+        SqsQueueParameters:
+          MessageGroupId: $.dynamodb.NewImage.handle.S
+          MessageDeduplicationId: $.eventID
 
   ReadHandleDatabaseSecretsManagedPolicy:
     Type: AWS::IAM::ManagedPolicy
@@ -457,6 +568,25 @@ Resources:
             Path: /events
             Method: post
             RestApiId: !Ref NvaApprovalsApi
+
+  NvaCreateSnapshotFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub "/aws/lambda/${NvaCreateSnapshotFunction}"
+      RetentionInDays: 90
+
+  NvaCreateSnapshotFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: approvals
+      Handler: no.sikt.nva.approvals.snapshot.CreateSnapshotHandler::handleRequest
+      Timeout: 300
+      Events:
+        SourceChanged:
+          Type: SQS
+          Properties:
+            Queue: !GetAtt CreateSnapshotQueue.Arn
+            BatchSize: 1
 
   NvaCreateHandleBasePathMapping:
     Type: AWS::ApiGateway::BasePathMapping
