@@ -619,7 +619,7 @@ class DynamoDbApprovalRepositoryTest {
   @Test
   void shouldPersistEventWithProvidedSource() {
     var event = randomEvent();
-    approvalRepository.save(event);
+    approvalRepository.save(event, randomUUID());
 
     var persisted = storedEvent(event);
 
@@ -629,7 +629,7 @@ class DynamoDbApprovalRepositoryTest {
   @Test
   void shouldPersistEventWithProvidedHandle() {
     var event = randomEvent();
-    approvalRepository.save(event);
+    approvalRepository.save(event, randomUUID());
 
     var persisted = storedEvent(event);
 
@@ -639,7 +639,7 @@ class DynamoDbApprovalRepositoryTest {
   @Test
   void shouldPersistEventWithProvidedCustomerIdentifier() {
     var event = randomEvent();
-    approvalRepository.save(event);
+    approvalRepository.save(event, randomUUID());
 
     var persisted = storedEvent(event);
 
@@ -647,9 +647,20 @@ class DynamoDbApprovalRepositoryTest {
   }
 
   @Test
+  void shouldPersistEventWithProvidedApprovalIdentifier() {
+    var event = randomEvent();
+    var approvalIdentifier = randomUUID();
+    approvalRepository.save(event, approvalIdentifier);
+
+    var persisted = storedEvent(event);
+
+    assertEquals(approvalIdentifier, persisted.approvalIdentifier());
+  }
+
+  @Test
   void shouldNotUpdateEventWhenEventWithSameHandleIdentifierAndCustomerAlreadyExists() {
     var event = randomEvent();
-    approvalRepository.save(event);
+    approvalRepository.save(event, randomUUID());
     var persisted = storedEvent(event);
     var duplicate =
         new SourceChangedEvent(
@@ -659,7 +670,7 @@ class DynamoDbApprovalRepositoryTest {
             event.timestamp().plusSeconds(1),
             event.customerIdentifier());
 
-    approvalRepository.save(duplicate);
+    approvalRepository.save(duplicate, randomUUID());
     var persistedAfterSecondInvocation = storedEvent(event);
 
     assertThat(persisted.createdDate(), equalTo(persistedAfterSecondInvocation.createdDate()));
@@ -671,7 +682,7 @@ class DynamoDbApprovalRepositoryTest {
   }
 
   private EventDao storedEvent(SourceChangedEvent event) {
-    var databaseIdentifier = EventDao.fromEvent(event, null).getDatabaseIdentifier();
+    var databaseIdentifier = EventDao.fromEvent(event, null, null).getDatabaseIdentifier();
     return scanItems().stream()
         .filter(item -> databaseIdentifier.equals(item.get(PK0).s()))
         .findFirst()

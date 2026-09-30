@@ -82,10 +82,10 @@ public class DynamoDbApprovalRepository implements ApprovalRepository {
   }
 
   @Override
-  public void save(SourceChangedEvent event) {
+  public void save(SourceChangedEvent event, UUID approvalIdentifier) {
     var request =
         PutItemEnhancedRequest.builder(EnhancedDocument.class)
-            .item(EventDao.fromEvent(event, Instant.now()).toEnhancedDocument())
+            .item(EventDao.fromEvent(event, approvalIdentifier, Instant.now()).toEnhancedDocument())
             .conditionExpression(newDaoCondition())
             .build();
     try {

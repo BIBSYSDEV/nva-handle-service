@@ -14,7 +14,7 @@ public interface ApprovalRepository {
 
   void save(Approval approval);
 
-  void save(SourceChangedEvent event);
+  void save(SourceChangedEvent event, UUID approvalIdentifier);
 
   void updateApproval(Approval approval);
 

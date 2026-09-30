@@ -4,11 +4,13 @@ import static nva.commons.core.attempt.Try.attempt;
 
 import java.net.URI;
 import java.time.Instant;
+import java.util.UUID;
 import no.unit.nva.commons.json.JsonSerializable;
 import no.unit.nva.commons.json.JsonUtils;
 
 public record SourceChangedMessage(
-    String eventIdentifier, URI handle, URI source, Instant timestamp) implements JsonSerializable {
+    String eventIdentifier, UUID approvalIdentifier, URI handle, URI source, Instant timestamp)
+    implements JsonSerializable {
 
   private static final String INVALID_MESSAGE = "Could not parse source changed message: %s";
 
