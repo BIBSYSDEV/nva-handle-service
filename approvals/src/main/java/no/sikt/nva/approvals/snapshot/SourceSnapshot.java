@@ -5,9 +5,10 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 import java.net.URI;
 import java.time.Instant;
 import java.util.UUID;
+import no.unit.nva.identifiers.SortableIdentifier;
 
 public record SourceSnapshot(
-    UUID identifier,
+    SortableIdentifier identifier,
     UUID approvalIdentifier,
     String eventIdentifier,
     URI source,
@@ -15,19 +16,24 @@ public record SourceSnapshot(
 
   private static final String IDENTIFIER_SEED = "%s:%s";
 
-  /**
-   * The identifier is derived from the approval and event, so a redelivered message resolves to the
-   * same snapshot and the conditional write stores it only once.
-   */
   public static SourceSnapshot create(SourceChange sourceChange, Instant timestamp) {
-    var seed =
-        IDENTIFIER_SEED.formatted(
-            sourceChange.approvalIdentifier(), sourceChange.eventIdentifier());
     return new SourceSnapshot(
-        UUID.nameUUIDFromBytes(seed.getBytes(UTF_8)),
+        createIdentifier(sourceChange, timestamp),
         sourceChange.approvalIdentifier(),
         sourceChange.eventIdentifier(),
         sourceChange.source(),
         timestamp);
+  }
+
+  /**
+   * The identifier is derived from the approval and event, so a redelivered message resolves to the
+   * same snapshot and the conditional write stores it only once.
+   */
+  private static SortableIdentifier createIdentifier(SourceChange sourceChange, Instant timestamp) {
+    var seed =
+        IDENTIFIER_SEED.formatted(
+            sourceChange.approvalIdentifier(), sourceChange.eventIdentifier());
+    var uuid = UUID.nameUUIDFromBytes(seed.getBytes(UTF_8));
+    return SortableIdentifier.create(timestamp, uuid);
   }
 }

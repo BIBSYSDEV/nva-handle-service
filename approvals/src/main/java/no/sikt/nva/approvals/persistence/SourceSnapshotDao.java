@@ -13,12 +13,13 @@ import java.time.Instant;
 import java.util.UUID;
 import no.sikt.nva.approvals.snapshot.SourceSnapshot;
 import no.unit.nva.commons.json.JsonSerializable;
+import no.unit.nva.identifiers.SortableIdentifier;
 import software.amazon.awssdk.enhanced.dynamodb.document.EnhancedDocument;
 
 @JsonTypeInfo(use = Id.NAME, property = "type")
 @JsonTypeName("SourceSnapshot")
 public record SourceSnapshotDao(
-    UUID identifier,
+    SortableIdentifier identifier,
     UUID approvalIdentifier,
     String eventIdentifier,
     URI source,

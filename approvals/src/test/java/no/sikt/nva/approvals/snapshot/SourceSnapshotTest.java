@@ -16,8 +16,9 @@ class SourceSnapshotTest {
   void shouldCreateSameSnapshotIdentifierForTheSameApprovalAndEvent() {
     var sourceChange = randomSourceChange();
 
-    var first = SourceSnapshot.create(sourceChange, Instant.now());
-    var redelivered = SourceSnapshot.create(sourceChange, Instant.now().plusSeconds(1));
+    var timestamp = Instant.now();
+    var first = SourceSnapshot.create(sourceChange, timestamp);
+    var redelivered = SourceSnapshot.create(sourceChange, timestamp);
 
     assertThat(redelivered.identifier(), equalTo(first.identifier()));
   }
