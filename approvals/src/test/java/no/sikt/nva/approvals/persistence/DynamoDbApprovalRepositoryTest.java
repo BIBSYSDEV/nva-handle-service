@@ -74,7 +74,7 @@ class DynamoDbApprovalRepositoryTest {
   private static final String CHANGE_KEY = "Change:%s";
   private static final String APPROVAL_REVISION_TYPE = "ApprovalRevision";
   private static final String OTHER_CHANGE_TYPE = "SourceSnapshot";
-  private static final String CHANGE_ID_FIELD = "changeId";
+  private static final String CHANGE_IDENTIFIER_FIELD = "changeIdentifier";
   private static final String APPROVAL_IDENTIFIER_FIELD = "approvalIdentifier";
   private static final String ACTIVITY_FIELD = "activity";
   private static final String SCHEMA_VERSION_FIELD = "schemaVersion";
@@ -83,7 +83,7 @@ class DynamoDbApprovalRepositoryTest {
   private static final String SCHEMA_VERSION_ONE = "1";
   private static final String UNSUPPORTED_SCHEMA_VERSION = "999";
   private static final String SCHEMA_VERSION_ONE_BODY_RESOURCE = "approval-revision-body-v1.json";
-  private static final String V1_CHANGE_ID =
+  private static final String V1_CHANGE_IDENTIFIER =
       "2026-09-30T10:15:30.123456Z_3f2a6c1e-1b7d-4c9a-9e0f-2d4b5a6c7d8e";
   private static final String V1_CREATED_DATE = "2026-09-30T10:15:30.123456Z";
   private static final String V1_ACTIVITY = "CreateApproval";
@@ -818,7 +818,7 @@ class DynamoDbApprovalRepositoryTest {
   }
 
   private static String changeKey(ApprovalRevision revision) {
-    return CHANGE_KEY.formatted(revision.changeId());
+    return CHANGE_KEY.formatted(revision.changeIdentifier());
   }
 
   private void insertConflictingChangeItem(ApprovalRevision revision) {
@@ -839,9 +839,9 @@ class DynamoDbApprovalRepositoryTest {
     item.put(
         PK0,
         AttributeValue.builder().s(ApprovalDao.toDatabaseIdentifier(approvalIdentifier)).build());
-    item.put(SK0, AttributeValue.builder().s(CHANGE_KEY.formatted(V1_CHANGE_ID)).build());
+    item.put(SK0, AttributeValue.builder().s(CHANGE_KEY.formatted(V1_CHANGE_IDENTIFIER)).build());
     item.put(TYPE_FIELD, AttributeValue.builder().s(APPROVAL_REVISION_TYPE).build());
-    item.put(CHANGE_ID_FIELD, AttributeValue.builder().s(V1_CHANGE_ID).build());
+    item.put(CHANGE_IDENTIFIER_FIELD, AttributeValue.builder().s(V1_CHANGE_IDENTIFIER).build());
     item.put(
         APPROVAL_IDENTIFIER_FIELD,
         AttributeValue.builder().s(approvalIdentifier.toString()).build());

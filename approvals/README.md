@@ -155,14 +155,15 @@ Every create and update of an approval also writes an immutable `ApprovalRevisio
 the approval item (the first chunk when the write is split at 80 items), so a failed revision write rolls back the
 approval write. An update that changes nothing writes no revision.
 
-| Item               | `PK0`             | `SK0`               | `PK1`/`PK2` |
-| ------------------ | ----------------- | ------------------- | ----------- |
-| `ApprovalRevision` | `Approval:<uuid>` | `Change:<changeId>` | not set     |
+| Item               | `PK0`             | `SK0`                       | `PK1`/`PK2` |
+| ------------------ | ----------------- | --------------------------- | ----------- |
+| `ApprovalRevision` | `Approval:<uuid>` | `Change:<changeIdentifier>` | not set     |
 
-- `changeId` is `<UTC timestamp with fixed width, microseconds>_<random uuid>`, e.g.
+- `changeIdentifier` is `<UTC timestamp with fixed width, microseconds>_<random uuid>`, e.g.
   `2026-09-30T10:15:30.123456Z_3f2a…`, so it sorts by time as a string.
-- The item is an envelope with a few stable attributes: `changeId`, `approvalIdentifier`, `customerIdentifier`,
-  `createdDate`, `activity` (`CreateApproval` / `UpdateApproval`), `schemaVersion` and `contentType`.
+- The item is an envelope with a few stable attributes: `changeIdentifier`, `approvalIdentifier`,
+  `customerIdentifier`, `createdDate`, `activity` (`CreateApproval` / `UpdateApproval`), `schemaVersion` and
+  `contentType`.
 - The content is stored as-is in `body`: a JSON string with the approval image (`identifiers`, `source`, `handle`,
   `context`, `ontology`) in the format given by `schemaVersion`. History is never migrated; a new format gets a new
   `schemaVersion` and its own reader, while old revisions keep being read with the version they were written with.

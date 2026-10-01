@@ -18,7 +18,7 @@ import software.amazon.awssdk.enhanced.dynamodb.document.EnhancedDocument;
 @JsonTypeInfo(use = Id.NAME, property = "type")
 @JsonTypeName(ApprovalRevisionDao.TYPE)
 public record ApprovalRevisionDao(
-    String changeId,
+    String changeIdentifier,
     UUID approvalIdentifier,
     UUID customerIdentifier,
     Instant createdDate,
@@ -38,7 +38,7 @@ public record ApprovalRevisionDao(
   public static ApprovalRevisionDao fromApprovalRevision(ApprovalRevision revision) {
     var approval = revision.approval();
     return new ApprovalRevisionDao(
-        revision.changeId(),
+        revision.changeIdentifier(),
         approval.identifier(),
         approval.customerIdentifier(),
         revision.createdDate(),
@@ -56,7 +56,7 @@ public record ApprovalRevisionDao(
   public ApprovalRevision toApprovalRevision() {
     var image = readImage();
     return new ApprovalRevision(
-        changeId,
+        changeIdentifier,
         image.toApproval(approvalIdentifier, customerIdentifier),
         createdDate,
         activity,
@@ -66,7 +66,7 @@ public record ApprovalRevisionDao(
 
   @Override
   public String getDatabaseIdentifier() {
-    return CHANGE_KEY.formatted(changeId);
+    return CHANGE_KEY.formatted(changeIdentifier);
   }
 
   public EnhancedDocument toEnhancedDocument() {
@@ -80,7 +80,7 @@ public record ApprovalRevisionDao(
   private ApprovalImage readImage() {
     if (schemaVersion != ApprovalImage.SCHEMA_VERSION) {
       throw new IllegalStateException(
-          UNSUPPORTED_SCHEMA_VERSION_MESSAGE.formatted(schemaVersion, changeId));
+          UNSUPPORTED_SCHEMA_VERSION_MESSAGE.formatted(schemaVersion, changeIdentifier));
     }
     return ApprovalImage.fromJson(body);
   }

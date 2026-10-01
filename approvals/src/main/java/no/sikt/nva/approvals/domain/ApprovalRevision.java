@@ -9,16 +9,16 @@ import java.time.format.DateTimeFormatter;
 import java.util.UUID;
 
 public record ApprovalRevision(
-    String changeId,
+    String changeIdentifier,
     Approval approval,
     Instant createdDate,
     ApprovalActivity activity,
     URI context,
     URI ontology) {
 
-  private static final DateTimeFormatter CHANGE_ID_TIMESTAMP_FORMAT =
+  private static final DateTimeFormatter CHANGE_IDENTIFIER_TIMESTAMP_FORMAT =
       DateTimeFormatter.ofPattern("uuuu-MM-dd'T'HH:mm:ss.SSSSSS'Z'").withZone(ZoneOffset.UTC);
-  private static final String CHANGE_ID_FORMAT = "%s_%s";
+  private static final String CHANGE_IDENTIFIER_FORMAT = "%s_%s";
 
   public static ApprovalRevision create(
       Approval approval,
@@ -28,11 +28,11 @@ public record ApprovalRevision(
       Instant createdDate) {
     var timestamp = createdDate.truncatedTo(MICROS);
     return new ApprovalRevision(
-        createChangeId(timestamp), approval, timestamp, activity, context, ontology);
+        createChangeIdentifier(timestamp), approval, timestamp, activity, context, ontology);
   }
 
-  private static String createChangeId(Instant timestamp) {
-    return CHANGE_ID_FORMAT.formatted(
-        CHANGE_ID_TIMESTAMP_FORMAT.format(timestamp), UUID.randomUUID());
+  private static String createChangeIdentifier(Instant timestamp) {
+    return CHANGE_IDENTIFIER_FORMAT.formatted(
+        CHANGE_IDENTIFIER_TIMESTAMP_FORMAT.format(timestamp), UUID.randomUUID());
   }
 }

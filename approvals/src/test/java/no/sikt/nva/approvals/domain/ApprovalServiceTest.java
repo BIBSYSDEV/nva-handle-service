@@ -60,11 +60,11 @@ class ApprovalServiceTest {
   private static final String EXPECTED_JOINED_VALUES = "aaa-first, zzz-last";
   private static final URI RELATIVE_CONTEXT_URI = URI.create("approval/context");
   private static final URI RELATIVE_ONTOLOGY_URI = URI.create("approval/ontology");
-  private static final Pattern CHANGE_ID_PATTERN =
+  private static final Pattern CHANGE_IDENTIFIER_PATTERN =
       Pattern.compile(
           "\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{6}Z"
               + "_[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}");
-  private static final DateTimeFormatter CHANGE_ID_TIMESTAMP =
+  private static final DateTimeFormatter CHANGE_IDENTIFIER_TIMESTAMP =
       DateTimeFormatter.ofPattern("uuuu-MM-dd'T'HH:mm:ss.SSSSSS'Z'").withZone(ZoneOffset.UTC);
   private ApprovalService approvalService;
   private ApprovalRepository approvalRepository;
@@ -728,15 +728,17 @@ class ApprovalServiceTest {
   }
 
   @Test
-  void shouldCreateChangeIdStartingWithFixedWidthCreatedDate()
+  void shouldCreateChangeIdentifierStartingWithFixedWidthCreatedDate()
       throws SQLException, ApprovalServiceException, ApprovalConflictException {
     when(handleDatabase.createHandle(any(), any(), any())).thenReturn(randomHandle().value());
 
     approvalService.create(randomIdentifiers(), randomUri(), randomUUID());
 
     var revision = capturedSavedRevision();
-    assertTrue(CHANGE_ID_PATTERN.matcher(revision.changeId()).matches());
-    assertTrue(revision.changeId().startsWith(CHANGE_ID_TIMESTAMP.format(revision.createdDate())));
+    var changeIdentifier = revision.changeIdentifier();
+    assertTrue(CHANGE_IDENTIFIER_PATTERN.matcher(changeIdentifier).matches());
+    assertTrue(
+        changeIdentifier.startsWith(CHANGE_IDENTIFIER_TIMESTAMP.format(revision.createdDate())));
   }
 
   private ApprovalRevision capturedSavedRevision() {
