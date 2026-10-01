@@ -11,7 +11,7 @@ import java.util.UUID;
 public record ApprovalRevision(
     String changeId,
     Approval approval,
-    Instant generatedAtTime,
+    Instant createdDate,
     ApprovalActivity activity,
     URI context,
     URI ontology) {
@@ -25,8 +25,8 @@ public record ApprovalRevision(
       ApprovalActivity activity,
       URI context,
       URI ontology,
-      Instant generatedAtTime) {
-    var timestamp = generatedAtTime.truncatedTo(MICROS);
+      Instant createdDate) {
+    var timestamp = createdDate.truncatedTo(MICROS);
     return new ApprovalRevision(
         createChangeId(timestamp), approval, timestamp, activity, context, ontology);
   }

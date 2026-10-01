@@ -702,7 +702,7 @@ class ApprovalServiceTest {
   }
 
   @Test
-  void shouldPersistProvenanceOnRevision()
+  void shouldSetCreatedDateContextAndOntologyOnRevision()
       throws SQLException, ApprovalServiceException, ApprovalConflictException {
     when(handleDatabase.createHandle(any(), any(), any())).thenReturn(randomHandle().value());
     var beforeCreate = Instant.now().truncatedTo(MICROS);
@@ -712,7 +712,7 @@ class ApprovalServiceTest {
     var revision = capturedSavedRevision();
     assertEquals(RELATIVE_CONTEXT_URI, revision.context());
     assertEquals(RELATIVE_ONTOLOGY_URI, revision.ontology());
-    assertFalse(revision.generatedAtTime().isBefore(beforeCreate));
+    assertFalse(revision.createdDate().isBefore(beforeCreate));
   }
 
   @Test
@@ -728,7 +728,7 @@ class ApprovalServiceTest {
   }
 
   @Test
-  void shouldCreateChangeIdStartingWithFixedWidthGeneratedAtTime()
+  void shouldCreateChangeIdStartingWithFixedWidthCreatedDate()
       throws SQLException, ApprovalServiceException, ApprovalConflictException {
     when(handleDatabase.createHandle(any(), any(), any())).thenReturn(randomHandle().value());
 
@@ -736,8 +736,7 @@ class ApprovalServiceTest {
 
     var revision = capturedSavedRevision();
     assertTrue(CHANGE_ID_PATTERN.matcher(revision.changeId()).matches());
-    assertTrue(
-        revision.changeId().startsWith(CHANGE_ID_TIMESTAMP.format(revision.generatedAtTime())));
+    assertTrue(revision.changeId().startsWith(CHANGE_ID_TIMESTAMP.format(revision.createdDate())));
   }
 
   private ApprovalRevision capturedSavedRevision() {

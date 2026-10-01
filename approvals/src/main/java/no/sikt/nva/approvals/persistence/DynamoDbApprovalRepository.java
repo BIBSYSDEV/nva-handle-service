@@ -108,7 +108,7 @@ public class DynamoDbApprovalRepository implements ApprovalRepository {
     }
     var storedIdentifiers = getIdentifiers(entities);
     var originalCreatedDate = getApproval(entities).createdDate();
-    var modifiedDate = revision.generatedAtTime();
+    var modifiedDate = revision.createdDate();
 
     var operations = new ArrayList<Operation>();
     operations.addAll(deleteOperations(storedIdentifiers, approval.namedIdentifiers()));
@@ -411,7 +411,7 @@ public class DynamoDbApprovalRepository implements ApprovalRepository {
 
   private List<EnhancedDocument> createDocuments(ApprovalRevision revision) {
     var approval = revision.approval();
-    var createdDate = revision.generatedAtTime();
+    var createdDate = revision.createdDate();
     var approvalDao = ApprovalDao.fromApproval(approval, createdDate, createdDate);
     var handleDao = HandleDao.fromHandle(approval.handle(), createdDate);
 

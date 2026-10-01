@@ -5,8 +5,6 @@ import static no.sikt.nva.approvals.persistence.DynamoDbConstants.SK0;
 import static no.sikt.nva.approvals.persistence.DynamoDbConstants.STRING;
 import static nva.commons.core.attempt.Try.attempt;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.annotation.JsonTypeInfo.Id;
 import com.fasterxml.jackson.annotation.JsonTypeName;
@@ -26,11 +24,11 @@ import software.amazon.awssdk.enhanced.dynamodb.document.EnhancedDocument;
 @JsonTypeName(ApprovalRevisionDao.TYPE)
 public record ApprovalRevisionDao(
     String changeId,
-    UUID approvalId,
-    @JsonProperty("record") ApprovalRecordDao approvalRecord,
-    Instant generatedAtTime,
+    UUID approvalIdentifier,
+    ApprovalImage record,
+    Instant createdDate,
     ApprovalActivity activity,
-    UUID customerId,
+    UUID customerIdentifier,
     URI context,
     URI ontology)
     implements DatabaseEntry {
@@ -44,8 +42,8 @@ public record ApprovalRevisionDao(
     return new ApprovalRevisionDao(
         revision.changeId(),
         approval.identifier(),
-        ApprovalRecordDao.fromApproval(approval),
-        revision.generatedAtTime(),
+        ApprovalImage.fromApproval(approval),
+        revision.createdDate(),
         revision.activity(),
         approval.customerIdentifier(),
         revision.context(),
@@ -60,8 +58,8 @@ public record ApprovalRevisionDao(
   public ApprovalRevision toApprovalRevision() {
     return new ApprovalRevision(
         changeId,
-        approvalRecord.toApproval(approvalId, customerId),
-        generatedAtTime,
+        record.toApproval(approvalIdentifier, customerIdentifier),
+        createdDate,
         activity,
         context,
         ontology);
@@ -72,29 +70,24 @@ public record ApprovalRevisionDao(
     return CHANGE_KEY.formatted(changeId);
   }
 
-  @JsonIgnore
-  @Override
-  public Instant createdDate() {
-    return generatedAtTime;
-  }
-
   public EnhancedDocument toEnhancedDocument() {
     return EnhancedDocument.builder()
         .json(toJsonString())
-        .put(PK0, ApprovalDao.toDatabaseIdentifier(approvalId), STRING)
+        .put(PK0, ApprovalDao.toDatabaseIdentifier(approvalIdentifier), STRING)
         .put(SK0, getDatabaseIdentifier(), STRING)
         .build();
   }
 
-  public record ApprovalRecordDao(Collection<NamedIdentifier> identifiers, URI source, URI handle) {
+  public record ApprovalImage(Collection<NamedIdentifier> identifiers, URI source, URI handle) {
 
-    public static ApprovalRecordDao fromApproval(Approval approval) {
-      return new ApprovalRecordDao(
+    public static ApprovalImage fromApproval(Approval approval) {
+      return new ApprovalImage(
           approval.namedIdentifiers(), approval.source(), approval.handle().value());
     }
 
-    public Approval toApproval(UUID approvalId, UUID customerId) {
-      return new Approval(approvalId, identifiers, source, new Handle(handle), customerId);
+    public Approval toApproval(UUID approvalIdentifier, UUID customerIdentifier) {
+      return new Approval(
+          approvalIdentifier, identifiers, source, new Handle(handle), customerIdentifier);
     }
   }
 }

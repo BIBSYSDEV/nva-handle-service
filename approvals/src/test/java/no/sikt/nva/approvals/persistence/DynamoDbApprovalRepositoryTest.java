@@ -696,13 +696,26 @@ class DynamoDbApprovalRepositoryTest {
   }
 
   @Test
-  void shouldUseGeneratedAtTimeAsCreatedDateOfRevision() {
+  void shouldReadRevisionAsDatabaseEntryWithCreatedDate() {
     var revision = randomRevision(randomApproval(randomHandle()), CREATE_APPROVAL);
     approvalRepository.save(revision);
 
     var databaseEntry = toDatabaseEntry(scanItem(changeKey(revision)));
 
-    assertEquals(revision.generatedAtTime(), databaseEntry.createdDate());
+    assertEquals(revision.createdDate(), databaseEntry.createdDate());
+  }
+
+  @Test
+  void shouldStoreCustomerIdentifierOnRevisionInSameAttributeAsOnApproval() {
+    var approval = randomApproval(randomHandle());
+    var revision = randomRevision(approval, CREATE_APPROVAL);
+    approvalRepository.save(revision);
+
+    var revisionItem = scanItem(changeKey(revision));
+    var approvalItem = scanItem(ApprovalDao.toDatabaseIdentifier(approval.identifier()));
+
+    assertEquals(
+        approvalItem.get(CUSTOMER_IDENTIFIER_FIELD), revisionItem.get(CUSTOMER_IDENTIFIER_FIELD));
   }
 
   @Test
