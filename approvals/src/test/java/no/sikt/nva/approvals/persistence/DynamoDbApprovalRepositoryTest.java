@@ -84,7 +84,7 @@ class DynamoDbApprovalRepositoryTest {
   private static final String UNSUPPORTED_SCHEMA_VERSION = "999";
   private static final String SCHEMA_VERSION_ONE_BODY_RESOURCE = "approval-revision-body-v1.json";
   private static final String V1_CHANGE_IDENTIFIER =
-      "2026-09-30T10:15:30.123456Z_3f2a6c1e-1b7d-4c9a-9e0f-2d4b5a6c7d8e";
+      "01a0f1cfea4b-3f2a6c1e-1b7d-4c9a-9e0f-2d4b5a6c7d8e";
   private static final String V1_CREATED_DATE = "2026-09-30T10:15:30.123456Z";
   private static final String V1_ACTIVITY = "CreateApproval";
   private static final String V1_IDENTIFIER_NAME = "REK";

@@ -4,21 +4,16 @@ import static java.time.temporal.ChronoUnit.MICROS;
 
 import java.net.URI;
 import java.time.Instant;
-import java.time.ZoneOffset;
-import java.time.format.DateTimeFormatter;
 import java.util.UUID;
+import no.unit.nva.identifiers.SortableIdentifier;
 
 public record ApprovalRevision(
-    String changeIdentifier,
+    SortableIdentifier changeIdentifier,
     Approval approval,
     Instant createdDate,
     ApprovalActivity activity,
     URI context,
     URI ontology) {
-
-  private static final DateTimeFormatter CHANGE_IDENTIFIER_TIMESTAMP_FORMAT =
-      DateTimeFormatter.ofPattern("uuuu-MM-dd'T'HH:mm:ss.SSSSSS'Z'").withZone(ZoneOffset.UTC);
-  private static final String CHANGE_IDENTIFIER_FORMAT = "%s_%s";
 
   public static ApprovalRevision create(
       Approval approval,
@@ -28,11 +23,11 @@ public record ApprovalRevision(
       Instant createdDate) {
     var timestamp = createdDate.truncatedTo(MICROS);
     return new ApprovalRevision(
-        createChangeIdentifier(timestamp), approval, timestamp, activity, context, ontology);
-  }
-
-  private static String createChangeIdentifier(Instant timestamp) {
-    return CHANGE_IDENTIFIER_FORMAT.formatted(
-        CHANGE_IDENTIFIER_TIMESTAMP_FORMAT.format(timestamp), UUID.randomUUID());
+        SortableIdentifier.create(timestamp, UUID.randomUUID()),
+        approval,
+        timestamp,
+        activity,
+        context,
+        ontology);
   }
 }

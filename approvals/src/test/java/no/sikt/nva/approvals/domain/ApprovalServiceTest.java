@@ -27,13 +27,10 @@ import java.net.URI;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.time.Instant;
-import java.time.ZoneOffset;
-import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.function.Supplier;
-import java.util.regex.Pattern;
 import java.util.stream.Stream;
 import no.sikt.nva.approvals.persistence.ApprovalDao;
 import no.sikt.nva.approvals.persistence.ApprovalRepository;
@@ -60,12 +57,7 @@ class ApprovalServiceTest {
   private static final String EXPECTED_JOINED_VALUES = "aaa-first, zzz-last";
   private static final URI RELATIVE_CONTEXT_URI = URI.create("approval/context");
   private static final URI RELATIVE_ONTOLOGY_URI = URI.create("approval/ontology");
-  private static final Pattern CHANGE_IDENTIFIER_PATTERN =
-      Pattern.compile(
-          "\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{6}Z"
-              + "_[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}");
-  private static final DateTimeFormatter CHANGE_IDENTIFIER_TIMESTAMP =
-      DateTimeFormatter.ofPattern("uuuu-MM-dd'T'HH:mm:ss.SSSSSS'Z'").withZone(ZoneOffset.UTC);
+  private static final String SORTABLE_TIMESTAMP_PREFIX = "%012x-";
   private ApprovalService approvalService;
   private ApprovalRepository approvalRepository;
   private HandleDatabase handleDatabase;
@@ -728,17 +720,15 @@ class ApprovalServiceTest {
   }
 
   @Test
-  void shouldCreateChangeIdentifierStartingWithFixedWidthCreatedDate()
+  void shouldCreateSortableChangeIdentifierFromCreatedDate()
       throws SQLException, ApprovalServiceException, ApprovalConflictException {
     when(handleDatabase.createHandle(any(), any(), any())).thenReturn(randomHandle().value());
 
     approvalService.create(randomIdentifiers(), randomUri(), randomUUID());
 
     var revision = capturedSavedRevision();
-    var changeIdentifier = revision.changeIdentifier();
-    assertTrue(CHANGE_IDENTIFIER_PATTERN.matcher(changeIdentifier).matches());
-    assertTrue(
-        changeIdentifier.startsWith(CHANGE_IDENTIFIER_TIMESTAMP.format(revision.createdDate())));
+    var expectedPrefix = SORTABLE_TIMESTAMP_PREFIX.formatted(revision.createdDate().toEpochMilli());
+    assertTrue(revision.changeIdentifier().toString().startsWith(expectedPrefix));
   }
 
   private ApprovalRevision capturedSavedRevision() {

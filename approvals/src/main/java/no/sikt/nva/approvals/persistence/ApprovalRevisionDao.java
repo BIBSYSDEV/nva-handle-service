@@ -13,12 +13,13 @@ import java.util.UUID;
 import no.sikt.nva.approvals.domain.ApprovalActivity;
 import no.sikt.nva.approvals.domain.ApprovalRevision;
 import no.unit.nva.commons.json.JsonUtils;
+import no.unit.nva.identifiers.SortableIdentifier;
 import software.amazon.awssdk.enhanced.dynamodb.document.EnhancedDocument;
 
 @JsonTypeInfo(use = Id.NAME, property = "type")
 @JsonTypeName(ApprovalRevisionDao.TYPE)
 public record ApprovalRevisionDao(
-    String changeIdentifier,
+    SortableIdentifier changeIdentifier,
     UUID approvalIdentifier,
     UUID customerIdentifier,
     Instant createdDate,

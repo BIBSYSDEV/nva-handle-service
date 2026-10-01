@@ -159,8 +159,9 @@ approval write. An update that changes nothing writes no revision.
 | ------------------ | ----------------- | --------------------------- | ----------- |
 | `ApprovalRevision` | `Approval:<uuid>` | `Change:<changeIdentifier>` | not set     |
 
-- `changeIdentifier` is `<UTC timestamp with fixed width, microseconds>_<random uuid>`, e.g.
-  `2026-09-30T10:15:30.123456Z_3f2a…`, so it sorts by time as a string.
+- `changeIdentifier` is a `SortableIdentifier` from nva-commons (`<epoch millis as 12 hex digits>-<random uuid>`,
+  e.g. `01a0f1cfea4b-3f2a…`), so it sorts by time as a string. Source snapshots use the same identifier type, so all
+  `Change:` items for an approval sort together.
 - The item is an envelope with a few stable attributes: `changeIdentifier`, `approvalIdentifier`,
   `customerIdentifier`, `createdDate`, `activity` (`CreateApproval` / `UpdateApproval`), `schemaVersion` and
   `contentType`.
