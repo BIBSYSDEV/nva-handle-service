@@ -161,8 +161,11 @@ approval write. An update that changes nothing writes no revision.
 
 - `changeId` is `<UTC timestamp with fixed width, microseconds>_<random uuid>`, e.g.
   `2026-09-30T10:15:30.123456Z_3f2a…`, so it sorts by time as a string.
-- The item holds a copy of the record (`identifiers`, `source`, `handle`) together with `approvalIdentifier`,
-  `createdDate`, `activity` (`CreateApproval` / `UpdateApproval`), `customerIdentifier`, `context` and `ontology`.
+- The item is an envelope with a few stable attributes: `changeId`, `approvalIdentifier`, `customerIdentifier`,
+  `createdDate`, `activity` (`CreateApproval` / `UpdateApproval`), `schemaVersion` and `contentType`.
+- The content is stored as-is in `body`: a JSON string with the approval image (`identifiers`, `source`, `handle`,
+  `context`, `ontology`) in the format given by `schemaVersion`. History is never migrated; a new format gets a new
+  `schemaVersion` and its own reader, while old revisions keep being read with the version they were written with.
 - `context` and `ontology` are stored as relative URIs (`approval/context`, `approval/ontology`), never with the API
   host, since the host differs per environment. Resolve them against `API_HOST` when reading.
 - Revisions for one approval are listed in time order with a query on `PK0 = Approval:<uuid>` and

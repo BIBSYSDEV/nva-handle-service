@@ -8,15 +8,10 @@ import static nva.commons.core.attempt.Try.attempt;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.annotation.JsonTypeInfo.Id;
 import com.fasterxml.jackson.annotation.JsonTypeName;
-import java.net.URI;
 import java.time.Instant;
-import java.util.Collection;
 import java.util.UUID;
-import no.sikt.nva.approvals.domain.Approval;
 import no.sikt.nva.approvals.domain.ApprovalActivity;
 import no.sikt.nva.approvals.domain.ApprovalRevision;
-import no.sikt.nva.approvals.domain.Handle;
-import no.sikt.nva.approvals.domain.NamedIdentifier;
 import no.unit.nva.commons.json.JsonUtils;
 import software.amazon.awssdk.enhanced.dynamodb.document.EnhancedDocument;
 
@@ -25,29 +20,32 @@ import software.amazon.awssdk.enhanced.dynamodb.document.EnhancedDocument;
 public record ApprovalRevisionDao(
     String changeId,
     UUID approvalIdentifier,
-    ApprovalImage record,
+    UUID customerIdentifier,
     Instant createdDate,
     ApprovalActivity activity,
-    UUID customerIdentifier,
-    URI context,
-    URI ontology)
+    int schemaVersion,
+    String contentType,
+    String body)
     implements DatabaseEntry {
 
   public static final String TYPE = "ApprovalRevision";
   public static final String CHANGE_KEY_PREFIX = "Change:";
+  public static final String JSON_CONTENT_TYPE = "application/json";
   private static final String CHANGE_KEY = "Change:%s";
+  private static final String UNSUPPORTED_SCHEMA_VERSION_MESSAGE =
+      "Unsupported schema version %s on approval revision %s";
 
   public static ApprovalRevisionDao fromApprovalRevision(ApprovalRevision revision) {
     var approval = revision.approval();
     return new ApprovalRevisionDao(
         revision.changeId(),
         approval.identifier(),
-        ApprovalImage.fromApproval(approval),
+        approval.customerIdentifier(),
         revision.createdDate(),
         revision.activity(),
-        approval.customerIdentifier(),
-        revision.context(),
-        revision.ontology());
+        ApprovalImage.SCHEMA_VERSION,
+        JSON_CONTENT_TYPE,
+        ApprovalImage.fromApprovalRevision(revision).toJsonString());
   }
 
   public static ApprovalRevisionDao fromJson(String json) {
@@ -56,13 +54,14 @@ public record ApprovalRevisionDao(
   }
 
   public ApprovalRevision toApprovalRevision() {
+    var image = readImage();
     return new ApprovalRevision(
         changeId,
-        record.toApproval(approvalIdentifier, customerIdentifier),
+        image.toApproval(approvalIdentifier, customerIdentifier),
         createdDate,
         activity,
-        context,
-        ontology);
+        image.context(),
+        image.ontology());
   }
 
   @Override
@@ -78,16 +77,11 @@ public record ApprovalRevisionDao(
         .build();
   }
 
-  public record ApprovalImage(Collection<NamedIdentifier> identifiers, URI source, URI handle) {
-
-    public static ApprovalImage fromApproval(Approval approval) {
-      return new ApprovalImage(
-          approval.namedIdentifiers(), approval.source(), approval.handle().value());
+  private ApprovalImage readImage() {
+    if (schemaVersion != ApprovalImage.SCHEMA_VERSION) {
+      throw new IllegalStateException(
+          UNSUPPORTED_SCHEMA_VERSION_MESSAGE.formatted(schemaVersion, changeId));
     }
-
-    public Approval toApproval(UUID approvalIdentifier, UUID customerIdentifier) {
-      return new Approval(
-          approvalIdentifier, identifiers, source, new Handle(handle), customerIdentifier);
-    }
+    return ApprovalImage.fromJson(body);
   }
 }

@@ -30,6 +30,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.net.URI;
+import java.nio.file.Path;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -42,11 +43,13 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import no.sikt.nva.approvals.domain.Approval;
 import no.sikt.nva.approvals.domain.ApprovalRevision;
+import no.sikt.nva.approvals.domain.Handle;
 import no.sikt.nva.approvals.domain.IdentifierPolicy;
 import no.sikt.nva.approvals.domain.NamedIdentifier;
 import no.sikt.nva.approvals.events.SourceChangedEvent;
 import no.unit.nva.commons.json.JsonUtils;
 import nva.commons.core.Environment;
+import nva.commons.core.ioutils.IoUtils;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -71,6 +74,25 @@ class DynamoDbApprovalRepositoryTest {
   private static final String CHANGE_KEY = "Change:%s";
   private static final String APPROVAL_REVISION_TYPE = "ApprovalRevision";
   private static final String OTHER_CHANGE_TYPE = "SourceSnapshot";
+  private static final String CHANGE_ID_FIELD = "changeId";
+  private static final String APPROVAL_IDENTIFIER_FIELD = "approvalIdentifier";
+  private static final String ACTIVITY_FIELD = "activity";
+  private static final String SCHEMA_VERSION_FIELD = "schemaVersion";
+  private static final String CONTENT_TYPE_FIELD = "contentType";
+  private static final String BODY_FIELD = "body";
+  private static final String SCHEMA_VERSION_ONE = "1";
+  private static final String UNSUPPORTED_SCHEMA_VERSION = "999";
+  private static final String SCHEMA_VERSION_ONE_BODY_RESOURCE = "approval-revision-body-v1.json";
+  private static final String V1_CHANGE_ID =
+      "2026-09-30T10:15:30.123456Z_3f2a6c1e-1b7d-4c9a-9e0f-2d4b5a6c7d8e";
+  private static final String V1_CREATED_DATE = "2026-09-30T10:15:30.123456Z";
+  private static final String V1_ACTIVITY = "CreateApproval";
+  private static final String V1_IDENTIFIER_NAME = "REK";
+  private static final String V1_IDENTIFIER_VALUE = "2024/123";
+  private static final String V1_SOURCE = "https://example.com/source/12345";
+  private static final String V1_HANDLE = "https://hdl.handle.net/11250.1/98765";
+  private static final String V1_CONTEXT = "approval/context";
+  private static final String V1_ONTOLOGY = "approval/ontology";
 
   private ApprovalRepository approvalRepository;
   private DynamoDbLocal dynamoDbLocal;
@@ -723,6 +745,51 @@ class DynamoDbApprovalRepositoryTest {
     assertTrue(approvalRepository.findRevisions(randomUUID()).isEmpty());
   }
 
+  @Test
+  void shouldStoreRevisionContentAsVersionedJsonBody() {
+    var revision = randomRevision(randomApproval(randomHandle()), CREATE_APPROVAL);
+    approvalRepository.save(revision);
+
+    var item = scanItem(changeKey(revision));
+
+    assertEquals(String.valueOf(ApprovalImage.SCHEMA_VERSION), item.get(SCHEMA_VERSION_FIELD).n());
+    assertEquals(ApprovalRevisionDao.JSON_CONTENT_TYPE, item.get(CONTENT_TYPE_FIELD).s());
+    assertEquals(
+        ApprovalImage.fromApprovalRevision(revision),
+        ApprovalImage.fromJson(item.get(BODY_FIELD).s()));
+  }
+
+  @Test
+  void shouldReadRevisionStoredWithSchemaVersionOne() {
+    var approvalIdentifier = randomUUID();
+    var customerIdentifier = randomUUID();
+    insertRevisionItem(
+        approvalIdentifier, customerIdentifier, SCHEMA_VERSION_ONE, schemaVersionOneBody());
+
+    var revision = approvalRepository.findRevisions(approvalIdentifier).getFirst();
+
+    var expectedApproval =
+        new Approval(
+            approvalIdentifier,
+            List.of(new NamedIdentifier(V1_IDENTIFIER_NAME, V1_IDENTIFIER_VALUE)),
+            URI.create(V1_SOURCE),
+            new Handle(URI.create(V1_HANDLE)),
+            customerIdentifier);
+    assertEquals(expectedApproval, revision.approval());
+    assertEquals(URI.create(V1_CONTEXT), revision.context());
+    assertEquals(URI.create(V1_ONTOLOGY), revision.ontology());
+  }
+
+  @Test
+  void shouldFailWhenRevisionHasUnsupportedSchemaVersion() {
+    var approvalIdentifier = randomUUID();
+    insertRevisionItem(
+        approvalIdentifier, randomUUID(), UNSUPPORTED_SCHEMA_VERSION, schemaVersionOneBody());
+
+    assertThrows(
+        IllegalStateException.class, () -> approvalRepository.findRevisions(approvalIdentifier));
+  }
+
   private void saveApproval(Approval approval) {
     approvalRepository.save(randomRevision(approval, CREATE_APPROVAL));
   }
@@ -760,6 +827,36 @@ class DynamoDbApprovalRepositoryTest {
 
   private void insertChangeItemOfOtherType(UUID approvalIdentifier) {
     insertChangeItem(approvalIdentifier, CHANGE_KEY.formatted(randomString()), OTHER_CHANGE_TYPE);
+  }
+
+  private static String schemaVersionOneBody() {
+    return IoUtils.stringFromResources(Path.of(SCHEMA_VERSION_ONE_BODY_RESOURCE));
+  }
+
+  private void insertRevisionItem(
+      UUID approvalIdentifier, UUID customerIdentifier, String schemaVersion, String body) {
+    var item = new HashMap<String, AttributeValue>();
+    item.put(
+        PK0,
+        AttributeValue.builder().s(ApprovalDao.toDatabaseIdentifier(approvalIdentifier)).build());
+    item.put(SK0, AttributeValue.builder().s(CHANGE_KEY.formatted(V1_CHANGE_ID)).build());
+    item.put(TYPE_FIELD, AttributeValue.builder().s(APPROVAL_REVISION_TYPE).build());
+    item.put(CHANGE_ID_FIELD, AttributeValue.builder().s(V1_CHANGE_ID).build());
+    item.put(
+        APPROVAL_IDENTIFIER_FIELD,
+        AttributeValue.builder().s(approvalIdentifier.toString()).build());
+    item.put(
+        CUSTOMER_IDENTIFIER_FIELD,
+        AttributeValue.builder().s(customerIdentifier.toString()).build());
+    item.put(CREATED_DATE_FIELD, AttributeValue.builder().s(V1_CREATED_DATE).build());
+    item.put(ACTIVITY_FIELD, AttributeValue.builder().s(V1_ACTIVITY).build());
+    item.put(SCHEMA_VERSION_FIELD, AttributeValue.builder().n(schemaVersion).build());
+    item.put(
+        CONTENT_TYPE_FIELD,
+        AttributeValue.builder().s(ApprovalRevisionDao.JSON_CONTENT_TYPE).build());
+    item.put(BODY_FIELD, AttributeValue.builder().s(body).build());
+
+    dynamoDbLocal.client().putItem(PutItemRequest.builder().tableName(TABLE).item(item).build());
   }
 
   private void insertChangeItem(UUID approvalIdentifier, String sortKey, String type) {
