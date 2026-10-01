@@ -1,6 +1,5 @@
 package no.sikt.nva.approvals.snapshot;
 
-import java.time.Instant;
 import no.sikt.nva.approvals.persistence.ApprovalRepository;
 import no.sikt.nva.approvals.persistence.DynamoDbApprovalRepository;
 import nva.commons.core.Environment;
@@ -22,6 +21,6 @@ public class SnapshotServiceImpl implements SnapshotService {
   // TODO: retrieve the source via SourceClient (NP-51912) and store its content on the snapshot
   @Override
   public void createSnapshot(SourceChange sourceChange) {
-    approvalRepository.save(SourceSnapshot.create(sourceChange, Instant.now()));
+    approvalRepository.save(SourceSnapshot.create(sourceChange));
   }
 }

@@ -23,6 +23,6 @@ public record SourceChangedMessage(
   }
 
   public SourceChange toSourceChange() {
-    return new SourceChange(approvalIdentifier, eventIdentifier, source);
+    return new SourceChange(approvalIdentifier, eventIdentifier, source, timestamp);
   }
 }

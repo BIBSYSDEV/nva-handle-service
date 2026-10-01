@@ -106,7 +106,7 @@ public class TestUtils {
   }
 
   public static SourceChange randomSourceChange(UUID approvalIdentifier, String eventIdentifier) {
-    return new SourceChange(approvalIdentifier, eventIdentifier, randomUri());
+    return new SourceChange(approvalIdentifier, eventIdentifier, randomUri(), Instant.now());
   }
 
   public static Handle randomHandle() {

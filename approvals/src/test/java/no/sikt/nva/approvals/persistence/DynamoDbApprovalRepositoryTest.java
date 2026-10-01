@@ -680,7 +680,7 @@ class DynamoDbApprovalRepositoryTest {
 
   @Test
   void shouldNotFindApprovalWhenOnlySnapshotExistsForApprovalIdentifier() {
-    var snapshot = SourceSnapshot.create(randomSourceChange(), Instant.now());
+    var snapshot = SourceSnapshot.create(randomSourceChange());
     approvalRepository.save(snapshot);
 
     var approval = approvalRepository.findByApprovalIdentifier(snapshot.approvalIdentifier());
@@ -690,28 +690,32 @@ class DynamoDbApprovalRepositoryTest {
 
   @Test
   void shouldPersistSnapshot() {
-    var snapshot = SourceSnapshot.create(randomSourceChange(), Instant.now());
+    var snapshot = SourceSnapshot.create(randomSourceChange());
     approvalRepository.save(snapshot);
 
     var persisted = storedSnapshot(snapshot);
 
-    assertThat(persisted, equalTo(SourceSnapshotDao.fromSourceSnapshot(snapshot)));
+    assertThat(
+        persisted,
+        equalTo(SourceSnapshotDao.fromSourceSnapshot(snapshot, persisted.createdDate())));
   }
 
   @Test
   void shouldNotOverwriteSnapshotWhenSameEventIsSavedAgain() {
     var sourceChange = randomSourceChange();
-    var snapshot = SourceSnapshot.create(sourceChange, Instant.now());
+    var snapshot = SourceSnapshot.create(sourceChange);
     approvalRepository.save(snapshot);
-    var redelivered = SourceSnapshot.create(sourceChange, snapshot.timestamp().plusSeconds(1));
+    var stored = storedSnapshot(snapshot);
 
-    approvalRepository.save(redelivered);
+    approvalRepository.save(SourceSnapshot.create(sourceChange));
+    var redelivered = storedSnapshot(snapshot);
 
-    assertThat(storedSnapshot(snapshot).createdDate(), equalTo(snapshot.timestamp()));
+    assertThat(stored, equalTo(redelivered));
   }
 
   private SourceSnapshotDao storedSnapshot(SourceSnapshot snapshot) {
-    var databaseIdentifier = SourceSnapshotDao.fromSourceSnapshot(snapshot).getDatabaseIdentifier();
+    var databaseIdentifier =
+        SourceSnapshotDao.fromSourceSnapshot(snapshot, Instant.now()).getDatabaseIdentifier();
     return scanItems().stream()
         .filter(item -> databaseIdentifier.equals(item.get(SK0).s()))
         .findFirst()

@@ -7,7 +7,6 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.not;
 
-import java.time.Instant;
 import org.junit.jupiter.api.Test;
 
 class SourceSnapshotTest {
@@ -16,9 +15,8 @@ class SourceSnapshotTest {
   void shouldCreateSameSnapshotIdentifierForTheSameApprovalAndEvent() {
     var sourceChange = randomSourceChange();
 
-    var timestamp = Instant.now();
-    var first = SourceSnapshot.create(sourceChange, timestamp);
-    var redelivered = SourceSnapshot.create(sourceChange, timestamp);
+    var first = SourceSnapshot.create(sourceChange);
+    var redelivered = SourceSnapshot.create(sourceChange);
 
     assertThat(redelivered.identifier(), equalTo(first.identifier()));
   }
@@ -27,12 +25,8 @@ class SourceSnapshotTest {
   void shouldCreateDifferentIdentifiersForTheSameApprovalButDifferentEvents() {
     var approvalIdentifier = randomUUID();
 
-    var first =
-        SourceSnapshot.create(
-            randomSourceChange(approvalIdentifier, randomString()), Instant.now());
-    var second =
-        SourceSnapshot.create(
-            randomSourceChange(approvalIdentifier, randomString()), Instant.now());
+    var first = SourceSnapshot.create(randomSourceChange(approvalIdentifier, randomString()));
+    var second = SourceSnapshot.create(randomSourceChange(approvalIdentifier, randomString()));
 
     assertThat(second.identifier(), not(equalTo(first.identifier())));
   }
@@ -41,10 +35,8 @@ class SourceSnapshotTest {
   void shouldCreateDifferentIdentifiersForSameEventIdentifierOnDifferentApprovals() {
     var eventIdentifier = randomString();
 
-    var first =
-        SourceSnapshot.create(randomSourceChange(randomUUID(), eventIdentifier), Instant.now());
-    var second =
-        SourceSnapshot.create(randomSourceChange(randomUUID(), eventIdentifier), Instant.now());
+    var first = SourceSnapshot.create(randomSourceChange(randomUUID(), eventIdentifier));
+    var second = SourceSnapshot.create(randomSourceChange(randomUUID(), eventIdentifier));
 
     assertThat(second.identifier(), not(equalTo(first.identifier())));
   }

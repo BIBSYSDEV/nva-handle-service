@@ -28,13 +28,13 @@ public record SourceSnapshotDao(
 
   private static final String SNAPSHOT_KEY = "Change:%s";
 
-  public static SourceSnapshotDao fromSourceSnapshot(SourceSnapshot snapshot) {
+  public static SourceSnapshotDao fromSourceSnapshot(SourceSnapshot snapshot, Instant createdDate) {
     return new SourceSnapshotDao(
         snapshot.identifier(),
         snapshot.approvalIdentifier(),
         snapshot.eventIdentifier(),
         snapshot.source(),
-        snapshot.timestamp());
+        createdDate);
   }
 
   public EnhancedDocument toEnhancedDocument() {
