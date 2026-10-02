@@ -203,9 +203,10 @@ paths:
       operationId: getContextVersion
       summary: Get a specific version of the JSON-LD Context
       description: |
-        Returns a specific version of the JSON-LD context. A published context version never changes.
-        Changes that only add terms are made to the current version, while breaking changes are
-        published as a new major version (`v2`, `v3`, ...).
+        Returns a specific version of the JSON-LD context. Term definitions in a published version
+        never change or disappear, so a document referencing a version always expands to the same
+        IRIs. New terms may be added to the current version; any change to or removal of an existing
+        term is published as a new major version (`v2`, `v3`, ...).
       parameters:
         - $ref: "#/components/parameters/ContextVersion"
       x-amazon-apigateway-integration:
