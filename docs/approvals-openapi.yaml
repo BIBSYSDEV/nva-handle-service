@@ -576,6 +576,7 @@ components:
         - source
         - type
         - subject
+        - time
       properties:
         specversion:
           type: string
@@ -601,7 +602,7 @@ components:
         time:
           type: string
           format: date-time
-          description: Optional time the change happened, as reported by the sender.
+          description: Time the change happened, as reported by the sender.
       example:
         specversion: "1.0"
         id: 5c1e2b0a-7f41-4a55-9d0e-3b2f8a61c9d4
