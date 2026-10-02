@@ -1,7 +1,21 @@
-@prefix : <__ONTOLOGY_NAMESPACE__> .
+@prefix : <__ONTOLOGY_IRI__#> .
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
 @prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix vann: <http://purl.org/vocab/vann/> .
 @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+#################################################################
+#    Ontology
+#################################################################
+
+<__ONTOLOGY_IRI__> a owl:Ontology ;
+    rdfs:label "NVA Approval ontology" ;
+    rdfs:comment "Vocabulary for approvals in NVA. The ontology is versioned with semantic versioning. The namespace and term IRIs are stable across versions: breaking changes introduce new terms and deprecate old ones instead of changing their meaning. Every version is served at its version IRI and never changes once published, while the ontology IRI always serves the latest version." ;
+    vann:preferredNamespacePrefix "approval" ;
+    vann:preferredNamespaceUri "__ONTOLOGY_IRI__#" ;
+    owl:versionIRI <__ONTOLOGY_IRI__/1.0.0> ;
+    owl:versionInfo "1.0.0" .
 
 #################################################################
 #    Classes
@@ -13,14 +27,14 @@
 
 :Identifier a rdfs:Class ;
     rdfs:label "Identifier" ;
-    rdfs:comment "A named identifier consisting of a name-value pair used to reference an approval. The combination of name and value must be unique across all approvals in the system." .
+    rdfs:comment "An identifier used to reference an approval, consisting of a namespace and a value. A value is unique within its namespace across all approvals in the system, while the same value may exist in another namespace." .
 
 #################################################################
 #    Properties
 #################################################################
 
-:identifier a rdf:Property ;
-    rdfs:label "identifier" ;
+:identifiers a rdf:Property ;
+    rdfs:label "identifiers" ;
     rdfs:comment "Links an approval to its named identifiers" ;
     rdfs:domain :Approval ;
     rdfs:range :Identifier .
@@ -37,15 +51,15 @@
     rdfs:domain :Approval ;
     rdfs:range xsd:anyURI .
 
-:name a rdf:Property ;
-    rdfs:label "name" ;
-    rdfs:comment "The name or category of the identifier (e.g., REK, DMP)" ;
+:namespace a rdf:Property ;
+    rdfs:label "namespace" ;
+    rdfs:comment "The namespace the identifier value belongs to, e.g. REK or DMP. A value is unique within its namespace, but the same value may exist in another namespace. Serialized as the JSON field name." ;
     rdfs:domain :Identifier ;
     rdfs:range xsd:string .
 
 :value a rdf:Property ;
     rdfs:label "value" ;
-    rdfs:comment "The actual identifier value" ;
+    rdfs:comment "The identifier value, unique within its namespace" ;
     rdfs:domain :Identifier ;
     rdfs:range xsd:string .
 
