@@ -14,6 +14,8 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.stream.IntStream;
 import no.sikt.nva.approvals.domain.Approval;
+import no.sikt.nva.approvals.domain.ApprovalActivity;
+import no.sikt.nva.approvals.domain.ApprovalRevision;
 import no.sikt.nva.approvals.domain.Handle;
 import no.sikt.nva.approvals.domain.IdentifierPolicy;
 import no.sikt.nva.approvals.domain.NamedIdentifier;
@@ -64,6 +66,10 @@ public class TestUtils {
 
   public static Approval randomApproval(URI source, Handle handle, UUID customerIdentifier) {
     return new Approval(randomUUID(), randomIdentifiers(), source, handle, customerIdentifier);
+  }
+
+  public static ApprovalRevision randomRevision(Approval approval, ApprovalActivity activity) {
+    return ApprovalRevision.create(approval, activity, randomUri(), randomUri(), Instant.now());
   }
 
   public static Instant randomTimestamp() {

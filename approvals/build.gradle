@@ -13,6 +13,7 @@ dependencies {
     api(nvaLibs.apigateway)
     api(nvaLibs.core)
     api(nvaLibs.json)
+    api(nvaLibs.identifiers)
     api(project(":handle"))
     implementation(nvaCatalog.aws.sdk2.auth)
     implementation(nvaCatalog.aws.sdk2.aws.core)

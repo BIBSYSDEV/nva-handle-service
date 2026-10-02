@@ -1,0 +1,12 @@
+{
+  "identifiers": [
+    {
+      "name": "REK",
+      "value": "2024/123"
+    }
+  ],
+  "source": "https://example.com/source/12345",
+  "handle": "https://hdl.handle.net/11250.1/98765",
+  "context": "approval/context",
+  "ontology": "approval/ontology"
+}

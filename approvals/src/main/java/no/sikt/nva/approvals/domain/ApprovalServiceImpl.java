@@ -1,10 +1,13 @@
 package no.sikt.nva.approvals.domain;
 
 import static java.util.UUID.randomUUID;
+import static no.sikt.nva.approvals.domain.ApprovalActivity.CREATE_APPROVAL;
+import static no.sikt.nva.approvals.domain.ApprovalActivity.UPDATE_APPROVAL;
 import static no.sikt.nva.handle.utils.DatabaseConnectionSupplier.getConnectionSupplier;
 
 import java.net.URI;
 import java.sql.Connection;
+import java.time.Instant;
 import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -30,6 +33,8 @@ public class ApprovalServiceImpl implements ApprovalService {
   private static final String HANDLE_PREFIX = "HANDLE_PREFIX";
   private static final String API_HOST = "API_HOST";
   private static final String APPROVAL_PATH = "approval";
+  private static final URI CONTEXT_PATH = URI.create("approval/context");
+  private static final URI ONTOLOGY_PATH = URI.create("approval/ontology");
   private static final String VALUE_DELIMITER = ", ";
   private static final String DUPLICATE_IDENTIFIERS_MESSAGE =
       "Identifiers must be unique, but the following were provided more than once: [%s]";
@@ -73,7 +78,7 @@ public class ApprovalServiceImpl implements ApprovalService {
     var approvalUri = createApprovalUri(approvalId);
     var handle = createHandle(approvalUri);
     var approval = new Approval(approvalId, namedIdentifiers, source, handle, customerIdentifier);
-    approvalRepository.save(approval);
+    approvalRepository.save(createRevision(approval, CREATE_APPROVAL));
     return approval;
   }
 
@@ -114,7 +119,7 @@ public class ApprovalServiceImpl implements ApprovalService {
     var updatedApproval =
         new Approval(
             approvalId, namedIdentifiers, source, approval.handle(), approval.customerIdentifier());
-    approvalRepository.updateApproval(updatedApproval);
+    approvalRepository.updateApproval(createRevision(updatedApproval, UPDATE_APPROVAL));
 
     return updatedApproval;
   }
@@ -217,6 +222,10 @@ public class ApprovalServiceImpl implements ApprovalService {
                     Collectors.collectingAndThen(
                         Collectors.toCollection(TreeSet::new),
                         values -> String.join(VALUE_DELIMITER, values)))));
+  }
+
+  private ApprovalRevision createRevision(Approval approval, ApprovalActivity activity) {
+    return ApprovalRevision.create(approval, activity, CONTEXT_PATH, ONTOLOGY_PATH, Instant.now());
   }
 
   private URI createApprovalUri(UUID approvalId) {

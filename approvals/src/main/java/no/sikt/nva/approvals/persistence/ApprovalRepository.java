@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import no.sikt.nva.approvals.domain.Approval;
+import no.sikt.nva.approvals.domain.ApprovalRevision;
 import no.sikt.nva.approvals.domain.Handle;
 import no.sikt.nva.approvals.domain.IdentifierPolicy;
 import no.sikt.nva.approvals.domain.NamedIdentifier;
@@ -12,13 +13,15 @@ import no.sikt.nva.approvals.events.SourceChangedEvent;
 
 public interface ApprovalRepository {
 
-  void save(Approval approval);
+  void save(ApprovalRevision revision);
 
   void save(SourceChangedEvent event, UUID approvalIdentifier);
 
-  void updateApproval(Approval approval);
+  void updateApproval(ApprovalRevision revision);
 
   Optional<Approval> findByApprovalIdentifier(UUID approvalIdentifier);
+
+  List<ApprovalRevision> findRevisions(UUID approvalIdentifier);
 
   Optional<Approval> findByHandle(Handle handle);
 
