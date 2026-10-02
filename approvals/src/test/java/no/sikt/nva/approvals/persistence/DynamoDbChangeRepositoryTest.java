@@ -14,14 +14,17 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasSize;
-import static org.hamcrest.Matchers.not;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Stream;
 import no.sikt.nva.approvals.domain.Approval;
 import no.sikt.nva.approvals.domain.ApprovalRevision;
 import no.sikt.nva.approvals.domain.Change;
+import no.sikt.nva.approvals.domain.ChangeList;
 import no.sikt.nva.approvals.domain.SourceSnapshot;
 import nva.commons.core.Environment;
 import org.junit.jupiter.api.AfterEach;
@@ -114,20 +117,31 @@ class DynamoDbChangeRepositoryTest {
   }
 
   @Test
-  void shouldListNextChangeWhenContinuingAfterLastChangeOfPage() {
+  void shouldListEveryChangeExactlyOnceWhenPagingWithNext() {
     var approval = randomApproval(randomHandle());
     saveApproval(approval);
     approvalRepository.save(
         SourceSnapshot.create(randomSourceChange(approval.identifier(), randomString())));
-    var firstPage = changeRepository.listChangesByApproval(approval.identifier(), null, 1);
+    approvalRepository.save(
+        SourceSnapshot.create(randomSourceChange(approval.identifier(), randomString())));
 
-    var secondPage =
-        changeRepository.listChangesByApproval(
-            approval.identifier(), firstPage.changes().getFirst().identifier(), 1);
+    var identifiers =
+        Stream.iterate(
+                Optional.of(changeRepository.listChangesByApproval(approval.identifier(), null, 1)),
+                Optional::isPresent,
+                page ->
+                    page.flatMap(ChangeList::next)
+                        .map(
+                            after ->
+                                changeRepository.listChangesByApproval(
+                                    approval.identifier(), after, 1)))
+            .flatMap(Optional::stream)
+            .flatMap(page -> page.changes().stream())
+            .map(Change::identifier)
+            .toList();
 
-    assertThat(
-        secondPage.changes().getFirst().identifier(),
-        not(equalTo(firstPage.changes().getFirst().identifier())));
+    assertThat(identifiers, hasSize(3));
+    assertThat(Set.copyOf(identifiers), hasSize(3));
   }
 
   private void saveApproval(Approval approval) {
