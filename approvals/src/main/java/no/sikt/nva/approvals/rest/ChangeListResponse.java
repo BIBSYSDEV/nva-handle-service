@@ -9,7 +9,4 @@ import java.util.List;
 @JsonTypeName("ChangeList")
 public record ChangeListResponse(List<ChangeResponse> changes) {
 
-  public static ChangeListResponse empty() {
-    return new ChangeListResponse(List.of());
-  }
 }

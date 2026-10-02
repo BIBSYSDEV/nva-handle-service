@@ -30,7 +30,7 @@ public class FetchChangesHandler extends ApiGatewayHandler<Void, ChangeListRespo
   @Override
   protected ChangeListResponse processInput(Void input, RequestInfo requestInfo, Context context)
       throws ApiGatewayException {
-    return ChangeListResponse.empty();
+    return new ChangeListResponse(List.of());
   }
 
   @Override
