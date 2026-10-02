@@ -1,9 +1,12 @@
 package no.sikt.nva.approvals.rest;
 
 import static java.net.HttpURLConnection.HTTP_OK;
+import static nva.commons.apigateway.MediaTypes.APPLICATION_JSON_LD;
 
 import com.amazonaws.services.lambda.runtime.Context;
+import java.util.List;
 import nva.commons.apigateway.ApiGatewayHandler;
+import nva.commons.apigateway.MediaType;
 import nva.commons.apigateway.RequestInfo;
 import nva.commons.apigateway.exceptions.ApiGatewayException;
 import nva.commons.apigateway.exceptions.NotFoundException;
@@ -27,7 +30,9 @@ public class FetchChangeHandler extends ApiGatewayHandler<Void, ChangeResponse> 
 
   @Override
   protected void validateRequest(Void input, RequestInfo requestInfo, Context context)
-      throws ApiGatewayException {}
+      throws ApiGatewayException {
+    getDefaultResponseContentTypeHeaderValue(requestInfo);
+  }
 
   @Override
   protected ChangeResponse processInput(Void input, RequestInfo requestInfo, Context context)
@@ -43,5 +48,10 @@ public class FetchChangeHandler extends ApiGatewayHandler<Void, ChangeResponse> 
   @Override
   protected Integer getSuccessStatusCode(Void input, ChangeResponse output) {
     return HTTP_OK;
+  }
+
+  @Override
+  protected List<MediaType> listSupportedMediaTypes() {
+    return List.of(APPLICATION_JSON_LD, MediaType.JSON_UTF_8);
   }
 }
