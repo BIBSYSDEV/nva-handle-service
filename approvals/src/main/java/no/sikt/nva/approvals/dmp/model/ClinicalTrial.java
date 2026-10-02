@@ -4,6 +4,7 @@ import java.net.URI;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Objects;
+import no.sikt.nva.approvals.source.SourceDocument;
 
 // FIXME: Suppressing warning in order to upgrade PMD version
 @SuppressWarnings("unused")
@@ -15,7 +16,8 @@ public record ClinicalTrial(
     Collection<TrialEvent> events,
     Collection<Sponsor> sponsors,
     Collection<TrialSite> trialSites,
-    PublicContactPoint publicContactPoint) {
+    PublicContactPoint publicContactPoint)
+    implements SourceDocument {
   public ClinicalTrial {
     events = Objects.isNull(events) ? Collections.emptyList() : events;
     sponsors = Objects.isNull(sponsors) ? Collections.emptyList() : sponsors;
