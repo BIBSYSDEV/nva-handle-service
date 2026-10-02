@@ -10,6 +10,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
+import no.sikt.nva.approvals.domain.Change;
 import no.sikt.nva.approvals.domain.ChangeList;
 import no.unit.nva.identifiers.SortableIdentifier;
 import nva.commons.core.Environment;
@@ -48,6 +49,18 @@ public class DynamoDbChangeRepository implements ChangeRepository {
         .map(identifier -> exclusiveStartKey(approvalIdentifier, identifier))
         .ifPresent(request::exclusiveStartKey);
     return sendRequest(request.build());
+  }
+
+  @Override
+  public Optional<Change> findChange(UUID approvalIdentifier, SortableIdentifier changeIdentifier) {
+    var key =
+        createChangeKey(
+            approvalIdentifier, ApprovalRevisionDao.CHANGE_KEY_PREFIX + changeIdentifier);
+    return Optional.ofNullable(table.getItem(key)).map(DynamoDbChangeRepository::toChange);
+  }
+
+  private static Change toChange(EnhancedDocument document) {
+    return ChangeDao.fromJson(document.toJson()).toChange();
   }
 
   private Map<String, AttributeValue> exclusiveStartKey(

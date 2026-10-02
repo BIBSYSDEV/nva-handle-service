@@ -144,6 +144,28 @@ class DynamoDbChangeRepositoryTest {
     assertThat(Set.copyOf(identifiers), hasSize(3));
   }
 
+  @Test
+  void shouldFindChangeOfApproval() {
+    var approval = randomApproval(randomHandle());
+    var snapshot = SourceSnapshot.create(randomSourceChange(approval.identifier(), randomString()));
+    saveApproval(approval);
+    approvalRepository.save(snapshot);
+
+    var change = changeRepository.findChange(approval.identifier(), snapshot.identifier());
+
+    assertThat(change, equalTo(Optional.of(snapshot)));
+  }
+
+  @Test
+  void shouldNotFindChangeOfOtherApproval() {
+    var snapshot = SourceSnapshot.create(randomSourceChange());
+    approvalRepository.save(snapshot);
+
+    var change = changeRepository.findChange(randomUUID(), snapshot.identifier());
+
+    assertThat(change, equalTo(Optional.empty()));
+  }
+
   private void saveApproval(Approval approval) {
     approvalRepository.save(randomRevision(approval, CREATE_APPROVAL));
   }
