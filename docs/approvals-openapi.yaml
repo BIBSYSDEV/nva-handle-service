@@ -297,6 +297,45 @@ paths:
             "application/json":
               schema:
                 $ref: "#/components/schemas/Problem"
+  /changes:
+    get:
+      tags:
+        - Approval
+        - external
+      operationId: getChanges
+      summary: Get changes
+      description: Lists changes to approvals, newest first.
+      security:
+        - CognitoUserPool:
+            ["https://api.nva.unit.no/scopes/third-party/approval-upsert", "https://api.nva.unit.no/scopes/backend"]
+      x-amazon-apigateway-integration:
+        uri:
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${NvaFetchChangesFunction.Arn}/invocations
+        responses: {}
+        httpMethod: POST
+        type: AWS_PROXY
+      responses:
+        "200":
+          description: Changes found
+          content:
+            application/ld+json:
+              schema:
+                $ref: "#/components/schemas/ChangeList"
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChangeList"
+        "401":
+          description: Unauthorized
+          content:
+            "application/json":
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "403":
+          description: Forbidden
+          content:
+            "application/json":
+              schema:
+                $ref: "#/components/schemas/Problem"
   /{approvalId}:
     get:
       tags:
@@ -610,6 +649,27 @@ components:
         type: no.sikt.nva.approval.source.changed
         subject: https://hdl.handle.net/11250.1/98765
         time: "2026-09-28T10:15:30Z"
+    ChangeList:
+      type: object
+      description: A page of recorded changes to approvals, newest first
+      properties:
+        type:
+          type: string
+          default: ChangeList
+        changes:
+          type: array
+          items:
+            $ref: "#/components/schemas/Change"
+    Change:
+      type: object
+      description: A recorded change to an approval
+      properties:
+        type:
+          type: string
+          default: Change
+        id:
+          type: string
+          format: uri
     Problem:
       type: object
       description: NVA error reporting object

@@ -569,6 +569,25 @@ Resources:
             Method: post
             RestApiId: !Ref NvaApprovalsApi
 
+  NvaFetchChangesFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub "/aws/lambda/${NvaFetchChangesFunction}"
+      RetentionInDays: 90
+
+  NvaFetchChangesFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: approvals
+      Handler: no.sikt.nva.approvals.rest.FetchChangesHandler::handleRequest
+      Events:
+        FetchChanges:
+          Type: Api
+          Properties:
+            Path: /changes
+            Method: get
+            RestApiId: !Ref NvaApprovalsApi
+
   NvaCreateSnapshotFunctionLogGroup:
     Type: AWS::Logs::LogGroup
     Properties:
