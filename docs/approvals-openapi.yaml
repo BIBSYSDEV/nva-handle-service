@@ -594,6 +594,12 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Change"
+        "400":
+          description: Bad Request. `approvalId` is not a UUID or `changeId` is not a change identifier
+          content:
+            "application/json":
+              schema:
+                $ref: "#/components/schemas/Problem"
         "401":
           description: Unauthorized
           content:
@@ -607,7 +613,9 @@ paths:
               schema:
                 $ref: "#/components/schemas/Problem"
         "404":
-          description: Change not found for this approval
+          description: >
+            Change not found for this approval. Also returned when the approval belongs to another
+            customer; only backend clients may read changes of every approval.
           content:
             "application/json":
               schema:
@@ -772,13 +780,26 @@ components:
     Change:
       type: object
       description: A recorded change to an approval
+      required:
+        - type
+        - id
+        - approval
       properties:
         type:
           type: string
-          default: Change
+          enum:
+            - ApprovalRevision
+            - SourceSnapshot
+          description: >
+            ApprovalRevision is a version of the approval record, SourceSnapshot a snapshot of its
+            source taken when the source reported a change.
         id:
           type: string
           format: uri
+        approval:
+          type: string
+          format: uri
+          description: The approval the change belongs to
     Problem:
       type: object
       description: NVA error reporting object
