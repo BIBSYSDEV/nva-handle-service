@@ -157,12 +157,12 @@ approval write. An update that changes nothing writes no revision.
 
 | Item               | `PK0`             | `SK0`                       | `PK1`/`PK2` |
 | ------------------ | ----------------- | --------------------------- | ----------- |
-| `ApprovalRevision` | `Approval:<uuid>` | `Change:<changeIdentifier>` | not set     |
+| `ApprovalRevision` | `Approval:<uuid>` | `Change:<identifier>`       | not set     |
 
-- `changeIdentifier` is a `SortableIdentifier` from nva-commons (`<epoch millis as 12 hex digits>-<random uuid>`,
+- `identifier` is a `SortableIdentifier` from nva-commons (`<epoch millis as 12 hex digits>-<random uuid>`,
   e.g. `01a0f1cfea4b-3f2a…`), so it sorts by time as a string. Source snapshots use the same identifier type, so all
   `Change:` items for an approval sort together.
-- The item is an envelope with a few stable attributes: `changeIdentifier`, `approvalIdentifier`,
+- The item is an envelope with a few stable attributes: `identifier`, `approvalIdentifier`,
   `customerIdentifier`, `createdDate`, `activity` (`CreateApproval` / `UpdateApproval`), `schemaVersion` and
   `contentType`.
 - The content is stored as-is in `body`: a JSON string with the approval image (`identifiers`, `source`, `handle`,
@@ -170,8 +170,9 @@ approval write. An update that changes nothing writes no revision.
   `schemaVersion` and its own reader, while old revisions keep being read with the version they were written with.
 - `context` and `ontology` are stored as relative URIs (`approval/context`, `approval/ontology`), never with the API
   host, since the host differs per environment. Resolve them against `API_HOST` when reading.
-- Revisions for one approval are listed in time order with a query on `PK0 = Approval:<uuid>` and
-  `SK0 begins_with Change:`, filtered on `type = ApprovalRevision`.
+- `ChangeRepository.listChangesByApproval` lists all changes of an approval (revisions and source snapshots) newest
+  first with a query on `PK0 = Approval:<uuid>` and `SK0 begins_with Change:`, a page at a time. The next page starts
+  after the last change of the previous one (`ChangeList.next()`).
 
 ## Endpoints
 
