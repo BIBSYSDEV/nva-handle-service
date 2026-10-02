@@ -1,7 +1,6 @@
 package no.sikt.nva.approvals.snapshot;
 
 import static no.sikt.nva.approvals.utils.TestUtils.randomSourceChange;
-import static org.mockito.ArgumentMatchers.refEq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 
@@ -27,6 +26,6 @@ class SnapshotServiceImplTest {
     snapshotService.createSnapshot(sourceChange);
 
     var expected = SourceSnapshot.create(sourceChange);
-    verify(approvalRepository).save(refEq(expected, "timestamp"));
+    verify(approvalRepository).save(expected);
   }
 }
