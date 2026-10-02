@@ -15,6 +15,7 @@ import static nva.commons.core.attempt.Try.attempt;
 import static software.amazon.awssdk.enhanced.dynamodb.AttributeValueType.S;
 import static software.amazon.awssdk.enhanced.dynamodb.TableMetadata.primaryIndexName;
 import static software.amazon.awssdk.enhanced.dynamodb.model.QueryConditional.keyEqualTo;
+import static software.amazon.awssdk.enhanced.dynamodb.model.QueryConditional.sortBeginsWith;
 
 import java.time.Instant;
 import java.util.ArrayList;
@@ -25,6 +26,7 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.IntStream;
 import no.sikt.nva.approvals.domain.Approval;
+import no.sikt.nva.approvals.domain.ApprovalRevision;
 import no.sikt.nva.approvals.domain.Handle;
 import no.sikt.nva.approvals.domain.IdentifierPolicy;
 import no.sikt.nva.approvals.domain.NamedIdentifier;
@@ -44,10 +46,12 @@ import software.amazon.awssdk.enhanced.dynamodb.document.EnhancedDocument;
 import software.amazon.awssdk.enhanced.dynamodb.model.BatchGetItemEnhancedRequest;
 import software.amazon.awssdk.enhanced.dynamodb.model.Page;
 import software.amazon.awssdk.enhanced.dynamodb.model.PutItemEnhancedRequest;
+import software.amazon.awssdk.enhanced.dynamodb.model.QueryEnhancedRequest;
 import software.amazon.awssdk.enhanced.dynamodb.model.ReadBatch;
 import software.amazon.awssdk.enhanced.dynamodb.model.TransactPutItemEnhancedRequest;
 import software.amazon.awssdk.enhanced.dynamodb.model.TransactWriteItemsEnhancedRequest;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
+import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 import software.amazon.awssdk.services.dynamodb.model.ConditionalCheckFailedException;
 
 // FIXME: Suppressing warning in order to upgrade PMD version
@@ -58,6 +62,7 @@ public class DynamoDbApprovalRepository implements ApprovalRepository {
   private static final int TRANSACT_WRITE_ITEM_LIMIT = 80;
   private static final int FIRST_CHUNK = 0;
   private static final String APPROVAL_NOT_FOUND_MESSAGE = "Approval not found: %s";
+  private static final String TYPE_FIELD = "type";
   private final DynamoDbTable<EnhancedDocument> table;
   private final DynamoDbEnhancedClient client;
 
@@ -72,8 +77,8 @@ public class DynamoDbApprovalRepository implements ApprovalRepository {
   }
 
   @Override
-  public void save(Approval approval) {
-    var allDocuments = createDocuments(approval, Instant.now());
+  public void save(ApprovalRevision revision) {
+    var allDocuments = createDocuments(revision);
     if (allDocuments.size() <= TRANSACT_WRITE_ITEM_LIMIT) {
       saveDocumentsInTransaction(allDocuments);
     } else {
@@ -110,28 +115,45 @@ public class DynamoDbApprovalRepository implements ApprovalRepository {
   }
 
   @Override
-  public void updateApproval(Approval approval) {
+  public void updateApproval(ApprovalRevision revision) {
+    var approval = revision.approval();
     var entities = fetchEntitiesByApprovalIdentifier(toDatabaseIdentifier(approval.identifier()));
     if (entities.isEmpty()) {
       throw new IllegalStateException(APPROVAL_NOT_FOUND_MESSAGE.formatted(approval.identifier()));
     }
     var storedIdentifiers = getIdentifiers(entities);
     var originalCreatedDate = getApproval(entities).createdDate();
-    var now = Instant.now();
+    var modifiedDate = revision.createdDate();
 
     var operations = new ArrayList<Operation>();
     operations.addAll(deleteOperations(storedIdentifiers, approval.namedIdentifiers()));
-    operations.addAll(createOperations(approval.namedIdentifiers(), storedIdentifiers, now));
+    operations.addAll(
+        createOperations(approval.namedIdentifiers(), storedIdentifiers, modifiedDate));
 
-    var approvalDao = ApprovalDao.fromApproval(approval, originalCreatedDate, now);
+    var approvalDao = ApprovalDao.fromApproval(approval, originalCreatedDate, modifiedDate);
     var handleDao = HandleDao.fromHandle(approval.handle(), originalCreatedDate);
-    updateIdentifiersForApproval(approvalDao, handleDao, operations);
+    var revisionDao = ApprovalRevisionDao.fromApprovalRevision(revision);
+    updateIdentifiersForApproval(approvalDao, handleDao, revisionDao, operations);
   }
 
   @Override
   public Optional<Approval> findByApprovalIdentifier(UUID approvalIdentifier) {
     var entities = fetchEntitiesByApprovalIdentifier(toDatabaseIdentifier(approvalIdentifier));
     return entities.isEmpty() ? Optional.empty() : Optional.of(constructApproval(entities));
+  }
+
+  @Override
+  public List<ApprovalRevision> findRevisions(UUID approvalIdentifier) {
+    var request =
+        QueryEnhancedRequest.builder()
+            .queryConditional(sortBeginsWith(changeKeyPrefix(approvalIdentifier)))
+            .filterExpression(typeIs(ApprovalRevisionDao.TYPE))
+            .build();
+    return table.query(request).items().stream()
+        .map(EnhancedDocument::toJson)
+        .map(ApprovalRevisionDao::fromJson)
+        .map(ApprovalRevisionDao::toApprovalRevision)
+        .toList();
   }
 
   @Override
@@ -255,6 +277,29 @@ public class DynamoDbApprovalRepository implements ApprovalRepository {
         .build();
   }
 
+  private static Expression typeIs(String type) {
+    return Expression.builder()
+        .expression("#type = :type")
+        .expressionNames(Map.of("#type", TYPE_FIELD))
+        .expressionValues(Map.of(":type", AttributeValue.fromS(type)))
+        .build();
+  }
+
+  private static Key changeKeyPrefix(UUID approvalIdentifier) {
+    return Key.builder()
+        .partitionValue(toDatabaseIdentifier(approvalIdentifier))
+        .sortValue(ApprovalRevisionDao.CHANGE_KEY_PREFIX)
+        .build();
+  }
+
+  private static TransactPutItemEnhancedRequest<EnhancedDocument> newItemRequest(
+      EnhancedDocument document) {
+    return TransactPutItemEnhancedRequest.builder(EnhancedDocument.class)
+        .item(document)
+        .conditionExpression(newDaoCondition())
+        .build();
+  }
+
   private static List<Operation> deleteOperations(
       Collection<NamedIdentifier> storedIdentifiers,
       Collection<NamedIdentifier> updatedIdentifiers) {
@@ -306,41 +351,42 @@ public class DynamoDbApprovalRepository implements ApprovalRepository {
   private void saveDocumentsInTransaction(List<EnhancedDocument> documents) {
     var requestBuilder = TransactWriteItemsEnhancedRequest.builder();
 
-    documents.forEach(
-        document -> {
-          var putRequest =
-              TransactPutItemEnhancedRequest.builder(EnhancedDocument.class)
-                  .item(document)
-                  .conditionExpression(newDaoCondition())
-                  .build();
-          requestBuilder.addPutItem(table, putRequest);
-        });
+    documents.forEach(document -> requestBuilder.addPutItem(table, newItemRequest(document)));
 
     client.transactWriteItems(requestBuilder.build());
   }
 
   private void updateIdentifiersForApproval(
-      ApprovalDao approvalDao, HandleDao handleDao, List<Operation> operations) {
+      ApprovalDao approvalDao,
+      HandleDao handleDao,
+      ApprovalRevisionDao revisionDao,
+      List<Operation> operations) {
     var chunks = splitToChunks(operations, TRANSACT_WRITE_ITEM_LIMIT);
     if (chunks.isEmpty()) {
-      sendTransaction(approvalDao, handleDao, List.of(), true);
+      sendTransaction(approvalDao, handleDao, revisionDao, List.of(), true);
       return;
     }
     IntStream.range(0, chunks.size())
         .forEach(
             chunkIndex ->
                 sendTransaction(
-                    approvalDao, handleDao, chunks.get(chunkIndex), chunkIndex == FIRST_CHUNK));
+                    approvalDao,
+                    handleDao,
+                    revisionDao,
+                    chunks.get(chunkIndex),
+                    chunkIndex == FIRST_CHUNK));
   }
 
   private void sendTransaction(
       ApprovalDao approvalDao,
       HandleDao handleDao,
+      ApprovalRevisionDao revisionDao,
       List<Operation> operations,
       boolean includeApproval) {
     var requestBuilder = TransactWriteItemsEnhancedRequest.builder();
     if (includeApproval) {
       requestBuilder.addPutItem(table, approvalDao.toEnhancedDocument(handleDao));
+      requestBuilder.addPutItem(table, newItemRequest(revisionDao.toEnhancedDocument()));
     }
     operations.forEach(
         operation -> addOperation(requestBuilder, operation, approvalDao, handleDao));
@@ -357,11 +403,7 @@ public class DynamoDbApprovalRepository implements ApprovalRepository {
           requestBuilder.addDeleteItem(table, primaryKey);
       case Operation.CreateIdentifier(var identifierDao) ->
           requestBuilder.addPutItem(
-              table,
-              TransactPutItemEnhancedRequest.builder(EnhancedDocument.class)
-                  .item(identifierDao.toEnhancedDocument(approvalDao, handleDao))
-                  .conditionExpression(newDaoCondition())
-                  .build());
+              table, newItemRequest(identifierDao.toEnhancedDocument(approvalDao, handleDao)));
     }
   }
 
@@ -382,13 +424,16 @@ public class DynamoDbApprovalRepository implements ApprovalRepository {
         .orElseThrow();
   }
 
-  private List<EnhancedDocument> createDocuments(Approval approval, Instant createdDate) {
+  private List<EnhancedDocument> createDocuments(ApprovalRevision revision) {
+    var approval = revision.approval();
+    var createdDate = revision.createdDate();
     var approvalDao = ApprovalDao.fromApproval(approval, createdDate, createdDate);
     var handleDao = HandleDao.fromHandle(approval.handle(), createdDate);
 
     var documents = new ArrayList<EnhancedDocument>();
     documents.add(handleDao.toEnhancedDocument(approvalDao));
     documents.add(approvalDao.toEnhancedDocument(handleDao));
+    documents.add(ApprovalRevisionDao.fromApprovalRevision(revision).toEnhancedDocument());
     documents.addAll(createIdentifierDocuments(approval, approvalDao, handleDao, createdDate));
     return documents;
   }

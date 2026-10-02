@@ -1,5 +1,6 @@
 package no.sikt.nva.approvals.domain;
 
+import static java.time.temporal.ChronoUnit.MICROS;
 import static java.util.UUID.randomUUID;
 import static no.sikt.nva.approvals.utils.TestUtils.randomApproval;
 import static no.sikt.nva.approvals.utils.TestUtils.randomHandle;
@@ -10,6 +11,7 @@ import static no.sikt.nva.approvals.utils.TestUtils.toIdentifierQueryObject;
 import static no.unit.nva.testutils.RandomDataGenerator.randomString;
 import static no.unit.nva.testutils.RandomDataGenerator.randomUri;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -24,6 +26,7 @@ import static org.mockito.Mockito.when;
 import java.net.URI;
 import java.sql.Connection;
 import java.sql.SQLException;
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -41,6 +44,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
+import org.mockito.ArgumentCaptor;
 
 class ApprovalServiceTest {
 
@@ -51,6 +55,9 @@ class ApprovalServiceTest {
   private static final String FIRST_VALUE_WHEN_SORTED = "aaa-first";
   private static final String LAST_VALUE_WHEN_SORTED = "zzz-last";
   private static final String EXPECTED_JOINED_VALUES = "aaa-first, zzz-last";
+  private static final URI RELATIVE_CONTEXT_URI = URI.create("approval/context");
+  private static final URI RELATIVE_ONTOLOGY_URI = URI.create("approval/ontology");
+  private static final String SORTABLE_TIMESTAMP_PREFIX = "%012x-";
   private ApprovalService approvalService;
   private ApprovalRepository approvalRepository;
   private HandleDatabase handleDatabase;
@@ -100,7 +107,7 @@ class ApprovalServiceTest {
     var handle = randomHandle().value();
     when(handleDatabase.createHandle(eq(HANDLE_PREFIX), any(URI.class), eq(connection)))
         .thenReturn(handle);
-    doNothing().when(approvalRepository).save((Approval) any());
+    doNothing().when(approvalRepository).save((ApprovalRevision) any());
 
     var approval = approvalService.create(randomIdentifiers(), randomUri(), randomUUID());
 
@@ -113,7 +120,7 @@ class ApprovalServiceTest {
     var source = randomUri();
     when(handleDatabase.createHandle(eq(HANDLE_PREFIX), any(URI.class), eq(connection)))
         .thenReturn(randomHandle().value());
-    doNothing().when(approvalRepository).save((Approval) any());
+    doNothing().when(approvalRepository).save((ApprovalRevision) any());
 
     var approval = approvalService.create(randomIdentifiers(), source, randomUUID());
 
@@ -125,7 +132,7 @@ class ApprovalServiceTest {
       throws SQLException, ApprovalServiceException, ApprovalConflictException {
     when(handleDatabase.createHandle(eq(HANDLE_PREFIX), any(URI.class), eq(connection)))
         .thenReturn(randomHandle().value());
-    doNothing().when(approvalRepository).save((Approval) any());
+    doNothing().when(approvalRepository).save((ApprovalRevision) any());
 
     var approval = approvalService.create(randomIdentifiers(), randomUri(), randomUUID());
 
@@ -141,7 +148,7 @@ class ApprovalServiceTest {
   void shouldCreateApprovalWithIdentifiersProvidedInInput()
       throws SQLException, ApprovalServiceException, ApprovalConflictException {
     when(handleDatabase.createHandle(any(), any(), any())).thenReturn(randomHandle().value());
-    doNothing().when(approvalRepository).save((Approval) any());
+    doNothing().when(approvalRepository).save((ApprovalRevision) any());
 
     var identifiers = randomIdentifiers();
     var approval = approvalService.create(identifiers, randomUri(), randomUUID());
@@ -309,7 +316,7 @@ class ApprovalServiceTest {
     var identifiers = List.of(new NamedIdentifier(name, randomString()));
     when(approvalRepository.findIdentifiers(identifiers)).thenReturn(List.of());
     when(handleDatabase.createHandle(any(), any(), any())).thenReturn(randomHandle().value());
-    doNothing().when(approvalRepository).save((Approval) any());
+    doNothing().when(approvalRepository).save((ApprovalRevision) any());
 
     var approval = approvalService.create(identifiers, randomUri(), randomUUID());
 
@@ -322,7 +329,7 @@ class ApprovalServiceTest {
     var identifiers = List.of(new NamedIdentifier(randomString(), "2023-510166#27-01"));
     when(approvalRepository.findIdentifiers(identifiers)).thenReturn(List.of());
     when(handleDatabase.createHandle(any(), any(), any())).thenReturn(randomHandle().value());
-    doNothing().when(approvalRepository).save((Approval) any());
+    doNothing().when(approvalRepository).save((ApprovalRevision) any());
 
     var approval = approvalService.create(identifiers, randomUri(), randomUUID());
 
@@ -338,7 +345,7 @@ class ApprovalServiceTest {
             new NamedIdentifier(name, randomString()), new NamedIdentifier(name, randomString()));
     when(approvalRepository.findIdentifiers(identifiers)).thenReturn(List.of());
     when(handleDatabase.createHandle(any(), any(), any())).thenReturn(randomHandle().value());
-    doNothing().when(approvalRepository).save((Approval) any());
+    doNothing().when(approvalRepository).save((ApprovalRevision) any());
 
     var approval = approvalService.create(identifiers, randomUri(), randomUUID());
 
@@ -627,7 +634,7 @@ class ApprovalServiceTest {
     var customerIdentifier = randomUUID();
     when(handleDatabase.createHandle(eq(HANDLE_PREFIX), any(URI.class), eq(connection)))
         .thenReturn(randomHandle().value());
-    doNothing().when(approvalRepository).save((Approval) any());
+    doNothing().when(approvalRepository).save((ApprovalRevision) any());
 
     var approval = approvalService.create(randomIdentifiers(), randomUri(), customerIdentifier);
 
@@ -651,5 +658,88 @@ class ApprovalServiceTest {
             approval.customerIdentifier());
 
     assertEquals(approval.customerIdentifier(), updatedApproval.customerIdentifier());
+  }
+
+  @Test
+  void shouldPersistCreateRevisionOfCreatedApproval()
+      throws SQLException, ApprovalServiceException, ApprovalConflictException {
+    when(handleDatabase.createHandle(any(), any(), any())).thenReturn(randomHandle().value());
+
+    var approval = approvalService.create(randomIdentifiers(), randomUri(), randomUUID());
+
+    var revision = capturedSavedRevision();
+    assertEquals(approval, revision.approval());
+    assertEquals(ApprovalActivity.CREATE_APPROVAL, revision.activity());
+  }
+
+  @Test
+  void shouldPersistUpdateRevisionOfUpdatedApproval()
+      throws ApprovalServiceException, ApprovalConflictException {
+    var approval = randomApproval(randomUUID(), randomUri());
+    var newIdentifiers = randomIdentifiers(2);
+    when(approvalRepository.findByApprovalIdentifier(approval.identifier()))
+        .thenReturn(Optional.of(approval));
+    when(approvalRepository.findIdentifiers(newIdentifiers)).thenReturn(List.of());
+
+    var updatedApproval =
+        approvalService.updateApproval(
+            approval.identifier(),
+            newIdentifiers,
+            approval.source(),
+            approval.customerIdentifier());
+
+    var revision = capturedUpdatedRevision();
+    assertEquals(updatedApproval, revision.approval());
+    assertEquals(ApprovalActivity.UPDATE_APPROVAL, revision.activity());
+  }
+
+  @Test
+  void shouldSetCreatedDateContextAndOntologyOnRevision()
+      throws SQLException, ApprovalServiceException, ApprovalConflictException {
+    when(handleDatabase.createHandle(any(), any(), any())).thenReturn(randomHandle().value());
+    var beforeCreate = Instant.now().truncatedTo(MICROS);
+
+    approvalService.create(randomIdentifiers(), randomUri(), randomUUID());
+
+    var revision = capturedSavedRevision();
+    assertEquals(RELATIVE_CONTEXT_URI, revision.context());
+    assertEquals(RELATIVE_ONTOLOGY_URI, revision.ontology());
+    assertFalse(revision.createdDate().isBefore(beforeCreate));
+  }
+
+  @Test
+  void shouldNotPersistEnvironmentSpecificHostOnRevision()
+      throws SQLException, ApprovalServiceException, ApprovalConflictException {
+    when(handleDatabase.createHandle(any(), any(), any())).thenReturn(randomHandle().value());
+
+    approvalService.create(randomIdentifiers(), randomUri(), randomUUID());
+
+    var revision = capturedSavedRevision();
+    assertFalse(revision.context().isAbsolute());
+    assertFalse(revision.ontology().isAbsolute());
+  }
+
+  @Test
+  void shouldCreateSortableChangeIdentifierFromCreatedDate()
+      throws SQLException, ApprovalServiceException, ApprovalConflictException {
+    when(handleDatabase.createHandle(any(), any(), any())).thenReturn(randomHandle().value());
+
+    approvalService.create(randomIdentifiers(), randomUri(), randomUUID());
+
+    var revision = capturedSavedRevision();
+    var expectedPrefix = SORTABLE_TIMESTAMP_PREFIX.formatted(revision.createdDate().toEpochMilli());
+    assertTrue(revision.changeIdentifier().toString().startsWith(expectedPrefix));
+  }
+
+  private ApprovalRevision capturedSavedRevision() {
+    var captor = ArgumentCaptor.forClass(ApprovalRevision.class);
+    verify(approvalRepository).save(captor.capture());
+    return captor.getValue();
+  }
+
+  private ApprovalRevision capturedUpdatedRevision() {
+    var captor = ArgumentCaptor.forClass(ApprovalRevision.class);
+    verify(approvalRepository).updateApproval(captor.capture());
+    return captor.getValue();
   }
 }
