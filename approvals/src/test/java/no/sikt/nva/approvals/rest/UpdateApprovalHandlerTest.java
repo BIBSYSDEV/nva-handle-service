@@ -287,6 +287,9 @@ class UpdateApprovalHandlerTest {
 
     assertEquals(HTTP_BAD_REQUEST, response.getStatusCode());
     assertEquals(INVALID_APPROVAL_ID_MESSAGE, problemDetail(response));
+    assertEquals(
+        List.of(error(INVALID_APPROVAL_ID_MESSAGE, APPROVAL_ID_PATH_PARAMETER)),
+        problemErrors(response));
   }
 
   @Test

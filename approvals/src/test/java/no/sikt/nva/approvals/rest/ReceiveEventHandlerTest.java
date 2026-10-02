@@ -11,6 +11,7 @@ import static no.sikt.nva.approvals.utils.TestUtils.randomHandle;
 import static no.unit.nva.testutils.RandomDataGenerator.randomString;
 import static no.unit.nva.testutils.RandomDataGenerator.randomUri;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doThrow;
@@ -143,6 +144,8 @@ class ReceiveEventHandlerTest {
     var response = send(null);
 
     assertProblem(response, HTTP_BAD_REQUEST, "Request body is missing");
+    assertFalse(
+        response.getBodyObject(Problem.class).getParameters().containsKey(ERRORS_PARAMETER));
   }
 
   @Test

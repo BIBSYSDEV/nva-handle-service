@@ -31,14 +31,17 @@ public final class RequestValidator {
 
   public static void validateBody(Object body) throws BadRequestException {
     if (isNull(body)) {
-      throw new BadRequestException(
-          BODY_MISSING_MESSAGE, new ValidationError(BODY_MISSING_MESSAGE, ROOT_POINTER));
+      throw new BadRequestException(BODY_MISSING_MESSAGE);
     }
     validate(body, RequestValidator::toJsonPointer);
   }
 
   public static void validateQueryParameters(Object queryParameters) throws BadRequestException {
     validate(queryParameters, RequestValidator::toParameterName);
+  }
+
+  public static BadRequestException badRequest(String message, String pointer) {
+    return new BadRequestException(message, new ValidationError(message, pointer));
   }
 
   private static void validate(Object request, Function<Path, String> pointerResolver)
