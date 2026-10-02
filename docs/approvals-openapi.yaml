@@ -514,6 +514,63 @@ paths:
             "application/json":
               schema:
                 $ref: "#/components/schemas/Problem"
+  /{approvalId}/changes/{changeId}:
+    get:
+      tags:
+        - Approval
+        - external
+      operationId: getChange
+      summary: Get change
+      description: Get one recorded change to an approval.
+      parameters:
+        - name: approvalId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: changeId
+          in: path
+          required: true
+          schema:
+            type: string
+      security:
+        - CognitoUserPool:
+            ["https://api.nva.unit.no/scopes/third-party/approval-upsert", "https://api.nva.unit.no/scopes/backend"]
+      x-amazon-apigateway-integration:
+        uri:
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${NvaFetchChangeFunction.Arn}/invocations
+        responses: {}
+        httpMethod: POST
+        type: AWS_PROXY
+      responses:
+        "200":
+          description: Change found
+          content:
+            application/ld+json:
+              schema:
+                $ref: "#/components/schemas/Change"
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Change"
+        "401":
+          description: Unauthorized
+          content:
+            "application/json":
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "403":
+          description: Forbidden
+          content:
+            "application/json":
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "404":
+          description: Change not found for this approval
+          content:
+            "application/json":
+              schema:
+                $ref: "#/components/schemas/Problem"
 components:
   schemas:
     ApprovalWritableState:
