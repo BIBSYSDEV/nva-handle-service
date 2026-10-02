@@ -728,7 +728,7 @@ class ApprovalServiceTest {
 
     var revision = capturedSavedRevision();
     var expectedPrefix = SORTABLE_TIMESTAMP_PREFIX.formatted(revision.createdDate().toEpochMilli());
-    assertTrue(revision.changeIdentifier().toString().startsWith(expectedPrefix));
+    assertTrue(revision.identifier().toString().startsWith(expectedPrefix));
   }
 
   private ApprovalRevision capturedSavedRevision() {

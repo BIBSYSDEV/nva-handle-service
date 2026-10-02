@@ -47,8 +47,8 @@ import no.sikt.nva.approvals.domain.ApprovalRevision;
 import no.sikt.nva.approvals.domain.Handle;
 import no.sikt.nva.approvals.domain.IdentifierPolicy;
 import no.sikt.nva.approvals.domain.NamedIdentifier;
+import no.sikt.nva.approvals.domain.SourceSnapshot;
 import no.sikt.nva.approvals.events.SourceChangedEvent;
-import no.sikt.nva.approvals.snapshot.SourceSnapshot;
 import no.unit.nva.commons.json.JsonUtils;
 import nva.commons.core.Environment;
 import nva.commons.core.ioutils.IoUtils;
@@ -64,6 +64,8 @@ import software.amazon.awssdk.services.dynamodb.model.UpdateItemRequest;
 
 class DynamoDbApprovalRepositoryTest {
 
+  private static final int PAGE_SIZE = 100;
+
   private static final Environment ENVIRONMENT = new Environment();
   private static final String TABLE = ENVIRONMENT.readEnv(DynamoDbConstants.TABLE);
   private static final String DMP = "DMP";
@@ -75,8 +77,7 @@ class DynamoDbApprovalRepositoryTest {
   private static final String CREATED_DATE_FIELD = "createdDate";
   private static final String CHANGE_KEY = "Change:%s";
   private static final String APPROVAL_REVISION_TYPE = "ApprovalRevision";
-  private static final String OTHER_CHANGE_TYPE = "SourceSnapshot";
-  private static final String CHANGE_IDENTIFIER_FIELD = "changeIdentifier";
+  private static final String CHANGE_IDENTIFIER_FIELD = "identifier";
   private static final String APPROVAL_IDENTIFIER_FIELD = "approvalIdentifier";
   private static final String ACTIVITY_FIELD = "activity";
   private static final String SCHEMA_VERSION_FIELD = "schemaVersion";
@@ -97,12 +98,14 @@ class DynamoDbApprovalRepositoryTest {
   private static final String V1_ONTOLOGY = "approval/ontology";
 
   private ApprovalRepository approvalRepository;
+  private ChangeRepository changeRepository;
   private DynamoDbLocal dynamoDbLocal;
 
   @BeforeEach
   void setUp() {
     dynamoDbLocal = dynamoDBLocal(TABLE);
     approvalRepository = new DynamoDbApprovalRepository(dynamoDbLocal.client(), ENVIRONMENT);
+    changeRepository = new DynamoDbChangeRepository(dynamoDbLocal.client(), ENVIRONMENT);
   }
 
   @AfterEach
@@ -590,7 +593,7 @@ class DynamoDbApprovalRepositoryTest {
 
     approvalRepository.save(revision);
 
-    assertEquals(List.of(revision), approvalRepository.findRevisions(approval.identifier()));
+    assertEquals(List.of(revision), revisions(approval.identifier()));
   }
 
   @Test
@@ -603,13 +606,11 @@ class DynamoDbApprovalRepositoryTest {
 
     approvalRepository.updateApproval(updateRevision);
 
-    assertEquals(
-        List.of(createRevision, updateRevision),
-        approvalRepository.findRevisions(approval.identifier()));
+    assertEquals(List.of(updateRevision, createRevision), revisions(approval.identifier()));
   }
 
   @Test
-  void shouldReturnRevisionsInTimeOrder() {
+  void shouldListRevisionsNewestFirst() {
     var createdApproval = randomApproval(randomIdentifiers(2), randomUUID());
     var firstUpdate = withIdentifiers(createdApproval, randomIdentifiers(1));
     var secondUpdate = withSource(firstUpdate, randomUri());
@@ -618,11 +619,9 @@ class DynamoDbApprovalRepositoryTest {
     updateApproval(secondUpdate);
 
     var approvalSnapshots =
-        approvalRepository.findRevisions(createdApproval.identifier()).stream()
-            .map(ApprovalRevision::approval)
-            .toList();
+        revisions(createdApproval.identifier()).stream().map(ApprovalRevision::approval).toList();
 
-    assertEquals(List.of(createdApproval, firstUpdate, secondUpdate), approvalSnapshots);
+    assertEquals(List.of(secondUpdate, firstUpdate, createdApproval), approvalSnapshots);
   }
 
   @Test
@@ -631,7 +630,7 @@ class DynamoDbApprovalRepositoryTest {
 
     saveApproval(approval);
 
-    assertEquals(1, approvalRepository.findRevisions(approval.identifier()).size());
+    assertEquals(1, revisions(approval.identifier()).size());
   }
 
   @Test
@@ -641,7 +640,7 @@ class DynamoDbApprovalRepositoryTest {
 
     updateApproval(withIdentifiers(approval, randomIdentifiers(60)));
 
-    assertEquals(2, approvalRepository.findRevisions(approval.identifier()).size());
+    assertEquals(2, revisions(approval.identifier()).size());
   }
 
   @Test
@@ -680,7 +679,7 @@ class DynamoDbApprovalRepositoryTest {
     var otherApproval = randomApproval(List.of(removedIdentifier), randomUUID());
     saveApproval(otherApproval);
 
-    var firstRevision = approvalRepository.findRevisions(approval.identifier()).getFirst();
+    var firstRevision = revisions(approval.identifier()).getLast();
     assertTrue(firstRevision.approval().namedIdentifiers().contains(removedIdentifier));
     assertEquals(
         otherApproval, approvalRepository.findByIdentifier(removedIdentifier).orElseThrow());
@@ -711,15 +710,6 @@ class DynamoDbApprovalRepositoryTest {
   }
 
   @Test
-  void shouldNotReturnOtherChangeTypesAsRevisions() {
-    var approval = randomApproval(randomHandle());
-    saveApproval(approval);
-    insertChangeItemOfOtherType(approval.identifier());
-
-    assertEquals(1, approvalRepository.findRevisions(approval.identifier()).size());
-  }
-
-  @Test
   void shouldReadRevisionAsDatabaseEntryWithCreatedDate() {
     var revision = randomRevision(randomApproval(randomHandle()), CREATE_APPROVAL);
     approvalRepository.save(revision);
@@ -744,7 +734,7 @@ class DynamoDbApprovalRepositoryTest {
 
   @Test
   void shouldReturnEmptyListWhenApprovalHasNoRevisions() {
-    assertTrue(approvalRepository.findRevisions(randomUUID()).isEmpty());
+    assertTrue(revisions(randomUUID()).isEmpty());
   }
 
   @Test
@@ -768,7 +758,7 @@ class DynamoDbApprovalRepositoryTest {
     insertRevisionItem(
         approvalIdentifier, customerIdentifier, SCHEMA_VERSION_ONE, schemaVersionOneBody());
 
-    var revision = approvalRepository.findRevisions(approvalIdentifier).getFirst();
+    var revision = revisions(approvalIdentifier).getFirst();
 
     var expectedApproval =
         new Approval(
@@ -788,8 +778,7 @@ class DynamoDbApprovalRepositoryTest {
     insertRevisionItem(
         approvalIdentifier, randomUUID(), UNSUPPORTED_SCHEMA_VERSION, schemaVersionOneBody());
 
-    assertThrows(
-        IllegalStateException.class, () -> approvalRepository.findRevisions(approvalIdentifier));
+    assertThrows(IllegalStateException.class, () -> revisions(approvalIdentifier));
   }
 
   private void saveApproval(Approval approval) {
@@ -820,15 +809,11 @@ class DynamoDbApprovalRepositoryTest {
   }
 
   private static String changeKey(ApprovalRevision revision) {
-    return CHANGE_KEY.formatted(revision.changeIdentifier());
+    return CHANGE_KEY.formatted(revision.identifier());
   }
 
   private void insertConflictingChangeItem(ApprovalRevision revision) {
     insertChangeItem(revision.approval().identifier(), changeKey(revision), APPROVAL_REVISION_TYPE);
-  }
-
-  private void insertChangeItemOfOtherType(UUID approvalIdentifier) {
-    insertChangeItem(approvalIdentifier, CHANGE_KEY.formatted(randomString()), OTHER_CHANGE_TYPE);
   }
 
   private static String schemaVersionOneBody() {
@@ -1036,6 +1021,15 @@ class DynamoDbApprovalRepositoryTest {
     var redelivered = storedSnapshot(snapshot);
 
     assertThat(stored, equalTo(redelivered));
+  }
+
+  private List<ApprovalRevision> revisions(UUID approvalIdentifier) {
+    return changeRepository
+        .listChangesByApproval(approvalIdentifier, null, PAGE_SIZE)
+        .changes()
+        .stream()
+        .map(ApprovalRevision.class::cast)
+        .toList();
   }
 
   private SourceSnapshotDao storedSnapshot(SourceSnapshot snapshot) {

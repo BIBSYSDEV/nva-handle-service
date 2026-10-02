@@ -3,7 +3,6 @@ package no.sikt.nva.approvals.persistence;
 import static no.sikt.nva.approvals.persistence.DynamoDbConstants.PK0;
 import static no.sikt.nva.approvals.persistence.DynamoDbConstants.SK0;
 import static no.sikt.nva.approvals.persistence.DynamoDbConstants.STRING;
-import static nva.commons.core.attempt.Try.attempt;
 
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.annotation.JsonTypeInfo.Id;
@@ -12,14 +11,13 @@ import java.time.Instant;
 import java.util.UUID;
 import no.sikt.nva.approvals.domain.ApprovalActivity;
 import no.sikt.nva.approvals.domain.ApprovalRevision;
-import no.unit.nva.commons.json.JsonUtils;
 import no.unit.nva.identifiers.SortableIdentifier;
 import software.amazon.awssdk.enhanced.dynamodb.document.EnhancedDocument;
 
 @JsonTypeInfo(use = Id.NAME, property = "type")
 @JsonTypeName(ApprovalRevisionDao.TYPE)
 public record ApprovalRevisionDao(
-    SortableIdentifier changeIdentifier,
+    SortableIdentifier identifier,
     UUID approvalIdentifier,
     UUID customerIdentifier,
     Instant createdDate,
@@ -27,7 +25,7 @@ public record ApprovalRevisionDao(
     int schemaVersion,
     String contentType,
     String body)
-    implements DatabaseEntry {
+    implements ChangeDao {
 
   public static final String TYPE = "ApprovalRevision";
   public static final String CHANGE_KEY_PREFIX = "Change:";
@@ -39,7 +37,7 @@ public record ApprovalRevisionDao(
   public static ApprovalRevisionDao fromApprovalRevision(ApprovalRevision revision) {
     var approval = revision.approval();
     return new ApprovalRevisionDao(
-        revision.changeIdentifier(),
+        revision.identifier(),
         approval.identifier(),
         approval.customerIdentifier(),
         revision.createdDate(),
@@ -49,15 +47,11 @@ public record ApprovalRevisionDao(
         ApprovalImage.fromApprovalRevision(revision).toJsonString());
   }
 
-  public static ApprovalRevisionDao fromJson(String json) {
-    return attempt(() -> JsonUtils.dtoObjectMapper.readValue(json, ApprovalRevisionDao.class))
-        .orElseThrow();
-  }
-
-  public ApprovalRevision toApprovalRevision() {
+  @Override
+  public ApprovalRevision toChange() {
     var image = readImage();
     return new ApprovalRevision(
-        changeIdentifier,
+        identifier,
         image.toApproval(approvalIdentifier, customerIdentifier),
         createdDate,
         activity,
@@ -67,7 +61,7 @@ public record ApprovalRevisionDao(
 
   @Override
   public String getDatabaseIdentifier() {
-    return CHANGE_KEY.formatted(changeIdentifier);
+    return CHANGE_KEY.formatted(identifier);
   }
 
   public EnhancedDocument toEnhancedDocument() {
@@ -81,7 +75,7 @@ public record ApprovalRevisionDao(
   private ApprovalImage readImage() {
     if (schemaVersion != ApprovalImage.SCHEMA_VERSION) {
       throw new IllegalStateException(
-          UNSUPPORTED_SCHEMA_VERSION_MESSAGE.formatted(schemaVersion, changeIdentifier));
+          UNSUPPORTED_SCHEMA_VERSION_MESSAGE.formatted(schemaVersion, identifier));
     }
     return ApprovalImage.fromJson(body);
   }
