@@ -129,7 +129,7 @@ paths:
 
         **Example queries:**
         - By handle: `/approval?handle=https%3A%2F%2Fhdl.handle.net%2F11250.1%2F12345`
-        - By identifier: `/approval?name=REK&value=2024%2F123`
+        - By identifier: `/approval?name=REK&value=123456`
 
         **Note:** You must provide either `handle` OR both `name` and `value`. Providing both or incomplete identifier parameters will return 400 Bad Request.
       parameters:
@@ -449,7 +449,7 @@ paths:
                   identifiers:
                     - type: Identifier
                       name: REK
-                      value: "2024/123"
+                      value: "123456"
                     - type: Identifier
                       name: DMP
                       value: dmp-456
@@ -464,7 +464,7 @@ paths:
                   identifiers:
                     - type: Identifier
                       name: REK
-                      value: "2024/123"
+                      value: "123456"
                     - type: Identifier
                       name: DMP
                       value: dmp-456
@@ -648,7 +648,7 @@ components:
         identifiers:
           - type: Identifier
             name: REK
-            value: "2024/123"
+            value: "123456"
           - type: Identifier
             name: DMP
             value: dmp-456
@@ -695,7 +695,7 @@ components:
         identifiers:
           - type: Identifier
             name: REK
-            value: "2024/123"
+            value: "123456"
           - type: Identifier
             name: DMP
             value: dmp-456
@@ -864,7 +864,7 @@ components:
         identifiers:
           - type: Identifier
             name: REK
-            value: "2024/123"
+            value: "123456"
         source: https://example.com/source/12345
         handle: https://hdl.handle.net/11250.1/98765
     Identifier:
@@ -883,7 +883,10 @@ components:
           type: string
           maxLength: 100
           pattern: "^\\s*[A-Za-z0-9_-]+\\s*$"
-          description: The name or category of the identifier (e.g., 'doi', 'isbn')
+          description: >
+            The namespace of the identifier (e.g., 'doi', 'isbn'). All values under one name must
+            belong to the same identifier space, so that each value could be resolved as
+            `<base URI>/<value>`. Use separate names for identifier spaces that can produce the same value.
         value:
           type: string
           maxLength: 900
