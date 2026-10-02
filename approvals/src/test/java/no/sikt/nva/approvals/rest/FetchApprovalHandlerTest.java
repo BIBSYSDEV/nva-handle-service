@@ -66,6 +66,14 @@ class FetchApprovalHandlerTest {
   private static final String ERRORS_PARAMETER = "errors";
   private static final String DETAIL_FIELD = "detail";
   private static final String POINTER_FIELD = "pointer";
+  private static final String MANDATORY_MESSAGE = "Is mandatory";
+  private static final String INVALID_APPROVAL_ID_MESSAGE =
+      "Provided approval identifier is not valid!";
+  private static final String CONFLICTING_QUERY_MESSAGE =
+      "Use either 'handle' or 'name' and 'value', not both";
+  private static final String CONFLICTING_PATH_MESSAGE =
+      "Cannot use both path parameter and query parameters. Use either approvalId path or query"
+          + " parameters";
   private static final String API_HOST = "api.unittest.nva.unit.no";
   private static final String COGNITO_AUTHORIZER_URLS_ENV = "COGNITO_AUTHORIZER_URLS";
   private static final String API_HOST_ENV = "API_HOST";
@@ -123,9 +131,69 @@ class FetchApprovalHandlerTest {
             new FakeApprovalService(), environment, templateEngine, new FakeDmpClient());
     var request = createRequestWithInvalidId();
 
-    var response = handleRequest(request);
+    var response = handleRequestAsProblem(request);
 
     assertEquals(HTTP_BAD_REQUEST, response.getStatusCode());
+    assertEquals(
+        List.of(
+            Map.of(
+                DETAIL_FIELD,
+                INVALID_APPROVAL_ID_MESSAGE,
+                POINTER_FIELD,
+                APPROVAL_ID_PATH_PARAMETER)),
+        problemErrors(response));
+  }
+
+  @Test
+  void shouldReturnBadRequestWhenHandleIsCombinedWithNamedIdentifier() {
+    handler =
+        new FetchApprovalHandler(
+            new FakeApprovalService(), environment, templateEngine, new FakeDmpClient());
+    var request =
+        createRequestWithQueryParameters(
+            Map.of(
+                HANDLE_QUERY_PARAMETER, VALID_HANDLE,
+                NAME_QUERY_PARAMETER, "doi",
+                VALUE_QUERY_PARAMETER, "10.1234/5678"));
+
+    var response = handleRequestAsProblem(request);
+
+    assertEquals(HTTP_BAD_REQUEST, response.getStatusCode());
+    assertEquals(
+        List.of(
+            Map.of(DETAIL_FIELD, CONFLICTING_QUERY_MESSAGE, POINTER_FIELD, HANDLE_QUERY_PARAMETER)),
+        problemErrors(response));
+  }
+
+  @Test
+  void shouldReturnBadRequestPointingToMissingValueWhenOnlyNameIsProvided() {
+    handler =
+        new FetchApprovalHandler(
+            new FakeApprovalService(), environment, templateEngine, new FakeDmpClient());
+    var request = createRequestWithQueryParameters(Map.of(NAME_QUERY_PARAMETER, "doi"));
+
+    var response = handleRequestAsProblem(request);
+
+    assertEquals(
+        List.of(Map.of(DETAIL_FIELD, MANDATORY_MESSAGE, POINTER_FIELD, VALUE_QUERY_PARAMETER)),
+        problemErrors(response));
+  }
+
+  @Test
+  void shouldReturnBadRequestPointingToApprovalIdWhenPathAndQueryAreCombined() {
+    handler =
+        new FetchApprovalHandler(
+            new FakeApprovalService(), environment, templateEngine, new FakeDmpClient());
+    var request = createRequestWithPathAndQueryParameters(UUID.randomUUID(), VALID_HANDLE);
+
+    var response = handleRequestAsProblem(request);
+
+    assertEquals(HTTP_BAD_REQUEST, response.getStatusCode());
+    assertEquals(
+        List.of(
+            Map.of(
+                DETAIL_FIELD, CONFLICTING_PATH_MESSAGE, POINTER_FIELD, APPROVAL_ID_PATH_PARAMETER)),
+        problemErrors(response));
   }
 
   @Test
@@ -542,6 +610,14 @@ class FetchApprovalHandlerTest {
       handler.handleRequest(request, output, CONTEXT);
       return GatewayResponse.fromOutputStream(output, Problem.class);
     } catch (IOException e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  private static Object problemErrors(GatewayResponse<Problem> response) {
+    try {
+      return response.getBodyObject(Problem.class).getParameters().get(ERRORS_PARAMETER);
+    } catch (JsonProcessingException e) {
       throw new RuntimeException(e);
     }
   }

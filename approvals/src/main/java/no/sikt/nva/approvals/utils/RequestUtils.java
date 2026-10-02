@@ -1,5 +1,7 @@
 package no.sikt.nva.approvals.utils;
 
+import static no.sikt.nva.approvals.validation.RequestConstraints.INVALID_APPROVAL_IDENTIFIER_MESSAGE;
+import static no.sikt.nva.approvals.validation.RequestValidator.badRequest;
 import static nva.commons.core.attempt.Try.attempt;
 
 import java.util.Map;
@@ -34,7 +36,7 @@ public final class RequestUtils {
     return attempt(() -> requestInfo.getPathParameter(APPROVAL_ID_PATH_PARAMETER))
         .map(UUID::fromString)
         .orElseThrow(
-            failure -> new BadRequestException("Provided approval identifier is not valid!"));
+            failure -> badRequest(INVALID_APPROVAL_IDENTIFIER_MESSAGE, APPROVAL_ID_PATH_PARAMETER));
   }
 
   public static UUID getCustomerIdentifier(RequestInfo requestInfo) throws UnauthorizedException {

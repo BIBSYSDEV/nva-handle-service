@@ -129,7 +129,7 @@ paths:
 
         **Example queries:**
         - By handle: `/approval?handle=https%3A%2F%2Fhdl.handle.net%2F11250.1%2F12345`
-        - By identifier: `/approval?name=REK&value=2024%2F123`
+        - By identifier: `/approval?name=REK&value=123456`
 
         **Note:** You must provide either `handle` OR both `name` and `value`. Providing both or incomplete identifier parameters will return 400 Bad Request.
       parameters:
@@ -139,6 +139,7 @@ paths:
           schema:
             type: string
             format: uri
+            maxLength: 1024
         - name: name
           in: query
           description: Identifier name (required when using value parameter)
@@ -174,10 +175,15 @@ paths:
               schema:
                 type: string
         "400":
-          description: >-
-            Bad Request - invalid query parameters or missing required parameters. A `name` or
-            `value` that breaks the limits of an identifier is listed in `errors`, with the
-            parameter name as pointer.
+          description: |-
+            Bad Request. The request is rejected when:
+            * no query parameters are given, or `handle` is combined with `name` / `value`
+              (pointer `handle`)
+            * only one of `name` and `value` is given (pointer to the missing one)
+            * `handle` is not a handle URI of at most 1024 characters
+            * `name` or `value` breaks the rules of an identifier
+
+            Every invalid parameter is listed in `errors`, with the parameter name as pointer.
           content:
             "application/json":
               schema:
@@ -395,7 +401,9 @@ paths:
               schema:
                 type: string
         "400":
-          description: Bad Request
+          description: >-
+            Bad Request - `approvalId` is not a UUID, or query parameters are combined with the
+            path parameter. Listed in `errors` with pointer `approvalId`.
           content:
             "application/json":
               schema:
@@ -449,7 +457,7 @@ paths:
                   identifiers:
                     - type: Identifier
                       name: REK
-                      value: "2024/123"
+                      value: "123456"
                     - type: Identifier
                       name: DMP
                       value: dmp-456
@@ -464,7 +472,7 @@ paths:
                   identifiers:
                     - type: Identifier
                       name: REK
-                      value: "2024/123"
+                      value: "123456"
                     - type: Identifier
                       name: DMP
                       value: dmp-456
@@ -495,6 +503,7 @@ paths:
         "400":
           description: |-
             Bad Request. The request is rejected when:
+            * `approvalId` is not a UUID
             * the body is missing or invalid
             * `identifiers` is missing, empty or holds more than 20 identifiers
             * an identifier `name` is missing, longer than 100 characters, or contains anything
@@ -507,7 +516,9 @@ paths:
             * `source` is missing or longer than 1024 characters
             * `id` or `identifier` in the body does not address the approval in the request URI
 
-            Every invalid field is listed in `errors`, with a JSON pointer to the field.
+            Every invalid field is listed in `errors`, with a JSON pointer to the field in the
+            body, or with pointer `approvalId` for the path parameter. A missing body is reported
+            in `detail` only.
           content:
             "application/json":
               schema:
@@ -648,7 +659,7 @@ components:
         identifiers:
           - type: Identifier
             name: REK
-            value: "2024/123"
+            value: "123456"
           - type: Identifier
             name: DMP
             value: dmp-456
@@ -695,7 +706,7 @@ components:
         identifiers:
           - type: Identifier
             name: REK
-            value: "2024/123"
+            value: "123456"
           - type: Identifier
             name: DMP
             value: dmp-456
@@ -818,8 +829,8 @@ components:
           type: string
           description: >-
             JSON pointer (RFC 6901) to the invalid field in the request body, for example
-            `/identifiers/3/value`. For query parameters it is the parameter name, for example
-            `name`.
+            `/identifiers/3/value`. For query and path parameters it is the parameter name, for
+            example `name` or `approvalId`.
       example:
         detail: Must be at most 900 bytes long in UTF-8
         pointer: /identifiers/3/value
@@ -864,7 +875,7 @@ components:
         identifiers:
           - type: Identifier
             name: REK
-            value: "2024/123"
+            value: "123456"
         source: https://example.com/source/12345
         handle: https://hdl.handle.net/11250.1/98765
     Identifier:
@@ -883,7 +894,10 @@ components:
           type: string
           maxLength: 100
           pattern: "^\\s*[A-Za-z0-9_-]+\\s*$"
-          description: The name or category of the identifier (e.g., 'doi', 'isbn')
+          description: >
+            The namespace of the identifier (e.g., 'doi', 'isbn'). All values under one name must
+            belong to the same identifier space, so that each value could be resolved as
+            `<base URI>/<value>`. Use separate names for identifier spaces that can produce the same value.
         value:
           type: string
           maxLength: 900

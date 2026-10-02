@@ -12,7 +12,7 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.Target;
 
 @Documented
-@Constraint(validatedBy = HandleUriValidator.class)
+@Constraint(validatedBy = {HandleUriValidator.class, HandleStringValidator.class})
 @Target({FIELD, PARAMETER})
 @Retention(RUNTIME)
 public @interface HandleUri {

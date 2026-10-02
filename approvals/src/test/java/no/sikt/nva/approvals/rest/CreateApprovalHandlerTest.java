@@ -10,6 +10,7 @@ import static no.sikt.nva.approvals.validation.RequestConstraints.MAX_IDENTIFIER
 import static no.unit.nva.testutils.RandomDataGenerator.randomString;
 import static no.unit.nva.testutils.RandomDataGenerator.randomUri;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
@@ -50,6 +51,7 @@ class CreateApprovalHandlerTest {
   private static final String IDENTIFIERS_SIZE_MESSAGE =
       "Between 1 and 20 identifiers are required";
   private static final String ERRORS_PARAMETER = "errors";
+  private static final String BODY_MISSING_MESSAGE = "Request body is missing";
   private static final String DETAIL_FIELD = "detail";
   private static final String POINTER_FIELD = "pointer";
   private CreateApprovalHandler handler;
@@ -249,8 +251,11 @@ class CreateApprovalHandlerTest {
     handler.handleRequest(request, output, context);
 
     var response = GatewayResponse.fromOutputStream(output, Problem.class);
+    var problem = response.getBodyObject(Problem.class);
 
     assertEquals(HTTP_BAD_REQUEST, response.getStatusCode());
+    assertEquals(BODY_MISSING_MESSAGE, problem.getDetail());
+    assertFalse(problem.getParameters().containsKey(ERRORS_PARAMETER));
   }
 
   private static CreateApprovalRequest randomApprovalRequest(URI source) {
