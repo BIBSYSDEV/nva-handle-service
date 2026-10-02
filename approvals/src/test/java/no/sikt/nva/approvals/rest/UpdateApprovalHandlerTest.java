@@ -10,6 +10,7 @@ import static no.sikt.nva.approvals.utils.TestUtils.randomIdentifier;
 import static no.sikt.nva.approvals.utils.TestUtils.randomIdentifiers;
 import static no.sikt.nva.approvals.validation.RequestConstraints.MAX_IDENTIFIERS;
 import static no.sikt.nva.approvals.validation.RequestConstraints.MAX_IDENTIFIER_VALUE_LENGTH;
+import static no.sikt.nva.approvals.validation.RequestConstraints.MAX_URI_LENGTH;
 import static no.unit.nva.testutils.RandomDataGenerator.randomString;
 import static no.unit.nva.testutils.RandomDataGenerator.randomUri;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -67,6 +68,9 @@ class UpdateApprovalHandlerTest {
   private static final String DETAIL_FIELD = "detail";
   private static final String POINTER_FIELD = "pointer";
   private static final String CHARACTER = "a";
+  private static final String BASE_URI = "https://hdl.handle.net/11250.1/";
+  private static final String URI_TOO_LONG_MESSAGE = "Must be at most 1024 characters long";
+  private static final String HANDLE_POINTER = "/handle";
   private static final String ID_MISMATCH_MESSAGE = "Provided id %s does not address approval %s";
   private static final String IDENTIFIER_MISMATCH_MESSAGE =
       "Provided identifier %s does not match approval %s";
@@ -380,6 +384,19 @@ class UpdateApprovalHandlerTest {
     var response = GatewayResponse.fromOutputStream(output, Void.class);
 
     assertEquals(HTTP_ACCEPTED, response.getStatusCode());
+  }
+
+  @Test
+  void shouldReturnBadRequestPointingToHandleThatIsTooLong() throws IOException {
+    var tooLongHandle = URI.create(BASE_URI + CHARACTER.repeat(MAX_URI_LENGTH));
+    var request = createRequest(updateApprovalRequest(null, null, tooLongHandle), approvalId);
+
+    handler.handleRequest(request, output, context);
+
+    var response = GatewayResponse.fromOutputStream(output, Problem.class);
+
+    assertEquals(HTTP_BAD_REQUEST, response.getStatusCode());
+    assertEquals(List.of(error(URI_TOO_LONG_MESSAGE, HANDLE_POINTER)), problemErrors(response));
   }
 
   @Test

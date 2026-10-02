@@ -161,6 +161,20 @@ class CreateApprovalRequestTest {
         validationErrors(request));
   }
 
+  @Test
+  void shouldReportEveryBrokenRuleOfFieldInFixedOrder() {
+    var invalidName = "REK 2" + text(MAX_IDENTIFIER_NAME_LENGTH);
+    var request =
+        new CreateApprovalRequest(
+            List.of(new NamedIdentifier(invalidName, randomString())), randomUri());
+
+    assertEquals(
+        List.of(
+            new ValidationError(NAME_PATTERN_MESSAGE, "/identifiers/0/name"),
+            new ValidationError(NAME_TOO_LONG_MESSAGE, "/identifiers/0/name")),
+        validationErrors(request));
+  }
+
   @ParameterizedTest
   @ValueSource(strings = {"DMP", "dmp", "  DMP  ", "apitest-uib", "rek_2", "REK2"})
   void shouldAcceptSupportedIdentifierNames(String name) {

@@ -673,6 +673,7 @@ components:
             handle:
               type: string
               format: uri
+              maxLength: 1024
               description: >
                 Optional immutable persistent handle URI. Ignored by the update
                 operation. This field is accepted to allow a representation returned
@@ -796,8 +797,10 @@ components:
         errors:
           type: array
           description: >-
-            One entry per invalid field (only present on 400 Bad Request responses caused by
-            invalid fields), sorted by pointer.
+            One entry per broken rule (only present on 400 Bad Request responses caused by
+            invalid fields), sorted by pointer and then detail. A field that breaks several rules,
+            for example a name that is both too long and contains unsupported characters, has one
+            entry per rule.
           items:
             $ref: "#/components/schemas/ValidationError"
     ValidationError:

@@ -206,8 +206,8 @@ response.
 
 Names are compared ignoring case and surrounding whitespace when looking for duplicates, values are compared exactly.
 
-A `400` lists every invalid field in `errors`, sorted by pointer. The pointer is a JSON pointer into the request body,
-or the parameter name for query parameters:
+A `400` lists every broken rule in `errors`, sorted by pointer and then detail, so a field that breaks two rules
+has two entries. The pointer is a JSON pointer into the request body, or the parameter name for query parameters:
 
 ```json
 {

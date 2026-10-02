@@ -29,7 +29,7 @@ public record UpdateApprovalRequest(
         @UniqueIdentifiers
         Collection<@NotNull(message = MANDATORY_MESSAGE) @Valid NamedIdentifier> identifiers,
     @NotNull(message = MANDATORY_MESSAGE) @UriSize(max = MAX_URI_LENGTH) URI source,
-    URI handle) {
+    @UriSize(max = MAX_URI_LENGTH) URI handle) {
 
   private static final String ID_POINTER = "/id";
   private static final String IDENTIFIER_POINTER = "/identifier";

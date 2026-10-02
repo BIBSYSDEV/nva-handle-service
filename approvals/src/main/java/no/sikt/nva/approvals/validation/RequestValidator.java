@@ -46,7 +46,9 @@ public final class RequestValidator {
     var validationErrors =
         VALIDATOR.validate(request).stream()
             .map(violation -> toValidationError(violation, pointerResolver))
-            .sorted(Comparator.comparing(ValidationError::pointer))
+            .sorted(
+                Comparator.comparing(ValidationError::pointer)
+                    .thenComparing(ValidationError::detail))
             .toList();
     if (!validationErrors.isEmpty()) {
       throw new BadRequestException(describe(validationErrors), validationErrors);
