@@ -5,6 +5,7 @@ import static no.sikt.nva.approvals.utils.RequestUtils.createAdditionalApprovalH
 import static no.sikt.nva.approvals.utils.RequestUtils.getApiHost;
 import static no.sikt.nva.approvals.utils.RequestUtils.getApprovalIdentifier;
 import static no.sikt.nva.approvals.utils.RequestUtils.handleException;
+import static no.sikt.nva.approvals.validation.RequestValidator.validateBody;
 
 import com.amazonaws.services.lambda.runtime.Context;
 import no.sikt.nva.approvals.domain.Approval;
@@ -48,7 +49,8 @@ public class UpdateApprovalHandler extends ApiGatewayHandler<UpdateApprovalReque
       UpdateApprovalRequest updateApprovalRequest, RequestInfo requestInfo, Context context)
       throws ApiGatewayException {
     var approvalIdentifier = getApprovalIdentifier(requestInfo);
-    updateApprovalRequest.validate(approvalIdentifier);
+    validateBody(updateApprovalRequest);
+    updateApprovalRequest.ensureAddresses(approvalIdentifier);
   }
 
   @Override

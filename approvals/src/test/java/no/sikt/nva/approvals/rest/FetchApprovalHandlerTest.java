@@ -5,6 +5,9 @@ import static java.net.HttpURLConnection.HTTP_NOT_FOUND;
 import static java.net.HttpURLConnection.HTTP_OK;
 import static no.sikt.nva.approvals.utils.TestUtils.randomApproval;
 import static no.sikt.nva.approvals.utils.TestUtils.randomHandle;
+import static no.sikt.nva.approvals.validation.RequestConstraints.MAX_IDENTIFIER_NAME_LENGTH;
+import static no.sikt.nva.approvals.validation.RequestConstraints.MAX_IDENTIFIER_VALUE_BYTES;
+import static no.sikt.nva.approvals.validation.RequestConstraints.MAX_URI_LENGTH;
 import static no.unit.nva.testutils.RandomDataGenerator.randomUri;
 import static nva.commons.apigateway.ApiGatewayHandler.ALLOWED_ORIGIN_ENV;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -47,6 +50,7 @@ import nva.commons.core.Environment;
 import org.apache.hc.core5.http.HttpHeaders;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.zalando.problem.Problem;
 
 class FetchApprovalHandlerTest {
 
@@ -56,6 +60,12 @@ class FetchApprovalHandlerTest {
   private static final String NAME_QUERY_PARAMETER = "name";
   private static final String VALUE_QUERY_PARAMETER = "value";
   private static final String VALID_HANDLE = "https://hdl.handle.net/11250.1/12345";
+  private static final String CHARACTER = "a";
+  private static final String NAME_TOO_LONG_MESSAGE = "Must be at most 100 characters long";
+  private static final String VALUE_TOO_LONG_MESSAGE = "Must be at most 900 bytes long in UTF-8";
+  private static final String ERRORS_PARAMETER = "errors";
+  private static final String DETAIL_FIELD = "detail";
+  private static final String POINTER_FIELD = "pointer";
   private static final String API_HOST = "api.unittest.nva.unit.no";
   private static final String COGNITO_AUTHORIZER_URLS_ENV = "COGNITO_AUTHORIZER_URLS";
   private static final String API_HOST_ENV = "API_HOST";
@@ -186,6 +196,54 @@ class FetchApprovalHandlerTest {
     var response = handleRequest(request);
 
     assertEquals(HTTP_NOT_FOUND, response.getStatusCode());
+  }
+
+  @Test
+  void shouldReturnNotFoundWhenNamedIdentifierOfMaximumLengthFindsNothing() {
+    handler =
+        new FetchApprovalHandler(
+            new FakeApprovalService(), environment, templateEngine, new FakeDmpClient());
+    var request =
+        createRequestWithNamedIdentifierQuery(
+            CHARACTER.repeat(MAX_IDENTIFIER_NAME_LENGTH),
+            CHARACTER.repeat(MAX_IDENTIFIER_VALUE_BYTES));
+
+    var response = handleRequest(request);
+
+    assertEquals(HTTP_NOT_FOUND, response.getStatusCode());
+  }
+
+  @Test
+  void shouldReturnBadRequestPointingToQueryParametersThatAreTooLong() throws Exception {
+    handler =
+        new FetchApprovalHandler(
+            new FakeApprovalService(), environment, templateEngine, new FakeDmpClient());
+    var request =
+        createRequestWithNamedIdentifierQuery(
+            CHARACTER.repeat(MAX_IDENTIFIER_NAME_LENGTH + 1),
+            CHARACTER.repeat(MAX_IDENTIFIER_VALUE_BYTES + 1));
+
+    var response = handleRequestAsProblem(request);
+
+    assertEquals(HTTP_BAD_REQUEST, response.getStatusCode());
+    assertEquals(
+        List.of(
+            Map.of(DETAIL_FIELD, NAME_TOO_LONG_MESSAGE, POINTER_FIELD, NAME_QUERY_PARAMETER),
+            Map.of(DETAIL_FIELD, VALUE_TOO_LONG_MESSAGE, POINTER_FIELD, VALUE_QUERY_PARAMETER)),
+        response.getBodyObject(Problem.class).getParameters().get(ERRORS_PARAMETER));
+  }
+
+  @Test
+  void shouldReturnBadRequestWhenHandleIsTooLong() {
+    handler =
+        new FetchApprovalHandler(
+            new FakeApprovalService(), environment, templateEngine, new FakeDmpClient());
+    var tooLongHandle = VALID_HANDLE + CHARACTER.repeat(MAX_URI_LENGTH);
+    var request = createRequestWithHandleQuery(tooLongHandle);
+
+    var response = handleRequest(request);
+
+    assertEquals(HTTP_BAD_REQUEST, response.getStatusCode());
   }
 
   @Test
@@ -474,6 +532,15 @@ class FetchApprovalHandlerTest {
     try {
       handler.handleRequest(request, output, CONTEXT);
       return GatewayResponse.fromOutputStream(output, ApprovalResponse.class);
+    } catch (IOException e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  private GatewayResponse<Problem> handleRequestAsProblem(InputStream request) {
+    try {
+      handler.handleRequest(request, output, CONTEXT);
+      return GatewayResponse.fromOutputStream(output, Problem.class);
     } catch (IOException e) {
       throw new RuntimeException(e);
     }

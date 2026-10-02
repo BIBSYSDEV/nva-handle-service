@@ -1,42 +1,36 @@
 package no.sikt.nva.approvals.events;
 
-import static nva.commons.core.attempt.Try.attempt;
+import static no.sikt.nva.approvals.validation.RequestConstraints.EVENT_ID_PATTERN;
+import static no.sikt.nva.approvals.validation.RequestConstraints.EVENT_TYPE_PATTERN;
+import static no.sikt.nva.approvals.validation.RequestConstraints.INVALID_EVENT_ID_MESSAGE;
+import static no.sikt.nva.approvals.validation.RequestConstraints.MANDATORY_MESSAGE;
+import static no.sikt.nva.approvals.validation.RequestConstraints.MAX_URI_LENGTH;
+import static no.sikt.nva.approvals.validation.RequestConstraints.SPEC_VERSION_PATTERN;
+import static no.sikt.nva.approvals.validation.RequestConstraints.UNSUPPORTED_EVENT_TYPE_MESSAGE;
+import static no.sikt.nva.approvals.validation.RequestConstraints.UNSUPPORTED_SPEC_VERSION_MESSAGE;
 
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
 import java.net.URI;
 import java.time.Instant;
-import java.util.Objects;
 import java.util.UUID;
-import java.util.regex.Pattern;
 import no.sikt.nva.approvals.domain.Handle;
-import nva.commons.apigateway.exceptions.BadRequestException;
+import no.sikt.nva.approvals.validation.HandleUri;
+import no.sikt.nva.approvals.validation.UriSize;
 
 public record CloudEvent(
-    String specversion, String id, URI source, String type, URI subject, Instant time) {
-
-  private static final String SUPPORTED_CLOUD_EVENT_TYPE = "no.sikt.nva.approval.source.changed";
-  private static final String SUPPORTED_SPEC_VERSION = "1.0";
-  private static final Pattern EVENT_ID_PATTERN = Pattern.compile("^[A-Za-z0-9_-]{1,128}$");
-  private static final String UNSUPPORTED_SPEC_VERSION_MESSAGE =
-      "Unsupported specversion %s, only 1.0 is supported";
-  private static final String UNSUPPORTED_TYPE_MESSAGE = "Unsupported event type %s";
-  private static final String INVALID_EVENT_ID_MESSAGE =
-      "Event id must match " + EVENT_ID_PATTERN.pattern();
-  private static final String SOURCE_IS_MISSING_MESSAGE = "Event source is missing";
-  private static final String TIME_IS_MISSING_MESSAGE = "Event time is missing";
-  private static final String SUBJECT_NOT_HANDLE_MESSAGE =
-      "Event subject must be the handle of an approval";
-
-  public void validate() throws BadRequestException {
-    requireThat(
-        SUPPORTED_SPEC_VERSION.equals(specversion),
-        UNSUPPORTED_SPEC_VERSION_MESSAGE.formatted(specversion));
-    requireThat(SUPPORTED_CLOUD_EVENT_TYPE.equals(type), UNSUPPORTED_TYPE_MESSAGE.formatted(type));
-    requireThat(
-        Objects.nonNull(id) && EVENT_ID_PATTERN.matcher(id).matches(), INVALID_EVENT_ID_MESSAGE);
-    requireThat(Objects.nonNull(source), SOURCE_IS_MISSING_MESSAGE);
-    requireThat(isHandle(subject), SUBJECT_NOT_HANDLE_MESSAGE);
-    requireThat(Objects.nonNull(time), TIME_IS_MISSING_MESSAGE);
-  }
+    @NotNull(message = MANDATORY_MESSAGE)
+        @Pattern(regexp = SPEC_VERSION_PATTERN, message = UNSUPPORTED_SPEC_VERSION_MESSAGE)
+        String specversion,
+    @NotNull(message = MANDATORY_MESSAGE)
+        @Pattern(regexp = EVENT_ID_PATTERN, message = INVALID_EVENT_ID_MESSAGE)
+        String id,
+    @NotNull(message = MANDATORY_MESSAGE) @UriSize(max = MAX_URI_LENGTH) URI source,
+    @NotNull(message = MANDATORY_MESSAGE)
+        @Pattern(regexp = EVENT_TYPE_PATTERN, message = UNSUPPORTED_EVENT_TYPE_MESSAGE)
+        String type,
+    @NotNull(message = MANDATORY_MESSAGE) @HandleUri URI subject,
+    @NotNull(message = MANDATORY_MESSAGE) Instant time) {
 
   public Handle handle() {
     return new Handle(subject);
@@ -44,15 +38,5 @@ public record CloudEvent(
 
   public SourceChangedEvent toSourceChangedEvent(UUID customerIdentifier) {
     return new SourceChangedEvent(id, source, handle(), time, customerIdentifier);
-  }
-
-  private static boolean isHandle(URI uri) {
-    return attempt(() -> new Handle(uri)).isSuccess();
-  }
-
-  private static void requireThat(boolean condition, String message) throws BadRequestException {
-    if (!condition) {
-      throw new BadRequestException(message);
-    }
   }
 }

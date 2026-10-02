@@ -5,6 +5,7 @@ import static java.util.Objects.isNull;
 import static java.util.Objects.nonNull;
 import static no.sikt.nva.approvals.utils.RequestUtils.getApiHost;
 import static no.sikt.nva.approvals.utils.RequestUtils.getApprovalIdentifier;
+import static no.sikt.nva.approvals.validation.RequestValidator.validateQueryParameters;
 import static nva.commons.apigateway.MediaTypes.APPLICATION_JSON_LD;
 import static nva.commons.core.StringUtils.isNotBlank;
 
@@ -199,6 +200,7 @@ public class FetchApprovalHandler extends ApiGatewayHandler<Void, Object> {
       throw new BadRequestException(MISSING_NAME_OR_VALUE_MESSAGE);
     }
     var namedIdentifier = new NamedIdentifier(name, value);
+    validateQueryParameters(namedIdentifier);
     return approvalService.getApprovalByNamedIdentifier(namedIdentifier);
   }
 
