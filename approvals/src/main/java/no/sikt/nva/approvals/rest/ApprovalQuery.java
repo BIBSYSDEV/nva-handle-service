@@ -5,7 +5,7 @@ import static java.util.Objects.nonNull;
 import static no.sikt.nva.approvals.validation.RequestConstraints.IDENTIFIER_NAME_PATTERN;
 import static no.sikt.nva.approvals.validation.RequestConstraints.IDENTIFIER_NAME_PATTERN_MESSAGE;
 import static no.sikt.nva.approvals.validation.RequestConstraints.MAX_IDENTIFIER_NAME_LENGTH;
-import static no.sikt.nva.approvals.validation.RequestConstraints.MAX_IDENTIFIER_VALUE_LENGTH;
+import static no.sikt.nva.approvals.validation.RequestConstraints.MAX_IDENTIFIER_VALUE_BYTES;
 import static no.sikt.nva.approvals.validation.RequestConstraints.TOO_LONG_MESSAGE;
 import static nva.commons.core.StringUtils.isNotBlank;
 
@@ -16,6 +16,7 @@ import java.util.Map;
 import no.sikt.nva.approvals.domain.Handle;
 import no.sikt.nva.approvals.domain.NamedIdentifier;
 import no.sikt.nva.approvals.validation.HandleUri;
+import no.sikt.nva.approvals.validation.Utf8Size;
 
 @QueryCombination
 public record ApprovalQuery(
@@ -23,7 +24,7 @@ public record ApprovalQuery(
     @Size(max = MAX_IDENTIFIER_NAME_LENGTH, message = TOO_LONG_MESSAGE)
         @Pattern(regexp = IDENTIFIER_NAME_PATTERN, message = IDENTIFIER_NAME_PATTERN_MESSAGE)
         String name,
-    @Size(max = MAX_IDENTIFIER_VALUE_LENGTH, message = TOO_LONG_MESSAGE) String value) {
+    @Utf8Size(max = MAX_IDENTIFIER_VALUE_BYTES) String value) {
 
   private static final String HANDLE_PARAMETER = "handle";
   private static final String NAME_PARAMETER = "name";
