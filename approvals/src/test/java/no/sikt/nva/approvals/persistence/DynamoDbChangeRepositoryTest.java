@@ -15,6 +15,7 @@ import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasSize;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.Map;
 import java.util.Optional;
@@ -145,7 +146,7 @@ class DynamoDbChangeRepositoryTest {
   }
 
   @Test
-  void shouldFindChangeOfApproval() {
+  void shouldReturnChangeOfApproval() {
     var approval = randomApproval(randomHandle());
     var snapshot = SourceSnapshot.create(randomSourceChange(approval.identifier(), randomString()));
     saveApproval(approval);
@@ -157,13 +158,13 @@ class DynamoDbChangeRepositoryTest {
   }
 
   @Test
-  void shouldNotFindChangeOfOtherApproval() {
+  void shouldReturnOptionalEmtpyWhenChangeDoesNotExist() {
     var snapshot = SourceSnapshot.create(randomSourceChange());
     approvalRepository.save(snapshot);
 
     var change = changeRepository.findChange(randomUUID(), snapshot.identifier());
 
-    assertThat(change, equalTo(Optional.empty()));
+    assertTrue(change.isEmpty());
   }
 
   private void saveApproval(Approval approval) {
