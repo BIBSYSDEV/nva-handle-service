@@ -23,6 +23,7 @@ class CloudEventTest {
   private static final String INVALID_EVENT_ID_MESSAGE =
       "Event id must match ^[A-Za-z0-9_-]{1,128}$";
   private static final String SOURCE_IS_MISSING_MESSAGE = "Event source is missing";
+  private static final String TIME_IS_MISSING_MESSAGE = "Event time is missing";
   private static final String SUBJECT_NOT_HANDLE_MESSAGE =
       "Event subject must be the handle of an approval";
 
@@ -86,6 +87,22 @@ class CloudEventTest {
     var exception = assertThrows(BadRequestException.class, cloudEvent::validate);
 
     assertEquals(SUBJECT_NOT_HANDLE_MESSAGE, exception.getMessage());
+  }
+
+  @Test
+  void shouldThrowBadRequestWhenTimeIsMissing() {
+    var cloudEvent =
+        new CloudEvent(
+            SPEC_VERSION,
+            randomUUID().toString(),
+            randomUri(),
+            SUPPORTED_CLOUD_EVENT_TYPE,
+            randomHandle().value(),
+            null);
+
+    var exception = assertThrows(BadRequestException.class, cloudEvent::validate);
+
+    assertEquals(TIME_IS_MISSING_MESSAGE, exception.getMessage());
   }
 
   private static CloudEvent cloudEventWithType(String type) {

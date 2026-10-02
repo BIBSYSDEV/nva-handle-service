@@ -581,6 +581,11 @@ Resources:
       CodeUri: approvals
       Handler: no.sikt.nva.approvals.snapshot.CreateSnapshotHandler::handleRequest
       Timeout: 300
+      Policies:
+        - !Ref DynamoDbTableAccessPolicy
+      Environment:
+        Variables:
+          TABLE: !Ref ApprovalsTable
       Events:
         SourceChanged:
           Type: SQS

@@ -21,4 +21,8 @@ public record SourceChangedMessage(
                 new IllegalArgumentException(
                     INVALID_MESSAGE.formatted(value), failure.getException()));
   }
+
+  public SourceChange toSourceChange() {
+    return new SourceChange(approvalIdentifier, eventIdentifier, source, timestamp);
+  }
 }

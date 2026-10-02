@@ -22,6 +22,7 @@ public record CloudEvent(
   private static final String INVALID_EVENT_ID_MESSAGE =
       "Event id must match " + EVENT_ID_PATTERN.pattern();
   private static final String SOURCE_IS_MISSING_MESSAGE = "Event source is missing";
+  private static final String TIME_IS_MISSING_MESSAGE = "Event time is missing";
   private static final String SUBJECT_NOT_HANDLE_MESSAGE =
       "Event subject must be the handle of an approval";
 
@@ -34,6 +35,7 @@ public record CloudEvent(
         Objects.nonNull(id) && EVENT_ID_PATTERN.matcher(id).matches(), INVALID_EVENT_ID_MESSAGE);
     requireThat(Objects.nonNull(source), SOURCE_IS_MISSING_MESSAGE);
     requireThat(isHandle(subject), SUBJECT_NOT_HANDLE_MESSAGE);
+    requireThat(Objects.nonNull(time), TIME_IS_MISSING_MESSAGE);
   }
 
   public Handle handle() {

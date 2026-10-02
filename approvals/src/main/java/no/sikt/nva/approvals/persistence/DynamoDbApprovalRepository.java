@@ -31,6 +31,7 @@ import no.sikt.nva.approvals.domain.Handle;
 import no.sikt.nva.approvals.domain.IdentifierPolicy;
 import no.sikt.nva.approvals.domain.NamedIdentifier;
 import no.sikt.nva.approvals.events.SourceChangedEvent;
+import no.sikt.nva.approvals.snapshot.SourceSnapshot;
 import no.unit.nva.commons.json.JsonUtils;
 import nva.commons.core.Environment;
 import nva.commons.core.JacocoGenerated;
@@ -91,6 +92,20 @@ public class DynamoDbApprovalRepository implements ApprovalRepository {
     var request =
         PutItemEnhancedRequest.builder(EnhancedDocument.class)
             .item(EventDao.fromEvent(event, approvalIdentifier, Instant.now()).toEnhancedDocument())
+            .conditionExpression(newDaoCondition())
+            .build();
+    try {
+      table.putItem(request);
+    } catch (ConditionalCheckFailedException ignored) {
+    }
+  }
+
+  @Override
+  public void save(SourceSnapshot snapshot) {
+    var request =
+        PutItemEnhancedRequest.builder(EnhancedDocument.class)
+            .item(
+                SourceSnapshotDao.fromSourceSnapshot(snapshot, Instant.now()).toEnhancedDocument())
             .conditionExpression(newDaoCondition())
             .build();
     try {
