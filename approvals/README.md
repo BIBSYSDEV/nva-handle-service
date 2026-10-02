@@ -42,8 +42,12 @@ flowchart TB
 
 - **`Approval`** — `identifier` (UUID), `namedIdentifiers`, `source` (the source URI) and `handle`. All four are
   mandatory, and the identifier collection cannot be empty.
-- **`NamedIdentifier`** — a name/value pair, for example `REK` / `2024/123`. Every identifier must be unique across all
+- **`NamedIdentifier`** — a name/value pair, for example `REK` / `123456`. Every identifier must be unique across all
   approvals; a collision returns `409 Conflict` with `conflictingKeys` in the problem response.
+  A `name` is the namespace of one identifier space: every value under it refers to the same kind of thing
+  from the same issuer, and no value means two different things. A useful test is whether every value could
+  be resolved as `<one base URI>/<value>`. If a source issues identifiers for different kinds of things, or
+  has several series that can produce the same value, each needs its own name.
 - **`Handle`** — a validated handle URI.
 - **`IdentifierPolicy` / `IdentifierPolicyService`** — which identifier names a given customer is allowed to use. An
   unknown customer resolves to `IdentifierPolicy.DENY_ALL`. Currently domain-level only; not yet wired into the
@@ -228,7 +232,7 @@ Query parameters on `GET /` must be URL-encoded, and you supply either `handle` 
 
 ```
 GET /approval?handle=https%3A%2F%2Fhdl.handle.net%2F11250.1%2F12345
-GET /approval?name=REK&value=2024%2F123
+GET /approval?name=REK&value=123456
 ```
 
 Request body for `POST /`:
@@ -237,7 +241,7 @@ Request body for `POST /`:
 {
   "type": "Approval",
   "identifiers": [
-    { "type": "Identifier", "name": "REK", "value": "2024/123" },
+    { "type": "Identifier", "name": "REK", "value": "123456" },
     { "type": "Identifier", "name": "DMP", "value": "dmp-456" }
   ],
   "source": "https://example.com/source/12345"
@@ -254,7 +258,7 @@ Response body:
   "type": "Approval",
   "id": "https://api.nva.unit.no/approval/6ff5f1b5-97c1-40f0-86ad-2cbd9006eee2",
   "identifier": "6ff5f1b5-97c1-40f0-86ad-2cbd9006eee2",
-  "identifiers": [{ "type": "Identifier", "name": "REK", "value": "2024/123" }],
+  "identifiers": [{ "type": "Identifier", "name": "REK", "value": "123456" }],
   "source": "https://example.com/source/12345",
   "handle": "https://hdl.handle.net/11250.1/98765"
 }
