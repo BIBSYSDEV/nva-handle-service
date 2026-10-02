@@ -9,21 +9,21 @@ import java.time.Duration;
 import java.util.Objects;
 import java.util.Optional;
 import no.sikt.nva.approvals.dmp.model.ClinicalTrial;
+import no.sikt.nva.approvals.source.SourceClient;
 import no.unit.nva.commons.json.JsonUtils;
 import nva.commons.core.JacocoGenerated;
-import nva.commons.core.paths.UriWrapper;
 
 // FIXME: Suppressing warning in order to upgrade PMD version
 @SuppressWarnings("PMD.DoNotUseThreads")
-public class DmpClient implements DmpClientService {
+public class DmpClient implements SourceClient<ClinicalTrial> {
 
   private static final String AUTHORIZATION_HEADER = "Authorization";
   private static final String BEARER_PREFIX = "Bearer ";
   private static final String ACCEPT_HEADER = "Accept";
   private static final String APPLICATION_JSON = "application/json";
-  private static final String CLINICAL_TRIAL_PATH = "clinical-trial";
   private static final int HTTP_OK = 200;
   private static final int HTTP_NOT_FOUND = 404;
+  private static final String FETCH_FAILED_MESSAGE = "Failed to fetch source: %s";
 
   private final OAuth2TokenService tokenService;
   private final HttpClient httpClient;
@@ -44,25 +44,21 @@ public class DmpClient implements DmpClientService {
   }
 
   @Override
-  public Optional<ClinicalTrial> getClinicalTrial(String identifier) throws DmpClientException {
-    if (identifier == null) {
-      throw new DmpClientException("Identifier is required");
-    }
+  public URI getBaseUrl() {
+    return URI.create(baseUrl);
+  }
+
+  @Override
+  public Optional<ClinicalTrial> fetch(URI source) throws DmpClientException {
     try {
-      var uri = buildClinicalTrialUri(identifier);
-      var request = buildRequest(uri);
-      var response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+      var response = httpClient.send(buildRequest(source), HttpResponse.BodyHandlers.ofString());
       return handleResponse(response);
     } catch (InterruptedException exception) {
       Thread.currentThread().interrupt();
-      throw new DmpClientException("Failed to fetch clinical trial: " + identifier, exception);
+      throw new DmpClientException(FETCH_FAILED_MESSAGE.formatted(source), exception);
     } catch (IOException exception) {
-      throw new DmpClientException("Failed to fetch clinical trial: " + identifier, exception);
+      throw new DmpClientException(FETCH_FAILED_MESSAGE.formatted(source), exception);
     }
-  }
-
-  private URI buildClinicalTrialUri(String identifier) {
-    return UriWrapper.fromUri(baseUrl).addChild(CLINICAL_TRIAL_PATH).addChild(identifier).getUri();
   }
 
   private HttpRequest buildRequest(URI uri) throws DmpClientException {

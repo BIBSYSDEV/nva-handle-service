@@ -17,8 +17,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
-import no.sikt.nva.approvals.dmp.DmpClientException;
-import no.sikt.nva.approvals.dmp.DmpClientService;
 import no.sikt.nva.approvals.dmp.DmpClientSupplier;
 import no.sikt.nva.approvals.dmp.model.ClinicalTrial;
 import no.sikt.nva.approvals.domain.Approval;
@@ -26,6 +24,8 @@ import no.sikt.nva.approvals.domain.ApprovalService;
 import no.sikt.nva.approvals.domain.ApprovalServiceImpl;
 import no.sikt.nva.approvals.domain.Handle;
 import no.sikt.nva.approvals.domain.NamedIdentifier;
+import no.sikt.nva.approvals.source.SourceClient;
+import no.sikt.nva.approvals.source.SourceClientException;
 import nva.commons.apigateway.ApiGatewayHandler;
 import nva.commons.apigateway.MediaType;
 import nva.commons.apigateway.RequestInfo;
@@ -36,6 +36,7 @@ import nva.commons.apigateway.exceptions.UnsupportedAcceptHeaderException;
 import nva.commons.core.Environment;
 import nva.commons.core.JacocoGenerated;
 import nva.commons.core.StringUtils;
+import nva.commons.core.paths.UriWrapper;
 import org.apache.hc.core5.http.HttpHeaders;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -49,6 +50,7 @@ public class FetchApprovalHandler extends ApiGatewayHandler<Void, Object> {
   private static final String VALUE_QUERY_PARAMETER = "value";
   private static final String APPROVAL_NOT_FOUND_MESSAGE = "Approval not found";
   private static final String INVALID_HANDLE_MESSAGE = "Invalid handle format";
+  private static final String CLINICAL_TRIAL_PATH = "clinical-trial";
   private static final String MISSING_NAME_OR_VALUE_MESSAGE =
       "Both 'name' and 'value' query parameters are required";
   private static final String MISSING_QUERY_PARAMETERS_MESSAGE =
@@ -64,7 +66,7 @@ public class FetchApprovalHandler extends ApiGatewayHandler<Void, Object> {
   private final String apiHost;
   private final String applicationDomain;
   private final TemplateEngine templateEngine;
-  private final DmpClientService dmpClient;
+  private final SourceClient<ClinicalTrial> dmpClient;
 
   @JacocoGenerated
   public FetchApprovalHandler() {
@@ -79,7 +81,7 @@ public class FetchApprovalHandler extends ApiGatewayHandler<Void, Object> {
       ApprovalService approvalService,
       Environment environment,
       TemplateEngine templateEngine,
-      DmpClientService dmpClient) {
+      SourceClient<ClinicalTrial> dmpClient) {
     super(Void.class, environment);
     this.approvalService = approvalService;
     this.apiHost = getApiHost(environment);
@@ -247,11 +249,19 @@ public class FetchApprovalHandler extends ApiGatewayHandler<Void, Object> {
 
   private Optional<ClinicalTrial> fetchClinicalTrial(String dmpIdentifier) {
     try {
-      return dmpClient.getClinicalTrial(dmpIdentifier);
-    } catch (DmpClientException exception) {
+      var uri = getUri(dmpIdentifier);
+      return dmpClient.fetch(uri);
+    } catch (SourceClientException exception) {
       logger.warn(
           "Failed to fetch clinical trial data for identifier: {}", dmpIdentifier, exception);
       return Optional.empty();
     }
+  }
+
+  private URI getUri(String dmpIdentifier) {
+    return UriWrapper.fromUri(dmpClient.getBaseUrl())
+        .addChild(CLINICAL_TRIAL_PATH)
+        .addChild(dmpIdentifier)
+        .getUri();
   }
 }

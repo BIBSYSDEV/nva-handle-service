@@ -1,6 +1,8 @@
 package no.sikt.nva.approvals.dmp;
 
-public class DmpClientException extends Exception {
+import no.sikt.nva.approvals.source.SourceClientException;
+
+public class DmpClientException extends SourceClientException {
 
   public DmpClientException(String message) {
     super(message);
