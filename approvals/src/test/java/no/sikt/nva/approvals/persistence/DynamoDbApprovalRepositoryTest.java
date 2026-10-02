@@ -1,5 +1,6 @@
 package no.sikt.nva.approvals.persistence;
 
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.time.temporal.ChronoUnit.MILLIS;
 import static java.util.UUID.randomUUID;
 import static no.sikt.nva.approvals.domain.ApprovalActivity.CREATE_APPROVAL;
@@ -19,6 +20,8 @@ import static no.sikt.nva.approvals.utils.TestUtils.randomIdentifiers;
 import static no.sikt.nva.approvals.utils.TestUtils.randomRevision;
 import static no.sikt.nva.approvals.utils.TestUtils.randomSourceChange;
 import static no.sikt.nva.approvals.utils.TestUtils.randomTimestamp;
+import static no.sikt.nva.approvals.validation.RequestConstraints.MAX_IDENTIFIER_NAME_LENGTH;
+import static no.sikt.nva.approvals.validation.RequestConstraints.MAX_IDENTIFIER_VALUE_BYTES;
 import static no.unit.nva.testutils.RandomDataGenerator.randomString;
 import static no.unit.nva.testutils.RandomDataGenerator.randomUri;
 import static nva.commons.core.attempt.Try.attempt;
@@ -95,6 +98,8 @@ class DynamoDbApprovalRepositoryTest {
   private static final String V1_HANDLE = "https://hdl.handle.net/11250.1/98765";
   private static final String V1_CONTEXT = "approval/context";
   private static final String V1_ONTOLOGY = "approval/ontology";
+  private static final String ASCII_CHARACTER = "a";
+  private static final String MULTIBYTE_CHARACTER = "ø";
 
   private ApprovalRepository approvalRepository;
   private DynamoDbLocal dynamoDbLocal;
@@ -117,6 +122,15 @@ class DynamoDbApprovalRepositoryTest {
     var persistedApproval = approvalRepository.findByApprovalIdentifier(approval.identifier());
 
     assertEquals(approval, persistedApproval.orElseThrow());
+  }
+
+  @Test
+  void shouldPersistAndFindIdentifierOfMaximumSizeWithMultibyteValue() {
+    var identifier = largestMultibyteIdentifier();
+    var approval = randomApproval(identifier);
+    saveApproval(approval);
+
+    assertEquals(approval, approvalRepository.findByIdentifier(identifier).orElseThrow());
   }
 
   @Test
@@ -798,6 +812,14 @@ class DynamoDbApprovalRepositoryTest {
 
   private void updateApproval(Approval approval) {
     approvalRepository.updateApproval(randomRevision(approval, UPDATE_APPROVAL));
+  }
+
+  private static NamedIdentifier largestMultibyteIdentifier() {
+    var multibyteCharacterCount =
+        MAX_IDENTIFIER_VALUE_BYTES / MULTIBYTE_CHARACTER.getBytes(UTF_8).length;
+    return new NamedIdentifier(
+        ASCII_CHARACTER.repeat(MAX_IDENTIFIER_NAME_LENGTH),
+        MULTIBYTE_CHARACTER.repeat(multibyteCharacterCount));
   }
 
   private static Approval withIdentifiers(

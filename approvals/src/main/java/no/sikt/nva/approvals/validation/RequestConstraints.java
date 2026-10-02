@@ -5,7 +5,7 @@ public final class RequestConstraints {
   public static final int MIN_IDENTIFIERS = 1;
   public static final int MAX_IDENTIFIERS = 20;
   public static final int MAX_IDENTIFIER_NAME_LENGTH = 100;
-  public static final int MAX_IDENTIFIER_VALUE_LENGTH = 1000;
+  public static final int MAX_IDENTIFIER_VALUE_BYTES = 900;
   public static final int MAX_URI_LENGTH = 1024;
   public static final String IDENTIFIER_NAME_PATTERN = "\\s*[A-Za-z0-9_-]+\\s*";
   public static final String EVENT_ID_PATTERN = "[A-Za-z0-9_-]{1,128}";
@@ -18,6 +18,7 @@ public final class RequestConstraints {
   public static final String IDENTIFIERS_SIZE_MESSAGE =
       "Between {min} and {max} identifiers are required";
   public static final String TOO_LONG_MESSAGE = "Must be at most {max} characters long";
+  public static final String TOO_MANY_BYTES_MESSAGE = "Must be at most {max} bytes long in UTF-8";
   public static final String IDENTIFIER_NAME_PATTERN_MESSAGE =
       "May only contain letters, digits, hyphen and underscore";
   public static final String DUPLICATE_IDENTIFIER_MESSAGE =

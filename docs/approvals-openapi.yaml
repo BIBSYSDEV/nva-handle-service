@@ -76,7 +76,7 @@ paths:
             * `identifiers` is missing, empty or holds more than 20 identifiers
             * an identifier `name` is missing, longer than 100 characters, or contains anything
               but letters, digits, hyphen and underscore
-            * an identifier `value` is missing or longer than 1000 characters
+            * an identifier `value` is missing or longer than 900 bytes when encoded as UTF-8
             * two identifiers share the same name and the same value. Names are compared ignoring
               case and surrounding whitespace, so `DMP` and ` dmp ` count as the same name, while
               values are compared exactly. Two identifiers sharing a name but holding different
@@ -148,10 +148,12 @@ paths:
             pattern: "^\\s*[A-Za-z0-9_-]+\\s*$"
         - name: value
           in: query
-          description: Identifier value (required when using name parameter)
+          description: >-
+            Identifier value (required when using name parameter). At most 900 bytes when encoded
+            as UTF-8
           schema:
             type: string
-            maxLength: 1000
+            maxLength: 900
       x-amazon-apigateway-integration:
         uri:
           Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${NvaFetchApprovalFunction.Arn}/invocations
@@ -497,7 +499,7 @@ paths:
             * `identifiers` is missing, empty or holds more than 20 identifiers
             * an identifier `name` is missing, longer than 100 characters, or contains anything
               but letters, digits, hyphen and underscore
-            * an identifier `value` is missing or longer than 1000 characters
+            * an identifier `value` is missing or longer than 900 bytes when encoded as UTF-8
             * two identifiers share the same name and the same value. Names are compared ignoring
               case and surrounding whitespace, so `DMP` and ` dmp ` count as the same name, while
               values are compared exactly. Two identifiers sharing a name but holding different
@@ -819,7 +821,7 @@ components:
             `/identifiers/3/value`. For query parameters it is the parameter name, for example
             `name`.
       example:
-        detail: Must be at most 1000 characters long
+        detail: Must be at most 900 bytes long in UTF-8
         pointer: /identifiers/3/value
     Approval:
       type: object
@@ -884,8 +886,8 @@ components:
           description: The name or category of the identifier (e.g., 'doi', 'isbn')
         value:
           type: string
-          maxLength: 1000
-          description: The actual identifier value
+          maxLength: 900
+          description: The actual identifier value. At most 900 bytes when encoded as UTF-8
   securitySchemes:
     CognitoUserPool:
       type: apiKey

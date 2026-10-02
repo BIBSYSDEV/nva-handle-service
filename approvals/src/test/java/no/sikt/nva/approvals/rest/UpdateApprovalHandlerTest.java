@@ -9,7 +9,7 @@ import static no.sikt.nva.approvals.utils.TestUtils.randomApproval;
 import static no.sikt.nva.approvals.utils.TestUtils.randomIdentifier;
 import static no.sikt.nva.approvals.utils.TestUtils.randomIdentifiers;
 import static no.sikt.nva.approvals.validation.RequestConstraints.MAX_IDENTIFIERS;
-import static no.sikt.nva.approvals.validation.RequestConstraints.MAX_IDENTIFIER_VALUE_LENGTH;
+import static no.sikt.nva.approvals.validation.RequestConstraints.MAX_IDENTIFIER_VALUE_BYTES;
 import static no.sikt.nva.approvals.validation.RequestConstraints.MAX_URI_LENGTH;
 import static no.unit.nva.testutils.RandomDataGenerator.randomString;
 import static no.unit.nva.testutils.RandomDataGenerator.randomUri;
@@ -60,7 +60,7 @@ class UpdateApprovalHandlerTest {
   private static final String SOURCE_MANDATORY_DETAIL = "/source: Is mandatory";
   private static final String IDENTIFIERS_SIZE_MESSAGE =
       "Between 1 and 20 identifiers are required";
-  private static final String VALUE_TOO_LONG_MESSAGE = "Must be at most 1000 characters long";
+  private static final String VALUE_TOO_LONG_MESSAGE = "Must be at most 900 bytes long in UTF-8";
   private static final String IDENTIFIERS_POINTER = "/identifiers";
   private static final String SOURCE_POINTER = "/source";
   private static final String IDENTIFIER_POINTER = "/identifier";
@@ -187,7 +187,7 @@ class UpdateApprovalHandlerTest {
 
   @Test
   void shouldReturnBadRequestPointingToIdentifierValueThatIsTooLong() throws IOException {
-    var tooLongValue = CHARACTER.repeat(MAX_IDENTIFIER_VALUE_LENGTH + 1);
+    var tooLongValue = CHARACTER.repeat(MAX_IDENTIFIER_VALUE_BYTES + 1);
     var identifiers = List.of(randomIdentifier(), new NamedIdentifier(REK, tooLongValue));
     var request = createRequest(requestWithIdentifiers(identifiers), approvalId);
 

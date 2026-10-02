@@ -6,7 +6,7 @@ import static java.net.HttpURLConnection.HTTP_OK;
 import static no.sikt.nva.approvals.utils.TestUtils.randomApproval;
 import static no.sikt.nva.approvals.utils.TestUtils.randomHandle;
 import static no.sikt.nva.approvals.validation.RequestConstraints.MAX_IDENTIFIER_NAME_LENGTH;
-import static no.sikt.nva.approvals.validation.RequestConstraints.MAX_IDENTIFIER_VALUE_LENGTH;
+import static no.sikt.nva.approvals.validation.RequestConstraints.MAX_IDENTIFIER_VALUE_BYTES;
 import static no.sikt.nva.approvals.validation.RequestConstraints.MAX_URI_LENGTH;
 import static no.unit.nva.testutils.RandomDataGenerator.randomUri;
 import static nva.commons.apigateway.ApiGatewayHandler.ALLOWED_ORIGIN_ENV;
@@ -62,7 +62,7 @@ class FetchApprovalHandlerTest {
   private static final String VALID_HANDLE = "https://hdl.handle.net/11250.1/12345";
   private static final String CHARACTER = "a";
   private static final String NAME_TOO_LONG_MESSAGE = "Must be at most 100 characters long";
-  private static final String VALUE_TOO_LONG_MESSAGE = "Must be at most 1000 characters long";
+  private static final String VALUE_TOO_LONG_MESSAGE = "Must be at most 900 bytes long in UTF-8";
   private static final String ERRORS_PARAMETER = "errors";
   private static final String DETAIL_FIELD = "detail";
   private static final String POINTER_FIELD = "pointer";
@@ -206,7 +206,7 @@ class FetchApprovalHandlerTest {
     var request =
         createRequestWithNamedIdentifierQuery(
             CHARACTER.repeat(MAX_IDENTIFIER_NAME_LENGTH),
-            CHARACTER.repeat(MAX_IDENTIFIER_VALUE_LENGTH));
+            CHARACTER.repeat(MAX_IDENTIFIER_VALUE_BYTES));
 
     var response = handleRequest(request);
 
@@ -221,7 +221,7 @@ class FetchApprovalHandlerTest {
     var request =
         createRequestWithNamedIdentifierQuery(
             CHARACTER.repeat(MAX_IDENTIFIER_NAME_LENGTH + 1),
-            CHARACTER.repeat(MAX_IDENTIFIER_VALUE_LENGTH + 1));
+            CHARACTER.repeat(MAX_IDENTIFIER_VALUE_BYTES + 1));
 
     var response = handleRequestAsProblem(request);
 

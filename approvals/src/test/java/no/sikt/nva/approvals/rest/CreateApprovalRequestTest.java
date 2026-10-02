@@ -3,7 +3,7 @@ package no.sikt.nva.approvals.rest;
 import static no.sikt.nva.approvals.utils.TestUtils.randomIdentifiers;
 import static no.sikt.nva.approvals.validation.RequestConstraints.MAX_IDENTIFIERS;
 import static no.sikt.nva.approvals.validation.RequestConstraints.MAX_IDENTIFIER_NAME_LENGTH;
-import static no.sikt.nva.approvals.validation.RequestConstraints.MAX_IDENTIFIER_VALUE_LENGTH;
+import static no.sikt.nva.approvals.validation.RequestConstraints.MAX_IDENTIFIER_VALUE_BYTES;
 import static no.sikt.nva.approvals.validation.RequestConstraints.MAX_URI_LENGTH;
 import static no.sikt.nva.approvals.validation.RequestValidator.validateBody;
 import static no.unit.nva.testutils.RandomDataGenerator.randomString;
@@ -29,7 +29,8 @@ class CreateApprovalRequestTest {
   private static final String IDENTIFIERS_SIZE_MESSAGE =
       "Between 1 and 20 identifiers are required";
   private static final String NAME_TOO_LONG_MESSAGE = "Must be at most 100 characters long";
-  private static final String VALUE_TOO_LONG_MESSAGE = "Must be at most 1000 characters long";
+  private static final String MULTIBYTE_CHARACTER = "ø";
+  private static final String VALUE_TOO_LONG_MESSAGE = "Must be at most 900 bytes long in UTF-8";
   private static final String URI_TOO_LONG_MESSAGE = "Must be at most 1024 characters long";
   private static final String NAME_PATTERN_MESSAGE =
       "May only contain letters, digits, hyphen and underscore";
@@ -84,7 +85,7 @@ class CreateApprovalRequestTest {
   @Test
   void shouldAcceptIdentifierNameAndValueOfMaximumLength() {
     var identifier =
-        new NamedIdentifier(text(MAX_IDENTIFIER_NAME_LENGTH), text(MAX_IDENTIFIER_VALUE_LENGTH));
+        new NamedIdentifier(text(MAX_IDENTIFIER_NAME_LENGTH), text(MAX_IDENTIFIER_VALUE_BYTES));
     var request = new CreateApprovalRequest(List.of(identifier), randomUri());
 
     assertDoesNotThrow(() -> validateBody(request));
@@ -104,7 +105,18 @@ class CreateApprovalRequestTest {
   @Test
   void shouldPointToIdentifierValueThatIsTooLong() {
     var identifiers =
-        identifiersWith(new NamedIdentifier(randomString(), text(MAX_IDENTIFIER_VALUE_LENGTH + 1)));
+        identifiersWith(new NamedIdentifier(randomString(), text(MAX_IDENTIFIER_VALUE_BYTES + 1)));
+    var request = new CreateApprovalRequest(identifiers, randomUri());
+
+    assertEquals(
+        List.of(new ValidationError(VALUE_TOO_LONG_MESSAGE, "/identifiers/2/value")),
+        validationErrors(request));
+  }
+
+  @Test
+  void shouldMeasureIdentifierValueInUtf8Bytes() {
+    var multibyteValue = MULTIBYTE_CHARACTER.repeat(MAX_IDENTIFIER_VALUE_BYTES / 2 + 1);
+    var identifiers = identifiersWith(new NamedIdentifier(randomString(), multibyteValue));
     var request = new CreateApprovalRequest(identifiers, randomUri());
 
     assertEquals(
@@ -215,7 +227,7 @@ class CreateApprovalRequestTest {
     var identifiers =
         List.of(
             new NamedIdentifier(text(MAX_IDENTIFIER_NAME_LENGTH + 1), randomString()),
-            new NamedIdentifier(randomString(), text(MAX_IDENTIFIER_VALUE_LENGTH + 1)));
+            new NamedIdentifier(randomString(), text(MAX_IDENTIFIER_VALUE_BYTES + 1)));
     var request = new CreateApprovalRequest(identifiers, null);
 
     assertEquals(
