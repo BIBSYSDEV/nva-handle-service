@@ -1,13 +1,14 @@
 package no.sikt.nva.approvals.domain;
 
 import static java.util.UUID.randomUUID;
+import static no.sikt.nva.approvals.domain.ApprovalActivity.CREATE_APPROVAL;
+import static no.sikt.nva.approvals.domain.ApprovalActivity.UPDATE_APPROVAL;
 import static no.sikt.nva.handle.utils.DatabaseConnectionSupplier.getConnectionSupplier;
 
 import java.net.URI;
 import java.sql.Connection;
+import java.time.Instant;
 import java.util.Collection;
-import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -15,7 +16,6 @@ import java.util.Set;
 import java.util.TreeSet;
 import java.util.UUID;
 import java.util.function.Supplier;
-import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import no.sikt.nva.approvals.persistence.ApprovalRepository;
 import no.sikt.nva.approvals.persistence.DynamoDbApprovalRepository;
@@ -30,13 +30,9 @@ public class ApprovalServiceImpl implements ApprovalService {
   private static final String HANDLE_PREFIX = "HANDLE_PREFIX";
   private static final String API_HOST = "API_HOST";
   private static final String APPROVAL_PATH = "approval";
+  private static final URI CONTEXT_PATH = URI.create("approval/context");
+  private static final URI ONTOLOGY_PATH = URI.create("approval/ontology");
   private static final String VALUE_DELIMITER = ", ";
-  private static final String DUPLICATE_IDENTIFIERS_MESSAGE =
-      "Identifiers must be unique, but the following were provided more than once: [%s]";
-  private static final Pattern SUPPORTED_IDENTIFIER_NAME_REGEX = Pattern.compile("[a-z0-9_-]+");
-  private static final String MALFORMED_IDENTIFIER_NAME_MESSAGE =
-      "Identifier names may only contain letters, digits, hyphen and underscore, but the following"
-          + " did not: [%s]";
   private final HandleDatabase handleDatabase;
   private final ApprovalRepository approvalRepository;
   private final Supplier<Connection> connectionSupplier;
@@ -66,14 +62,12 @@ public class ApprovalServiceImpl implements ApprovalService {
   public Approval create(
       Collection<NamedIdentifier> namedIdentifiers, URI source, UUID customerIdentifier)
       throws ApprovalServiceException, ApprovalConflictException {
-    ensureIdentifierNamesAreWellFormed(namedIdentifiers);
-    ensureNoDuplicateIdentifiers(namedIdentifiers);
     ensureIdentifiersDoesNotExist(namedIdentifiers);
     var approvalId = randomUUID();
     var approvalUri = createApprovalUri(approvalId);
     var handle = createHandle(approvalUri);
     var approval = new Approval(approvalId, namedIdentifiers, source, handle, customerIdentifier);
-    approvalRepository.save(approval);
+    approvalRepository.save(createRevision(approval, CREATE_APPROVAL));
     return approval;
   }
 
@@ -99,13 +93,11 @@ public class ApprovalServiceImpl implements ApprovalService {
       URI source,
       UUID customerIdentifier)
       throws ApprovalServiceException, ApprovalConflictException {
-    ensureIdentifierNamesAreWellFormed(namedIdentifiers);
-    ensureNoDuplicateIdentifiers(namedIdentifiers);
     var identifiers = approvalRepository.findIdentifiers(namedIdentifiers);
     var approval =
         getApprovalByIdentifier(approvalId)
             .orElseThrow(() -> new ApprovalNotFoundException(approvalId));
-    ensureCustomerOwnsApproval(approval, customerIdentifier);
+    approval.ensureOwnedBy(customerIdentifier);
     ensureIdentifiersAreNotUsedByOtherApproval(identifiers, approval);
     if (isUnchanged(approval, namedIdentifiers, source)) {
       return approval;
@@ -114,16 +106,9 @@ public class ApprovalServiceImpl implements ApprovalService {
     var updatedApproval =
         new Approval(
             approvalId, namedIdentifiers, source, approval.handle(), approval.customerIdentifier());
-    approvalRepository.updateApproval(updatedApproval);
+    approvalRepository.updateApproval(createRevision(updatedApproval, UPDATE_APPROVAL));
 
     return updatedApproval;
-  }
-
-  private static void ensureCustomerOwnsApproval(Approval approval, UUID customerIdentifier)
-      throws CustomerMismatchException {
-    if (!customerIdentifier.equals(approval.customerIdentifier())) {
-      throw new CustomerMismatchException();
-    }
   }
 
   private static boolean hasSameIdentifiers(
@@ -135,50 +120,6 @@ public class ApprovalServiceImpl implements ApprovalService {
       Approval approval, Collection<NamedIdentifier> namedIdentifiers, URI source) {
     return hasSameIdentifiers(approval, namedIdentifiers)
         && Objects.equals(approval.source(), source);
-  }
-
-  private void ensureIdentifierNamesAreWellFormed(Collection<NamedIdentifier> namedIdentifiers) {
-    var malformedNames =
-        namedIdentifiers.stream()
-            .map(NamedIdentifier::name)
-            .filter(
-                name ->
-                    !SUPPORTED_IDENTIFIER_NAME_REGEX
-                        .matcher(NamedIdentifier.normalizeName(name))
-                        .matches())
-            .distinct()
-            .toList();
-
-    if (!malformedNames.isEmpty()) {
-      throw new IllegalArgumentException(
-          MALFORMED_IDENTIFIER_NAME_MESSAGE.formatted(
-              String.join(VALUE_DELIMITER, malformedNames)));
-    }
-  }
-
-  private void ensureNoDuplicateIdentifiers(Collection<NamedIdentifier> namedIdentifiers) {
-    var duplicates =
-        namedIdentifiers.stream()
-            .collect(
-                Collectors.groupingBy(
-                    ApprovalServiceImpl::duplicateDetectionKey,
-                    LinkedHashMap::new,
-                    Collectors.toList()))
-            .values()
-            .stream()
-            .filter(identifiersWithSameKey -> identifiersWithSameKey.size() > 1)
-            .map(List::getFirst)
-            .map(identifier -> "%s: %s".formatted(identifier.name(), identifier.value()))
-            .toList();
-
-    if (!duplicates.isEmpty()) {
-      throw new IllegalArgumentException(
-          DUPLICATE_IDENTIFIERS_MESSAGE.formatted(String.join(VALUE_DELIMITER, duplicates)));
-    }
-  }
-
-  private static List<String> duplicateDetectionKey(NamedIdentifier namedIdentifier) {
-    return List.of(namedIdentifier.normalizedName(), namedIdentifier.value());
   }
 
   private void ensureIdentifiersAreNotUsedByOtherApproval(
@@ -224,6 +165,10 @@ public class ApprovalServiceImpl implements ApprovalService {
                     Collectors.collectingAndThen(
                         Collectors.toCollection(TreeSet::new),
                         values -> String.join(VALUE_DELIMITER, values)))));
+  }
+
+  private ApprovalRevision createRevision(Approval approval, ApprovalActivity activity) {
+    return ApprovalRevision.create(approval, activity, CONTEXT_PATH, ONTOLOGY_PATH, Instant.now());
   }
 
   private URI createApprovalUri(UUID approvalId) {

@@ -14,12 +14,15 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.stream.IntStream;
 import no.sikt.nva.approvals.domain.Approval;
+import no.sikt.nva.approvals.domain.ApprovalActivity;
+import no.sikt.nva.approvals.domain.ApprovalRevision;
 import no.sikt.nva.approvals.domain.Handle;
 import no.sikt.nva.approvals.domain.IdentifierPolicy;
 import no.sikt.nva.approvals.domain.NamedIdentifier;
 import no.sikt.nva.approvals.persistence.ApprovalDao;
 import no.sikt.nva.approvals.persistence.HandleDao;
 import no.sikt.nva.approvals.persistence.NamedIdentifierQueryObject;
+import no.sikt.nva.approvals.snapshot.SourceChange;
 import nva.commons.core.paths.UriWrapper;
 
 public class TestUtils {
@@ -62,6 +65,14 @@ public class TestUtils {
     return new Approval(identifier, namedIdentifiers, source, handle, customerIdentifier);
   }
 
+  public static Approval randomApproval(URI source, Handle handle, UUID customerIdentifier) {
+    return new Approval(randomUUID(), randomIdentifiers(), source, handle, customerIdentifier);
+  }
+
+  public static ApprovalRevision randomRevision(Approval approval, ApprovalActivity activity) {
+    return ApprovalRevision.create(approval, activity, randomUri(), randomUri(), Instant.now());
+  }
+
   public static Instant randomTimestamp() {
     return Instant.now()
         .minusSeconds(RANDOM.nextInt(MAX_TIMESTAMP_AGE_IN_SECONDS))
@@ -94,6 +105,14 @@ public class TestUtils {
         identifier.value(),
         ApprovalDao.toDatabaseIdentifier(randomUUID()),
         HandleDao.toDatabaseIdentifier(randomHandle()));
+  }
+
+  public static SourceChange randomSourceChange() {
+    return randomSourceChange(randomUUID(), randomString());
+  }
+
+  public static SourceChange randomSourceChange(UUID approvalIdentifier, String eventIdentifier) {
+    return new SourceChange(approvalIdentifier, eventIdentifier, randomUri(), Instant.now());
   }
 
   public static Handle randomHandle() {

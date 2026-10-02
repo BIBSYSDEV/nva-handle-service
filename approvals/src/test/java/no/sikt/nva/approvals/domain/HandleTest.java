@@ -1,5 +1,6 @@
 package no.sikt.nva.approvals.domain;
 
+import static no.sikt.nva.approvals.validation.RequestConstraints.MAX_URI_LENGTH;
 import static no.unit.nva.testutils.RandomDataGenerator.randomUri;
 import static nva.commons.core.StringUtils.EMPTY_STRING;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -36,6 +37,14 @@ class HandleTest {
     assertThrows(
         IllegalArgumentException.class,
         () -> new Handle(URI.create("https://hdl.handle.net/prefix")));
+  }
+
+  @Test
+  void shouldThrowIllegalArgumentExceptionWhenCreatingHandleFromUriThatIsTooLong() {
+    var tooLongSuffix = "a".repeat(MAX_URI_LENGTH);
+    var uri = URI.create("https://hdl.handle.net/prefix/%s".formatted(tooLongSuffix));
+
+    assertThrows(IllegalArgumentException.class, () -> new Handle(uri));
   }
 
   @Test

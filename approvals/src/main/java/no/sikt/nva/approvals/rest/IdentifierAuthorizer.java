@@ -1,6 +1,6 @@
 package no.sikt.nva.approvals.rest;
 
-import static nva.commons.core.attempt.Try.attempt;
+import static no.sikt.nva.approvals.utils.RequestUtils.getCustomerIdentifier;
 
 import java.util.Collection;
 import java.util.UUID;
@@ -10,10 +10,8 @@ import no.sikt.nva.approvals.domain.IdentifierPolicyServiceImpl;
 import no.sikt.nva.approvals.domain.NamedIdentifier;
 import nva.commons.apigateway.RequestInfo;
 import nva.commons.apigateway.exceptions.ApiGatewayException;
-import nva.commons.apigateway.exceptions.UnauthorizedException;
 import nva.commons.core.Environment;
 import nva.commons.core.JacocoGenerated;
-import nva.commons.core.paths.UriWrapper;
 
 public class IdentifierAuthorizer {
 
@@ -38,14 +36,6 @@ public class IdentifierAuthorizer {
       throw new DisallowedIdentifierNamesException(disallowedIdentifierNames);
     }
     return customerIdentifier;
-  }
-
-  private static UUID getCustomerIdentifier(RequestInfo requestInfo) throws UnauthorizedException {
-    var customerId = requestInfo.getCurrentCustomer();
-    return attempt(() -> UriWrapper.fromUri(customerId))
-        .map(UriWrapper::getLastPathElement)
-        .map(UUID::fromString)
-        .orElseThrow();
   }
 
   private IdentifierPolicy resolveIdentifierPolicy(RequestInfo requestInfo, UUID customerId) {

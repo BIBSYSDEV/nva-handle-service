@@ -1,6 +1,7 @@
 package no.sikt.nva.approvals.domain;
 
 import static java.util.Objects.isNull;
+import static no.sikt.nva.approvals.validation.RequestConstraints.MAX_URI_LENGTH;
 
 import java.net.URI;
 import java.util.Arrays;
@@ -16,7 +17,7 @@ public record Handle(URI value) {
   }
 
   private static void validate(URI uri) {
-    if (isNull(uri) || StringUtils.isBlank(uri.toString())) {
+    if (isNull(uri) || StringUtils.isBlank(uri.toString()) || isTooLong(uri)) {
       throw new IllegalArgumentException(INVALID_HANDLE_EXCEPTION);
     }
     if (isNull(uri.getHost()) || !HANDLE_HOST.equals(uri.getHost())) {
@@ -25,6 +26,10 @@ public record Handle(URI value) {
     if (!hasPrefixAndSuffix(uri)) {
       throw new IllegalArgumentException(INVALID_HANDLE_EXCEPTION);
     }
+  }
+
+  private static boolean isTooLong(URI uri) {
+    return uri.toString().length() > MAX_URI_LENGTH;
   }
 
   private static boolean hasPrefixAndSuffix(URI uri) {

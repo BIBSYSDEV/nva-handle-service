@@ -12,7 +12,10 @@ import no.unit.nva.commons.json.JsonSerializable;
   @JsonSubTypes.Type(IdentifierDao.class),
   @JsonSubTypes.Type(HandleDao.class),
   @JsonSubTypes.Type(ApprovalDao.class),
-  @JsonSubTypes.Type(IdentifierPolicyDao.class)
+  @JsonSubTypes.Type(IdentifierPolicyDao.class),
+  @JsonSubTypes.Type(EventDao.class),
+  @JsonSubTypes.Type(SourceSnapshotDao.class),
+  @JsonSubTypes.Type(ApprovalRevisionDao.class)
 })
 public interface DatabaseEntry extends JsonSerializable {
 

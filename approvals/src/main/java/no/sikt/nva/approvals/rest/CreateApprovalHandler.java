@@ -4,6 +4,7 @@ import static java.net.HttpURLConnection.HTTP_ACCEPTED;
 import static no.sikt.nva.approvals.utils.RequestUtils.createAdditionalApprovalHeaders;
 import static no.sikt.nva.approvals.utils.RequestUtils.getApiHost;
 import static no.sikt.nva.approvals.utils.RequestUtils.handleException;
+import static no.sikt.nva.approvals.validation.RequestValidator.validateBody;
 
 import com.amazonaws.services.lambda.runtime.Context;
 import no.sikt.nva.approvals.domain.Approval;
@@ -12,7 +13,6 @@ import no.sikt.nva.approvals.domain.ApprovalServiceImpl;
 import nva.commons.apigateway.ApiGatewayHandler;
 import nva.commons.apigateway.RequestInfo;
 import nva.commons.apigateway.exceptions.ApiGatewayException;
-import nva.commons.apigateway.exceptions.BadRequestException;
 import nva.commons.core.Environment;
 import nva.commons.core.JacocoGenerated;
 
@@ -47,7 +47,7 @@ public class CreateApprovalHandler extends ApiGatewayHandler<CreateApprovalReque
   protected void validateRequest(
       CreateApprovalRequest input, RequestInfo requestInfo, Context context)
       throws ApiGatewayException {
-    validateInput(input);
+    validateBody(input);
   }
 
   @Override
@@ -75,13 +75,5 @@ public class CreateApprovalHandler extends ApiGatewayHandler<CreateApprovalReque
   private void addHeaders(Approval approval) {
     addAdditionalHeaders(
         () -> createAdditionalApprovalHeaders(approval.identifier(), getApiHost(environment)));
-  }
-
-  private static void validateInput(CreateApprovalRequest input) throws BadRequestException {
-    try {
-      input.validate();
-    } catch (IllegalArgumentException exception) {
-      throw new BadRequestException(exception.getMessage());
-    }
   }
 }

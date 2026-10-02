@@ -192,6 +192,29 @@ A single DynamoDB table with `PK0`/`SK0` plus two global secondary indexes (`GSI
 by named identifier in addition to lookup by approval id. Point-in-time recovery is enabled and the table is tagged for
 backup.
 
+Every create and update of an approval also writes an immutable `ApprovalRevision` in the same `TransactWriteItems` as
+the approval item, so a failed revision write rolls back the approval write. An update that changes nothing writes no
+revision. Since an approval holds at most 20 identifiers (see [Validation](#validation)), a create writes at most 23
+items and an update at most 42, so every write fits in one transaction.
+
+| Item               | `PK0`             | `SK0`                       | `PK1`/`PK2` |
+| ------------------ | ----------------- | --------------------------- | ----------- |
+| `ApprovalRevision` | `Approval:<uuid>` | `Change:<changeIdentifier>` | not set     |
+
+- `changeIdentifier` is a `SortableIdentifier` from nva-commons (`<epoch millis as 12 hex digits>-<random uuid>`,
+  e.g. `01a0f1cfea4b-3f2a…`), so it sorts by time as a string. Source snapshots use the same identifier type, so all
+  `Change:` items for an approval sort together.
+- The item is an envelope with a few stable attributes: `changeIdentifier`, `approvalIdentifier`,
+  `customerIdentifier`, `createdDate`, `activity` (`CreateApproval` / `UpdateApproval`), `schemaVersion` and
+  `contentType`.
+- The content is stored as-is in `body`: a JSON string with the approval image (`identifiers`, `source`, `handle`,
+  `context`, `ontology`) in the format given by `schemaVersion`. History is never migrated; a new format gets a new
+  `schemaVersion` and its own reader, while old revisions keep being read with the version they were written with.
+- `context` and `ontology` are stored as relative URIs (`approval/context`, `approval/ontology`), never with the API
+  host, since the host differs per environment. Resolve them against `API_HOST` when reading.
+- Revisions for one approval are listed in time order with a query on `PK0 = Approval:<uuid>` and
+  `SK0 begins_with Change:`, filtered on `type = ApprovalRevision`.
+
 ## Endpoints
 
 | Method | Path                  | OperationId          | Scope                                                        | Success | Description                                             |
@@ -205,8 +228,44 @@ backup.
 | GET    | `/ontology`           | `getOntology`        | open                                                         | `200`   | Latest RDF ontology (Turtle)                            |
 | GET    | `/ontology/{version}` | `getOntologyVersion` | open                                                         | `200`   | RDF ontology version (`1.0.0`)                          |
 
-Error codes: `400`, `401` (missing or invalid token), `403` (missing scope), `404`, `409` (identifier already in use,
-with `conflictingKeys`), `502`.
+Error codes: `400` (invalid request, with `errors`), `401` (missing or invalid token), `403` (missing scope), `404`,
+`409` (identifier already in use, with `conflictingKeys`), `502`.
+
+## Validation
+
+Requests are validated in the Lambda with Jakarta Bean Validation annotations on the request records, with Apache BVal
+as provider. The limits live as constants in `RequestConstraints`. API Gateway body validation is turned off
+(`no_validation`) for `POST /`, `PUT /{approvalId}` and `POST /events`, so every invalid request gets the same problem
+response.
+
+| Field                | Rule                                                                 |
+| -------------------- | -------------------------------------------------------------------- |
+| `identifiers`        | mandatory, 1 to 20 identifiers, no two with the same name and value  |
+| identifier `name`    | mandatory, at most 100 characters, only letters, digits, `-` and `_` |
+| identifier `value`   | mandatory, at most 900 bytes when encoded as UTF-8                   |
+| `source`             | mandatory, at most 1024 characters                                   |
+| `handle` / `subject` | a handle URI of at most 1024 characters                              |
+| `?name=` / `?value=` | same length and name rules as an identifier                          |
+
+Names are compared ignoring case and surrounding whitespace when looking for duplicates, values are compared exactly.
+
+A `400` lists every broken rule in `errors`, sorted by pointer and then detail, so a field that breaks two rules
+has two entries. The pointer is a JSON pointer into the request body, or the parameter name for query parameters:
+
+```json
+{
+  "title": "Bad Request",
+  "status": 400,
+  "detail": "/identifiers/3/value: Must be at most 900 bytes long in UTF-8; /source: Is mandatory",
+  "errors": [
+    {
+      "detail": "Must be at most 900 bytes long in UTF-8",
+      "pointer": "/identifiers/3/value"
+    },
+    { "detail": "Is mandatory", "pointer": "/source" }
+  ]
+}
+```
 
 Query parameters on `GET /` must be URL-encoded, and you supply either `handle` or both `name` and `value`:
 
@@ -272,6 +331,7 @@ src/main/
 │   ├── persistence/   # ApprovalRepository, DynamoDbApprovalRepository, DAOs, query objects
 │   ├── rest/          # Create/Update/Fetch handlers, request and response models, ApprovalHtmlModel
 │   ├── dmp/           # DmpClient, OAuth2TokenService and clinical trial models
+│   ├── validation/    # RequestValidator, RequestConstraints and custom constraints
 │   └── utils/         # RequestUtils, ValidationUtils
 └── resources/jte/     # HTML templates (approval.jte)
 ```
