@@ -503,6 +503,7 @@ paths:
         "400":
           description: |-
             Bad Request. The request is rejected when:
+            * `approvalId` is not a UUID
             * the body is missing or invalid
             * `identifiers` is missing, empty or holds more than 20 identifiers
             * an identifier `name` is missing, longer than 100 characters, or contains anything
@@ -515,7 +516,9 @@ paths:
             * `source` is missing or longer than 1024 characters
             * `id` or `identifier` in the body does not address the approval in the request URI
 
-            Every invalid field is listed in `errors`, with a JSON pointer to the field.
+            Every invalid field is listed in `errors`, with a JSON pointer to the field in the
+            body, or with pointer `approvalId` for the path parameter. A missing body is reported
+            in `detail` only.
           content:
             "application/json":
               schema:
