@@ -336,6 +336,12 @@ paths:
             "application/json":
               schema:
                 $ref: "#/components/schemas/Problem"
+        "406":
+          description: Not Acceptable
+          content:
+            "application/json":
+              schema:
+                $ref: "#/components/schemas/Problem"
   /{approvalId}:
     get:
       tags:
