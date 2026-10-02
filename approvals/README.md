@@ -199,7 +199,7 @@ response.
 | -------------------- | -------------------------------------------------------------------- |
 | `identifiers`        | mandatory, 1 to 20 identifiers, no two with the same name and value  |
 | identifier `name`    | mandatory, at most 100 characters, only letters, digits, `-` and `_` |
-| identifier `value`   | mandatory, at most 1000 characters                                   |
+| identifier `value`   | mandatory, at most 900 bytes when encoded as UTF-8                   |
 | `source`             | mandatory, at most 1024 characters                                   |
 | `handle` / `subject` | a handle URI of at most 1024 characters                              |
 | `?name=` / `?value=` | same length and name rules as an identifier                          |
@@ -213,10 +213,10 @@ has two entries. The pointer is a JSON pointer into the request body, or the par
 {
   "title": "Bad Request",
   "status": 400,
-  "detail": "/identifiers/3/value: Must be at most 1000 characters long; /source: Is mandatory",
+  "detail": "/identifiers/3/value: Must be at most 900 bytes long in UTF-8; /source: Is mandatory",
   "errors": [
     {
-      "detail": "Must be at most 1000 characters long",
+      "detail": "Must be at most 900 bytes long in UTF-8",
       "pointer": "/identifiers/3/value"
     },
     { "detail": "Is mandatory", "pointer": "/source" }
