@@ -1,6 +1,7 @@
 package no.sikt.nva.approvals.rest;
 
 import static no.sikt.nva.approvals.utils.TestUtils.randomHandle;
+import static no.sikt.nva.approvals.validation.RequestConstraints.MAX_IDENTIFIER_NAME_LENGTH;
 import static no.sikt.nva.approvals.validation.RequestConstraints.MAX_URI_LENGTH;
 import static no.sikt.nva.approvals.validation.RequestValidator.validateQueryParameters;
 import static no.unit.nva.testutils.RandomDataGenerator.randomString;
@@ -27,6 +28,7 @@ class ApprovalQueryTest {
   private static final String VALUE_PARAMETER = "value";
   private static final String QUERY_POINTER = "handle";
   private static final String MANDATORY_MESSAGE = "Is mandatory";
+  private static final String NAME_TOO_LONG_MESSAGE = "Must be at most 100 characters long";
   private static final String NOT_A_HANDLE_MESSAGE = "Must be the handle of an approval";
   private static final String NAME_PATTERN_MESSAGE =
       "May only contain letters, digits, hyphen and underscore";
@@ -78,6 +80,17 @@ class ApprovalQueryTest {
 
     assertEquals(
         List.of(new ValidationError(MANDATORY_MESSAGE, VALUE_PARAMETER)), validationErrors(query));
+  }
+
+  @Test
+  void shouldReportInvalidNameTogetherWithMissingValue() {
+    var query = new ApprovalQuery(null, "a".repeat(MAX_IDENTIFIER_NAME_LENGTH + 1), null);
+
+    assertEquals(
+        List.of(
+            new ValidationError(NAME_TOO_LONG_MESSAGE, NAME_PARAMETER),
+            new ValidationError(MANDATORY_MESSAGE, VALUE_PARAMETER)),
+        validationErrors(query));
   }
 
   @Test
