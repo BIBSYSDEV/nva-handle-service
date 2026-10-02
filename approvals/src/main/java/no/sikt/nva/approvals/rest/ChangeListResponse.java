@@ -7,6 +7,4 @@ import java.util.List;
 
 @JsonTypeInfo(use = Id.NAME, property = "type")
 @JsonTypeName("ChangeList")
-public record ChangeListResponse(List<ChangeResponse> changes) {
-
-}
+public record ChangeListResponse(List<ChangeResponse> changes) {}
