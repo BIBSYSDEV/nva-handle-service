@@ -206,12 +206,16 @@ response.
 | identifier `value`   | mandatory, at most 900 bytes when encoded as UTF-8                   |
 | `source`             | mandatory, at most 1024 characters                                   |
 | `handle` / `subject` | a handle URI of at most 1024 characters                              |
-| `?name=` / `?value=` | same length and name rules as an identifier                          |
+| `time` (events)      | mandatory                                                            |
+| `?handle=`           | either `handle` or both `name` and `value`, never both               |
+| `?name=` / `?value=` | same length and name rules as an identifier, both or none            |
+| `{approvalId}`       | a UUID, and not combined with query parameters                       |
 
 Names are compared ignoring case and surrounding whitespace when looking for duplicates, values are compared exactly.
 
 A `400` lists every broken rule in `errors`, sorted by pointer and then detail, so a field that breaks two rules
-has two entries. The pointer is a JSON pointer into the request body, or the parameter name for query parameters:
+has two entries. The pointer is a JSON pointer into the request body, or the parameter name for query and path
+parameters. A missing body has no field to point to, so it returns only `detail`:
 
 ```json
 {
