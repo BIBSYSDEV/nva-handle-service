@@ -363,20 +363,35 @@ paths:
             "application/json":
               schema:
                 $ref: "#/components/schemas/Problem"
-  /changes:
+  /{approvalId}/changes:
     get:
       tags:
         - Approval
         - external
-      operationId: getChanges
-      summary: Get changes
-      description: Lists changes to approvals, newest first.
+      operationId: getApprovalChanges
+      summary: Get changes of an approval
+      description: >
+        Lists the recorded changes to an approval, newest first, 100 per page. An approval without
+        changes gives an empty list.
+      parameters:
+        - name: approvalId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: cursor
+          in: query
+          required: false
+          description: Continues the list from the `next` link of the previous page
+          schema:
+            type: string
       security:
         - CognitoUserPool:
             ["https://api.nva.unit.no/scopes/third-party/approval-upsert", "https://api.nva.unit.no/scopes/backend"]
       x-amazon-apigateway-integration:
         uri:
-          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${NvaFetchChangesFunction.Arn}/invocations
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${NvaFetchApprovalChangesFunction.Arn}/invocations
         responses: {}
         httpMethod: POST
         type: AWS_PROXY
@@ -390,6 +405,12 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ChangeList"
+        "400":
+          description: Bad Request. `approvalId` is not a UUID or `cursor` is not a cursor from `next`
+          content:
+            "application/json":
+              schema:
+                $ref: "#/components/schemas/Problem"
         "401":
           description: Unauthorized
           content:
@@ -398,6 +419,12 @@ paths:
                 $ref: "#/components/schemas/Problem"
         "403":
           description: Forbidden
+          content:
+            "application/json":
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "404":
+          description: Approval not found
           content:
             "application/json":
               schema:
@@ -808,7 +835,7 @@ components:
         time: "2026-09-28T10:15:30Z"
     ChangeList:
       type: object
-      description: A page of recorded changes to approvals, newest first
+      description: A page of recorded changes to an approval, newest first
       properties:
         type:
           type: string
@@ -817,6 +844,10 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/Change"
+        next:
+          type: string
+          format: uri
+          description: The next page. Absent on the last page.
     Change:
       type: object
       description: A recorded change to an approval

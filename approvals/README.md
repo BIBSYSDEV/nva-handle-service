@@ -225,16 +225,17 @@ items and an update at most 42, so every write fits in one transaction.
 
 ## Endpoints
 
-| Method | Path                  | OperationId          | Scope                                                        | Success | Description                                             |
-| ------ | --------------------- | -------------------- | ------------------------------------------------------------ | ------- | ------------------------------------------------------- |
-| POST   | `/`                   | `createApproval`     | `…/scopes/third-party/approval-upsert` or `…/scopes/backend` | `202`   | Create an approval with identifiers and a source URI    |
-| GET    | `/`                   | `getApprovalByQuery` | open                                                         | `200`   | Look up an approval by `?handle=` or `?name=`&`?value=` |
-| GET    | `/{approvalId}`       | `getApprovalById`    | open                                                         | `200`   | Fetch an approval by id (html, json or ld+json)         |
-| PUT    | `/{approvalId}`       | `updateApproval`     | `…/scopes/third-party/approval-upsert` or `…/scopes/backend` | `202`   | Replace the identifiers on an approval                  |
-| GET    | `/context`            | `getContext`         | open                                                         | `200`   | Current JSON-LD context                                 |
-| GET    | `/context/{version}`  | `getContextVersion`  | open                                                         | `200`   | JSON-LD context version (`v1`)                          |
-| GET    | `/ontology`           | `getOntology`        | open                                                         | `200`   | Latest RDF ontology (Turtle)                            |
-| GET    | `/ontology/{version}` | `getOntologyVersion` | open                                                         | `200`   | RDF ontology version (`1.0.0`)                          |
+| Method | Path                    | OperationId          | Scope                                                        | Success | Description                                                  |
+| ------ | ----------------------- | -------------------- | ------------------------------------------------------------ | ------- | ------------------------------------------------------------ |
+| POST   | `/`                     | `createApproval`     | `…/scopes/third-party/approval-upsert` or `…/scopes/backend` | `202`   | Create an approval with identifiers and a source URI         |
+| GET    | `/`                     | `getApprovalByQuery` | open                                                         | `200`   | Look up an approval by `?handle=` or `?name=`&`?value=`      |
+| GET    | `/{approvalId}`         | `getApprovalById`    | open                                                         | `200`   | Fetch an approval by id (html, json or ld+json)              |
+| GET    | `/{approvalId}/changes` | `getApprovalChanges` | `…/scopes/third-party/approval-upsert` or `…/scopes/backend` | `200`   | Changes of an approval, newest first, `?cursor=` from `next` |
+| PUT    | `/{approvalId}`         | `updateApproval`     | `…/scopes/third-party/approval-upsert` or `…/scopes/backend` | `202`   | Replace the identifiers on an approval                       |
+| GET    | `/context`              | `getContext`         | open                                                         | `200`   | Current JSON-LD context                                      |
+| GET    | `/context/{version}`    | `getContextVersion`  | open                                                         | `200`   | JSON-LD context version (`v1`)                               |
+| GET    | `/ontology`             | `getOntology`        | open                                                         | `200`   | Latest RDF ontology (Turtle)                                 |
+| GET    | `/ontology/{version}`   | `getOntologyVersion` | open                                                         | `200`   | RDF ontology version (`1.0.0`)                               |
 
 Error codes: `400` (invalid request, with `errors`), `401` (missing or invalid token), `403` (missing scope), `404`,
 `409` (identifier already in use, with `conflictingKeys`), `502`.
