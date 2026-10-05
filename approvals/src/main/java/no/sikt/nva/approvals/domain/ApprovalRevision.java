@@ -8,12 +8,13 @@ import java.util.UUID;
 import no.unit.nva.identifiers.SortableIdentifier;
 
 public record ApprovalRevision(
-    SortableIdentifier changeIdentifier,
+    SortableIdentifier identifier,
     Approval approval,
     Instant createdDate,
     ApprovalActivity activity,
     URI context,
-    URI ontology) {
+    URI ontology)
+    implements Change {
 
   public static ApprovalRevision create(
       Approval approval,

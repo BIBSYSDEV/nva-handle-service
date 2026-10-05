@@ -525,6 +525,12 @@ Resources:
             Path: /context
             Method: get
             RestApiId: !Ref NvaApprovalsApi
+        GetContextVersion:
+          Type: Api
+          Properties:
+            Path: /context/{version}
+            Method: get
+            RestApiId: !Ref NvaApprovalsApi
 
   NvaFetchOntologyFunctionLogGroup:
     Type: AWS::Logs::LogGroup
@@ -542,6 +548,12 @@ Resources:
           Type: Api
           Properties:
             Path: /ontology
+            Method: get
+            RestApiId: !Ref NvaApprovalsApi
+        GetOntologyVersion:
+          Type: Api
+          Properties:
+            Path: /ontology/{version}
             Method: get
             RestApiId: !Ref NvaApprovalsApi
 
@@ -599,6 +611,11 @@ Resources:
     Properties:
       CodeUri: approvals
       Handler: no.sikt.nva.approvals.rest.FetchChangeHandler::handleRequest
+      Policies:
+        - !Ref DynamoDbTableAccessPolicy
+      Environment:
+        Variables:
+          TABLE: !Ref ApprovalsTable
       Events:
         FetchChange:
           Type: Api

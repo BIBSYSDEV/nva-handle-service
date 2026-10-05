@@ -1,6 +1,8 @@
 package no.sikt.nva.approvals.rest;
 
 import static java.util.Objects.nonNull;
+import static no.sikt.nva.approvals.rest.RestConstants.APPROVAL_PATH;
+import static no.sikt.nva.approvals.rest.RestConstants.CONTEXT_PATH;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
@@ -22,9 +24,6 @@ public record ApprovalResponse(
     Collection<NamedIdentifier> identifiers,
     URI source,
     String handle) {
-
-  private static final String APPROVAL_PATH = "approval";
-  private static final String CONTEXT_PATH = "context";
 
   public static ApprovalResponse fromApproval(Approval approval, String apiHost) {
     var id = buildId(apiHost, approval.identifier());
@@ -50,6 +49,10 @@ public record ApprovalResponse(
   }
 
   private static URI buildContextUri(String apiHost) {
-    return UriWrapper.fromHost(apiHost).addChild(APPROVAL_PATH).addChild(CONTEXT_PATH).getUri();
+    return UriWrapper.fromHost(apiHost)
+        .addChild(APPROVAL_PATH)
+        .addChild(CONTEXT_PATH)
+        .addChild(FetchContextHandler.CURRENT_CONTEXT_VERSION)
+        .getUri();
   }
 }

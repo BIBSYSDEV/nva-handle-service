@@ -5,17 +5,12 @@ import static no.sikt.nva.approvals.persistence.DynamoDbConstants.GSI1;
 import static no.sikt.nva.approvals.persistence.DynamoDbConstants.GSI2;
 import static no.sikt.nva.approvals.persistence.DynamoDbConstants.PK0;
 import static no.sikt.nva.approvals.persistence.DynamoDbConstants.PK1;
-import static no.sikt.nva.approvals.persistence.DynamoDbConstants.PK2;
 import static no.sikt.nva.approvals.persistence.DynamoDbConstants.SK0;
-import static no.sikt.nva.approvals.persistence.DynamoDbConstants.SK1;
-import static no.sikt.nva.approvals.persistence.DynamoDbConstants.SK2;
 import static no.sikt.nva.approvals.persistence.DynamoDbConstants.TABLE;
 import static no.sikt.nva.approvals.persistence.DynamoDbConstants.defaultDynamoClient;
+import static no.sikt.nva.approvals.persistence.DynamoDbConstants.documentTableSchema;
 import static nva.commons.core.attempt.Try.attempt;
-import static software.amazon.awssdk.enhanced.dynamodb.AttributeValueType.S;
-import static software.amazon.awssdk.enhanced.dynamodb.TableMetadata.primaryIndexName;
 import static software.amazon.awssdk.enhanced.dynamodb.model.QueryConditional.keyEqualTo;
-import static software.amazon.awssdk.enhanced.dynamodb.model.QueryConditional.sortBeginsWith;
 
 import java.time.Instant;
 import java.util.ArrayList;
@@ -30,28 +25,23 @@ import no.sikt.nva.approvals.domain.ApprovalRevision;
 import no.sikt.nva.approvals.domain.Handle;
 import no.sikt.nva.approvals.domain.IdentifierPolicy;
 import no.sikt.nva.approvals.domain.NamedIdentifier;
+import no.sikt.nva.approvals.domain.SourceSnapshot;
 import no.sikt.nva.approvals.events.SourceChangedEvent;
-import no.sikt.nva.approvals.snapshot.SourceSnapshot;
 import no.unit.nva.commons.json.JsonUtils;
 import nva.commons.core.Environment;
 import nva.commons.core.JacocoGenerated;
-import software.amazon.awssdk.enhanced.dynamodb.AttributeConverterProvider;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedClient;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbTable;
 import software.amazon.awssdk.enhanced.dynamodb.Expression;
 import software.amazon.awssdk.enhanced.dynamodb.Key;
-import software.amazon.awssdk.enhanced.dynamodb.TableSchema;
-import software.amazon.awssdk.enhanced.dynamodb.document.DocumentTableSchema;
 import software.amazon.awssdk.enhanced.dynamodb.document.EnhancedDocument;
 import software.amazon.awssdk.enhanced.dynamodb.model.BatchGetItemEnhancedRequest;
 import software.amazon.awssdk.enhanced.dynamodb.model.Page;
 import software.amazon.awssdk.enhanced.dynamodb.model.PutItemEnhancedRequest;
-import software.amazon.awssdk.enhanced.dynamodb.model.QueryEnhancedRequest;
 import software.amazon.awssdk.enhanced.dynamodb.model.ReadBatch;
 import software.amazon.awssdk.enhanced.dynamodb.model.TransactPutItemEnhancedRequest;
 import software.amazon.awssdk.enhanced.dynamodb.model.TransactWriteItemsEnhancedRequest;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
-import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 import software.amazon.awssdk.services.dynamodb.model.ConditionalCheckFailedException;
 
 // FIXME: Suppressing warning in order to upgrade PMD version
@@ -62,7 +52,6 @@ public class DynamoDbApprovalRepository implements ApprovalRepository {
   private static final int TRANSACT_WRITE_ITEM_LIMIT = 80;
   private static final int FIRST_CHUNK = 0;
   private static final String APPROVAL_NOT_FOUND_MESSAGE = "Approval not found: %s";
-  private static final String TYPE_FIELD = "type";
   private final DynamoDbTable<EnhancedDocument> table;
   private final DynamoDbEnhancedClient client;
 
@@ -140,20 +129,6 @@ public class DynamoDbApprovalRepository implements ApprovalRepository {
   public Optional<Approval> findByApprovalIdentifier(UUID approvalIdentifier) {
     var entities = fetchEntitiesByApprovalIdentifier(toDatabaseIdentifier(approvalIdentifier));
     return entities.isEmpty() ? Optional.empty() : Optional.of(constructApproval(entities));
-  }
-
-  @Override
-  public List<ApprovalRevision> findRevisions(UUID approvalIdentifier) {
-    var request =
-        QueryEnhancedRequest.builder()
-            .queryConditional(sortBeginsWith(changeKeyPrefix(approvalIdentifier)))
-            .filterExpression(typeIs(ApprovalRevisionDao.TYPE))
-            .build();
-    return table.query(request).items().stream()
-        .map(EnhancedDocument::toJson)
-        .map(ApprovalRevisionDao::fromJson)
-        .map(ApprovalRevisionDao::toApprovalRevision)
-        .toList();
   }
 
   @Override
@@ -258,37 +233,10 @@ public class DynamoDbApprovalRepository implements ApprovalRepository {
         .orElseThrow(() -> new IllegalStateException("Approval not found"));
   }
 
-  private static DocumentTableSchema documentTableSchema() {
-    return TableSchema.documentSchemaBuilder()
-        .addIndexPartitionKey(primaryIndexName(), PK0, S)
-        .addIndexSortKey(primaryIndexName(), SK0, S)
-        .addIndexPartitionKey(GSI1, PK1, S)
-        .addIndexSortKey(GSI1, SK1, S)
-        .addIndexPartitionKey(GSI2, PK2, S)
-        .addIndexSortKey(GSI2, SK2, S)
-        .attributeConverterProviders(AttributeConverterProvider.defaultProvider())
-        .build();
-  }
-
   private static Expression newDaoCondition() {
     return Expression.builder()
         .expression("attribute_not_exists(#pk) AND attribute_not_exists(#sk)")
         .expressionNames(Map.of("#pk", PK0, "#sk", SK0))
-        .build();
-  }
-
-  private static Expression typeIs(String type) {
-    return Expression.builder()
-        .expression("#type = :type")
-        .expressionNames(Map.of("#type", TYPE_FIELD))
-        .expressionValues(Map.of(":type", AttributeValue.fromS(type)))
-        .build();
-  }
-
-  private static Key changeKeyPrefix(UUID approvalIdentifier) {
-    return Key.builder()
-        .partitionValue(toDatabaseIdentifier(approvalIdentifier))
-        .sortValue(ApprovalRevisionDao.CHANGE_KEY_PREFIX)
         .build();
   }
 

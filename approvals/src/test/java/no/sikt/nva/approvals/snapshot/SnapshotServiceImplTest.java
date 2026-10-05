@@ -4,6 +4,7 @@ import static no.sikt.nva.approvals.utils.TestUtils.randomSourceChange;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 
+import no.sikt.nva.approvals.domain.SourceSnapshot;
 import no.sikt.nva.approvals.persistence.ApprovalRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

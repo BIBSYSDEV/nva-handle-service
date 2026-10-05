@@ -11,7 +11,7 @@ import com.fasterxml.jackson.annotation.JsonTypeName;
 import java.net.URI;
 import java.time.Instant;
 import java.util.UUID;
-import no.sikt.nva.approvals.snapshot.SourceSnapshot;
+import no.sikt.nva.approvals.domain.SourceSnapshot;
 import no.unit.nva.commons.json.JsonSerializable;
 import no.unit.nva.identifiers.SortableIdentifier;
 import software.amazon.awssdk.enhanced.dynamodb.document.EnhancedDocument;
@@ -24,7 +24,7 @@ public record SourceSnapshotDao(
     String eventIdentifier,
     URI source,
     Instant createdDate)
-    implements JsonSerializable, DatabaseEntry {
+    implements JsonSerializable, ChangeDao {
 
   private static final String SNAPSHOT_KEY = "Change:%s";
 
@@ -35,6 +35,11 @@ public record SourceSnapshotDao(
         snapshot.eventIdentifier(),
         snapshot.source(),
         createdDate);
+  }
+
+  @Override
+  public SourceSnapshot toChange() {
+    return new SourceSnapshot(identifier, approvalIdentifier, eventIdentifier, source);
   }
 
   public EnhancedDocument toEnhancedDocument() {

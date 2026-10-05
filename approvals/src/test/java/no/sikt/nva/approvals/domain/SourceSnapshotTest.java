@@ -1,4 +1,4 @@
-package no.sikt.nva.approvals.snapshot;
+package no.sikt.nva.approvals.domain;
 
 import static java.util.UUID.randomUUID;
 import static no.sikt.nva.approvals.utils.TestUtils.randomSourceChange;

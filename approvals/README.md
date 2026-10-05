@@ -18,8 +18,8 @@ flowchart TB
 
     subgraph read["Read (open)"]
         FA["FetchApprovalHandler<br/>GET / and GET /{approvalId}"]
-        FC["FetchContextHandler<br/>GET /context"]
-        FO["FetchOntologyHandler<br/>GET /ontology"]
+        FC["FetchContextHandler<br/>GET /context and GET /context/{version}"]
+        FO["FetchOntologyHandler<br/>GET /ontology and GET /ontology/{version}"]
     end
 
     CA --> SVC["ApprovalServiceImpl"]
@@ -42,8 +42,10 @@ flowchart TB
 
 - **`Approval`** — `identifier` (UUID), `namedIdentifiers`, `source` (the source URI) and `handle`. All four are
   mandatory, and the identifier collection cannot be empty.
-- **`NamedIdentifier`** — a name/value pair, for example `REK` / `123456`. Every identifier must be unique across all
-  approvals; a collision returns `409 Conflict` with `conflictingKeys` in the problem response.
+- **`NamedIdentifier`** — a namespace/value pair, for example `REK` / `123456`, where the JSON field `name` holds the
+  namespace. The name/value pair is unique across all approvals: a value must be unique within its namespace, but the
+  same value may exist in another namespace. A collision returns `409 Conflict` with `conflictingKeys` in the problem
+  response.
   A `name` is the namespace of one identifier space: every value under it refers to the same kind of thing
   from the same issuer, and no value means two different things. A useful test is whether every value could
   be resolved as `<one base URI>/<value>`. If a source issues identifiers for different kinds of things, or
@@ -147,7 +149,49 @@ Corrections against the current implementation:
   `Accept` header the response is `application/json`.
 - For identifiers named `DMP`, the HTML view is enriched with clinical trial data from the DMP API through `DmpClient`
   (OAuth2 client credentials, secrets in `DmpClientCredentials`). The JSON and JSON-LD representations are not enriched.
-- `GET /context` and `GET /ontology` serve the JSON-LD context and the RDF ontology (Turtle) for the API.
+- `GET /context` and `GET /ontology` serve the JSON-LD context and the RDF ontology (Turtle) for the API. Both are
+  versioned, see [Vocabulary and versioning](#vocabulary-and-versioning).
+
+## Vocabulary and versioning
+
+The approval vocabulary lives in one namespace per environment, used as `@vocab` in the JSON-LD context:
+
+```
+https://api.nva.unit.no/approval/ontology#
+```
+
+The namespace is dereferenceable: it resolves to the ontology document. JSON field names resolve to terms in this
+namespace, and the context only aliases the fields whose term has a different name. The ontology and the JSON-LD context
+are versioned independently, and every published version is immutable.
+
+| Resource | Versioning                    | Latest                   | Specific version                   |
+| -------- | ----------------------------- | ------------------------ | ---------------------------------- |
+| Ontology | Semantic versioning (`1.0.0`) | `GET /approval/ontology` | `GET /approval/ontology/{version}` |
+| Context  | Frozen versions (`v1`)        | `GET /approval/context`  | `GET /approval/context/{version}`  |
+
+- **Stable term IRIs.** The namespace contains no version, so `…/ontology#identifiers` means the same in every ontology
+  version. A breaking change introduces a new term and marks the old one deprecated instead of changing its meaning.
+- **Ontology versions** are declared in the ontology itself with `owl:versionIRI` and `owl:versionInfo`, and the
+  namespace with `vann:preferredNamespacePrefix` and `vann:preferredNamespaceUri`. PATCH is for documentation only,
+  MINOR for new or deprecated terms, and MAJOR, which removes or changes a term, should never be needed.
+- **Context versions** are frozen: any change to a published context, including added terms, is published as a new
+  version (`v2`, `v3`, ...). Approval responses always reference a versioned context (`…/context/v1`), so a document
+  always expands to the same triples. Because of `@vocab`, a new JSON field named like its ontology term needs no context
+  change; only new aliases, type coercions or changed mappings do.
+- **Unversioned URIs** always return the latest version, with a `Content-Location` header pointing to the versioned
+  resource that was returned. Unknown versions return `404`.
+- Current versions: ontology `1.0.0`, context `v1`.
+
+How JSON fields map to the vocabulary in context `v1` (terms relative to the namespace above):
+
+| JSON field    | Ontology term  | Meaning                                     |
+| ------------- | -------------- | ------------------------------------------- |
+| `identifier`  | `#approvalId`  | The approval's UUID (alias)                 |
+| `identifiers` | `#identifiers` | The approval's namespaced identifiers       |
+| `name`        | `#namespace`   | Namespace of an identifier, e.g. REK or DMP |
+| `value`       | `#value`       | Identifier value, unique within namespace   |
+| `source`      | `#source`      | The source URI                              |
+| `handle`      | `#handle`      | The handle URI                              |
 
 ## Persistence
 
@@ -160,14 +204,14 @@ the approval item, so a failed revision write rolls back the approval write. An 
 revision. Since an approval holds at most 20 identifiers (see [Validation](#validation)), a create writes at most 23
 items and an update at most 42, so every write fits in one transaction.
 
-| Item               | `PK0`             | `SK0`                       | `PK1`/`PK2` |
-| ------------------ | ----------------- | --------------------------- | ----------- |
-| `ApprovalRevision` | `Approval:<uuid>` | `Change:<changeIdentifier>` | not set     |
+| Item               | `PK0`             | `SK0`                 | `PK1`/`PK2` |
+| ------------------ | ----------------- | --------------------- | ----------- |
+| `ApprovalRevision` | `Approval:<uuid>` | `Change:<identifier>` | not set     |
 
-- `changeIdentifier` is a `SortableIdentifier` from nva-commons (`<epoch millis as 12 hex digits>-<random uuid>`,
+- `identifier` is a `SortableIdentifier` from nva-commons (`<epoch millis as 12 hex digits>-<random uuid>`,
   e.g. `01a0f1cfea4b-3f2a…`), so it sorts by time as a string. Source snapshots use the same identifier type, so all
   `Change:` items for an approval sort together.
-- The item is an envelope with a few stable attributes: `changeIdentifier`, `approvalIdentifier`,
+- The item is an envelope with a few stable attributes: `identifier`, `approvalIdentifier`,
   `customerIdentifier`, `createdDate`, `activity` (`CreateApproval` / `UpdateApproval`), `schemaVersion` and
   `contentType`.
 - The content is stored as-is in `body`: a JSON string with the approval image (`identifiers`, `source`, `handle`,
@@ -175,19 +219,22 @@ items and an update at most 42, so every write fits in one transaction.
   `schemaVersion` and its own reader, while old revisions keep being read with the version they were written with.
 - `context` and `ontology` are stored as relative URIs (`approval/context`, `approval/ontology`), never with the API
   host, since the host differs per environment. Resolve them against `API_HOST` when reading.
-- Revisions for one approval are listed in time order with a query on `PK0 = Approval:<uuid>` and
-  `SK0 begins_with Change:`, filtered on `type = ApprovalRevision`.
+- `ChangeRepository.listChangesByApproval` lists all changes of an approval (revisions and source snapshots) newest
+  first with a query on `PK0 = Approval:<uuid>` and `SK0 begins_with Change:`, a page at a time. The next page starts
+  after the last change of the previous one (`ChangeList.next()`).
 
 ## Endpoints
 
-| Method | Path            | OperationId          | Scope                                                        | Success | Description                                             |
-| ------ | --------------- | -------------------- | ------------------------------------------------------------ | ------- | ------------------------------------------------------- |
-| POST   | `/`             | `createApproval`     | `…/scopes/third-party/approval-upsert` or `…/scopes/backend` | `202`   | Create an approval with identifiers and a source URI    |
-| GET    | `/`             | `getApprovalByQuery` | open                                                         | `200`   | Look up an approval by `?handle=` or `?name=`&`?value=` |
-| GET    | `/{approvalId}` | `getApprovalById`    | open                                                         | `200`   | Fetch an approval by id (html, json or ld+json)         |
-| PUT    | `/{approvalId}` | `updateApproval`     | `…/scopes/third-party/approval-upsert` or `…/scopes/backend` | `202`   | Replace the identifiers on an approval                  |
-| GET    | `/context`      | `getContext`         | open                                                         | `200`   | JSON-LD context                                         |
-| GET    | `/ontology`     | `getOntology`        | open                                                         | `200`   | RDF ontology (Turtle)                                   |
+| Method | Path                  | OperationId          | Scope                                                        | Success | Description                                             |
+| ------ | --------------------- | -------------------- | ------------------------------------------------------------ | ------- | ------------------------------------------------------- |
+| POST   | `/`                   | `createApproval`     | `…/scopes/third-party/approval-upsert` or `…/scopes/backend` | `202`   | Create an approval with identifiers and a source URI    |
+| GET    | `/`                   | `getApprovalByQuery` | open                                                         | `200`   | Look up an approval by `?handle=` or `?name=`&`?value=` |
+| GET    | `/{approvalId}`       | `getApprovalById`    | open                                                         | `200`   | Fetch an approval by id (html, json or ld+json)         |
+| PUT    | `/{approvalId}`       | `updateApproval`     | `…/scopes/third-party/approval-upsert` or `…/scopes/backend` | `202`   | Replace the identifiers on an approval                  |
+| GET    | `/context`            | `getContext`         | open                                                         | `200`   | Current JSON-LD context                                 |
+| GET    | `/context/{version}`  | `getContextVersion`  | open                                                         | `200`   | JSON-LD context version (`v1`)                          |
+| GET    | `/ontology`           | `getOntology`        | open                                                         | `200`   | Latest RDF ontology (Turtle)                            |
+| GET    | `/ontology/{version}` | `getOntologyVersion` | open                                                         | `200`   | RDF ontology version (`1.0.0`)                          |
 
 Error codes: `400` (invalid request, with `errors`), `401` (missing or invalid token), `403` (missing scope), `404`,
 `409` (identifier already in use, with `conflictingKeys`), `502`.
@@ -258,7 +305,7 @@ Response body:
 
 ```json
 {
-  "@context": "https://api.nva.unit.no/approval/context",
+  "@context": "https://api.nva.unit.no/approval/context/v1",
   "type": "Approval",
   "id": "https://api.nva.unit.no/approval/6ff5f1b5-97c1-40f0-86ad-2cbd9006eee2",
   "identifier": "6ff5f1b5-97c1-40f0-86ad-2cbd9006eee2",
