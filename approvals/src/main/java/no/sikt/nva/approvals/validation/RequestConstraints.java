@@ -40,6 +40,7 @@ public final class RequestConstraints {
       "Provided approval identifier is not valid!";
   public static final String INVALID_CHANGE_IDENTIFIER_MESSAGE =
       "Provided change identifier is not valid!";
+  public static final String INVALID_CURSOR_MESSAGE = "Must be the cursor given in next";
 
   private RequestConstraints() {}
 }
