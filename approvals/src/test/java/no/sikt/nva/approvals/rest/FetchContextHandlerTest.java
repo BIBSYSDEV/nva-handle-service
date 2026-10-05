@@ -12,6 +12,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.nio.file.Path;
+import java.util.Map;
 import no.unit.nva.commons.json.JsonUtils;
 import no.unit.nva.stubs.FakeContext;
 import no.unit.nva.testutils.HandlerRequestBuilder;
@@ -22,12 +23,17 @@ import org.junit.jupiter.api.Test;
 
 class FetchContextHandlerTest {
 
-  private static final String ONTOLOGY_NAMESPACE = "https://localhost/approval/ontology#";
-  private static final String ONTOLOGY_NAMESPACE_PLACEHOLDER = "__ONTOLOGY_NAMESPACE__";
+  private static final String ONTOLOGY_IRI = "https://localhost/approval/ontology";
+  private static final String ONTOLOGY_IRI_PLACEHOLDER = "__ONTOLOGY_IRI__";
   private static final String LEGACY_NAMESPACE = "https://nva.unit.no/approval#";
+  private static final String VERSION_PATH_PARAMETER = "version";
+  private static final String CONTEXT_VERSION = "v1";
+  private static final String UNKNOWN_VERSION = "v0";
+  private static final String CONTENT_LOCATION_HEADER = "Content-Location";
+  private static final String VERSIONED_CONTEXT_URI = "https://localhost/approval/context/v1";
   private static final String EXPECTED_CONTEXT =
-      IoUtils.stringFromResources(Path.of("approval-context.json"))
-          .replace(ONTOLOGY_NAMESPACE_PLACEHOLDER, ONTOLOGY_NAMESPACE);
+      IoUtils.stringFromResources(Path.of("context/approval-context-v1.json"))
+          .replace(ONTOLOGY_IRI_PLACEHOLDER, ONTOLOGY_IRI);
   private static final Context CONTEXT = new FakeContext();
   private FetchContextHandler handler;
   private ByteArrayOutputStream outputStream;
@@ -39,41 +45,63 @@ class FetchContextHandlerTest {
   }
 
   @Test
-  void shouldReturnContextJson() throws IOException {
-    var inputStream = createRequest();
-
-    handler.handleRequest(inputStream, outputStream, CONTEXT);
+  void shouldReturnCurrentContextWhenVersionIsNotGiven() throws IOException {
+    handler.handleRequest(createRequest(), outputStream, CONTEXT);
 
     var response = GatewayResponse.fromOutputStream(outputStream, String.class);
     assertThat(response.getStatusCode(), is(HttpURLConnection.HTTP_OK));
-    assertThat(response.getBody(), containsString("@context"));
-    assertThat(response.getBody(), containsString("@vocab"));
-    assertThat(
-        response.getBody(), containsString("\"@vocab\": \"%s\"".formatted(ONTOLOGY_NAMESPACE)));
+    assertThat(response.getBody(), is(EXPECTED_CONTEXT));
+  }
+
+  @Test
+  void shouldReturnRequestedContextVersion() throws IOException {
+    handler.handleRequest(createRequest(CONTEXT_VERSION), outputStream, CONTEXT);
+
+    var response = GatewayResponse.fromOutputStream(outputStream, String.class);
+    assertThat(response.getStatusCode(), is(HttpURLConnection.HTTP_OK));
+    assertThat(response.getBody(), is(EXPECTED_CONTEXT));
+  }
+
+  @Test
+  void shouldPointToVersionedContextInContentLocationWhenVersionIsNotGiven() throws IOException {
+    handler.handleRequest(createRequest(), outputStream, CONTEXT);
+
+    var response = GatewayResponse.fromOutputStream(outputStream, String.class);
+    assertThat(response.getHeaders().get(CONTENT_LOCATION_HEADER), is(VERSIONED_CONTEXT_URI));
+  }
+
+  @Test
+  void shouldReturnNotFoundForUnknownVersion() throws IOException {
+    handler.handleRequest(createRequest(UNKNOWN_VERSION), outputStream, CONTEXT);
+
+    var response = GatewayResponse.fromOutputStream(outputStream, String.class);
+    assertThat(response.getStatusCode(), is(HttpURLConnection.HTTP_NOT_FOUND));
+  }
+
+  @Test
+  void shouldResolveVocabularyToOntologyNamespace() throws IOException {
+    handler.handleRequest(createRequest(), outputStream, CONTEXT);
+
+    var response = GatewayResponse.fromOutputStream(outputStream, String.class);
+    assertThat(response.getBody(), containsString("\"@vocab\": \"%s#\"".formatted(ONTOLOGY_IRI)));
   }
 
   @Test
   void shouldNotReturnUnresolvableNamespaceOrPlaceholder() throws IOException {
-    var inputStream = createRequest();
-
-    handler.handleRequest(inputStream, outputStream, CONTEXT);
+    handler.handleRequest(createRequest(), outputStream, CONTEXT);
 
     var response = GatewayResponse.fromOutputStream(outputStream, String.class);
     assertThat(response.getBody(), not(containsString(LEGACY_NAMESPACE)));
-    assertThat(response.getBody(), not(containsString(ONTOLOGY_NAMESPACE_PLACEHOLDER)));
-  }
-
-  @Test
-  void shouldReturnExpectedContextContent() throws IOException {
-    var inputStream = createRequest();
-
-    handler.handleRequest(inputStream, outputStream, CONTEXT);
-
-    var response = GatewayResponse.fromOutputStream(outputStream, String.class);
-    assertThat(response.getBody(), is(EXPECTED_CONTEXT));
+    assertThat(response.getBody(), not(containsString(ONTOLOGY_IRI_PLACEHOLDER)));
   }
 
   private InputStream createRequest() throws JsonProcessingException {
     return new HandlerRequestBuilder<Void>(JsonUtils.dtoObjectMapper).build();
+  }
+
+  private InputStream createRequest(String version) throws JsonProcessingException {
+    return new HandlerRequestBuilder<Void>(JsonUtils.dtoObjectMapper)
+        .withPathParameters(Map.of(VERSION_PATH_PARAMETER, version))
+        .build();
   }
 }

@@ -1,6 +1,7 @@
 [versions]
 postgres = { strictly = '42.7.13' }
 jte = { strictly = '3.2.4' }
+glassfish-jakarta-json = { strictly = '2.0.1' }
 jakarta-validation-api = { strictly = '3.1.1' }
 apache-bval = { strictly = '3.1.0' }
 
@@ -10,6 +11,7 @@ apache-bval = { group = 'org.apache.bval', name = 'bval-jsr', version.ref = 'apa
 postgres = { group = 'org.postgresql', name = 'postgresql', version.ref = 'postgres' }
 jte = { group = 'gg.jte', name = 'jte', version.ref = 'jte' }
 jte-runtime = { group = 'gg.jte', name = 'jte-runtime', version.ref = 'jte' }
+glassfish-jakarta-json = { group = 'org.glassfish', name = 'jakarta.json', version.ref = 'glassfish-jakarta-json' }
 
 [plugins]
 jte = { id = 'gg.jte.gradle', version.ref = 'jte' }
