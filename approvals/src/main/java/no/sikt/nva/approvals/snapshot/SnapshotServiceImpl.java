@@ -1,5 +1,6 @@
 package no.sikt.nva.approvals.snapshot;
 
+import no.sikt.nva.approvals.domain.SourceSnapshot;
 import no.sikt.nva.approvals.persistence.ApprovalRepository;
 import no.sikt.nva.approvals.persistence.DynamoDbApprovalRepository;
 import nva.commons.core.Environment;

@@ -42,9 +42,14 @@ flowchart TB
 
 - **`Approval`** — `identifier` (UUID), `namedIdentifiers`, `source` (the source URI) and `handle`. All four are
   mandatory, and the identifier collection cannot be empty.
-- **`NamedIdentifier`** — a namespace/value pair, for example `REK` / `2024/123`, where the JSON field `name` holds the
-  namespace. A value must be unique within its namespace across all approvals, but the same value may exist in another
-  namespace; a collision returns `409 Conflict` with `conflictingKeys` in the problem response.
+- **`NamedIdentifier`** — a namespace/value pair, for example `REK` / `123456`, where the JSON field `name` holds the
+  namespace. The name/value pair is unique across all approvals: a value must be unique within its namespace, but the
+  same value may exist in another namespace. A collision returns `409 Conflict` with `conflictingKeys` in the problem
+  response.
+  A `name` is the namespace of one identifier space: every value under it refers to the same kind of thing
+  from the same issuer, and no value means two different things. A useful test is whether every value could
+  be resolved as `<one base URI>/<value>`. If a source issues identifiers for different kinds of things, or
+  has several series that can produce the same value, each needs its own name.
 - **`Handle`** — a validated handle URI.
 - **`IdentifierPolicy` / `IdentifierPolicyService`** — which identifier names a given customer is allowed to use. An
   unknown customer resolves to `IdentifierPolicy.DENY_ALL`. Currently domain-level only; not yet wired into the
@@ -197,14 +202,14 @@ the approval item, so a failed revision write rolls back the approval write. An 
 revision. Since an approval holds at most 20 identifiers (see [Validation](#validation)), a create writes at most 23
 items and an update at most 42, so every write fits in one transaction.
 
-| Item               | `PK0`             | `SK0`                       | `PK1`/`PK2` |
-| ------------------ | ----------------- | --------------------------- | ----------- |
-| `ApprovalRevision` | `Approval:<uuid>` | `Change:<changeIdentifier>` | not set     |
+| Item               | `PK0`             | `SK0`                 | `PK1`/`PK2` |
+| ------------------ | ----------------- | --------------------- | ----------- |
+| `ApprovalRevision` | `Approval:<uuid>` | `Change:<identifier>` | not set     |
 
-- `changeIdentifier` is a `SortableIdentifier` from nva-commons (`<epoch millis as 12 hex digits>-<random uuid>`,
+- `identifier` is a `SortableIdentifier` from nva-commons (`<epoch millis as 12 hex digits>-<random uuid>`,
   e.g. `01a0f1cfea4b-3f2a…`), so it sorts by time as a string. Source snapshots use the same identifier type, so all
   `Change:` items for an approval sort together.
-- The item is an envelope with a few stable attributes: `changeIdentifier`, `approvalIdentifier`,
+- The item is an envelope with a few stable attributes: `identifier`, `approvalIdentifier`,
   `customerIdentifier`, `createdDate`, `activity` (`CreateApproval` / `UpdateApproval`), `schemaVersion` and
   `contentType`.
 - The content is stored as-is in `body`: a JSON string with the approval image (`identifiers`, `source`, `handle`,
@@ -212,8 +217,9 @@ items and an update at most 42, so every write fits in one transaction.
   `schemaVersion` and its own reader, while old revisions keep being read with the version they were written with.
 - `context` and `ontology` are stored as relative URIs (`approval/context`, `approval/ontology`), never with the API
   host, since the host differs per environment. Resolve them against `API_HOST` when reading.
-- Revisions for one approval are listed in time order with a query on `PK0 = Approval:<uuid>` and
-  `SK0 begins_with Change:`, filtered on `type = ApprovalRevision`.
+- `ChangeRepository.listChangesByApproval` lists all changes of an approval (revisions and source snapshots) newest
+  first with a query on `PK0 = Approval:<uuid>` and `SK0 begins_with Change:`, a page at a time. The next page starts
+  after the last change of the previous one (`ChangeList.next()`).
 
 ## Endpoints
 
@@ -245,12 +251,16 @@ response.
 | identifier `value`   | mandatory, at most 900 bytes when encoded as UTF-8                   |
 | `source`             | mandatory, at most 1024 characters                                   |
 | `handle` / `subject` | a handle URI of at most 1024 characters                              |
-| `?name=` / `?value=` | same length and name rules as an identifier                          |
+| `time` (events)      | mandatory                                                            |
+| `?handle=`           | either `handle` or both `name` and `value`, never both               |
+| `?name=` / `?value=` | same length and name rules as an identifier, both or none            |
+| `{approvalId}`       | a UUID, and not combined with query parameters                       |
 
 Names are compared ignoring case and surrounding whitespace when looking for duplicates, values are compared exactly.
 
 A `400` lists every broken rule in `errors`, sorted by pointer and then detail, so a field that breaks two rules
-has two entries. The pointer is a JSON pointer into the request body, or the parameter name for query parameters:
+has two entries. The pointer is a JSON pointer into the request body, or the parameter name for query and path
+parameters. A missing body has no field to point to, so it returns only `detail`:
 
 ```json
 {
@@ -271,7 +281,7 @@ Query parameters on `GET /` must be URL-encoded, and you supply either `handle` 
 
 ```
 GET /approval?handle=https%3A%2F%2Fhdl.handle.net%2F11250.1%2F12345
-GET /approval?name=REK&value=2024%2F123
+GET /approval?name=REK&value=123456
 ```
 
 Request body for `POST /`:
@@ -280,7 +290,7 @@ Request body for `POST /`:
 {
   "type": "Approval",
   "identifiers": [
-    { "type": "Identifier", "name": "REK", "value": "2024/123" },
+    { "type": "Identifier", "name": "REK", "value": "123456" },
     { "type": "Identifier", "name": "DMP", "value": "dmp-456" }
   ],
   "source": "https://example.com/source/12345"
@@ -297,7 +307,7 @@ Response body:
   "type": "Approval",
   "id": "https://api.nva.unit.no/approval/6ff5f1b5-97c1-40f0-86ad-2cbd9006eee2",
   "identifier": "6ff5f1b5-97c1-40f0-86ad-2cbd9006eee2",
-  "identifiers": [{ "type": "Identifier", "name": "REK", "value": "2024/123" }],
+  "identifiers": [{ "type": "Identifier", "name": "REK", "value": "123456" }],
   "source": "https://example.com/source/12345",
   "handle": "https://hdl.handle.net/11250.1/98765"
 }

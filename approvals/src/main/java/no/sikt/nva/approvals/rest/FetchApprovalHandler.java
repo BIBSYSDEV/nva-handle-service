@@ -1,10 +1,10 @@
 package no.sikt.nva.approvals.rest;
 
 import static java.net.HttpURLConnection.HTTP_OK;
-import static java.util.Objects.isNull;
-import static java.util.Objects.nonNull;
 import static no.sikt.nva.approvals.utils.RequestUtils.getApiHost;
 import static no.sikt.nva.approvals.utils.RequestUtils.getApprovalIdentifier;
+import static no.sikt.nva.approvals.validation.RequestConstraints.CONFLICTING_PARAMETERS_MESSAGE;
+import static no.sikt.nva.approvals.validation.RequestValidator.badRequest;
 import static no.sikt.nva.approvals.validation.RequestValidator.validateQueryParameters;
 import static nva.commons.apigateway.MediaTypes.APPLICATION_JSON_LD;
 import static nva.commons.core.StringUtils.isNotBlank;
@@ -12,7 +12,6 @@ import static nva.commons.core.StringUtils.isNotBlank;
 import com.amazonaws.services.lambda.runtime.Context;
 import gg.jte.TemplateEngine;
 import gg.jte.output.StringOutput;
-import java.net.URI;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -24,7 +23,6 @@ import no.sikt.nva.approvals.dmp.model.ClinicalTrial;
 import no.sikt.nva.approvals.domain.Approval;
 import no.sikt.nva.approvals.domain.ApprovalService;
 import no.sikt.nva.approvals.domain.ApprovalServiceImpl;
-import no.sikt.nva.approvals.domain.Handle;
 import no.sikt.nva.approvals.domain.NamedIdentifier;
 import nva.commons.apigateway.ApiGatewayHandler;
 import nva.commons.apigateway.MediaType;
@@ -44,18 +42,7 @@ public class FetchApprovalHandler extends ApiGatewayHandler<Void, Object> {
 
   private static final Logger logger = LoggerFactory.getLogger(FetchApprovalHandler.class);
   private static final String APPROVAL_ID_PATH_PARAMETER = "approvalId";
-  private static final String HANDLE_QUERY_PARAMETER = "handle";
-  private static final String NAME_QUERY_PARAMETER = "name";
-  private static final String VALUE_QUERY_PARAMETER = "value";
   private static final String APPROVAL_NOT_FOUND_MESSAGE = "Approval not found";
-  private static final String INVALID_HANDLE_MESSAGE = "Invalid handle format";
-  private static final String MISSING_NAME_OR_VALUE_MESSAGE =
-      "Both 'name' and 'value' query parameters are required";
-  private static final String MISSING_QUERY_PARAMETERS_MESSAGE =
-      "Missing query parameters. Use 'handle' or 'name' and 'value'";
-  private static final String CONFLICTING_PARAMETERS_MESSAGE =
-      "Cannot use both path parameter and query parameters. Use either approvalId path or query"
-          + " parameters";
   private static final String TEMPLATE_NAME = "approval.jte";
   private static final String DMP_IDENTIFIER_NAME = "DMP";
   private static final String APPLICATION_DOMAIN_ENV = "APPLICATION_DOMAIN";
@@ -101,9 +88,7 @@ public class FetchApprovalHandler extends ApiGatewayHandler<Void, Object> {
   @Override
   protected void validateRequest(Void input, RequestInfo requestInfo, Context context)
       throws ApiGatewayException {
-    if (hasPathParameter(requestInfo) && hasQueryParameters(requestInfo)) {
-      throw new BadRequestException(CONFLICTING_PARAMETERS_MESSAGE);
-    }
+    ensurePathAndQueryAreNotCombined(requestInfo);
   }
 
   @Override
@@ -137,19 +122,20 @@ public class FetchApprovalHandler extends ApiGatewayHandler<Void, Object> {
     return headers;
   }
 
+  private void ensurePathAndQueryAreNotCombined(RequestInfo requestInfo)
+      throws BadRequestException {
+    if (hasPathParameter(requestInfo) && hasQueryParameters(requestInfo)) {
+      throw badRequest(CONFLICTING_PARAMETERS_MESSAGE, APPROVAL_ID_PATH_PARAMETER);
+    }
+  }
+
   private boolean hasPathParameter(RequestInfo requestInfo) {
     var approvalId = requestInfo.getPathParameters().get(APPROVAL_ID_PATH_PARAMETER);
     return isNotBlank(approvalId);
   }
 
-  private boolean hasQueryParameters(RequestInfo requestInfo) {
-    var queryParameters = requestInfo.getQueryParameters();
-    if (isNull(queryParameters)) {
-      return false;
-    }
-    return isNotBlank(queryParameters.get(HANDLE_QUERY_PARAMETER))
-        || isNotBlank(queryParameters.get(NAME_QUERY_PARAMETER))
-        || isNotBlank(queryParameters.get(VALUE_QUERY_PARAMETER));
+  private static boolean hasQueryParameters(RequestInfo requestInfo) {
+    return !ApprovalQuery.fromQueryParameters(requestInfo.getQueryParameters()).isEmpty();
   }
 
   private Optional<Approval> fetchByApprovalId(RequestInfo requestInfo) throws ApiGatewayException {
@@ -159,49 +145,15 @@ public class FetchApprovalHandler extends ApiGatewayHandler<Void, Object> {
 
   private Optional<Approval> fetchByQueryParameters(RequestInfo requestInfo)
       throws ApiGatewayException {
-    var handleParam = getQueryParameter(requestInfo, HANDLE_QUERY_PARAMETER);
-    if (isNotBlank(handleParam)) {
-      return fetchApprovalByHandle(handleParam);
-    }
-    var nameParam = getQueryParameter(requestInfo, NAME_QUERY_PARAMETER);
-    var valueParam = getQueryParameter(requestInfo, VALUE_QUERY_PARAMETER);
-    if (isNotBlank(nameParam) || isNotBlank(valueParam)) {
-      return fetchApprovalByNamedIdentifier(nameParam, valueParam);
-    }
-    throw new BadRequestException(MISSING_QUERY_PARAMETERS_MESSAGE);
-  }
-
-  private String getQueryParameter(RequestInfo requestInfo, String parameterName) {
-    var queryParameters = requestInfo.getQueryParameters();
-    return nonNull(queryParameters) ? queryParameters.get(parameterName) : null;
+    var query = ApprovalQuery.fromQueryParameters(requestInfo.getQueryParameters());
+    validateQueryParameters(query);
+    return query.isHandleLookup()
+        ? approvalService.getApprovalByHandle(query.toHandle())
+        : approvalService.getApprovalByNamedIdentifier(query.toNamedIdentifier());
   }
 
   private Optional<Approval> fetchApprovalByIdentifier(UUID approvalId) {
     return approvalService.getApprovalByIdentifier(approvalId);
-  }
-
-  private Optional<Approval> fetchApprovalByHandle(String handleParam) throws BadRequestException {
-    var handle = parseHandle(handleParam);
-    return approvalService.getApprovalByHandle(handle);
-  }
-
-  private Handle parseHandle(String handleParam) throws BadRequestException {
-    try {
-      var uri = URI.create(handleParam);
-      return new Handle(uri);
-    } catch (IllegalArgumentException exception) {
-      throw new BadRequestException(INVALID_HANDLE_MESSAGE);
-    }
-  }
-
-  private Optional<Approval> fetchApprovalByNamedIdentifier(String name, String value)
-      throws BadRequestException {
-    if (StringUtils.isBlank(name) || StringUtils.isBlank(value)) {
-      throw new BadRequestException(MISSING_NAME_OR_VALUE_MESSAGE);
-    }
-    var namedIdentifier = new NamedIdentifier(name, value);
-    validateQueryParameters(namedIdentifier);
-    return approvalService.getApprovalByNamedIdentifier(namedIdentifier);
   }
 
   private boolean isJsonRequest(RequestInfo requestInfo) {

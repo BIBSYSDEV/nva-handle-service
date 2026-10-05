@@ -6,6 +6,7 @@ import static no.sikt.nva.approvals.validation.RequestConstraints.MANDATORY_MESS
 import static no.sikt.nva.approvals.validation.RequestConstraints.MAX_IDENTIFIERS;
 import static no.sikt.nva.approvals.validation.RequestConstraints.MAX_URI_LENGTH;
 import static no.sikt.nva.approvals.validation.RequestConstraints.MIN_IDENTIFIERS;
+import static no.sikt.nva.approvals.validation.RequestValidator.badRequest;
 import static nva.commons.core.attempt.Try.attempt;
 
 import jakarta.validation.Valid;
@@ -18,7 +19,6 @@ import no.sikt.nva.approvals.domain.NamedIdentifier;
 import no.sikt.nva.approvals.validation.UniqueIdentifiers;
 import no.sikt.nva.approvals.validation.UriSize;
 import nva.commons.apigateway.exceptions.BadRequestException;
-import nva.commons.apigateway.exceptions.ValidationError;
 import nva.commons.core.paths.UriWrapper;
 
 public record UpdateApprovalRequest(
@@ -47,10 +47,6 @@ public record UpdateApprovalRequest(
     if (nonNull(id) && !addressesApproval(approvalIdentifier)) {
       throw badRequest(ID_MISMATCH_MESSAGE.formatted(id, approvalIdentifier), ID_POINTER);
     }
-  }
-
-  private static BadRequestException badRequest(String message, String pointer) {
-    return new BadRequestException(message, new ValidationError(message, pointer));
   }
 
   private boolean addressesApproval(UUID approvalIdentifier) throws BadRequestException {
