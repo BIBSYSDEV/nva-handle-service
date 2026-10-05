@@ -167,15 +167,17 @@ are versioned independently, and every published version is immutable.
 | Resource | Versioning                    | Latest                   | Specific version                   |
 | -------- | ----------------------------- | ------------------------ | ---------------------------------- |
 | Ontology | Semantic versioning (`1.0.0`) | `GET /approval/ontology` | `GET /approval/ontology/{version}` |
-| Context  | Major versions (`v1`)         | `GET /approval/context`  | `GET /approval/context/{version}`  |
+| Context  | Frozen versions (`v1`)        | `GET /approval/context`  | `GET /approval/context/{version}`  |
 
 - **Stable term IRIs.** The namespace contains no version, so `…/ontology#identifiers` means the same in every ontology
   version. A breaking change introduces a new term and marks the old one deprecated instead of changing its meaning.
 - **Ontology versions** are declared in the ontology itself with `owl:versionIRI` and `owl:versionInfo`, and the
-  namespace with `vann:preferredNamespacePrefix` and `vann:preferredNamespaceUri`.
-- **Context versions** only change on breaking changes (renamed or remapped terms). Adding terms is done in the current
-  version. Approval responses always reference a versioned context (`…/context/v1`), so a document keeps its meaning even
-  when a new context version is published.
+  namespace with `vann:preferredNamespacePrefix` and `vann:preferredNamespaceUri`. PATCH is for documentation only,
+  MINOR for new or deprecated terms, and MAJOR, which removes or changes a term, should never be needed.
+- **Context versions** are frozen: any change to a published context, including added terms, is published as a new
+  version (`v2`, `v3`, ...). Approval responses always reference a versioned context (`…/context/v1`), so a document
+  always expands to the same triples. Because of `@vocab`, a new JSON field named like its ontology term needs no context
+  change; only new aliases, type coercions or changed mappings do.
 - **Unversioned URIs** always return the latest version, with a `Content-Location` header pointing to the versioned
   resource that was returned. Unknown versions return `404`.
 - Current versions: ontology `1.0.0`, context `v1`.
