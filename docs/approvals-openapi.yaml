@@ -595,7 +595,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/Change"
         "400":
-          description: Bad Request. `approvalId` is not a UUID or `changeId` is not a change identifier
+          description: Bad Request.
           content:
             "application/json":
               schema:
@@ -613,9 +613,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/Problem"
         "404":
-          description: >
-            Change not found for this approval. Also returned when the approval belongs to another
-            customer; only backend clients may read changes of every approval.
+          description: Not found
           content:
             "application/json":
               schema:
