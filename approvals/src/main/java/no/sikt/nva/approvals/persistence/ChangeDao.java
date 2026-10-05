@@ -10,6 +10,7 @@ public sealed interface ChangeDao extends DatabaseEntry
     permits ApprovalRevisionDao, SourceSnapshotDao {
 
   String INVALID_CHANGE = "Could not read change item: %s";
+  String CHANGES_PARTITION = "Change";
 
   static ChangeDao fromJson(String json) {
     return attempt(() -> JsonUtils.dtoObjectMapper.readValue(json, ChangeDao.class))

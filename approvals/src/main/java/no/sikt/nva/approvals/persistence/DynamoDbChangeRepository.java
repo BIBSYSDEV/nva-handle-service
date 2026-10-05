@@ -1,10 +1,13 @@
 package no.sikt.nva.approvals.persistence;
 
 import static no.sikt.nva.approvals.persistence.ApprovalDao.toDatabaseIdentifier;
+import static no.sikt.nva.approvals.persistence.ChangeDao.CHANGES_PARTITION;
+import static no.sikt.nva.approvals.persistence.DynamoDbConstants.GSI1;
 import static no.sikt.nva.approvals.persistence.DynamoDbConstants.TABLE;
 import static no.sikt.nva.approvals.persistence.DynamoDbConstants.defaultDynamoClient;
 import static no.sikt.nva.approvals.persistence.DynamoDbConstants.documentTableSchema;
 import static software.amazon.awssdk.enhanced.dynamodb.model.QueryConditional.sortBeginsWith;
+import static software.amazon.awssdk.enhanced.dynamodb.model.QueryConditional.sortGreaterThan;
 
 import java.util.Map;
 import java.util.Objects;
@@ -12,6 +15,9 @@ import java.util.Optional;
 import java.util.UUID;
 import no.sikt.nva.approvals.domain.Change;
 import no.sikt.nva.approvals.domain.ChangeList;
+import no.sikt.nva.approvals.domain.ListChangesRequest;
+import no.sikt.nva.approvals.domain.ListChangesRequest.After;
+import no.sikt.nva.approvals.domain.ListChangesRequest.Since;
 import no.unit.nva.identifiers.SortableIdentifier;
 import nva.commons.core.Environment;
 import nva.commons.core.JacocoGenerated;
@@ -26,6 +32,7 @@ import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 
 public class DynamoDbChangeRepository implements ChangeRepository {
 
+  private static final String SINCE_LOWER_BOUND_FORMAT = "%012x";
   private final DynamoDbTable<EnhancedDocument> table;
 
   public DynamoDbChangeRepository(DynamoDbClient client, Environment environment) {
@@ -48,7 +55,26 @@ public class DynamoDbChangeRepository implements ChangeRepository {
     Optional.ofNullable(after)
         .map(identifier -> exclusiveStartKey(approvalIdentifier, identifier))
         .ifPresent(request::exclusiveStartKey);
-    return sendRequest(request.build());
+    return toChangeList(table.query(request.build()).iterator().next());
+  }
+
+  @Override
+  public ChangeList listChanges(ListChangesRequest request) {
+    var lowerBound =
+        switch (request) {
+          case Since(var timestamp, _) ->
+              SINCE_LOWER_BOUND_FORMAT.formatted(timestamp.toEpochMilli());
+          case After(var changeIdentifier, _) -> changeIdentifier.toString();
+        };
+    var query =
+        QueryEnhancedRequest.builder()
+            .queryConditional(
+                sortGreaterThan(
+                    Key.builder().partitionValue(CHANGES_PARTITION).sortValue(lowerBound).build()))
+            .scanIndexForward(true)
+            .limit(request.pageSize())
+            .build();
+    return toChangeList(table.index(GSI1).query(query).iterator().next());
   }
 
   @Override
@@ -89,8 +115,7 @@ public class DynamoDbChangeRepository implements ChangeRepository {
     return Objects.nonNull(page.lastEvaluatedKey()) && !page.lastEvaluatedKey().isEmpty();
   }
 
-  private ChangeList sendRequest(QueryEnhancedRequest request) {
-    var page = table.query(request).iterator().next();
+  private static ChangeList toChangeList(Page<EnhancedDocument> page) {
     var changes =
         page.items().stream()
             .map(EnhancedDocument::toJson)

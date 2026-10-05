@@ -700,14 +700,14 @@ class DynamoDbApprovalRepositoryTest {
   }
 
   @Test
-  void shouldNotIndexRevisionInSecondaryIndexes() {
+  void shouldIndexRevisionOnlyUnderChangesPartition() {
     var approval = randomApproval(randomHandle());
     var revision = randomRevision(approval, CREATE_APPROVAL);
     approvalRepository.save(revision);
 
     var item = scanItem(changeKey(revision));
 
-    assertFalse(item.containsKey(PK1));
+    assertEquals(ChangeDao.CHANGES_PARTITION, item.get(PK1).s());
     assertFalse(item.containsKey(PK2));
   }
 

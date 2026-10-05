@@ -204,9 +204,10 @@ the approval item, so a failed revision write rolls back the approval write. An 
 revision. Since an approval holds at most 20 identifiers (see [Validation](#validation)), a create writes at most 23
 items and an update at most 42, so every write fits in one transaction.
 
-| Item               | `PK0`             | `SK0`                 | `PK1`/`PK2` |
-| ------------------ | ----------------- | --------------------- | ----------- |
-| `ApprovalRevision` | `Approval:<uuid>` | `Change:<identifier>` | not set     |
+| Item               | `PK0`             | `SK0`                 | `PK1`    | `SK1`          | `PK2`   |
+| ------------------ | ----------------- | --------------------- | -------- | -------------- | ------- |
+| `ApprovalRevision` | `Approval:<uuid>` | `Change:<identifier>` | `Change` | `<identifier>` | not set |
+| `SourceSnapshot`   | `Approval:<uuid>` | `Change:<identifier>` | `Change` | `<identifier>` | not set |
 
 - `identifier` is a `SortableIdentifier` from nva-commons (`<epoch millis as 12 hex digits>-<random uuid>`,
   e.g. `01a0f1cfea4b-3f2a…`), so it sorts by time as a string. Source snapshots use the same identifier type, so all
@@ -222,6 +223,11 @@ items and an update at most 42, so every write fits in one transaction.
 - `ChangeRepository.listChangesByApproval` lists all changes of an approval (revisions and source snapshots) newest
   first with a query on `PK0 = Approval:<uuid>` and `SK0 begins_with Change:`, a page at a time. The next page starts
   after the last change of the previous one (`ChangeList.next()`).
+- `ChangeRepository.listChanges` lists the changes of every approval oldest first with a query on `GSI1`
+  (`PK1 = Change`, `SK1 > lower bound`), a page at a time. The first page is `ListChangesRequest.Since`: the time as 12
+  hex digits of epoch millis, so changes created in that exact millisecond are included. Following pages are
+  `ListChangesRequest.After` the last change of the previous page (`ChangeList.next()`), which is excluded. Changes
+  stored before `PK1`/`SK1` were introduced are not in the index.
 
 ## Endpoints
 

@@ -1,7 +1,9 @@
 package no.sikt.nva.approvals.persistence;
 
 import static no.sikt.nva.approvals.persistence.DynamoDbConstants.PK0;
+import static no.sikt.nva.approvals.persistence.DynamoDbConstants.PK1;
 import static no.sikt.nva.approvals.persistence.DynamoDbConstants.SK0;
+import static no.sikt.nva.approvals.persistence.DynamoDbConstants.SK1;
 import static no.sikt.nva.approvals.persistence.DynamoDbConstants.STRING;
 
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
@@ -69,6 +71,8 @@ public record ApprovalRevisionDao(
         .json(toJsonString())
         .put(PK0, ApprovalDao.toDatabaseIdentifier(approvalIdentifier), STRING)
         .put(SK0, getDatabaseIdentifier(), STRING)
+        .put(PK1, CHANGES_PARTITION, STRING)
+        .put(SK1, identifier.toString(), STRING)
         .build();
   }
 
