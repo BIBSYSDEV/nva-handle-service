@@ -586,6 +586,7 @@ class FetchApprovalHandlerTest {
                 "TrialSite", "456", "Test Department", "Test Location", null, null, investigator));
 
     return new ClinicalTrial(
+        randomUri(),
         URI.create("https://api.example.com/clinical-trial/" + identifier),
         identifier,
         URI.create("https://hdl.handle.net/11250.1/12345"),
