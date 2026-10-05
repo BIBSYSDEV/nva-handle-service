@@ -611,6 +611,11 @@ Resources:
     Properties:
       CodeUri: approvals
       Handler: no.sikt.nva.approvals.rest.FetchChangeHandler::handleRequest
+      Policies:
+        - !Ref DynamoDbTableAccessPolicy
+      Environment:
+        Variables:
+          TABLE: !Ref ApprovalsTable
       Events:
         FetchChange:
           Type: Api

@@ -636,6 +636,12 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Change"
+        "400":
+          description: Bad Request.
+          content:
+            "application/json":
+              schema:
+                $ref: "#/components/schemas/Problem"
         "401":
           description: Unauthorized
           content:
@@ -649,7 +655,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/Problem"
         "404":
-          description: Change not found for this approval
+          description: Not found
           content:
             "application/json":
               schema:
@@ -814,13 +820,23 @@ components:
     Change:
       type: object
       description: A recorded change to an approval
+      required:
+        - type
+        - id
+        - approval
       properties:
         type:
           type: string
-          default: Change
+          enum:
+            - ApprovalRevision
+            - SourceSnapshot
         id:
           type: string
           format: uri
+        approval:
+          type: string
+          format: uri
+          description: The approval the change belongs to
     Problem:
       type: object
       description: NVA error reporting object
