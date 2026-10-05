@@ -1,6 +1,7 @@
 package no.sikt.nva.approvals.rest;
 
 import static java.net.HttpURLConnection.HTTP_BAD_REQUEST;
+import static java.net.HttpURLConnection.HTTP_FORBIDDEN;
 import static java.net.HttpURLConnection.HTTP_NOT_ACCEPTABLE;
 import static java.net.HttpURLConnection.HTTP_NOT_FOUND;
 import static java.net.HttpURLConnection.HTTP_OK;
@@ -125,7 +126,7 @@ class FetchChangeHandlerTest {
   }
 
   @Test
-  void shouldReturnNotFoundWhenApprovalBelongsToOtherCustomer() throws IOException {
+  void shouldReturnForbiddenWhenApprovalBelongsToOtherCustomer() throws IOException {
     var approval = randomApproval(randomUri(), randomHandle(), randomUUID());
     var revision = randomRevision(approval, CREATE_APPROVAL);
     approvalRepository.save(revision);
@@ -133,7 +134,7 @@ class FetchChangeHandlerTest {
     var response =
         send(customerRequest(approval.identifier(), revision.identifier(), randomUUID()));
 
-    assertThat(response.getStatusCode(), equalTo(HTTP_NOT_FOUND));
+    assertThat(response.getStatusCode(), equalTo(HTTP_FORBIDDEN));
   }
 
   @Test
@@ -152,7 +153,7 @@ class FetchChangeHandlerTest {
 
   @ParameterizedTest
   @ValueSource(strings = {"application/json", "application/ld+json"})
-  void shouldReturnChangeWhenAcceptIsSupported(String mediaType) throws IOException {
+  void shouldReturnChangeWhenAcceptHeaderIsSupported(String mediaType) throws IOException {
     var approval = randomApproval(randomHandle());
     var revision = randomRevision(approval, CREATE_APPROVAL);
     approvalRepository.save(revision);
@@ -164,7 +165,7 @@ class FetchChangeHandlerTest {
   }
 
   @Test
-  void shouldReturnNotAcceptableWhenAcceptIsUnsupported() throws IOException {
+  void shouldReturnNotAcceptableWhenAcceptHeaderIsUnsupported() throws IOException {
     var response =
         send(backendRequest(randomUUID(), SortableIdentifier.next().toString(), "text/html"));
 

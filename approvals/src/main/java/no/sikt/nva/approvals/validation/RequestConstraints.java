@@ -38,6 +38,8 @@ public final class RequestConstraints {
           + " parameters";
   public static final String INVALID_APPROVAL_IDENTIFIER_MESSAGE =
       "Provided approval identifier is not valid!";
+  public static final String INVALID_CHANGE_IDENTIFIER_MESSAGE =
+      "Provided change identifier is not valid!";
 
   private RequestConstraints() {}
 }
