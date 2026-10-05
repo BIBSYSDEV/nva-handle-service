@@ -1,5 +1,8 @@
 package no.sikt.nva.approvals.rest;
 
+import static no.sikt.nva.approvals.rest.RestConstants.APPROVAL_PATH;
+import static no.sikt.nva.approvals.rest.RestConstants.CHANGES_PATH;
+
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.annotation.JsonTypeInfo.Id;
@@ -8,6 +11,7 @@ import java.util.UUID;
 import no.sikt.nva.approvals.domain.ApprovalRevision;
 import no.sikt.nva.approvals.domain.Change;
 import no.sikt.nva.approvals.domain.SourceSnapshot;
+import no.unit.nva.identifiers.SortableIdentifier;
 import nva.commons.core.paths.UriWrapper;
 
 @JsonTypeInfo(use = Id.NAME, property = "type")
@@ -17,22 +21,25 @@ import nva.commons.core.paths.UriWrapper;
 })
 public sealed interface ChangeResponse permits ApprovalRevisionResponse, SourceSnapshotResponse {
 
-  String APPROVAL_PATH = "approval";
-  String CHANGES_PATH = "changes";
-
   static ChangeResponse fromChange(Change change, String apiHost) {
     return switch (change) {
-      case ApprovalRevision revision -> {
-        var approvalIdentifier = revision.approval().identifier();
-        yield new ApprovalRevisionResponse(
-            changeUri(apiHost, approvalIdentifier, change),
-            approvalUri(apiHost, approvalIdentifier));
-      }
-      case SourceSnapshot snapshot ->
-          new SourceSnapshotResponse(
-              changeUri(apiHost, snapshot.approvalIdentifier(), change),
-              approvalUri(apiHost, snapshot.approvalIdentifier()));
+      case ApprovalRevision revision -> createApprovalRevisionResponse(revision, apiHost);
+      case SourceSnapshot snapshot -> createSourceSnapshotResponse(apiHost, snapshot);
     };
+  }
+
+  private static SourceSnapshotResponse createSourceSnapshotResponse(
+      String apiHost, SourceSnapshot snapshot) {
+    return new SourceSnapshotResponse(
+        changeUri(apiHost, snapshot.approvalIdentifier(), snapshot.identifier()),
+        approvalUri(apiHost, snapshot.approvalIdentifier()));
+  }
+
+  private static ApprovalRevisionResponse createApprovalRevisionResponse(
+      ApprovalRevision revision, String apiHost) {
+    return new ApprovalRevisionResponse(
+        changeUri(apiHost, revision.approval().identifier(), revision.identifier()),
+        approvalUri(apiHost, revision.approval().identifier()));
   }
 
   private static URI approvalUri(String apiHost, UUID approvalIdentifier) {
@@ -42,10 +49,11 @@ public sealed interface ChangeResponse permits ApprovalRevisionResponse, SourceS
         .getUri();
   }
 
-  private static URI changeUri(String apiHost, UUID approvalIdentifier, Change change) {
+  private static URI changeUri(
+      String apiHost, UUID approvalIdentifier, SortableIdentifier changeIdentifier) {
     return UriWrapper.fromUri(approvalUri(apiHost, approvalIdentifier))
         .addChild(CHANGES_PATH)
-        .addChild(change.identifier().toString())
+        .addChild(changeIdentifier.toString())
         .getUri();
   }
 }

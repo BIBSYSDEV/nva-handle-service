@@ -1,6 +1,7 @@
 package no.sikt.nva.approvals.rest;
 
 import static java.util.Objects.nonNull;
+import static no.sikt.nva.approvals.rest.RestConstants.APPROVAL_PATH;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
@@ -23,7 +24,6 @@ public record ApprovalResponse(
     URI source,
     String handle) {
 
-  private static final String APPROVAL_PATH = "approval";
   private static final String CONTEXT_PATH = "context";
 
   public static ApprovalResponse fromApproval(Approval approval, String apiHost) {

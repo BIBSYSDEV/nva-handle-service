@@ -1,6 +1,7 @@
 package no.sikt.nva.approvals.utils;
 
 import static no.sikt.nva.approvals.validation.RequestConstraints.INVALID_APPROVAL_IDENTIFIER_MESSAGE;
+import static no.sikt.nva.approvals.validation.RequestConstraints.INVALID_CHANGE_IDENTIFIER_MESSAGE;
 import static no.sikt.nva.approvals.validation.RequestValidator.badRequest;
 import static nva.commons.core.attempt.Try.attempt;
 
@@ -10,6 +11,7 @@ import no.sikt.nva.approvals.domain.ApprovalConflictException;
 import no.sikt.nva.approvals.domain.ApprovalNotFoundException;
 import no.sikt.nva.approvals.domain.CustomerMismatchException;
 import no.sikt.nva.approvals.domain.SourceMismatchException;
+import no.unit.nva.identifiers.SortableIdentifier;
 import nva.commons.apigateway.RequestInfo;
 import nva.commons.apigateway.exceptions.BadGatewayException;
 import nva.commons.apigateway.exceptions.BadRequestException;
@@ -24,6 +26,7 @@ public final class RequestUtils {
 
   private static final String BAD_GATEWAY_EXCEPTION_MESSAGE = "Something went wrong!";
   private static final String APPROVAL_ID_PATH_PARAMETER = "approvalId";
+  private static final String CHANGE_ID_PATH_PARAMETER = "changeId";
   private static final String APPROVAL_PATH_PARAM = "approval";
   private static final String LOCATION_HEADER = "Location";
   private static final String RETRY_AFTER_HEADER = "Retry-After";
@@ -37,6 +40,14 @@ public final class RequestUtils {
         .map(UUID::fromString)
         .orElseThrow(
             failure -> badRequest(INVALID_APPROVAL_IDENTIFIER_MESSAGE, APPROVAL_ID_PATH_PARAMETER));
+  }
+
+  public static SortableIdentifier getChangeIdentifier(RequestInfo requestInfo)
+      throws BadRequestException {
+    return attempt(() -> requestInfo.getPathParameter(CHANGE_ID_PATH_PARAMETER))
+        .map(SortableIdentifier::new)
+        .orElseThrow(
+            failure -> badRequest(INVALID_CHANGE_IDENTIFIER_MESSAGE, CHANGE_ID_PATH_PARAMETER));
   }
 
   public static UUID getCustomerIdentifier(RequestInfo requestInfo) throws UnauthorizedException {

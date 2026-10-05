@@ -790,9 +790,6 @@ components:
           enum:
             - ApprovalRevision
             - SourceSnapshot
-          description: >
-            ApprovalRevision is a version of the approval record, SourceSnapshot a snapshot of its
-            source taken when the source reported a change.
         id:
           type: string
           format: uri
