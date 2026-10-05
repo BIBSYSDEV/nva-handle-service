@@ -9,13 +9,14 @@ import java.time.Duration;
 import java.util.Objects;
 import java.util.Optional;
 import no.sikt.nva.approvals.dmp.model.ClinicalTrial;
+import no.sikt.nva.approvals.source.Source;
 import no.sikt.nva.approvals.source.SourceClient;
 import no.unit.nva.commons.json.JsonUtils;
 import nva.commons.core.JacocoGenerated;
 
 // FIXME: Suppressing warning in order to upgrade PMD version
 @SuppressWarnings("PMD.DoNotUseThreads")
-public class DmpClient implements SourceClient<ClinicalTrial> {
+public class DmpClient implements SourceClient {
 
   private static final String AUTHORIZATION_HEADER = "Authorization";
   private static final String BEARER_PREFIX = "Bearer ";
@@ -49,15 +50,15 @@ public class DmpClient implements SourceClient<ClinicalTrial> {
   }
 
   @Override
-  public Optional<ClinicalTrial> fetch(URI source) throws DmpClientException {
+  public Optional<Source> fetch(URI uri) throws DmpClientException {
     try {
-      var response = httpClient.send(buildRequest(source), HttpResponse.BodyHandlers.ofString());
+      var response = httpClient.send(buildRequest(uri), HttpResponse.BodyHandlers.ofString());
       return handleResponse(response);
     } catch (InterruptedException exception) {
       Thread.currentThread().interrupt();
-      throw new DmpClientException(FETCH_FAILED_MESSAGE.formatted(source), exception);
+      throw new DmpClientException(FETCH_FAILED_MESSAGE.formatted(uri), exception);
     } catch (IOException exception) {
-      throw new DmpClientException(FETCH_FAILED_MESSAGE.formatted(source), exception);
+      throw new DmpClientException(FETCH_FAILED_MESSAGE.formatted(uri), exception);
     }
   }
 
@@ -71,8 +72,7 @@ public class DmpClient implements SourceClient<ClinicalTrial> {
         .build();
   }
 
-  private Optional<ClinicalTrial> handleResponse(HttpResponse<String> response)
-      throws DmpClientException {
+  private Optional<Source> handleResponse(HttpResponse<String> response) throws DmpClientException {
     if (response.statusCode() == HTTP_NOT_FOUND) {
       return Optional.empty();
     }

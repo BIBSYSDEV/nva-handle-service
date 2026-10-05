@@ -3,9 +3,9 @@ package no.sikt.nva.approvals.source;
 import java.net.URI;
 import java.util.Optional;
 
-public interface SourceClient<T extends SourceDocument> {
+public interface SourceClient {
 
   URI getBaseUrl();
 
-  Optional<T> fetch(URI source) throws SourceClientException;
+  Optional<Source> fetch(URI uri) throws SourceClientException;
 }

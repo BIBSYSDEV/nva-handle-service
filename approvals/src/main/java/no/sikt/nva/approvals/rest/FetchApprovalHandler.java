@@ -3,6 +3,7 @@ package no.sikt.nva.approvals.rest;
 import static java.net.HttpURLConnection.HTTP_OK;
 import static no.sikt.nva.approvals.utils.RequestUtils.getApiHost;
 import static no.sikt.nva.approvals.utils.RequestUtils.getApprovalIdentifier;
+import static no.sikt.nva.approvals.validation.RequestConstraints.CONFLICTING_PARAMETERS_MESSAGE;
 import static no.sikt.nva.approvals.validation.RequestValidator.badRequest;
 import static no.sikt.nva.approvals.validation.RequestValidator.validateQueryParameters;
 import static nva.commons.apigateway.MediaTypes.APPLICATION_JSON_LD;
@@ -45,9 +46,6 @@ public class FetchApprovalHandler extends ApiGatewayHandler<Void, Object> {
   private static final String APPROVAL_ID_PATH_PARAMETER = "approvalId";
   private static final String APPROVAL_NOT_FOUND_MESSAGE = "Approval not found";
   private static final String CLINICAL_TRIAL_PATH = "clinical-trial";
-  private static final String CONFLICTING_PARAMETERS_MESSAGE =
-      "Cannot use both path parameter and query parameters. Use either approvalId path or query"
-          + " parameters";
   private static final String TEMPLATE_NAME = "approval.jte";
   private static final String DMP_IDENTIFIER_NAME = "DMP";
   private static final String APPLICATION_DOMAIN_ENV = "APPLICATION_DOMAIN";
@@ -56,7 +54,7 @@ public class FetchApprovalHandler extends ApiGatewayHandler<Void, Object> {
   private final String apiHost;
   private final String applicationDomain;
   private final TemplateEngine templateEngine;
-  private final SourceClient<ClinicalTrial> dmpClient;
+  private final SourceClient dmpClient;
 
   @JacocoGenerated
   public FetchApprovalHandler() {
@@ -71,7 +69,7 @@ public class FetchApprovalHandler extends ApiGatewayHandler<Void, Object> {
       ApprovalService approvalService,
       Environment environment,
       TemplateEngine templateEngine,
-      SourceClient<ClinicalTrial> dmpClient) {
+      SourceClient dmpClient) {
     super(Void.class, environment);
     this.approvalService = approvalService;
     this.apiHost = getApiHost(environment);
@@ -205,7 +203,10 @@ public class FetchApprovalHandler extends ApiGatewayHandler<Void, Object> {
   private Optional<ClinicalTrial> fetchClinicalTrial(String dmpIdentifier) {
     try {
       var uri = createClinicalTrialUri(dmpIdentifier);
-      return dmpClient.fetch(uri);
+      return dmpClient
+          .fetch(uri)
+          .filter(ClinicalTrial.class::isInstance)
+          .map(ClinicalTrial.class::cast);
     } catch (SourceClientException exception) {
       logger.warn(
           "Failed to fetch clinical trial data for identifier: {}", dmpIdentifier, exception);

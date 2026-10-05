@@ -16,6 +16,7 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import no.sikt.nva.approvals.dmp.model.ClinicalTrial;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -83,7 +84,7 @@ class DmpClientTest {
         .thenReturn(response);
     dmpClient = new DmpClient(tokenService, BASE_URL, httpClient);
 
-    var result = dmpClient.fetch(SOURCE);
+    var result = dmpClient.fetch(SOURCE).map(ClinicalTrial.class::cast);
 
     assertTrue(result.isPresent());
     var clinicalTrial = result.get();

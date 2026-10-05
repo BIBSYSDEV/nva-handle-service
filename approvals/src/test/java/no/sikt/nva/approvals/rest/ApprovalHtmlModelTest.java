@@ -189,6 +189,7 @@ class ApprovalHtmlModelTest {
             investigatorWithoutNvaId);
     var clinicalTrial =
         new ClinicalTrial(
+            randomUri(),
             URI.create("https://example.com/trial/123"),
             "123",
             URI.create("https://hdl.handle.net/11250/1"),
@@ -237,6 +238,7 @@ class ApprovalHtmlModelTest {
                 "TrialSite", "456", "Test Department", "Test Location", null, null, investigator));
 
     return new ClinicalTrial(
+        randomUri(),
         URI.create("https://api.example.com/clinical-trial/2022-500027-76-00"),
         "2022-500027-76-00",
         URI.create("https://hdl.handle.net/11250.1/12345"),

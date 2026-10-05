@@ -6,15 +6,15 @@ import java.net.URI;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
-import no.sikt.nva.approvals.dmp.model.ClinicalTrial;
+import no.sikt.nva.approvals.source.Source;
 import no.sikt.nva.approvals.source.SourceClient;
 import nva.commons.core.paths.UriWrapper;
 
-public class FakeDmpClient implements SourceClient<ClinicalTrial> {
+public class FakeDmpClient implements SourceClient {
 
   private static final URI BASE_URL = URI.create("https://dmp.example.org/ctis");
 
-  private final Map<String, ClinicalTrial> clinicalTrials;
+  private final Map<String, Source> clinicalTrials;
   private final DmpClientException exceptionToThrow;
 
   public FakeDmpClient() {
@@ -22,7 +22,7 @@ public class FakeDmpClient implements SourceClient<ClinicalTrial> {
     this.exceptionToThrow = null;
   }
 
-  public FakeDmpClient(Map<String, ClinicalTrial> clinicalTrials) {
+  public FakeDmpClient(Map<String, Source> clinicalTrials) {
     this.clinicalTrials = clinicalTrials;
     this.exceptionToThrow = null;
   }
@@ -38,12 +38,12 @@ public class FakeDmpClient implements SourceClient<ClinicalTrial> {
   }
 
   @Override
-  public Optional<ClinicalTrial> fetch(URI source) throws DmpClientException {
+  public Optional<Source> fetch(URI uri) throws DmpClientException {
     if (nonNull(exceptionToThrow)) {
       throw exceptionToThrow;
     }
     return clinicalTrials.entrySet().stream()
-        .filter(entry -> clinicalTrialUri(entry.getKey()).equals(source))
+        .filter(entry -> clinicalTrialUri(entry.getKey()).equals(uri))
         .map(Map.Entry::getValue)
         .findFirst();
   }
