@@ -1,25 +1,18 @@
 package no.sikt.nva.approvals.rest;
 
+import static no.sikt.nva.approvals.rest.RestConstants.CONTEXT_PATH;
 import static nva.commons.apigateway.MediaTypes.APPLICATION_JSON_LD;
 
-import com.amazonaws.services.lambda.runtime.Context;
-import java.net.HttpURLConnection;
-import java.nio.file.Path;
 import java.util.List;
-import no.sikt.nva.approvals.utils.RequestUtils;
-import nva.commons.apigateway.ApiGatewayHandler;
 import nva.commons.apigateway.MediaType;
-import nva.commons.apigateway.RequestInfo;
-import nva.commons.apigateway.exceptions.ApiGatewayException;
 import nva.commons.core.Environment;
 import nva.commons.core.JacocoGenerated;
-import nva.commons.core.ioutils.IoUtils;
 
-public class FetchContextHandler extends ApiGatewayHandler<Void, String> {
+public class FetchContextHandler extends FetchVersionedDocumentHandler {
 
-  private static final String CONTEXT_TEMPLATE =
-      IoUtils.stringFromResources(Path.of("approval-context.json"));
-  private final String approvalContext;
+  static final String CURRENT_CONTEXT_VERSION = "v1";
+  private static final List<String> CONTEXT_VERSIONS = List.of(CURRENT_CONTEXT_VERSION);
+  private static final String CONTEXT_FILE_FORMAT = "context/approval-context-%s.json";
 
   @JacocoGenerated
   public FetchContextHandler() {
@@ -27,30 +20,11 @@ public class FetchContextHandler extends ApiGatewayHandler<Void, String> {
   }
 
   public FetchContextHandler(Environment environment) {
-    super(Void.class, environment);
-    this.approvalContext =
-        OntologyNamespace.resolve(CONTEXT_TEMPLATE, RequestUtils.getApiHost(environment));
-  }
-
-  @Override
-  protected String processInput(Void input, RequestInfo requestInfo, Context context)
-      throws ApiGatewayException {
-    return approvalContext;
-  }
-
-  @Override
-  protected Integer getSuccessStatusCode(Void input, String output) {
-    return HttpURLConnection.HTTP_OK;
+    super(environment, CONTEXT_PATH, CONTEXT_VERSIONS, CONTEXT_FILE_FORMAT);
   }
 
   @Override
   protected List<MediaType> listSupportedMediaTypes() {
     return List.of(APPLICATION_JSON_LD, MediaType.JSON_UTF_8);
-  }
-
-  @Override
-  protected void validateRequest(Void unused, RequestInfo requestInfo, Context context)
-      throws ApiGatewayException {
-    // noop
   }
 }

@@ -40,6 +40,16 @@ class ApprovalResponseTest {
   }
 
   @Test
+  void shouldReferenceVersionedContext() {
+    var approval = randomApproval(randomHandle());
+
+    var response = ApprovalResponse.fromApproval(approval, API_HOST);
+
+    var expectedContext = URI.create("https://%s/approval/context/v1".formatted(API_HOST));
+    assertEquals(expectedContext, response.context());
+  }
+
+  @Test
   void shouldSerializeHandleAsString() throws JsonProcessingException {
     var handle = randomHandle();
     var approval = randomApproval(handle);
