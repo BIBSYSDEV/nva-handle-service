@@ -406,7 +406,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/ChangeList"
         "400":
-          description: Bad Request. `approvalId` is not a UUID or `cursor` is not a cursor from `next`
+          description: Bad Request
           content:
             "application/json":
               schema:
