@@ -54,6 +54,16 @@ public final class RequestUtils {
             failure -> badRequest(INVALID_CHANGE_IDENTIFIER_MESSAGE, CHANGE_ID_PATH_PARAMETER));
   }
 
+  public static SortableIdentifier getCursor(RequestInfo requestInfo) throws BadRequestException {
+    return attempt(
+            () ->
+                requestInfo
+                    .getQueryParameterOpt(CURSOR_QUERY_PARAMETER)
+                    .map(SortableIdentifier::new)
+                    .orElse(null))
+        .orElseThrow(failure -> badRequest(INVALID_CURSOR_MESSAGE, CURSOR_QUERY_PARAMETER));
+  }
+
   public static UUID getCustomerIdentifier(RequestInfo requestInfo) throws UnauthorizedException {
     var customerId = requestInfo.getCurrentCustomer();
     return attempt(() -> UriWrapper.fromUri(customerId))
