@@ -4,8 +4,6 @@ import static no.sikt.nva.approvals.rest.RestConstants.APPROVAL_PATH;
 import static no.sikt.nva.approvals.rest.RestConstants.CHANGES_PATH;
 import static no.sikt.nva.approvals.rest.RestConstants.CURSOR_QUERY_PARAMETER;
 
-import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.annotation.JsonTypeInfo.Id;
 import com.fasterxml.jackson.annotation.JsonTypeName;
@@ -18,8 +16,7 @@ import nva.commons.core.paths.UriWrapper;
 
 @JsonTypeInfo(use = Id.NAME, property = "type")
 @JsonTypeName("ChangeList")
-public record ChangeListResponse(
-    List<ChangeResponse> changes, @JsonInclude(Include.NON_NULL) URI next) {
+public record ChangeListResponse(List<ChangeResponse> changes, URI next) {
 
   public static ChangeListResponse fromChangeList(
       ChangeList changeList, UUID approvalIdentifier, String apiHost) {
