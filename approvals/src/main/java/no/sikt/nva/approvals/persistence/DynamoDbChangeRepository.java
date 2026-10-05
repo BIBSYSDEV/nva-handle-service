@@ -60,21 +60,26 @@ public class DynamoDbChangeRepository implements ChangeRepository {
 
   @Override
   public ChangeList listChanges(ListChangesRequest request) {
-    var lowerBound =
-        switch (request) {
-          case Since(var timestamp, _) ->
-              SINCE_LOWER_BOUND_FORMAT.formatted(timestamp.toEpochMilli());
-          case After(var changeIdentifier, _) -> changeIdentifier.toString();
-        };
-    var query =
-        QueryEnhancedRequest.builder()
-            .queryConditional(
-                sortGreaterThan(
-                    Key.builder().partitionValue(CHANGES_PARTITION).sortValue(lowerBound).build()))
-            .scanIndexForward(true)
-            .limit(request.pageSize())
-            .build();
+    var startKey = getExclusiveStartKey(request);
+    var query = createListChangesQuery(startKey, request.pageSize());
     return toChangeList(table.index(GSI1).query(query).iterator().next());
+  }
+
+  private static QueryEnhancedRequest createListChangesQuery(String startKey, int limit) {
+    return QueryEnhancedRequest.builder()
+               .queryConditional(
+                   sortGreaterThan(
+                       Key.builder().partitionValue(CHANGES_PARTITION).sortValue(startKey).build()))
+               .scanIndexForward(true)
+               .limit(limit)
+               .build();
+  }
+
+  private static String getExclusiveStartKey(ListChangesRequest request) {
+      return switch (request) {
+        case Since since -> SINCE_LOWER_BOUND_FORMAT.formatted(since.timestamp().toEpochMilli());
+        case After after -> after.changeIdentifier().toString();
+      };
   }
 
   @Override
