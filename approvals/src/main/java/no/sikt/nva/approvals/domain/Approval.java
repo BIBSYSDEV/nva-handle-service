@@ -23,13 +23,9 @@ public record Approval(
   }
 
   public void ensureOwnedBy(UUID customerIdentifier) throws CustomerMismatchException {
-    if (!isOwnedBy(customerIdentifier)) {
+    if (!customerIdentifier.equals(this.customerIdentifier)) {
       throw new CustomerMismatchException();
     }
-  }
-
-  public boolean isOwnedBy(UUID customerIdentifier) {
-    return customerIdentifier.equals(this.customerIdentifier);
   }
 
   public void ensureSourceIs(URI source) throws SourceMismatchException {

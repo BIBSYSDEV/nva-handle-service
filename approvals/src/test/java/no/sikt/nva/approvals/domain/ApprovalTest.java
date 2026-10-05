@@ -5,8 +5,6 @@ import static no.sikt.nva.approvals.utils.TestUtils.randomApproval;
 import static no.sikt.nva.approvals.utils.TestUtils.randomHandle;
 import static no.sikt.nva.approvals.utils.TestUtils.randomIdentifier;
 import static no.unit.nva.testutils.RandomDataGenerator.randomUri;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.util.Collections;
@@ -41,21 +39,6 @@ class ApprovalTest {
     var approval = randomApproval(randomUri(), randomHandle(), randomUUID());
 
     assertThrows(CustomerMismatchException.class, () -> approval.ensureOwnedBy(randomUUID()));
-  }
-
-  @Test
-  void shouldBeOwnedByCustomerItWasCreatedFor() {
-    var customerIdentifier = randomUUID();
-    var approval = randomApproval(randomUri(), randomHandle(), customerIdentifier);
-
-    assertThat(approval.isOwnedBy(customerIdentifier), equalTo(true));
-  }
-
-  @Test
-  void shouldNotBeOwnedByOtherCustomer() {
-    var approval = randomApproval(randomUri(), randomHandle(), randomUUID());
-
-    assertThat(approval.isOwnedBy(randomUUID()), equalTo(false));
   }
 
   @Test
