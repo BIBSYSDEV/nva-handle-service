@@ -17,6 +17,8 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import no.sikt.nva.approvals.dmp.model.ClinicalTrial;
+import no.sikt.nva.approvals.source.OAuth2TokenService;
+import no.sikt.nva.approvals.source.SourceClientException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -65,7 +67,7 @@ class DmpClientTest {
   private DmpClient dmpClient;
 
   @BeforeEach
-  void setUp() throws DmpClientException {
+  void setUp() throws SourceClientException {
     httpClient = mock(HttpClient.class);
     tokenService = mock(OAuth2TokenService.class);
     when(tokenService.getAccessToken()).thenReturn("test-token");

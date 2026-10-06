@@ -19,6 +19,7 @@ import static no.sikt.nva.approvals.utils.TestUtils.randomIdentifierPolicy;
 import static no.sikt.nva.approvals.utils.TestUtils.randomIdentifiers;
 import static no.sikt.nva.approvals.utils.TestUtils.randomRevision;
 import static no.sikt.nva.approvals.utils.TestUtils.randomSourceChange;
+import static no.sikt.nva.approvals.utils.TestUtils.randomSourceConfig;
 import static no.sikt.nva.approvals.utils.TestUtils.randomTimestamp;
 import static no.sikt.nva.approvals.validation.RequestConstraints.MAX_IDENTIFIER_NAME_LENGTH;
 import static no.sikt.nva.approvals.validation.RequestConstraints.MAX_IDENTIFIER_VALUE_BYTES;
@@ -50,6 +51,8 @@ import no.sikt.nva.approvals.domain.ApprovalRevision;
 import no.sikt.nva.approvals.domain.Handle;
 import no.sikt.nva.approvals.domain.IdentifierPolicy;
 import no.sikt.nva.approvals.domain.NamedIdentifier;
+import no.sikt.nva.approvals.domain.SourceAuthentication.NoAuthentication;
+import no.sikt.nva.approvals.domain.SourceConfig;
 import no.sikt.nva.approvals.domain.SourceSnapshot;
 import no.sikt.nva.approvals.events.SourceChangedEvent;
 import no.unit.nva.commons.json.JsonUtils;
@@ -438,6 +441,19 @@ class DynamoDbApprovalRepositoryTest {
   void shouldPersistAndFindIdentifierPolicy() {
     var customerIdentifier = randomUUID();
     var identifierPolicy = randomIdentifierPolicy();
+    approvalRepository.saveIdentifierPolicy(customerIdentifier, identifierPolicy);
+
+    assertEquals(
+        identifierPolicy,
+        approvalRepository.findIdentifierPolicy(customerIdentifier).orElseThrow());
+  }
+
+  @Test
+  void shouldPersistAndFindIdentifierPolicyWithSources() {
+    var customerIdentifier = randomUUID();
+    var sources =
+        List.of(randomSourceConfig(), new SourceConfig(randomUri(), new NoAuthentication()));
+    var identifierPolicy = new IdentifierPolicy(Set.of(DMP), sources);
     approvalRepository.saveIdentifierPolicy(customerIdentifier, identifierPolicy);
 
     assertEquals(

@@ -2,7 +2,9 @@ package no.sikt.nva.approvals.domain;
 
 import static java.util.stream.Collectors.toUnmodifiableSet;
 import static no.sikt.nva.approvals.utils.TestUtils.randomIdentifiers;
+import static no.sikt.nva.approvals.utils.TestUtils.randomSourceConfig;
 import static no.unit.nva.testutils.RandomDataGenerator.randomString;
+import static no.unit.nva.testutils.RandomDataGenerator.randomUri;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -10,7 +12,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Optional;
 import java.util.Set;
+import nva.commons.core.paths.UriWrapper;
 import org.junit.jupiter.api.Test;
 
 class IdentifierPolicyTest {
@@ -123,6 +127,22 @@ class IdentifierPolicyTest {
         namedIdentifiers.stream().map(NamedIdentifier::name).collect(toUnmodifiableSet());
 
     assertEquals(expectedNames, identifierPolicy.disallowedNames(namedIdentifiers));
+  }
+
+  @Test
+  void shouldFindSourceConfigWhenSourceIsUnderItsBaseUri() {
+    var sourceConfig = randomSourceConfig();
+    var identifierPolicy = new IdentifierPolicy(Set.of(DMP), List.of(sourceConfig));
+    var source = UriWrapper.fromUri(sourceConfig.baseUri()).addChild(randomString()).getUri();
+
+    assertEquals(Optional.of(sourceConfig), identifierPolicy.findSource(source));
+  }
+
+  @Test
+  void shouldNotFindSourceConfigWhenSourceIsUnderNoBaseUri() {
+    var identifierPolicy = new IdentifierPolicy(Set.of(DMP), List.of(randomSourceConfig()));
+
+    assertTrue(identifierPolicy.findSource(randomUri()).isEmpty());
   }
 
   @Test

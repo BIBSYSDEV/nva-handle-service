@@ -9,8 +9,10 @@ import java.time.Duration;
 import java.util.Objects;
 import java.util.Optional;
 import no.sikt.nva.approvals.dmp.model.ClinicalTrial;
+import no.sikt.nva.approvals.source.OAuth2TokenService;
 import no.sikt.nva.approvals.source.Source;
 import no.sikt.nva.approvals.source.SourceClient;
+import no.sikt.nva.approvals.source.SourceClientException;
 import no.unit.nva.commons.json.JsonUtils;
 import nva.commons.core.JacocoGenerated;
 
@@ -50,7 +52,7 @@ public class DmpClient implements SourceClient {
   }
 
   @Override
-  public Optional<Source> fetch(URI uri) throws DmpClientException {
+  public Optional<Source> fetch(URI uri) throws SourceClientException {
     try {
       var response = httpClient.send(buildRequest(uri), HttpResponse.BodyHandlers.ofString());
       return handleResponse(response);
@@ -62,7 +64,7 @@ public class DmpClient implements SourceClient {
     }
   }
 
-  private HttpRequest buildRequest(URI uri) throws DmpClientException {
+  private HttpRequest buildRequest(URI uri) throws SourceClientException {
     var token = tokenService.getAccessToken();
     return HttpRequest.newBuilder()
         .uri(uri)

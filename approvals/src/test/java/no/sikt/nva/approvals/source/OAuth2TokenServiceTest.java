@@ -1,4 +1,4 @@
-package no.sikt.nva.approvals.dmp;
+package no.sikt.nva.approvals.source;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
@@ -32,19 +32,15 @@ class OAuth2TokenServiceTest {
   private static final String ERROR_RESPONSE = "Invalid client credentials";
 
   private HttpClient httpClient;
-  private DmpClientSecrets secrets;
+  private OAuth2Credentials credentials;
   private OAuth2TokenService tokenService;
 
   @BeforeEach
   void setUp() {
     httpClient = mock(HttpClient.class);
-    secrets =
-        new DmpClientSecrets(
-            "client-id",
-            "client-secret",
-            "https://auth.example.com/oauth/token",
-            "api://default",
-            "https://api.example.com");
+    credentials =
+        new OAuth2Credentials(
+            "client-id", "client-secret", "https://auth.example.com/oauth/token", "api://default");
   }
 
   @Test
@@ -52,7 +48,7 @@ class OAuth2TokenServiceTest {
     var response = createMockResponse(200, TOKEN_RESPONSE);
     when(httpClient.send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class)))
         .thenReturn(response);
-    tokenService = new OAuth2TokenService(secrets, httpClient);
+    tokenService = new OAuth2TokenService(credentials, httpClient);
 
     var token = tokenService.getAccessToken();
 
@@ -64,7 +60,7 @@ class OAuth2TokenServiceTest {
     var response = createMockResponse(200, TOKEN_RESPONSE);
     when(httpClient.send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class)))
         .thenReturn(response);
-    tokenService = new OAuth2TokenService(secrets, httpClient);
+    tokenService = new OAuth2TokenService(credentials, httpClient);
 
     tokenService.getAccessToken();
     tokenService.getAccessToken();
@@ -77,9 +73,9 @@ class OAuth2TokenServiceTest {
     var response = createMockResponse(401, ERROR_RESPONSE);
     when(httpClient.send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class)))
         .thenReturn(response);
-    tokenService = new OAuth2TokenService(secrets, httpClient);
+    tokenService = new OAuth2TokenService(credentials, httpClient);
 
-    var exception = assertThrows(DmpClientException.class, () -> tokenService.getAccessToken());
+    var exception = assertThrows(SourceClientException.class, () -> tokenService.getAccessToken());
 
     assertThat(exception.getMessage(), notNullValue());
   }
@@ -88,22 +84,22 @@ class OAuth2TokenServiceTest {
   void shouldThrowExceptionOnNetworkError() throws Exception {
     when(httpClient.send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class)))
         .thenThrow(new IOException("Network error"));
-    tokenService = new OAuth2TokenService(secrets, httpClient);
+    tokenService = new OAuth2TokenService(credentials, httpClient);
 
-    var exception = assertThrows(DmpClientException.class, () -> tokenService.getAccessToken());
+    var exception = assertThrows(SourceClientException.class, () -> tokenService.getAccessToken());
 
     assertThat(exception.getMessage(), notNullValue());
     assertThat(exception.getCause(), notNullValue());
   }
 
   @Test
-  void shouldThrowExceptionWhenSecretsAreNull() {
+  void shouldThrowExceptionWhenCredentialsAreNull() {
     assertThrows(NullPointerException.class, () -> new OAuth2TokenService(null, httpClient));
   }
 
   @Test
   void shouldThrowExceptionWhenHttpClientIsNull() {
-    assertThrows(NullPointerException.class, () -> new OAuth2TokenService(secrets, null));
+    assertThrows(NullPointerException.class, () -> new OAuth2TokenService(credentials, null));
   }
 
   @SuppressWarnings("unchecked")

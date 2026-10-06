@@ -4,20 +4,26 @@ import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.toMap;
 import static java.util.stream.Collectors.toUnmodifiableSet;
 
+import java.net.URI;
 import java.util.Collection;
+import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import nva.commons.core.StringUtils;
 
-public record IdentifierPolicy(Set<String> allowedIdentifierNames, boolean allowsAllNames) {
+public record IdentifierPolicy(
+    Set<String> allowedIdentifierNames, boolean allowsAllNames, List<SourceConfig> sources) {
 
   public static final IdentifierPolicy DENY_ALL = new IdentifierPolicy(Set.of());
-  public static final IdentifierPolicy ALLOW_ALL = new IdentifierPolicy(Set.of(), true);
+  public static final IdentifierPolicy ALLOW_ALL = new IdentifierPolicy(Set.of(), true, List.of());
 
+  private static final String SOURCES_MESSAGE = "sources must not be null";
   private static final String BLANK_NAME_MESSAGE =
       "allowedIdentifierNames must not contain blank names";
 
   public IdentifierPolicy {
     requireNonNull(allowedIdentifierNames, "allowedIdentifierNames must not be null");
+    sources = List.copyOf(requireNonNull(sources, SOURCES_MESSAGE));
     allowedIdentifierNames =
         requireNonBlankNames(allowedIdentifierNames).stream()
             .map(IdentifierPolicy::normalize)
@@ -25,7 +31,15 @@ public record IdentifierPolicy(Set<String> allowedIdentifierNames, boolean allow
   }
 
   public IdentifierPolicy(Set<String> allowedIdentifierNames) {
-    this(allowedIdentifierNames, false);
+    this(allowedIdentifierNames, false, List.of());
+  }
+
+  public IdentifierPolicy(Set<String> allowedIdentifierNames, List<SourceConfig> sources) {
+    this(allowedIdentifierNames, false, sources);
+  }
+
+  public Optional<SourceConfig> findSource(URI source) {
+    return sources.stream().filter(sourceConfig -> sourceConfig.matches(source)).findFirst();
   }
 
   public Set<String> disallowedNames(Collection<NamedIdentifier> namedIdentifiers) {
