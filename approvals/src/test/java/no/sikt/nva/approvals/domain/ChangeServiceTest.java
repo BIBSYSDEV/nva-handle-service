@@ -108,12 +108,12 @@ class ChangeServiceTest {
   }
 
   @Test
-  void shouldThrowChangeNotFoundWhenCursorIsNotChangeOfApproval() {
+  void shouldThrowInvalidCursorWhenCursorIsNotChangeOfApproval() {
     var approvalIdentifier = saveRevision().approval().identifier();
     var changeOfOtherApproval = saveRevision().identifier();
 
     assertThrows(
-        ChangeNotFoundException.class,
+        InvalidCursorException.class,
         () -> changeService.listChangesByApproval(approvalIdentifier, changeOfOtherApproval));
   }
 

@@ -7,5 +7,5 @@ import no.unit.nva.identifiers.SortableIdentifier;
 public interface ChangeService {
 
   ChangeList listChangesByApproval(UUID approvalIdentifier, SortableIdentifier cursor)
-      throws ApprovalNotFoundException, ChangeNotFoundException;
+      throws ApprovalNotFoundException, InvalidCursorException;
 }
