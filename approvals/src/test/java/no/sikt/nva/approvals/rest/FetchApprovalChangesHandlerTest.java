@@ -25,8 +25,10 @@ import java.io.InputStream;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.stream.IntStream;
+import java.util.stream.Stream;
 import no.sikt.nva.approvals.domain.ApprovalRevision;
 import no.sikt.nva.approvals.domain.ChangeServiceImpl;
 import no.sikt.nva.approvals.domain.SourceSnapshot;
@@ -43,6 +45,8 @@ import nva.commons.core.Environment;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.zalando.problem.Problem;
 
 class FetchApprovalChangesHandlerTest {
@@ -51,6 +55,8 @@ class FetchApprovalChangesHandlerTest {
   private static final String TABLE = ENVIRONMENT.readEnv(DynamoDbConstants.TABLE);
   private static final FakeContext CONTEXT = new FakeContext();
   private static final String ACCEPT = "Accept";
+  private static final String CONTENT_TYPE = "Content-Type";
+  private static final String APPLICATION_JSON_LD = "application/ld+json";
   private static final String CURSOR = "cursor";
   private static final int PAGE_SIZE = 100;
 
@@ -113,6 +119,27 @@ class FetchApprovalChangesHandlerTest {
   }
 
   @Test
+  void shouldReturnEveryChangeExactlyOnceWhenFollowingNext() throws IOException {
+    var approvalIdentifier = saveRevision().approval().identifier();
+    IntStream.range(0, PAGE_SIZE)
+        .forEach(index -> saveSnapshotOfSourceChangedAt(approvalIdentifier, randomTimestamp()));
+    var firstPage =
+        send(request(approvalIdentifier, Map.of(), Map.of()))
+            .getBodyObject(ChangeListResponse.class);
+    var cursor = firstPage.next().getQuery().replaceFirst(CURSOR + "=", "");
+
+    output = new ByteArrayOutputStream();
+    var secondPage =
+        send(request(approvalIdentifier, Map.of(CURSOR, cursor), Map.of()))
+            .getBodyObject(ChangeListResponse.class);
+
+    var changes =
+        Stream.concat(firstPage.changes().stream(), secondPage.changes().stream()).toList();
+    assertThat(changes, hasSize(PAGE_SIZE + 1));
+    assertThat(Set.copyOf(changes), hasSize(PAGE_SIZE + 1));
+  }
+
+  @Test
   void shouldReturnChangesAfterCursorWhenCursorIsChangeOfApproval() throws IOException {
     var revision = saveRevision();
     var cursor = Map.of(CURSOR, revision.identifier().toString());
@@ -168,6 +195,28 @@ class FetchApprovalChangesHandlerTest {
     var response = sendForProblem(request(randomUUID(), Map.of(), Map.of(ACCEPT, "text/html")));
 
     assertThat(response.getStatusCode(), equalTo(HTTP_NOT_ACCEPTABLE));
+  }
+
+  @ParameterizedTest
+  @ValueSource(strings = {"application/json", APPLICATION_JSON_LD})
+  void shouldRespondWithRequestedMediaTypeWhenAcceptIsSupported(String mediaType)
+      throws IOException {
+    var revision = saveRevision();
+
+    var response =
+        send(request(revision.approval().identifier(), Map.of(), Map.of(ACCEPT, mediaType)));
+
+    assertThat(response.getStatusCode(), equalTo(HTTP_OK));
+    assertThat(response.getHeaders().get(CONTENT_TYPE), startsWith(mediaType));
+  }
+
+  @Test
+  void shouldRespondWithJsonLdWhenAcceptIsMissing() throws IOException {
+    var revision = saveRevision();
+
+    var response = send(request(revision.approval().identifier(), Map.of(), Map.of()));
+
+    assertThat(response.getHeaders().get(CONTENT_TYPE), startsWith(APPLICATION_JSON_LD));
   }
 
   private ApprovalRevision saveRevision() {

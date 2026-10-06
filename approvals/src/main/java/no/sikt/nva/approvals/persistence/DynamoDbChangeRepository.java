@@ -48,7 +48,7 @@ public class DynamoDbChangeRepository implements ChangeRepository {
     Optional.ofNullable(after)
         .map(identifier -> exclusiveStartKey(approvalIdentifier, identifier))
         .ifPresent(request::exclusiveStartKey);
-    return sendRequest(request.build());
+    return sendRequest(request.build(), pageSize);
   }
 
   @Override
@@ -75,7 +75,7 @@ public class DynamoDbChangeRepository implements ChangeRepository {
     return QueryEnhancedRequest.builder()
         .queryConditional(sortBeginsWith(changeKeyPrefix))
         .scanIndexForward(false)
-        .limit(pageSize);
+        .limit(pageSize + 1);
   }
 
   private static Key createChangeKey(UUID approvalIdentifier, String sortValue) {
@@ -89,10 +89,11 @@ public class DynamoDbChangeRepository implements ChangeRepository {
     return Objects.nonNull(page.lastEvaluatedKey()) && !page.lastEvaluatedKey().isEmpty();
   }
 
-  private ChangeList sendRequest(QueryEnhancedRequest request) {
+  private ChangeList sendRequest(QueryEnhancedRequest request, int pageSize) {
     var page = table.query(request).iterator().next();
     var changes =
         page.items().stream()
+            .limit(pageSize)
             .map(EnhancedDocument::toJson)
             .map(ChangeDao::fromJson)
             .map(ChangeDao::toChange)

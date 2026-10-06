@@ -31,6 +31,14 @@ public class ChangeServiceImpl implements ChangeService {
   }
 
   @Override
+  public Change fetchChange(UUID approvalIdentifier, SortableIdentifier changeIdentifier)
+      throws ChangeNotFoundException {
+    return changeRepository
+        .findChange(approvalIdentifier, changeIdentifier)
+        .orElseThrow(() -> new ChangeNotFoundException(approvalIdentifier, changeIdentifier));
+  }
+
+  @Override
   public ChangeList listChangesByApproval(UUID approvalIdentifier, SortableIdentifier cursor)
       throws ApprovalNotFoundException, InvalidCursorException {
     ensureApprovalExists(approvalIdentifier);

@@ -118,6 +118,30 @@ class DynamoDbChangeRepositoryTest {
   }
 
   @Test
+  void shouldNotReportMoreChangesWhenApprovalHasExactlyPageSizeChanges() {
+    var approval = randomApproval(randomHandle());
+    saveApproval(approval);
+    approvalRepository.save(
+        SourceSnapshot.create(randomSourceChange(approval.identifier(), randomString())));
+
+    var page = changeRepository.listChangesByApproval(approval.identifier(), null, 2);
+
+    assertThat(page.hasMore(), equalTo(false));
+  }
+
+  @Test
+  void shouldReturnNoMoreThanPageSizeChanges() {
+    var approval = randomApproval(randomHandle());
+    saveApproval(approval);
+    approvalRepository.save(
+        SourceSnapshot.create(randomSourceChange(approval.identifier(), randomString())));
+
+    var page = changeRepository.listChangesByApproval(approval.identifier(), null, 1);
+
+    assertThat(page.changes(), hasSize(1));
+  }
+
+  @Test
   void shouldListEveryChangeExactlyOnceWhenPagingWithNext() {
     var approval = randomApproval(randomHandle());
     saveApproval(approval);
