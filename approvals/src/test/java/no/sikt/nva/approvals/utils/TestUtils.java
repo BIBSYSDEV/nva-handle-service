@@ -19,7 +19,7 @@ import no.sikt.nva.approvals.domain.ApprovalRevision;
 import no.sikt.nva.approvals.domain.Handle;
 import no.sikt.nva.approvals.domain.IdentifierPolicy;
 import no.sikt.nva.approvals.domain.NamedIdentifier;
-import no.sikt.nva.approvals.domain.SourceAuthentication.OAuth2ClientCredentials;
+import no.sikt.nva.approvals.domain.OAuth2ClientCredentials;
 import no.sikt.nva.approvals.domain.SourceConfig;
 import no.sikt.nva.approvals.persistence.ApprovalDao;
 import no.sikt.nva.approvals.persistence.HandleDao;

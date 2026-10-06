@@ -6,7 +6,6 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.net.URI;
-import no.sikt.nva.approvals.domain.SourceAuthentication.NoAuthentication;
 import nva.commons.core.paths.UriWrapper;
 import org.junit.jupiter.api.Test;
 
@@ -17,6 +16,7 @@ class SourceConfigTest {
       URI.create("https://source.example.org.attacker.test/trials/1");
   private static final URI SOURCE_ON_LOOKALIKE_PATH =
       URI.create("https://source.example.org/trials-archive/1");
+  private static final URI RELATIVE_SOURCE_ON_OTHER_HOST = URI.create("//attacker.test/trials/1");
   private static final URI SOURCE_LEAVING_BASE_PATH =
       URI.create("https://source.example.org/trials/../admin");
 
@@ -44,5 +44,11 @@ class SourceConfigTest {
   void shouldNotMatchSourceThatLeavesBasePathThroughDotSegments() {
     assertFalse(
         new SourceConfig(BASE_URI, new NoAuthentication()).matches(SOURCE_LEAVING_BASE_PATH));
+  }
+
+  @Test
+  void shouldNotMatchRelativeSource() {
+    assertFalse(
+        new SourceConfig(BASE_URI, new NoAuthentication()).matches(RELATIVE_SOURCE_ON_OTHER_HOST));
   }
 }

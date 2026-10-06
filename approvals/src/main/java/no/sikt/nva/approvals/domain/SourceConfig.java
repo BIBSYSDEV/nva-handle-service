@@ -15,6 +15,6 @@ public record SourceConfig(URI baseUri, SourceAuthentication authentication) {
   }
 
   public boolean matches(URI source) {
-    return !baseUri.relativize(source).isAbsolute();
+    return source.isAbsolute() && !baseUri.relativize(source).isAbsolute();
   }
 }
