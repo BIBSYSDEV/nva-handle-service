@@ -80,7 +80,19 @@ public class SourceClient {
     var sourceConfig = fetchSourceConfig(source, customerIdentifier);
     var request = createRequest(source, sourceConfig.authentication());
     var response = fetchSource(request);
+    discardRejectedAccessToken(response, sourceConfig.authentication());
     return toSourceResponse(source, response);
+  }
+
+  private void discardRejectedAccessToken(
+      HttpResponse<String> response, SourceAuthentication authentication) {
+    if (isRejected(response) && authentication instanceof OAuth2ClientCredentials(String key)) {
+      tokenService.discardAccessToken(key);
+    }
+  }
+
+  private static boolean isRejected(HttpResponse<String> response) {
+    return response.statusCode() == HTTP_UNAUTHORIZED || response.statusCode() == HTTP_FORBIDDEN;
   }
 
   private SourceConfig fetchSourceConfig(URI source, UUID customerIdentifier)

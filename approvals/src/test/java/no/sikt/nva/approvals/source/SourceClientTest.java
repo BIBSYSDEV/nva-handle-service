@@ -3,6 +3,7 @@ package no.sikt.nva.approvals.source;
 import static java.net.HttpURLConnection.HTTP_INTERNAL_ERROR;
 import static java.net.HttpURLConnection.HTTP_NOT_FOUND;
 import static java.net.HttpURLConnection.HTTP_OK;
+import static java.net.HttpURLConnection.HTTP_UNAUTHORIZED;
 import static java.util.UUID.randomUUID;
 import static no.unit.nva.testutils.RandomDataGenerator.randomString;
 import static no.unit.nva.testutils.RandomDataGenerator.randomUri;
@@ -143,6 +144,19 @@ class SourceClientTest {
     assertThrowsExactly(
         SourceAuthenticationException.class,
         () -> fetchWith(new OAuth2ClientCredentials(credentialsKey)));
+  }
+
+  @Test
+  void shouldRequestNewTokenAfterSourceRejectsCachedToken() throws Exception {
+    stubSource(HTTP_UNAUTHORIZED, randomString());
+
+    assertThrowsExactly(
+        SourceAuthenticationException.class,
+        () -> fetchWith(new OAuth2ClientCredentials(credentialsKey)));
+    assertThrowsExactly(
+        SourceAuthenticationException.class,
+        () -> fetchWith(new OAuth2ClientCredentials(credentialsKey)));
+    verify(httpClient, times(2)).send(argThat(isRequestTo(tokenUri)), any());
   }
 
   @Test

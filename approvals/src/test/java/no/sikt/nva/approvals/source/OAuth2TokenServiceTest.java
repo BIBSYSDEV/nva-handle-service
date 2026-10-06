@@ -19,7 +19,9 @@ import java.io.IOException;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
+import java.time.Duration;
 import java.util.Map;
+import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentMatcher;
@@ -32,6 +34,7 @@ class OAuth2TokenServiceTest {
       """;
   private static final long ONE_HOUR_IN_SECONDS = 3600;
   private static final long EXPIRED_IMMEDIATELY = 0;
+  private static final Duration REQUEST_TIMEOUT = Duration.ofSeconds(5);
 
   private HttpClient httpClient;
   private String credentialsKey;
@@ -81,6 +84,27 @@ class OAuth2TokenServiceTest {
     tokenService.getAccessToken(credentialsKey);
 
     verify(httpClient, times(2)).send(argThat(isRequestTo(tokenUri)), any());
+  }
+
+  @Test
+  void shouldRequestNewAccessTokenAfterCachedOneIsDiscarded() throws Exception {
+    stubTokenEndpoint(tokenUri, HTTP_OK, tokenResponse(randomString(), ONE_HOUR_IN_SECONDS));
+
+    tokenService.getAccessToken(credentialsKey);
+    tokenService.discardAccessToken(credentialsKey);
+    tokenService.getAccessToken(credentialsKey);
+
+    verify(httpClient, times(2)).send(argThat(isRequestTo(tokenUri)), any());
+  }
+
+  @Test
+  void shouldLimitHowLongTokenRequestWaitsForResponse() throws Exception {
+    stubTokenEndpoint(tokenUri, HTTP_OK, tokenResponse(randomString(), ONE_HOUR_IN_SECONDS));
+
+    tokenService.getAccessToken(credentialsKey);
+
+    verify(httpClient)
+        .send(argThat(request -> request.timeout().equals(Optional.of(REQUEST_TIMEOUT))), any());
   }
 
   @Test

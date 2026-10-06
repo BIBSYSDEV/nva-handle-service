@@ -35,6 +35,7 @@ public class OAuth2TokenService {
   private static final String SCOPE_PARAM = "&scope=";
   private static final int HTTP_OK = 200;
   private static final Duration TOKEN_EXPIRY_BUFFER = Duration.ofMinutes(1);
+  private static final Duration REQUEST_TIMEOUT = Duration.ofSeconds(5);
   private static final String MISSING_CREDENTIALS_MESSAGE =
       "No source credentials stored under key %s";
   private static final String TOKEN_REJECTED_MESSAGE = "Failed to obtain access token. Status: %s";
@@ -57,6 +58,10 @@ public class OAuth2TokenService {
     var accessToken = requestAccessToken(findCredentials(credentialsKey));
     accessTokens.put(credentialsKey, accessToken);
     return accessToken.value();
+  }
+
+  public void discardAccessToken(String credentialsKey) {
+    accessTokens.remove(credentialsKey);
   }
 
   private Optional<AccessToken> findValidAccessToken(String credentialsKey) {
@@ -108,6 +113,7 @@ public class OAuth2TokenService {
             + URLEncoder.encode(credentials.scope(), StandardCharsets.UTF_8);
     return HttpRequest.newBuilder()
         .uri(URI.create(credentials.accessTokenUrl()))
+        .timeout(REQUEST_TIMEOUT)
         .header(CONTENT_TYPE_HEADER, FORM_URL_ENCODED)
         .header(AUTHORIZATION_HEADER, BASIC_PREFIX + encodedCredentials)
         .POST(HttpRequest.BodyPublishers.ofString(body))
