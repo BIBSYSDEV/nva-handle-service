@@ -17,6 +17,8 @@ class SourceConfigTest {
       URI.create("https://source.example.org.attacker.test/trials/1");
   private static final URI SOURCE_ON_LOOKALIKE_PATH =
       URI.create("https://source.example.org/trials-archive/1");
+  private static final URI SOURCE_LEAVING_BASE_PATH =
+      URI.create("https://source.example.org/trials/../admin");
 
   @Test
   void shouldMatchSourceUnderBaseUri() {
@@ -36,5 +38,11 @@ class SourceConfigTest {
   void shouldNotMatchSourceWhosePathOnlyStartsWithBasePath() {
     assertFalse(
         new SourceConfig(BASE_URI, new NoAuthentication()).matches(SOURCE_ON_LOOKALIKE_PATH));
+  }
+
+  @Test
+  void shouldNotMatchSourceThatLeavesBasePathThroughDotSegments() {
+    assertFalse(
+        new SourceConfig(BASE_URI, new NoAuthentication()).matches(SOURCE_LEAVING_BASE_PATH));
   }
 }

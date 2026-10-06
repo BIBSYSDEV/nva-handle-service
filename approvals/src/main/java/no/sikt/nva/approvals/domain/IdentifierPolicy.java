@@ -12,18 +12,18 @@ import java.util.Set;
 import nva.commons.core.StringUtils;
 
 public record IdentifierPolicy(
-    Set<String> allowedIdentifierNames, boolean allowsAllNames, List<SourceConfig> sources) {
+    Set<String> allowedIdentifierNames, boolean allowsAllNames, List<SourceConfig> sourceConfigs) {
 
   public static final IdentifierPolicy DENY_ALL = new IdentifierPolicy(Set.of());
   public static final IdentifierPolicy ALLOW_ALL = new IdentifierPolicy(Set.of(), true, List.of());
 
-  private static final String SOURCES_MESSAGE = "sources must not be null";
+  private static final String SOURCES_MESSAGE = "sourceConfigs must not be null";
   private static final String BLANK_NAME_MESSAGE =
       "allowedIdentifierNames must not contain blank names";
 
   public IdentifierPolicy {
     requireNonNull(allowedIdentifierNames, "allowedIdentifierNames must not be null");
-    sources = List.copyOf(requireNonNull(sources, SOURCES_MESSAGE));
+    sourceConfigs = List.copyOf(requireNonNull(sourceConfigs, SOURCES_MESSAGE));
     allowedIdentifierNames =
         requireNonBlankNames(allowedIdentifierNames).stream()
             .map(IdentifierPolicy::normalize)
@@ -38,8 +38,8 @@ public record IdentifierPolicy(
     this(allowedIdentifierNames, false, sources);
   }
 
-  public Optional<SourceConfig> findSource(URI source) {
-    return sources.stream().filter(sourceConfig -> sourceConfig.matches(source)).findFirst();
+  public Optional<SourceConfig> findSourceConfig(URI source) {
+    return sourceConfigs.stream().filter(sourceConfig -> sourceConfig.matches(source)).findFirst();
   }
 
   public Set<String> disallowedNames(Collection<NamedIdentifier> namedIdentifiers) {

@@ -14,6 +14,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 import no.sikt.nva.approvals.domain.IdentifierPolicy;
+import no.sikt.nva.approvals.domain.SourceConfig;
 import no.unit.nva.commons.json.JsonUtils;
 import software.amazon.awssdk.enhanced.dynamodb.Key;
 import software.amazon.awssdk.enhanced.dynamodb.document.EnhancedDocument;
@@ -23,7 +24,7 @@ import software.amazon.awssdk.enhanced.dynamodb.document.EnhancedDocument;
 public record IdentifierPolicyDao(
     UUID customerIdentifier,
     Set<String> allowedIdentifierNames,
-    List<SourceConfigDao> sources,
+    List<SourceConfig> sourceConfigs,
     Instant createdDate)
     implements DatabaseEntry {
 
@@ -33,7 +34,7 @@ public record IdentifierPolicyDao(
   // An empty set is omitted by the NON_EMPTY inclusion of the serializing object mapper
   public IdentifierPolicyDao {
     allowedIdentifierNames = isNull(allowedIdentifierNames) ? Set.of() : allowedIdentifierNames;
-    sources = isNull(sources) ? List.of() : sources;
+    sourceConfigs = isNull(sourceConfigs) ? List.of() : sourceConfigs;
   }
 
   public static IdentifierPolicyDao fromIdentifierPolicy(
@@ -41,7 +42,7 @@ public record IdentifierPolicyDao(
     return new IdentifierPolicyDao(
         customerIdentifier,
         identifierPolicy.allowedIdentifierNames(),
-        identifierPolicy.sources().stream().map(SourceConfigDao::fromSourceConfig).toList(),
+        identifierPolicy.sourceConfigs(),
         createdDate);
   }
 
@@ -63,8 +64,7 @@ public record IdentifierPolicyDao(
   }
 
   public IdentifierPolicy toIdentifierPolicy() {
-    return new IdentifierPolicy(
-        allowedIdentifierNames, sources.stream().map(SourceConfigDao::toSourceConfig).toList());
+    return new IdentifierPolicy(allowedIdentifierNames, sourceConfigs);
   }
 
   public EnhancedDocument toEnhancedDocument() {

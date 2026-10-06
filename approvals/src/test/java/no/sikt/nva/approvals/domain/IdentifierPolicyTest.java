@@ -135,14 +135,14 @@ class IdentifierPolicyTest {
     var identifierPolicy = new IdentifierPolicy(Set.of(DMP), List.of(sourceConfig));
     var source = UriWrapper.fromUri(sourceConfig.baseUri()).addChild(randomString()).getUri();
 
-    assertEquals(Optional.of(sourceConfig), identifierPolicy.findSource(source));
+    assertEquals(Optional.of(sourceConfig), identifierPolicy.findSourceConfig(source));
   }
 
   @Test
   void shouldNotFindSourceConfigWhenSourceIsUnderNoBaseUri() {
     var identifierPolicy = new IdentifierPolicy(Set.of(DMP), List.of(randomSourceConfig()));
 
-    assertTrue(identifierPolicy.findSource(randomUri()).isEmpty());
+    assertTrue(identifierPolicy.findSourceConfig(randomUri()).isEmpty());
   }
 
   @Test
