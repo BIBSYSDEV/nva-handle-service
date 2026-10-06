@@ -601,7 +601,7 @@ Resources:
         FetchApprovalChanges:
           Type: Api
           Properties:
-            Path: /{approvalId}/changes
+            Path: /{approvalId}/change
             Method: get
             RestApiId: !Ref NvaApprovalsApi
 
@@ -625,7 +625,7 @@ Resources:
         FetchChange:
           Type: Api
           Properties:
-            Path: /{approvalId}/changes/{changeId}
+            Path: /{approvalId}/change/{changeId}
             Method: get
             RestApiId: !Ref NvaApprovalsApi
 
