@@ -51,7 +51,7 @@ public class FetchApprovalHandler extends ApiGatewayHandler<Void, Object> {
   private static final String FETCHING_SOURCE_MESSAGE =
       "Fetching source {} of customer {} for approval page";
   private static final String CLINICAL_TRIAL_PARSE_FAILED_MESSAGE =
-      "Source is not a clinical trial";
+      "Source is not a clinical trial {}";
 
   private final ApprovalService approvalService;
   private final String apiHost;
@@ -217,6 +217,6 @@ public class FetchApprovalHandler extends ApiGatewayHandler<Void, Object> {
     return attempt(
             () -> JsonUtils.dtoObjectMapper.readValue(sourceResponse.body(), ClinicalTrial.class))
         .toOptional(
-            failure -> logger.warn(CLINICAL_TRIAL_PARSE_FAILED_MESSAGE, failure.getException()));
+            failure -> logger.warn(CLINICAL_TRIAL_PARSE_FAILED_MESSAGE, failure.getException().getMessage()));
   }
 }
