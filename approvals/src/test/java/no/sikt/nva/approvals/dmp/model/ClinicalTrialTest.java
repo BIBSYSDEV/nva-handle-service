@@ -1,5 +1,6 @@
 package no.sikt.nva.approvals.dmp.model;
 
+import static no.unit.nva.testutils.RandomDataGenerator.randomUri;
 import static nva.commons.core.ioutils.IoUtils.stringFromResources;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.emptyIterable;
@@ -85,6 +86,7 @@ class ClinicalTrialTest {
   void shouldHandleNullCollections() {
     var clinicalTrial =
         new ClinicalTrial(
+            randomUri(),
             URI.create("https://example.com"),
             "test-id",
             URI.create("https://hdl.handle.net/11250/1"),
@@ -107,6 +109,7 @@ class ClinicalTrialTest {
 
     var clinicalTrial =
         new ClinicalTrial(
+            randomUri(),
             URI.create("https://example.com"),
             "test-id",
             URI.create("https://hdl.handle.net/11250/1"),
