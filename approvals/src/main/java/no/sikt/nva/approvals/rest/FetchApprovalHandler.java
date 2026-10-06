@@ -48,6 +48,8 @@ public class FetchApprovalHandler extends ApiGatewayHandler<Void, Object> {
   private static final String TEMPLATE_NAME = "approval.jte";
   private static final String APPLICATION_DOMAIN_ENV = "APPLICATION_DOMAIN";
   private static final String SOURCE_FETCH_FAILED_MESSAGE = "Failed to fetch source {}";
+  private static final String FETCHING_SOURCE_MESSAGE =
+      "Fetching source {} of customer {} for approval page";
   private static final String CLINICAL_TRIAL_PARSE_FAILED_MESSAGE =
       "Source is not a clinical trial";
 
@@ -192,6 +194,7 @@ public class FetchApprovalHandler extends ApiGatewayHandler<Void, Object> {
 
   private Optional<ClinicalTrial> fetchClinicalTrial(Approval approval) {
     var customerIdentifier = approval.customerIdentifier();
+    logger.info(FETCHING_SOURCE_MESSAGE, approval.source(), customerIdentifier);
     return fetchSource(approval.source(), customerIdentifier)
         .flatMap(FetchApprovalHandler::toClinicalTrial);
   }
@@ -202,7 +205,9 @@ public class FetchApprovalHandler extends ApiGatewayHandler<Void, Object> {
   }
 
   private static Optional<SourceResponse> skipSource(URI source, Exception exception) {
-    if (!(exception instanceof UnregisteredSourceException)) {
+    if (exception instanceof UnregisteredSourceException) {
+      logger.info(exception.getMessage());
+    } else {
       logger.warn(SOURCE_FETCH_FAILED_MESSAGE, source, exception);
     }
     return Optional.empty();

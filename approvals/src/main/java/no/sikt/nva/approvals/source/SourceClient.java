@@ -25,9 +25,13 @@ import nva.commons.core.Environment;
 import nva.commons.core.JacocoGenerated;
 import nva.commons.core.attempt.Failure;
 import nva.commons.secrets.SecretsReader;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /** Fetches a source using the matching source config of the customer. */
 public class SourceClient {
+
+  private static final Logger logger = LoggerFactory.getLogger(SourceClient.class);
 
   private static final Duration CONNECT_TIMEOUT = Duration.ofSeconds(15);
   private static final Duration REQUEST_TIMEOUT = Duration.ofSeconds(5);
@@ -41,6 +45,7 @@ public class SourceClient {
   private static final String FETCH_FAILED_MESSAGE = "Failed to fetch source %s";
   private static final String REJECTED_CREDENTIALS_MESSAGE =
       "Source %s rejected the credentials with status %s";
+  private static final String SOURCE_NOT_FOUND_MESSAGE = "Source {} not found";
   private static final String UNEXPECTED_STATUS_MESSAGE = "Source %s responded with status %s";
 
   private final IdentifierPolicyService identifierPolicyService;
@@ -125,7 +130,7 @@ public class SourceClient {
       URI source, HttpResponse<String> response) throws SourceClientException {
     return switch (response.statusCode()) {
       case HTTP_OK -> Optional.of(new SourceResponse(contentType(response), response.body()));
-      case HTTP_NOT_FOUND -> Optional.empty();
+      case HTTP_NOT_FOUND -> notFound(source);
       case HTTP_UNAUTHORIZED, HTTP_FORBIDDEN ->
           throw new SourceAuthenticationException(
               REJECTED_CREDENTIALS_MESSAGE.formatted(source, response.statusCode()));
@@ -133,6 +138,11 @@ public class SourceClient {
           throw new SourceClientException(
               UNEXPECTED_STATUS_MESSAGE.formatted(source, response.statusCode()));
     };
+  }
+
+  private static Optional<SourceResponse> notFound(URI source) {
+    logger.info(SOURCE_NOT_FOUND_MESSAGE, source);
+    return Optional.empty();
   }
 
   private static String contentType(HttpResponse<String> response) {
