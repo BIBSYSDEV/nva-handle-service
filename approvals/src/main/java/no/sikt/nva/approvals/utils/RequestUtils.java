@@ -1,7 +1,9 @@
 package no.sikt.nva.approvals.utils;
 
+import static no.sikt.nva.approvals.rest.RestConstants.CURSOR_QUERY_PARAMETER;
 import static no.sikt.nva.approvals.validation.RequestConstraints.INVALID_APPROVAL_IDENTIFIER_MESSAGE;
 import static no.sikt.nva.approvals.validation.RequestConstraints.INVALID_CHANGE_IDENTIFIER_MESSAGE;
+import static no.sikt.nva.approvals.validation.RequestConstraints.INVALID_CURSOR_MESSAGE;
 import static no.sikt.nva.approvals.validation.RequestValidator.badRequest;
 import static nva.commons.core.attempt.Try.attempt;
 
@@ -10,9 +12,11 @@ import java.util.UUID;
 import no.sikt.nva.approvals.domain.ApprovalConflictException;
 import no.sikt.nva.approvals.domain.ApprovalNotFoundException;
 import no.sikt.nva.approvals.domain.CustomerMismatchException;
+import no.sikt.nva.approvals.domain.InvalidCursorException;
 import no.sikt.nva.approvals.domain.SourceMismatchException;
 import no.unit.nva.identifiers.SortableIdentifier;
 import nva.commons.apigateway.RequestInfo;
+import nva.commons.apigateway.exceptions.ApiGatewayException;
 import nva.commons.apigateway.exceptions.BadGatewayException;
 import nva.commons.apigateway.exceptions.BadRequestException;
 import nva.commons.apigateway.exceptions.ConflictException;
@@ -70,27 +74,27 @@ public final class RequestUtils {
         RETRY_AFTER_VALUE);
   }
 
-  public static void handleException(Exception exception)
-      throws BadGatewayException,
-          BadRequestException,
-          ConflictException,
-          ForbiddenException,
-          NotFoundException {
-    switch (exception) {
+  public static void handleException(Exception exception) throws ApiGatewayException {
+    throw toApiGatewayException(exception);
+  }
+
+  public static ApiGatewayException toApiGatewayException(Exception exception) {
+    return switch (exception) {
       case ApprovalNotFoundException notFoundException ->
-          throw new NotFoundException(notFoundException.getMessage());
+          new NotFoundException(notFoundException.getMessage());
+      case InvalidCursorException _ -> badRequest(INVALID_CURSOR_MESSAGE, CURSOR_QUERY_PARAMETER);
       case CustomerMismatchException customerMismatchException ->
-          throw new ForbiddenException(customerMismatchException.getMessage());
+          new ForbiddenException(customerMismatchException.getMessage());
       case SourceMismatchException sourceMismatchException ->
-          throw new ForbiddenException(sourceMismatchException.getMessage());
+          new ForbiddenException(sourceMismatchException.getMessage());
       case ApprovalConflictException conflictException ->
-          throw new ConflictException(
+          new ConflictException(
               conflictException.getMessage(), conflictException.getConflictingKeys());
       case IllegalArgumentException illegalArgumentException ->
-          throw new BadRequestException(illegalArgumentException.getMessage());
-      case BadRequestException badRequestException -> throw badRequestException;
-      default -> throw new BadGatewayException(BAD_GATEWAY_EXCEPTION_MESSAGE);
-    }
+          new BadRequestException(illegalArgumentException.getMessage());
+      case BadRequestException badRequestException -> badRequestException;
+      default -> new BadGatewayException(BAD_GATEWAY_EXCEPTION_MESSAGE);
+    };
   }
 
   private static String createApprovalLocationHeader(UUID identifier, String host) {
