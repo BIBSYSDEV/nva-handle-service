@@ -33,6 +33,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+
 import java.net.URI;
 import java.nio.file.Path;
 import java.time.Instant;
@@ -50,6 +51,8 @@ import no.sikt.nva.approvals.domain.ApprovalRevision;
 import no.sikt.nva.approvals.domain.Handle;
 import no.sikt.nva.approvals.domain.IdentifierPolicy;
 import no.sikt.nva.approvals.domain.NamedIdentifier;
+import no.sikt.nva.approvals.domain.NoAuthentication;
+import no.sikt.nva.approvals.domain.SourceConfig;
 import no.sikt.nva.approvals.domain.SourceSnapshot;
 import no.sikt.nva.approvals.events.SourceChangedEvent;
 import no.unit.nva.commons.json.JsonUtils;
@@ -448,7 +451,8 @@ class DynamoDbApprovalRepositoryTest {
   @Test
   void shouldPersistAndFindIdentifierPolicyWithSourceConfigs() {
     var customerIdentifier = randomUUID();
-    var sourceConfigs = List.of(randomSourceConfig(), randomSourceConfig());
+    var sourceConfigs =
+        List.of(randomSourceConfig(), new SourceConfig(randomUri(), new NoAuthentication()));
     var identifierPolicy = new IdentifierPolicy(Set.of(DMP), sourceConfigs);
     approvalRepository.saveIdentifierPolicy(customerIdentifier, identifierPolicy);
 

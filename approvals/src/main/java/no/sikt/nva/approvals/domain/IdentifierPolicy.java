@@ -34,8 +34,8 @@ public record IdentifierPolicy(
     this(allowedIdentifierNames, false, List.of());
   }
 
-  public IdentifierPolicy(Set<String> allowedIdentifierNames, List<SourceConfig> sources) {
-    this(allowedIdentifierNames, false, sources);
+  public IdentifierPolicy(Set<String> allowedIdentifierNames, List<SourceConfig> sourceConfigs) {
+    this(allowedIdentifierNames, false, sourceConfigs);
   }
 
   public Optional<SourceConfig> findSourceConfig(URI source) {
