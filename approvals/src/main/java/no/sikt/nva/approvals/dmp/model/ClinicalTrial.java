@@ -5,7 +5,6 @@ import java.net.URI;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Objects;
-import no.sikt.nva.approvals.source.Source;
 
 public record ClinicalTrial(
     @JsonProperty(CONTEXT_PROPERTY) URI context,
@@ -16,8 +15,7 @@ public record ClinicalTrial(
     Collection<TrialEvent> events,
     Collection<Sponsor> sponsors,
     Collection<TrialSite> trialSites,
-    PublicContactPoint publicContactPoint)
-    implements Source {
+    PublicContactPoint publicContactPoint) {
 
   private static final String CONTEXT_PROPERTY = "@context";
 
