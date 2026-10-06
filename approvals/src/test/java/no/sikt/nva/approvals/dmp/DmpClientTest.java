@@ -1,5 +1,7 @@
 package no.sikt.nva.approvals.dmp;
 
+import static no.unit.nva.testutils.RandomDataGenerator.randomString;
+import static no.unit.nva.testutils.RandomDataGenerator.randomUri;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.notNullValue;
@@ -10,15 +12,18 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import java.io.IOException;
+import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import no.sikt.nva.approvals.dmp.model.ClinicalTrial;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 class DmpClientTest {
 
   private static final String BASE_URL = "https://api.example.com/ctis";
+  private static final URI SOURCE = randomUri();
   private static final String CLINICAL_TRIAL_IDENTIFIER = "2022-500027-76-00";
   private static final String CLINICAL_TRIAL_RESPONSE =
       """
@@ -64,6 +69,12 @@ class DmpClientTest {
     httpClient = mock(HttpClient.class);
     tokenService = mock(OAuth2TokenService.class);
     when(tokenService.getAccessToken()).thenReturn("test-token");
+    dmpClient = new DmpClient(tokenService, BASE_URL, httpClient);
+  }
+
+  @Test
+  void shouldExposeConfiguredBaseUrl() {
+    assertThat(dmpClient.getBaseUrl(), is(URI.create(BASE_URL)));
   }
 
   @Test
@@ -73,7 +84,7 @@ class DmpClientTest {
         .thenReturn(response);
     dmpClient = new DmpClient(tokenService, BASE_URL, httpClient);
 
-    var result = dmpClient.getClinicalTrial(CLINICAL_TRIAL_IDENTIFIER);
+    var result = dmpClient.fetch(SOURCE).map(ClinicalTrial.class::cast);
 
     assertTrue(result.isPresent());
     var clinicalTrial = result.get();
@@ -90,7 +101,7 @@ class DmpClientTest {
         .thenReturn(response);
     dmpClient = new DmpClient(tokenService, BASE_URL, httpClient);
 
-    var result = dmpClient.getClinicalTrial(CLINICAL_TRIAL_IDENTIFIER);
+    var result = dmpClient.fetch(SOURCE);
 
     assertTrue(result.isEmpty());
   }
@@ -102,9 +113,7 @@ class DmpClientTest {
         .thenReturn(response);
     dmpClient = new DmpClient(tokenService, BASE_URL, httpClient);
 
-    var exception =
-        assertThrows(
-            DmpClientException.class, () -> dmpClient.getClinicalTrial(CLINICAL_TRIAL_IDENTIFIER));
+    var exception = assertThrows(DmpClientException.class, () -> dmpClient.fetch(SOURCE));
 
     assertThat(exception.getMessage(), notNullValue());
   }
@@ -115,9 +124,7 @@ class DmpClientTest {
         .thenThrow(new IOException("Network error"));
     dmpClient = new DmpClient(tokenService, BASE_URL, httpClient);
 
-    var exception =
-        assertThrows(
-            DmpClientException.class, () -> dmpClient.getClinicalTrial(CLINICAL_TRIAL_IDENTIFIER));
+    var exception = assertThrows(DmpClientException.class, () -> dmpClient.fetch(SOURCE));
 
     assertThat(exception.getCause(), notNullValue());
   }
@@ -127,15 +134,7 @@ class DmpClientTest {
     when(tokenService.getAccessToken()).thenThrow(new DmpClientException("Token error"));
     dmpClient = new DmpClient(tokenService, BASE_URL, httpClient);
 
-    assertThrows(
-        DmpClientException.class, () -> dmpClient.getClinicalTrial(CLINICAL_TRIAL_IDENTIFIER));
-  }
-
-  @Test
-  void shouldThrowExceptionWhenIdentifierIsNull() {
-    dmpClient = new DmpClient(tokenService, BASE_URL, httpClient);
-
-    assertThrows(DmpClientException.class, () -> dmpClient.getClinicalTrial(null));
+    assertThrows(DmpClientException.class, () -> dmpClient.fetch(SOURCE));
   }
 
   @Test
@@ -151,6 +150,18 @@ class DmpClientTest {
   @Test
   void shouldThrowExceptionWhenHttpClientIsNull() {
     assertThrows(NullPointerException.class, () -> new DmpClient(tokenService, BASE_URL, null));
+  }
+
+  @Test
+  void shouldThrowExceptionWhenClinicalTrialCannotBeParsed() throws Exception {
+    stubResponse(createMockResponse(200, randomString()));
+
+    assertThrows(DmpClientException.class, () -> dmpClient.fetch(SOURCE));
+  }
+
+  private void stubResponse(HttpResponse<String> response) throws Exception {
+    when(httpClient.send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class)))
+        .thenReturn(response);
   }
 
   @SuppressWarnings("unchecked")

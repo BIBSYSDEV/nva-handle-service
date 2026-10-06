@@ -32,10 +32,10 @@ public class ChangeServiceImpl implements ChangeService {
 
   @Override
   public ChangeList listChangesByApproval(UUID approvalIdentifier, SortableIdentifier cursor)
-      throws ApprovalNotFoundException, ChangeNotFoundException {
+      throws ApprovalNotFoundException, InvalidCursorException {
     ensureApprovalExists(approvalIdentifier);
     if (nonNull(cursor) && changeRepository.findChange(approvalIdentifier, cursor).isEmpty()) {
-      throw new ChangeNotFoundException(approvalIdentifier, cursor);
+      throw new InvalidCursorException(approvalIdentifier, cursor);
     }
     return changeRepository.listChangesByApproval(approvalIdentifier, cursor, PAGE_SIZE);
   }

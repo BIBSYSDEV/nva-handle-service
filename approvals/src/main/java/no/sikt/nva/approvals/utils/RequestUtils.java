@@ -11,8 +11,8 @@ import java.util.Map;
 import java.util.UUID;
 import no.sikt.nva.approvals.domain.ApprovalConflictException;
 import no.sikt.nva.approvals.domain.ApprovalNotFoundException;
-import no.sikt.nva.approvals.domain.ChangeNotFoundException;
 import no.sikt.nva.approvals.domain.CustomerMismatchException;
+import no.sikt.nva.approvals.domain.InvalidCursorException;
 import no.sikt.nva.approvals.domain.SourceMismatchException;
 import no.unit.nva.identifiers.SortableIdentifier;
 import nva.commons.apigateway.RequestInfo;
@@ -92,7 +92,7 @@ public final class RequestUtils {
     return switch (exception) {
       case ApprovalNotFoundException notFoundException ->
           new NotFoundException(notFoundException.getMessage());
-      case ChangeNotFoundException _ -> badRequest(INVALID_CURSOR_MESSAGE, CURSOR_QUERY_PARAMETER);
+      case InvalidCursorException _ -> badRequest(INVALID_CURSOR_MESSAGE, CURSOR_QUERY_PARAMETER);
       case CustomerMismatchException customerMismatchException ->
           new ForbiddenException(customerMismatchException.getMessage());
       case SourceMismatchException sourceMismatchException ->
