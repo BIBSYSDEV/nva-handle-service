@@ -51,6 +51,8 @@ import no.sikt.nva.approvals.domain.ApprovalRevision;
 import no.sikt.nva.approvals.domain.Handle;
 import no.sikt.nva.approvals.domain.IdentifierPolicy;
 import no.sikt.nva.approvals.domain.NamedIdentifier;
+import no.sikt.nva.approvals.domain.NoAuthentication;
+import no.sikt.nva.approvals.domain.SourceConfig;
 import no.sikt.nva.approvals.domain.SourceSnapshot;
 import no.sikt.nva.approvals.events.SourceChangedEvent;
 import no.unit.nva.commons.json.JsonUtils;
@@ -449,8 +451,9 @@ class DynamoDbApprovalRepositoryTest {
   @Test
   void shouldPersistAndFindIdentifierPolicyWithSourceConfigs() {
     var customerIdentifier = randomUUID();
-    var sourceConfigs = List.of(randomSourceConfig(), randomSourceConfig());
-    var identifierPolicy = new IdentifierPolicy(Set.of(DMP), sourceConfigs);
+    var sourceConfigs =
+        List.of(randomSourceConfig(), new SourceConfig(randomUri(), new NoAuthentication()));
+    var identifierPolicy = new IdentifierPolicy(Set.of(DMP), false, sourceConfigs);
     approvalRepository.saveIdentifierPolicy(customerIdentifier, identifierPolicy);
 
     assertEquals(

@@ -217,6 +217,8 @@ public class FetchApprovalHandler extends ApiGatewayHandler<Void, Object> {
     return attempt(
             () -> JsonUtils.dtoObjectMapper.readValue(sourceResponse.body(), ClinicalTrial.class))
         .toOptional(
-            failure -> logger.warn(CLINICAL_TRIAL_PARSE_FAILED_MESSAGE, failure.getException().getMessage()));
+            failure ->
+                logger.warn(
+                    CLINICAL_TRIAL_PARSE_FAILED_MESSAGE, failure.getException().getMessage()));
   }
 }
