@@ -1,7 +1,7 @@
 package no.sikt.nva.approvals.rest;
 
 import static no.sikt.nva.approvals.rest.RestConstants.APPROVAL_PATH;
-import static no.sikt.nva.approvals.rest.RestConstants.CHANGES_PATH;
+import static no.sikt.nva.approvals.rest.RestConstants.CHANGE_PATH;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
@@ -52,7 +52,7 @@ public sealed interface ChangeResponse permits ApprovalRevisionResponse, SourceS
   private static URI changeUri(
       String apiHost, UUID approvalIdentifier, SortableIdentifier changeIdentifier) {
     return UriWrapper.fromUri(approvalUri(apiHost, approvalIdentifier))
-        .addChild(CHANGES_PATH)
+        .addChild(CHANGE_PATH)
         .addChild(changeIdentifier.toString())
         .getUri();
   }

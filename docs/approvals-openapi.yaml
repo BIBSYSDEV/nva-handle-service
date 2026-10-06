@@ -363,7 +363,7 @@ paths:
             "application/json":
               schema:
                 $ref: "#/components/schemas/Problem"
-  /{approvalId}/changes:
+  /{approvalId}/change:
     get:
       tags:
         - Approval
@@ -624,7 +624,7 @@ paths:
             "application/json":
               schema:
                 $ref: "#/components/schemas/Problem"
-  /{approvalId}/changes/{changeId}:
+  /{approvalId}/change/{changeId}:
     get:
       tags:
         - Approval
