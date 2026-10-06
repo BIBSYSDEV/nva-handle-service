@@ -54,6 +54,25 @@ class ChangeServiceTest {
   }
 
   @Test
+  void shouldFetchChangeOfApproval() throws ChangeNotFoundException {
+    var revision = saveRevision();
+
+    var change = changeService.fetchChange(revision.approval().identifier(), revision.identifier());
+
+    assertThat(change.identifier(), equalTo(revision.identifier()));
+  }
+
+  @Test
+  void shouldThrowChangeNotFoundWhenChangeIsNotChangeOfApproval() {
+    var approvalIdentifier = saveRevision().approval().identifier();
+    var changeOfOtherApproval = saveRevision().identifier();
+
+    assertThrows(
+        ChangeNotFoundException.class,
+        () -> changeService.fetchChange(approvalIdentifier, changeOfOtherApproval));
+  }
+
+  @Test
   void shouldListChangesOfApprovalNewestFirst() throws ApprovalServiceException {
     var revision = saveRevision();
     var approvalIdentifier = revision.approval().identifier();

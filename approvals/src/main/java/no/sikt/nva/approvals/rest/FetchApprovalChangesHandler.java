@@ -2,7 +2,7 @@ package no.sikt.nva.approvals.rest;
 
 import static java.net.HttpURLConnection.HTTP_OK;
 import static no.sikt.nva.approvals.utils.RequestUtils.getApprovalIdentifier;
-import static no.sikt.nva.approvals.utils.RequestUtils.getChangeIdentifier;
+import static no.sikt.nva.approvals.utils.RequestUtils.getCursor;
 import static no.sikt.nva.approvals.utils.RequestUtils.toApiGatewayException;
 import static nva.commons.apigateway.MediaTypes.APPLICATION_JSON_LD;
 import static nva.commons.core.attempt.Try.attempt;
@@ -19,25 +19,30 @@ import nva.commons.apigateway.exceptions.ApiGatewayException;
 import nva.commons.core.Environment;
 import nva.commons.core.JacocoGenerated;
 
-public class FetchChangeHandler extends ApiGatewayHandler<Void, ChangeResponse> {
+public class FetchApprovalChangesHandler extends ApiGatewayHandler<Void, ChangeListResponse> {
 
   private final ChangeService changeService;
   private final String apiHost;
 
   @JacocoGenerated
-  public FetchChangeHandler() {
+  public FetchApprovalChangesHandler() {
     this(new Environment());
   }
 
   @JacocoGenerated
-  private FetchChangeHandler(Environment environment) {
+  private FetchApprovalChangesHandler(Environment environment) {
     this(ChangeServiceImpl.defaultInstance(environment), environment);
   }
 
-  public FetchChangeHandler(ChangeService changeService, Environment environment) {
+  public FetchApprovalChangesHandler(ChangeService changeService, Environment environment) {
     super(Void.class, environment);
     this.changeService = changeService;
     this.apiHost = RequestUtils.getApiHost(environment);
+  }
+
+  @Override
+  protected List<MediaType> listSupportedMediaTypes() {
+    return List.of(APPLICATION_JSON_LD, MediaType.JSON_UTF_8);
   }
 
   @Override
@@ -47,22 +52,17 @@ public class FetchChangeHandler extends ApiGatewayHandler<Void, ChangeResponse> 
   }
 
   @Override
-  protected ChangeResponse processInput(Void input, RequestInfo requestInfo, Context context)
+  protected ChangeListResponse processInput(Void input, RequestInfo requestInfo, Context context)
       throws ApiGatewayException {
     var approvalIdentifier = getApprovalIdentifier(requestInfo);
-    var changeIdentifier = getChangeIdentifier(requestInfo);
-    return attempt(() -> changeService.fetchChange(approvalIdentifier, changeIdentifier))
-        .map(change -> ChangeResponse.fromChange(change, apiHost))
+    var cursor = getCursor(requestInfo);
+    return attempt(() -> changeService.listChangesByApproval(approvalIdentifier, cursor))
+        .map(changes -> ChangeListResponse.fromChangeList(changes, approvalIdentifier, apiHost))
         .orElseThrow(failure -> toApiGatewayException(failure.getException()));
   }
 
   @Override
-  protected Integer getSuccessStatusCode(Void input, ChangeResponse output) {
+  protected Integer getSuccessStatusCode(Void input, ChangeListResponse output) {
     return HTTP_OK;
-  }
-
-  @Override
-  protected List<MediaType> listSupportedMediaTypes() {
-    return List.of(APPLICATION_JSON_LD, MediaType.JSON_UTF_8);
   }
 }

@@ -23,6 +23,7 @@ import java.io.InputStream;
 import java.util.Map;
 import java.util.UUID;
 import no.sikt.nva.approvals.domain.ApprovalRevision;
+import no.sikt.nva.approvals.domain.ChangeServiceImpl;
 import no.sikt.nva.approvals.domain.SourceSnapshot;
 import no.sikt.nva.approvals.persistence.DynamoDbApprovalRepository;
 import no.sikt.nva.approvals.persistence.DynamoDbChangeRepository;
@@ -58,9 +59,10 @@ class FetchChangeHandlerTest {
     dynamoDbLocal = dynamoDBLocal(TABLE);
     approvalRepository = new DynamoDbApprovalRepository(dynamoDbLocal.client(), ENVIRONMENT);
     output = new ByteArrayOutputStream();
-    handler =
-        new FetchChangeHandler(
-            new DynamoDbChangeRepository(dynamoDbLocal.client(), ENVIRONMENT), ENVIRONMENT);
+    var changeService =
+        new ChangeServiceImpl(
+            approvalRepository, new DynamoDbChangeRepository(dynamoDbLocal.client(), ENVIRONMENT));
+    handler = new FetchChangeHandler(changeService, ENVIRONMENT);
   }
 
   @AfterEach

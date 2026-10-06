@@ -581,22 +581,27 @@ Resources:
             Method: post
             RestApiId: !Ref NvaApprovalsApi
 
-  NvaFetchChangesFunctionLogGroup:
+  NvaFetchApprovalChangesFunctionLogGroup:
     Type: AWS::Logs::LogGroup
     Properties:
-      LogGroupName: !Sub "/aws/lambda/${NvaFetchChangesFunction}"
+      LogGroupName: !Sub "/aws/lambda/${NvaFetchApprovalChangesFunction}"
       RetentionInDays: 90
 
-  NvaFetchChangesFunction:
+  NvaFetchApprovalChangesFunction:
     Type: AWS::Serverless::Function
     Properties:
       CodeUri: approvals
-      Handler: no.sikt.nva.approvals.rest.FetchChangesHandler::handleRequest
+      Handler: no.sikt.nva.approvals.rest.FetchApprovalChangesHandler::handleRequest
+      Policies:
+        - !Ref DynamoDbTableAccessPolicy
+      Environment:
+        Variables:
+          TABLE: !Ref ApprovalsTable
       Events:
-        FetchChanges:
+        FetchApprovalChanges:
           Type: Api
           Properties:
-            Path: /changes
+            Path: /{approvalId}/changes
             Method: get
             RestApiId: !Ref NvaApprovalsApi
 
