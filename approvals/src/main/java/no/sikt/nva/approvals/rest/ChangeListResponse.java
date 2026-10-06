@@ -1,7 +1,7 @@
 package no.sikt.nva.approvals.rest;
 
 import static no.sikt.nva.approvals.rest.RestConstants.APPROVAL_PATH;
-import static no.sikt.nva.approvals.rest.RestConstants.CHANGES_PATH;
+import static no.sikt.nva.approvals.rest.RestConstants.CHANGE_PATH;
 import static no.sikt.nva.approvals.rest.RestConstants.CURSOR_QUERY_PARAMETER;
 
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
@@ -33,7 +33,7 @@ public record ChangeListResponse(List<ChangeResponse> changes, URI next) {
     return UriWrapper.fromHost(apiHost)
         .addChild(APPROVAL_PATH)
         .addChild(approvalIdentifier.toString())
-        .addChild(CHANGES_PATH)
+        .addChild(CHANGE_PATH)
         .addQueryParameter(CURSOR_QUERY_PARAMETER, cursor.toString())
         .getUri();
   }
