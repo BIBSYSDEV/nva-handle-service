@@ -1,4 +1,4 @@
-package no.sikt.nva.approvals.dmp;
+package no.sikt.nva.approvals.source;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import java.io.IOException;
@@ -29,21 +29,21 @@ public class OAuth2TokenService {
   private static final Duration TOKEN_EXPIRY_BUFFER = Duration.ofMinutes(1);
 
   private final HttpClient httpClient;
-  private final DmpClientSecrets secrets;
+  private final OAuth2Credentials credentials;
   private String cachedToken;
   private Instant tokenExpiry;
 
-  public OAuth2TokenService(DmpClientSecrets secrets, HttpClient httpClient) {
-    this.secrets = Objects.requireNonNull(secrets, "Secrets are required");
+  public OAuth2TokenService(OAuth2Credentials credentials, HttpClient httpClient) {
+    this.credentials = Objects.requireNonNull(credentials, "Credentials are required");
     this.httpClient = Objects.requireNonNull(httpClient, "HttpClient is required");
   }
 
   @JacocoGenerated
-  public OAuth2TokenService(DmpClientSecrets secrets) {
-    this(secrets, HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(10)).build());
+  public OAuth2TokenService(OAuth2Credentials credentials) {
+    this(credentials, HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(10)).build());
   }
 
-  public String getAccessToken() throws DmpClientException {
+  public String getAccessToken() throws SourceClientException {
     synchronized (this) {
       if (isTokenValid()) {
         return cachedToken;
@@ -58,12 +58,12 @@ public class OAuth2TokenService {
         && Instant.now().isBefore(tokenExpiry);
   }
 
-  private String fetchNewToken() throws DmpClientException {
+  private String fetchNewToken() throws SourceClientException {
     try {
       var request = buildTokenRequest();
       var response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
       if (response.statusCode() != HTTP_OK) {
-        throw new DmpClientException(
+        throw new SourceClientException(
             "Failed to obtain access token. Status: %s, Body: %s"
                 .formatted(response.statusCode(), response.body()));
       }
@@ -72,21 +72,23 @@ public class OAuth2TokenService {
       return cachedToken;
     } catch (InterruptedException exception) {
       Thread.currentThread().interrupt();
-      throw new DmpClientException("Failed to fetch OAuth2 token", exception);
+      throw new SourceClientException("Failed to fetch OAuth2 token", exception);
     } catch (IOException exception) {
-      throw new DmpClientException("Failed to fetch OAuth2 token", exception);
+      throw new SourceClientException("Failed to fetch OAuth2 token", exception);
     }
   }
 
   private HttpRequest buildTokenRequest() {
-    var credentials = "%s:%s".formatted(secrets.clientId(), secrets.clientSecret());
+    var basicCredentials = "%s:%s".formatted(credentials.clientId(), credentials.clientSecret());
     var encodedCredentials =
-        Base64.getEncoder().encodeToString(credentials.getBytes(StandardCharsets.UTF_8));
+        Base64.getEncoder().encodeToString(basicCredentials.getBytes(StandardCharsets.UTF_8));
     var body =
-        GRANT_TYPE_PARAM + SCOPE_PARAM + URLEncoder.encode(secrets.scope(), StandardCharsets.UTF_8);
+        GRANT_TYPE_PARAM
+            + SCOPE_PARAM
+            + URLEncoder.encode(credentials.scope(), StandardCharsets.UTF_8);
 
     return HttpRequest.newBuilder()
-        .uri(URI.create(secrets.accessTokenUrl()))
+        .uri(URI.create(credentials.accessTokenUrl()))
         .header(CONTENT_TYPE_HEADER, FORM_URL_ENCODED)
         .header(AUTHORIZATION_HEADER, BASIC_PREFIX + encodedCredentials)
         .POST(HttpRequest.BodyPublishers.ofString(body))

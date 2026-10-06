@@ -10,9 +10,11 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.annotation.JsonTypeInfo.Id;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import java.time.Instant;
+import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 import no.sikt.nva.approvals.domain.IdentifierPolicy;
+import no.sikt.nva.approvals.domain.SourceConfig;
 import no.unit.nva.commons.json.JsonUtils;
 import software.amazon.awssdk.enhanced.dynamodb.Key;
 import software.amazon.awssdk.enhanced.dynamodb.document.EnhancedDocument;
@@ -20,7 +22,10 @@ import software.amazon.awssdk.enhanced.dynamodb.document.EnhancedDocument;
 @JsonTypeInfo(use = Id.NAME, property = "type")
 @JsonTypeName("IdentifierPolicy")
 public record IdentifierPolicyDao(
-    UUID customerIdentifier, Set<String> allowedIdentifierNames, Instant createdDate)
+    UUID customerIdentifier,
+    Set<String> allowedIdentifierNames,
+    List<SourceConfig> sourceConfigs,
+    Instant createdDate)
     implements DatabaseEntry {
 
   private static final String CUSTOMER_KEY = "Customer:%s";
@@ -29,12 +34,16 @@ public record IdentifierPolicyDao(
   // An empty set is omitted by the NON_EMPTY inclusion of the serializing object mapper
   public IdentifierPolicyDao {
     allowedIdentifierNames = isNull(allowedIdentifierNames) ? Set.of() : allowedIdentifierNames;
+    sourceConfigs = isNull(sourceConfigs) ? List.of() : sourceConfigs;
   }
 
   public static IdentifierPolicyDao fromIdentifierPolicy(
       UUID customerIdentifier, IdentifierPolicy identifierPolicy, Instant createdDate) {
     return new IdentifierPolicyDao(
-        customerIdentifier, identifierPolicy.allowedIdentifierNames(), createdDate);
+        customerIdentifier,
+        identifierPolicy.allowedIdentifierNames(),
+        identifierPolicy.sourceConfigs(),
+        createdDate);
   }
 
   public static IdentifierPolicyDao fromJson(String json) {
@@ -55,7 +64,7 @@ public record IdentifierPolicyDao(
   }
 
   public IdentifierPolicy toIdentifierPolicy() {
-    return new IdentifierPolicy(allowedIdentifierNames);
+    return new IdentifierPolicy(allowedIdentifierNames, sourceConfigs);
   }
 
   public EnhancedDocument toEnhancedDocument() {
