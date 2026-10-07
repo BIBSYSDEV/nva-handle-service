@@ -1,5 +1,7 @@
 package no.sikt.nva.approvals.source;
 
+import static nva.commons.core.attempt.Try.attempt;
+
 import com.fasterxml.jackson.annotation.JsonProperty;
 import java.io.IOException;
 import java.net.URI;
@@ -7,102 +9,143 @@ import java.net.URLEncoder;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.net.http.HttpResponse.BodyHandlers;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Base64;
+import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Supplier;
 import no.unit.nva.commons.json.JsonUtils;
-import nva.commons.core.JacocoGenerated;
 
-// FIXME: Suppressing warning in order to upgrade PMD version
-@SuppressWarnings({"PMD.DoNotUseThreads", "PMD.AvoidSynchronizedStatement"})
+/**
+ * Requests OAuth2 client credentials access tokens with the source credentials stored under a key,
+ * and reuses each key's token until shortly before it expires. Credentials are read when the first
+ * token is requested and kept after that, so neither credentials nor tokens are captured in a
+ * SnapStart snapshot.
+ */
 public class OAuth2TokenService {
 
   private static final String CONTENT_TYPE_HEADER = "Content-Type";
   private static final String AUTHORIZATION_HEADER = "Authorization";
   private static final String FORM_URL_ENCODED = "application/x-www-form-urlencoded";
   private static final String BASIC_PREFIX = "Basic ";
+  private static final String BASIC_CREDENTIALS = "%s:%s";
   private static final String GRANT_TYPE_PARAM = "grant_type=client_credentials";
   private static final String SCOPE_PARAM = "&scope=";
   private static final int HTTP_OK = 200;
   private static final Duration TOKEN_EXPIRY_BUFFER = Duration.ofMinutes(1);
+  private static final Duration REQUEST_TIMEOUT = Duration.ofSeconds(5);
+  private static final String MISSING_CREDENTIALS_MESSAGE =
+      "No source credentials stored under key %s";
+  private static final String TOKEN_REJECTED_MESSAGE = "Failed to obtain access token. Status: %s";
+  private static final String TOKEN_FAILED_MESSAGE = "Failed to fetch OAuth2 token";
 
+  private final Supplier<SourceCredentials> sourceCredentialsSupplier;
   private final HttpClient httpClient;
-  private final OAuth2Credentials credentials;
-  private String cachedToken;
-  private Instant tokenExpiry;
+  private final Map<String, AccessToken> accessTokens = new ConcurrentHashMap<>();
+  private SourceCredentials sourceCredentials;
 
-  public OAuth2TokenService(OAuth2Credentials credentials, HttpClient httpClient) {
-    this.credentials = Objects.requireNonNull(credentials, "Credentials are required");
-    this.httpClient = Objects.requireNonNull(httpClient, "HttpClient is required");
+  public OAuth2TokenService(
+      Supplier<SourceCredentials> sourceCredentialsSupplier, HttpClient httpClient) {
+    this.sourceCredentialsSupplier = sourceCredentialsSupplier;
+    this.httpClient = httpClient;
   }
 
-  @JacocoGenerated
-  public OAuth2TokenService(OAuth2Credentials credentials) {
-    this(credentials, HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(10)).build());
-  }
-
-  public String getAccessToken() throws SourceClientException {
-    synchronized (this) {
-      if (isTokenValid()) {
-        return cachedToken;
-      }
-      return fetchNewToken();
+  public String getAccessToken(String credentialsKey) throws SourceClientException {
+    var cachedAccessToken = findValidAccessToken(credentialsKey);
+    if (cachedAccessToken.isPresent()) {
+      return cachedAccessToken.get().value();
     }
+    var accessToken = requestAccessToken(findCredentials(credentialsKey));
+    accessTokens.put(credentialsKey, accessToken);
+    return accessToken.value();
   }
 
-  private boolean isTokenValid() {
-    return Objects.nonNull(cachedToken)
-        && Objects.nonNull(tokenExpiry)
-        && Instant.now().isBefore(tokenExpiry);
+  public void discardAccessToken(String credentialsKey) {
+    accessTokens.remove(credentialsKey);
   }
 
-  private String fetchNewToken() throws SourceClientException {
-    try {
-      var request = buildTokenRequest();
-      var response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
-      if (response.statusCode() != HTTP_OK) {
-        throw new SourceClientException(
-            "Failed to obtain access token. Status: %s, Body: %s"
-                .formatted(response.statusCode(), response.body()));
-      }
-      var tokenResponse = JsonUtils.dtoObjectMapper.readValue(response.body(), TokenResponse.class);
-      cacheToken(tokenResponse);
-      return cachedToken;
-    } catch (InterruptedException exception) {
-      Thread.currentThread().interrupt();
-      throw new SourceClientException("Failed to fetch OAuth2 token", exception);
-    } catch (IOException exception) {
-      throw new SourceClientException("Failed to fetch OAuth2 token", exception);
+  private Optional<AccessToken> findValidAccessToken(String credentialsKey) {
+    return Optional.ofNullable(accessTokens.get(credentialsKey)).filter(AccessToken::isValid);
+  }
+
+  private OAuth2Credentials findCredentials(String credentialsKey) throws SourceClientException {
+    return readSourceCredentials()
+        .findCredentials(credentialsKey)
+        .orElseThrow(
+            () -> new SourceClientException(MISSING_CREDENTIALS_MESSAGE.formatted(credentialsKey)));
+  }
+
+  private SourceCredentials readSourceCredentials() {
+    if (Objects.isNull(sourceCredentials)) {
+      sourceCredentials = sourceCredentialsSupplier.get();
     }
+    return sourceCredentials;
   }
 
-  private HttpRequest buildTokenRequest() {
-    var basicCredentials = "%s:%s".formatted(credentials.clientId(), credentials.clientSecret());
+  private AccessToken requestAccessToken(OAuth2Credentials credentials)
+      throws SourceClientException {
+    return attempt(() -> httpClient.send(createTokenRequest(credentials), BodyHandlers.ofString()))
+        .map(OAuth2TokenService::requireOk)
+        .map(OAuth2TokenService::readTokenResponse)
+        .map(TokenResponse::toAccessToken)
+        .orElseThrow(failure -> toSourceClientException(failure.getException()));
+  }
+
+  private static HttpResponse<String> requireOk(HttpResponse<String> response)
+      throws SourceClientException {
+    if (response.statusCode() != HTTP_OK) {
+      throw new SourceClientException(TOKEN_REJECTED_MESSAGE.formatted(response.statusCode()));
+    }
+    return response;
+  }
+
+  private static TokenResponse readTokenResponse(HttpResponse<String> response) throws IOException {
+    return JsonUtils.dtoObjectMapper.readValue(response.body(), TokenResponse.class);
+  }
+
+  private static SourceClientException toSourceClientException(Exception exception) {
+    return exception instanceof SourceClientException sourceClientException
+        ? sourceClientException
+        : new SourceClientException(TOKEN_FAILED_MESSAGE, exception);
+  }
+
+  private static HttpRequest createTokenRequest(OAuth2Credentials credentials) {
+    var basicCredentials =
+        BASIC_CREDENTIALS.formatted(credentials.clientId(), credentials.clientSecret());
     var encodedCredentials =
         Base64.getEncoder().encodeToString(basicCredentials.getBytes(StandardCharsets.UTF_8));
     var body =
         GRANT_TYPE_PARAM
             + SCOPE_PARAM
             + URLEncoder.encode(credentials.scope(), StandardCharsets.UTF_8);
-
     return HttpRequest.newBuilder()
         .uri(URI.create(credentials.accessTokenUrl()))
+        .timeout(REQUEST_TIMEOUT)
         .header(CONTENT_TYPE_HEADER, FORM_URL_ENCODED)
         .header(AUTHORIZATION_HEADER, BASIC_PREFIX + encodedCredentials)
         .POST(HttpRequest.BodyPublishers.ofString(body))
         .build();
   }
 
-  private void cacheToken(TokenResponse tokenResponse) {
-    cachedToken = tokenResponse.accessToken();
-    var expiresInSeconds = tokenResponse.expiresIn();
-    tokenExpiry = Instant.now().plusSeconds(expiresInSeconds).minus(TOKEN_EXPIRY_BUFFER);
+  private record AccessToken(String value, Instant expiresAt) {
+
+    private boolean isValid() {
+      return Instant.now().isBefore(expiresAt);
+    }
   }
 
   private record TokenResponse(
       @JsonProperty("access_token") String accessToken,
-      @JsonProperty("expires_in") long expiresIn,
-      @JsonProperty("token_type") String tokenType) {}
+      @JsonProperty("expires_in") long expiresIn) {
+
+    private AccessToken toAccessToken() {
+      return new AccessToken(
+          accessToken, Instant.now().plusSeconds(expiresIn).minus(TOKEN_EXPIRY_BUFFER));
+    }
+  }
 }

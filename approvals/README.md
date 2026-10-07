@@ -32,7 +32,7 @@ flowchart TB
     REPO --> DDB[("DynamoDB<br/>PK0/SK0 + GSI1 + GSI2")]
 
     FA --> JTE["jte template<br/>approval.jte"]
-    FA --> DMP["DmpClient → DMP API"]
+    FA --> DMP["SourceClient → customer sources"]
 
     classDef ext fill:#f6f6f6,stroke:#999,stroke-dasharray: 4 3
     class PG,DMP ext
@@ -133,9 +133,8 @@ Corrections against the current implementation:
 
 - The `handle` field is never `null` in a `200` response — an `Approval` cannot exist without a handle, so the poll
   loop should terminate on `200`, not on a non-null `handle`. Until the record is readable, `GET` returns `404`.
-- Step 5 is not implemented here. Nothing in this service dereferences the `source` URI; `source` is stored purely as
-  provenance. The only outbound enrichment that exists today is `DmpClient`, which fetches clinical trial data from the
-  DMP API for identifiers named `DMP`, and only for the HTML representation.
+- Step 5 is not implemented here; `source` is stored as provenance and nothing is harvested from it. The only place the
+  `source` URI is dereferenced is the HTML representation, see [Reading approvals](#reading-approvals).
 - Step 6 is served by `nva-search-api`, not by this service.
 - The auth server in step 1 is the NVA Cognito user pool. Third parties need the scope
   `https://api.nva.unit.no/scopes/third-party/approval-upsert`; internal backends use
@@ -147,8 +146,10 @@ Corrections against the current implementation:
   parameter with query parameters returns `400 Bad Request`.
 - Content negotiation: `text/html` (jte template `approval.jte`), `application/ld+json` and `application/json`. With no
   `Accept` header the response is `application/json`.
-- For identifiers named `DMP`, the HTML view is enriched with clinical trial data from the DMP API through `DmpClient`
-  (OAuth2 client credentials, secrets in `DmpClientCredentials`). The JSON and JSON-LD representations are not enriched.
+- The HTML view is enriched with clinical trial data when the `source` URI matches a source config in the customer's
+  identifier policy. `SourceClient` fetches the source with the authentication the source config names: none, or OAuth2
+  client credentials stored under the source config's key in the `ApprovalCredentials` secret. The JSON and JSON-LD
+  representations are not enriched.
 - `GET /context` and `GET /ontology` serve the JSON-LD context and the RDF ontology (Turtle) for the API. Both are
   versioned, see [Vocabulary and versioning](#vocabulary-and-versioning).
 
@@ -328,7 +329,7 @@ Environment variables, set in [`template.yaml`](../template.yaml):
 | `HANDLE_PREFIX`               | create, update, fetch | Handle prefix — `20.500.14886` in production, otherwise `11250.1`             |
 | `HANDLE_BASE_URI`             | create, update, fetch | Host part of handle URIs (`https://hdl.handle.net`)                           |
 | `HANDLE_DATABASE_SECRET_NAME` | create, update, fetch | Secrets Manager secret holding Handle database credentials (`HandleDatabase`) |
-| `DMP_CLIENT_SECRET_NAME`      | fetch                 | Secret holding OAuth2 credentials for the DMP API (`DmpClientCredentials`)    |
+| `APPROVAL_CREDENTIALS`        | fetch                 | Secret holding the credentials of all sources, by key (`ApprovalCredentials`) |
 | `APPLICATION_DOMAIN`          | fetch                 | Domain used in the HTML view                                                  |
 | `COGNITO_AUTHORIZER_URLS`     | all                   | Cognito issuers                                                               |
 | `ALLOWED_ORIGIN`              | all                   | CORS                                                                          |
@@ -344,7 +345,8 @@ src/main/
 │   ├── domain/        # Approval, NamedIdentifier, Handle, IdentifierPolicy, ApprovalService(+Impl)
 │   ├── persistence/   # ApprovalRepository, DynamoDbApprovalRepository, DAOs, query objects
 │   ├── rest/          # Create/Update/Fetch handlers, request and response models, ApprovalHtmlModel
-│   ├── dmp/           # DmpClient, OAuth2TokenService and clinical trial models
+│   ├── dmp/           # Clinical trial models
+│   ├── source/        # SourceClient, OAuth2TokenService and source credentials
 │   ├── validation/    # RequestValidator, RequestConstraints and custom constraints
 │   └── utils/         # RequestUtils, ValidationUtils
 └── resources/jte/     # HTML templates (approval.jte)

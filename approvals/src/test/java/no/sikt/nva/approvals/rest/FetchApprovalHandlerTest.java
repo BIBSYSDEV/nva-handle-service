@@ -1,13 +1,17 @@
 package no.sikt.nva.approvals.rest;
 
 import static java.net.HttpURLConnection.HTTP_BAD_REQUEST;
+import static java.net.HttpURLConnection.HTTP_INTERNAL_ERROR;
 import static java.net.HttpURLConnection.HTTP_NOT_FOUND;
 import static java.net.HttpURLConnection.HTTP_OK;
+import static java.nio.charset.StandardCharsets.UTF_8;
+import static java.util.Objects.nonNull;
 import static no.sikt.nva.approvals.utils.TestUtils.randomApproval;
 import static no.sikt.nva.approvals.utils.TestUtils.randomHandle;
 import static no.sikt.nva.approvals.validation.RequestConstraints.MAX_IDENTIFIER_NAME_LENGTH;
 import static no.sikt.nva.approvals.validation.RequestConstraints.MAX_IDENTIFIER_VALUE_BYTES;
 import static no.sikt.nva.approvals.validation.RequestConstraints.MAX_URI_LENGTH;
+import static no.unit.nva.testutils.RandomDataGenerator.randomString;
 import static no.unit.nva.testutils.RandomDataGenerator.randomUri;
 import static nva.commons.apigateway.ApiGatewayHandler.ALLOWED_ORIGIN_ENV;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -19,6 +23,7 @@ import static org.mockito.Mockito.mock;
 
 import com.amazonaws.services.lambda.runtime.Context;
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.sun.net.httpserver.HttpServer;
 import gg.jte.ContentType;
 import gg.jte.TemplateEngine;
 import gg.jte.resolve.ResourceCodeResolver;
@@ -26,21 +31,29 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
+import java.net.InetSocketAddress;
 import java.net.URI;
+import java.net.http.HttpClient;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
-import no.sikt.nva.approvals.dmp.DmpClientException;
-import no.sikt.nva.approvals.dmp.FakeDmpClient;
 import no.sikt.nva.approvals.dmp.model.ClinicalTrial;
 import no.sikt.nva.approvals.dmp.model.Investigator;
 import no.sikt.nva.approvals.dmp.model.Sponsor;
 import no.sikt.nva.approvals.dmp.model.TrialEvent;
 import no.sikt.nva.approvals.dmp.model.TrialSite;
+import no.sikt.nva.approvals.domain.Approval;
 import no.sikt.nva.approvals.domain.FakeApprovalService;
 import no.sikt.nva.approvals.domain.Handle;
+import no.sikt.nva.approvals.domain.IdentifierPolicy;
+import no.sikt.nva.approvals.domain.IdentifierPolicyService;
 import no.sikt.nva.approvals.domain.NamedIdentifier;
+import no.sikt.nva.approvals.domain.NoAuthentication;
+import no.sikt.nva.approvals.domain.SourceConfig;
+import no.sikt.nva.approvals.source.SourceClient;
+import no.sikt.nva.approvals.source.SourceCredentials;
 import no.unit.nva.commons.json.JsonUtils;
 import no.unit.nva.stubs.FakeContext;
 import no.unit.nva.testutils.HandlerRequestBuilder;
@@ -48,6 +61,7 @@ import nva.commons.apigateway.GatewayResponse;
 import nva.commons.apigateway.MediaType;
 import nva.commons.core.Environment;
 import org.apache.hc.core5.http.HttpHeaders;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.zalando.problem.Problem;
@@ -77,7 +91,12 @@ class FetchApprovalHandlerTest {
   private static final String API_HOST = "api.unittest.nva.unit.no";
   private static final String COGNITO_AUTHORIZER_URLS_ENV = "COGNITO_AUTHORIZER_URLS";
   private static final String API_HOST_ENV = "API_HOST";
+  private static final String CLINICAL_TRIAL_TITLE = "Test Clinical Trial";
+  private static final String NOT_A_CLINICAL_TRIAL = "[]";
+  private static final String SOURCE_PATH = "/trials";
   private FetchApprovalHandler handler;
+  private SourceClient sourceClient;
+  private HttpServer server;
   private ByteArrayOutputStream output;
   private Environment environment;
   private TemplateEngine templateEngine;
@@ -87,11 +106,19 @@ class FetchApprovalHandlerTest {
     output = new ByteArrayOutputStream();
     environment = mock(Environment.class);
     templateEngine = createTemplateEngine();
+    sourceClient = sourceClientFor(customerIdentifier -> IdentifierPolicy.DENY_ALL);
     lenient().when(environment.readEnv(ALLOWED_ORIGIN_ENV)).thenReturn("*");
     lenient()
         .when(environment.readEnv(COGNITO_AUTHORIZER_URLS_ENV))
         .thenReturn("http://localhost:3000");
     lenient().when(environment.readEnv(API_HOST_ENV)).thenReturn(API_HOST);
+  }
+
+  @AfterEach
+  void tearDown() {
+    if (nonNull(server)) {
+      server.stop(0);
+    }
   }
 
   @Test
@@ -100,10 +127,7 @@ class FetchApprovalHandlerTest {
     var approval = randomApproval(approvalId, randomUri());
     handler =
         new FetchApprovalHandler(
-            new FakeApprovalService(List.of(approval)),
-            environment,
-            templateEngine,
-            new FakeDmpClient());
+            new FakeApprovalService(List.of(approval)), environment, templateEngine, sourceClient);
     var request = createRequestWithPathParameter(approvalId);
 
     var response = handleRequest(request);
@@ -116,7 +140,7 @@ class FetchApprovalHandlerTest {
     var approvalId = UUID.randomUUID();
     handler =
         new FetchApprovalHandler(
-            new FakeApprovalService(), environment, templateEngine, new FakeDmpClient());
+            new FakeApprovalService(), environment, templateEngine, sourceClient);
     var request = createRequestWithPathParameter(approvalId);
 
     var response = handleRequest(request);
@@ -128,7 +152,7 @@ class FetchApprovalHandlerTest {
   void shouldReturnBadRequestWhenApprovalIdIsInvalid() {
     handler =
         new FetchApprovalHandler(
-            new FakeApprovalService(), environment, templateEngine, new FakeDmpClient());
+            new FakeApprovalService(), environment, templateEngine, sourceClient);
     var request = createRequestWithInvalidId();
 
     var response = handleRequestAsProblem(request);
@@ -148,7 +172,7 @@ class FetchApprovalHandlerTest {
   void shouldReturnBadRequestWhenHandleIsCombinedWithNamedIdentifier() {
     handler =
         new FetchApprovalHandler(
-            new FakeApprovalService(), environment, templateEngine, new FakeDmpClient());
+            new FakeApprovalService(), environment, templateEngine, sourceClient);
     var request =
         createRequestWithQueryParameters(
             Map.of(
@@ -169,7 +193,7 @@ class FetchApprovalHandlerTest {
   void shouldReturnBadRequestPointingToMissingValueWhenOnlyNameIsProvided() {
     handler =
         new FetchApprovalHandler(
-            new FakeApprovalService(), environment, templateEngine, new FakeDmpClient());
+            new FakeApprovalService(), environment, templateEngine, sourceClient);
     var request = createRequestWithQueryParameters(Map.of(NAME_QUERY_PARAMETER, "doi"));
 
     var response = handleRequestAsProblem(request);
@@ -183,7 +207,7 @@ class FetchApprovalHandlerTest {
   void shouldReturnBadRequestPointingToApprovalIdWhenPathAndQueryAreCombined() {
     handler =
         new FetchApprovalHandler(
-            new FakeApprovalService(), environment, templateEngine, new FakeDmpClient());
+            new FakeApprovalService(), environment, templateEngine, sourceClient);
     var request = createRequestWithPathAndQueryParameters(UUID.randomUUID(), VALID_HANDLE);
 
     var response = handleRequestAsProblem(request);
@@ -202,10 +226,7 @@ class FetchApprovalHandlerTest {
     var approval = randomApproval(handle);
     handler =
         new FetchApprovalHandler(
-            new FakeApprovalService(List.of(approval)),
-            environment,
-            templateEngine,
-            new FakeDmpClient());
+            new FakeApprovalService(List.of(approval)), environment, templateEngine, sourceClient);
     var request = createRequestWithHandleQuery(VALID_HANDLE);
 
     var response = handleRequest(request);
@@ -217,7 +238,7 @@ class FetchApprovalHandlerTest {
   void shouldReturnNotFoundWhenHandleLookupFindsNothing() {
     handler =
         new FetchApprovalHandler(
-            new FakeApprovalService(), environment, templateEngine, new FakeDmpClient());
+            new FakeApprovalService(), environment, templateEngine, sourceClient);
     var request = createRequestWithHandleQuery(VALID_HANDLE);
 
     var response = handleRequest(request);
@@ -229,7 +250,7 @@ class FetchApprovalHandlerTest {
   void shouldReturnBadRequestWhenHandleIsInvalid() {
     handler =
         new FetchApprovalHandler(
-            new FakeApprovalService(), environment, templateEngine, new FakeDmpClient());
+            new FakeApprovalService(), environment, templateEngine, sourceClient);
     var request = createRequestWithHandleQuery("not-a-valid-handle");
 
     var response = handleRequest(request);
@@ -243,10 +264,7 @@ class FetchApprovalHandlerTest {
     var approval = randomApproval(namedIdentifier);
     handler =
         new FetchApprovalHandler(
-            new FakeApprovalService(List.of(approval)),
-            environment,
-            templateEngine,
-            new FakeDmpClient());
+            new FakeApprovalService(List.of(approval)), environment, templateEngine, sourceClient);
     var request = createRequestWithNamedIdentifierQuery("doi", "10.1234/5678");
 
     var response = handleRequest(request);
@@ -258,7 +276,7 @@ class FetchApprovalHandlerTest {
   void shouldReturnNotFoundWhenNamedIdentifierLookupFindsNothing() {
     handler =
         new FetchApprovalHandler(
-            new FakeApprovalService(), environment, templateEngine, new FakeDmpClient());
+            new FakeApprovalService(), environment, templateEngine, sourceClient);
     var request = createRequestWithNamedIdentifierQuery("doi", "10.1234/5678");
 
     var response = handleRequest(request);
@@ -270,7 +288,7 @@ class FetchApprovalHandlerTest {
   void shouldReturnNotFoundWhenNamedIdentifierOfMaximumLengthFindsNothing() {
     handler =
         new FetchApprovalHandler(
-            new FakeApprovalService(), environment, templateEngine, new FakeDmpClient());
+            new FakeApprovalService(), environment, templateEngine, sourceClient);
     var request =
         createRequestWithNamedIdentifierQuery(
             CHARACTER.repeat(MAX_IDENTIFIER_NAME_LENGTH),
@@ -285,7 +303,7 @@ class FetchApprovalHandlerTest {
   void shouldReturnBadRequestPointingToQueryParametersThatAreTooLong() throws Exception {
     handler =
         new FetchApprovalHandler(
-            new FakeApprovalService(), environment, templateEngine, new FakeDmpClient());
+            new FakeApprovalService(), environment, templateEngine, sourceClient);
     var request =
         createRequestWithNamedIdentifierQuery(
             CHARACTER.repeat(MAX_IDENTIFIER_NAME_LENGTH + 1),
@@ -305,7 +323,7 @@ class FetchApprovalHandlerTest {
   void shouldReturnBadRequestWhenHandleIsTooLong() {
     handler =
         new FetchApprovalHandler(
-            new FakeApprovalService(), environment, templateEngine, new FakeDmpClient());
+            new FakeApprovalService(), environment, templateEngine, sourceClient);
     var tooLongHandle = VALID_HANDLE + CHARACTER.repeat(MAX_URI_LENGTH);
     var request = createRequestWithHandleQuery(tooLongHandle);
 
@@ -318,7 +336,7 @@ class FetchApprovalHandlerTest {
   void shouldReturnBadRequestWhenOnlyNameIsProvided() {
     handler =
         new FetchApprovalHandler(
-            new FakeApprovalService(), environment, templateEngine, new FakeDmpClient());
+            new FakeApprovalService(), environment, templateEngine, sourceClient);
     var request = createRequestWithQueryParameters(Map.of(NAME_QUERY_PARAMETER, "doi"));
 
     var response = handleRequest(request);
@@ -330,7 +348,7 @@ class FetchApprovalHandlerTest {
   void shouldReturnBadRequestWhenOnlyValueIsProvided() {
     handler =
         new FetchApprovalHandler(
-            new FakeApprovalService(), environment, templateEngine, new FakeDmpClient());
+            new FakeApprovalService(), environment, templateEngine, sourceClient);
     var request = createRequestWithQueryParameters(Map.of(VALUE_QUERY_PARAMETER, "10.1234/5678"));
 
     var response = handleRequest(request);
@@ -342,7 +360,7 @@ class FetchApprovalHandlerTest {
   void shouldReturnBadRequestWhenNoQueryParametersProvided() {
     handler =
         new FetchApprovalHandler(
-            new FakeApprovalService(), environment, templateEngine, new FakeDmpClient());
+            new FakeApprovalService(), environment, templateEngine, sourceClient);
     var request = createRequestWithQueryParameters(Map.of());
 
     var response = handleRequest(request);
@@ -354,7 +372,7 @@ class FetchApprovalHandlerTest {
   void shouldReturnBadRequestWhenBothPathParameterAndQueryParametersProvided() {
     handler =
         new FetchApprovalHandler(
-            new FakeApprovalService(), environment, templateEngine, new FakeDmpClient());
+            new FakeApprovalService(), environment, templateEngine, sourceClient);
     var request = createRequestWithPathAndQueryParameters(UUID.randomUUID(), VALID_HANDLE);
 
     var response = handleRequest(request);
@@ -368,10 +386,7 @@ class FetchApprovalHandlerTest {
     var approval = randomApproval(approvalId, randomUri());
     handler =
         new FetchApprovalHandler(
-            new FakeApprovalService(List.of(approval)),
-            environment,
-            templateEngine,
-            new FakeDmpClient());
+            new FakeApprovalService(List.of(approval)), environment, templateEngine, sourceClient);
     var request = createRequestWithAcceptHeader(approvalId, MediaType.HTML_UTF_8.toString());
 
     var response = handleRequestAsString(request);
@@ -388,10 +403,7 @@ class FetchApprovalHandlerTest {
     var approval = randomApproval(approvalId, randomUri());
     handler =
         new FetchApprovalHandler(
-            new FakeApprovalService(List.of(approval)),
-            environment,
-            templateEngine,
-            new FakeDmpClient());
+            new FakeApprovalService(List.of(approval)), environment, templateEngine, sourceClient);
     var request = createRequestWithAcceptHeader(approvalId, MediaType.JSON_UTF_8.toString());
 
     var response = handleRequest(request);
@@ -407,10 +419,7 @@ class FetchApprovalHandlerTest {
     var approval = randomApproval(approvalId, randomUri());
     handler =
         new FetchApprovalHandler(
-            new FakeApprovalService(List.of(approval)),
-            environment,
-            templateEngine,
-            new FakeDmpClient());
+            new FakeApprovalService(List.of(approval)), environment, templateEngine, sourceClient);
     var request = createRequestWithPathParameter(approvalId);
 
     var response = handleRequest(request);
@@ -427,10 +436,7 @@ class FetchApprovalHandlerTest {
     var approval = randomApproval(approvalId, randomUri());
     handler =
         new FetchApprovalHandler(
-            new FakeApprovalService(List.of(approval)),
-            environment,
-            templateEngine,
-            new FakeDmpClient());
+            new FakeApprovalService(List.of(approval)), environment, templateEngine, sourceClient);
     var request = createRequestWithAcceptHeader(approvalId, browserAcceptHeader);
 
     var response = handleRequestAsString(request);
@@ -446,10 +452,7 @@ class FetchApprovalHandlerTest {
     var approval = randomApproval(approvalId, randomUri());
     handler =
         new FetchApprovalHandler(
-            new FakeApprovalService(List.of(approval)),
-            environment,
-            templateEngine,
-            new FakeDmpClient());
+            new FakeApprovalService(List.of(approval)), environment, templateEngine, sourceClient);
     var request = createRequestWithPathParameterAndNullQueryParams(approvalId);
 
     var response = handleRequest(request);
@@ -463,10 +466,7 @@ class FetchApprovalHandlerTest {
     var approval = randomApproval(approvalId, randomUri());
     handler =
         new FetchApprovalHandler(
-            new FakeApprovalService(List.of(approval)),
-            environment,
-            templateEngine,
-            new FakeDmpClient());
+            new FakeApprovalService(List.of(approval)), environment, templateEngine, sourceClient);
     var request = createRequestWithAcceptHeader(approvalId, "application/xml");
 
     var response = handleRequest(request);
@@ -475,96 +475,112 @@ class FetchApprovalHandlerTest {
   }
 
   @Test
-  void shouldEnrichHtmlWithClinicalTrialDataWhenDmpIdentifierPresent() {
-    var approvalId = UUID.randomUUID();
-    var dmpIdentifier = "2022-500027-76-00";
-    var approval =
-        randomApproval(
-            approvalId,
-            List.of(new NamedIdentifier("DMP", dmpIdentifier)),
-            randomUri(),
-            randomHandle());
-    var clinicalTrial = createClinicalTrial(dmpIdentifier);
-    var dmpClient = new FakeDmpClient(Map.of(dmpIdentifier, clinicalTrial));
-    handler =
-        new FetchApprovalHandler(
-            new FakeApprovalService(List.of(approval)), environment, templateEngine, dmpClient);
-    var request = createRequestWithAcceptHeader(approvalId, MediaType.HTML_UTF_8.toString());
+  void shouldEnrichHtmlWithClinicalTrialWhenCustomerHasSourceConfigForSource() throws IOException {
+    var source = serveSource(HTTP_OK, clinicalTrialJson());
+    var approval = approvalWithSource(source);
+    handler = handlerForCustomerWithSourceConfig(approval);
 
-    var response = handleRequestAsString(request);
+    var response = requestHtml(approval);
 
-    assertEquals(HTTP_OK, response.getStatusCode());
-    assertThat(response.getBody(), containsString("Test Clinical Trial"));
-    assertThat(response.getBody(), containsString("Test Hospital"));
-    assertThat(response.getBody(), containsString("John"));
-    assertThat(response.getBody(), containsString("Doe"));
+    assertThat(response.getBody(), containsString(CLINICAL_TRIAL_TITLE));
   }
 
   @Test
-  void shouldNotEnrichHtmlWhenNoDmpIdentifierPresent() {
-    var approvalId = UUID.randomUUID();
-    var approval =
-        randomApproval(
-            approvalId,
-            List.of(new NamedIdentifier("CTIS", "CT-123")),
-            randomUri(),
-            randomHandle());
-    var clinicalTrial = createClinicalTrial("some-other-id");
-    var dmpClient = new FakeDmpClient(Map.of("some-other-id", clinicalTrial));
+  void shouldRenderBasicHtmlWhenCustomerHasNoSourceConfigForSource() throws IOException {
+    var source = serveSource(HTTP_OK, clinicalTrialJson());
+    var approval = approvalWithSource(source);
     handler =
         new FetchApprovalHandler(
-            new FakeApprovalService(List.of(approval)), environment, templateEngine, dmpClient);
-    var request = createRequestWithAcceptHeader(approvalId, MediaType.HTML_UTF_8.toString());
+            new FakeApprovalService(List.of(approval)), environment, templateEngine, sourceClient);
 
-    var response = handleRequestAsString(request);
+    var response = requestHtml(approval);
 
-    assertEquals(HTTP_OK, response.getStatusCode());
-    assertThat(response.getBody(), not(containsString("Test Clinical Trial")));
+    assertThat(response.getBody(), not(containsString(CLINICAL_TRIAL_TITLE)));
   }
 
   @Test
-  void shouldRenderBasicHtmlWhenDmpClientFails() {
-    var approvalId = UUID.randomUUID();
-    var dmpIdentifier = "2022-500027-76-00";
-    var approval =
-        randomApproval(
-            approvalId,
-            List.of(new NamedIdentifier("DMP", dmpIdentifier)),
-            randomUri(),
-            randomHandle());
-    var dmpClient = new FakeDmpClient(new DmpClientException("Connection failed"));
-    handler =
-        new FetchApprovalHandler(
-            new FakeApprovalService(List.of(approval)), environment, templateEngine, dmpClient);
-    var request = createRequestWithAcceptHeader(approvalId, MediaType.HTML_UTF_8.toString());
+  void shouldRenderBasicHtmlWhenSourceFails() throws IOException {
+    var source = serveSource(HTTP_INTERNAL_ERROR, clinicalTrialJson());
+    var approval = approvalWithSource(source);
+    handler = handlerForCustomerWithSourceConfig(approval);
 
-    var response = handleRequestAsString(request);
+    var response = requestHtml(approval);
+
+    assertEquals(HTTP_OK, response.getStatusCode());
+    assertThat(response.getBody(), not(containsString(CLINICAL_TRIAL_TITLE)));
+  }
+
+  @Test
+  void shouldRenderBasicHtmlWhenSourceIsNotFound() throws IOException {
+    var source = serveSource(HTTP_NOT_FOUND, clinicalTrialJson());
+    var approval = approvalWithSource(source);
+    handler = handlerForCustomerWithSourceConfig(approval);
+
+    var response = requestHtml(approval);
 
     assertEquals(HTTP_OK, response.getStatusCode());
     assertThat(response.getBody(), containsString("<!DOCTYPE html>"));
-    assertThat(response.getBody(), not(containsString("Test Clinical Trial")));
   }
 
   @Test
-  void shouldRenderBasicHtmlWhenClinicalTrialNotFoundInDmp() {
-    var approvalId = UUID.randomUUID();
-    var dmpIdentifier = "2022-500027-76-00";
-    var approval =
-        randomApproval(
-            approvalId,
-            List.of(new NamedIdentifier("DMP", dmpIdentifier)),
-            randomUri(),
-            randomHandle());
-    var dmpClient = new FakeDmpClient();
-    handler =
-        new FetchApprovalHandler(
-            new FakeApprovalService(List.of(approval)), environment, templateEngine, dmpClient);
-    var request = createRequestWithAcceptHeader(approvalId, MediaType.HTML_UTF_8.toString());
+  void shouldRenderBasicHtmlWhenSourceIsNotClinicalTrial() throws IOException {
+    var source = serveSource(HTTP_OK, NOT_A_CLINICAL_TRIAL);
+    var approval = approvalWithSource(source);
+    handler = handlerForCustomerWithSourceConfig(approval);
 
-    var response = handleRequestAsString(request);
+    var response = requestHtml(approval);
 
     assertEquals(HTTP_OK, response.getStatusCode());
-    assertThat(response.getBody(), containsString("<!DOCTYPE html>"));
+    assertThat(response.getBody(), not(containsString(CLINICAL_TRIAL_TITLE)));
+  }
+
+  private URI serveSource(int status, String body) throws IOException {
+    server = HttpServer.create(new InetSocketAddress(0), 0);
+    server.createContext(
+        SOURCE_PATH,
+        exchange -> {
+          var bytes = body.getBytes(UTF_8);
+          exchange.sendResponseHeaders(status, bytes.length);
+          try (var responseBody = exchange.getResponseBody()) {
+            responseBody.write(bytes);
+          }
+        });
+    server.start();
+    return URI.create(
+        "http://localhost:" + server.getAddress().getPort() + SOURCE_PATH + "/" + randomString());
+  }
+
+  private static Approval approvalWithSource(URI source) {
+    return randomApproval(source, randomHandle(), UUID.randomUUID());
+  }
+
+  private FetchApprovalHandler handlerForCustomerWithSourceConfig(Approval approval) {
+    var baseUri = approval.source().resolve(SOURCE_PATH);
+    var identifierPolicy =
+        new IdentifierPolicy(Set.of(), List.of(new SourceConfig(baseUri, new NoAuthentication())));
+    return new FetchApprovalHandler(
+        new FakeApprovalService(List.of(approval)),
+        environment,
+        templateEngine,
+        sourceClientFor(
+            customerIdentifier ->
+                approval.customerIdentifier().equals(customerIdentifier)
+                    ? identifierPolicy
+                    : IdentifierPolicy.DENY_ALL));
+  }
+
+  private static SourceClient sourceClientFor(IdentifierPolicyService identifierPolicyService) {
+    return new SourceClient(
+        identifierPolicyService, () -> new SourceCredentials(Map.of()), HttpClient.newHttpClient());
+  }
+
+  private GatewayResponse<String> requestHtml(Approval approval) {
+    return handleRequestAsString(
+        createRequestWithAcceptHeader(approval.identifier(), MediaType.HTML_UTF_8.toString()));
+  }
+
+  private String clinicalTrialJson() throws IOException {
+    return JsonUtils.dtoObjectMapper.writeValueAsString(createClinicalTrial(randomString()));
   }
 
   private ClinicalTrial createClinicalTrial(String identifier) {
@@ -590,7 +606,7 @@ class FetchApprovalHandlerTest {
         URI.create("https://api.example.com/clinical-trial/" + identifier),
         identifier,
         URI.create("https://hdl.handle.net/11250.1/12345"),
-        "Test Clinical Trial",
+        CLINICAL_TRIAL_TITLE,
         events,
         sponsors,
         trialSites,

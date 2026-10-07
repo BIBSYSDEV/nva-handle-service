@@ -8,6 +8,7 @@ import static no.sikt.nva.approvals.validation.RequestValidator.badRequest;
 import static no.sikt.nva.approvals.validation.RequestValidator.validateQueryParameters;
 import static nva.commons.apigateway.MediaTypes.APPLICATION_JSON_LD;
 import static nva.commons.core.StringUtils.isNotBlank;
+import static nva.commons.core.attempt.Try.attempt;
 
 import com.amazonaws.services.lambda.runtime.Context;
 import gg.jte.TemplateEngine;
@@ -17,14 +18,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
-import no.sikt.nva.approvals.dmp.DmpClientSupplier;
 import no.sikt.nva.approvals.dmp.model.ClinicalTrial;
 import no.sikt.nva.approvals.domain.Approval;
 import no.sikt.nva.approvals.domain.ApprovalService;
 import no.sikt.nva.approvals.domain.ApprovalServiceImpl;
-import no.sikt.nva.approvals.domain.NamedIdentifier;
 import no.sikt.nva.approvals.source.SourceClient;
-import no.sikt.nva.approvals.source.SourceClientException;
+import no.sikt.nva.approvals.source.SourceResponse;
+import no.unit.nva.commons.json.JsonUtils;
 import nva.commons.apigateway.ApiGatewayHandler;
 import nva.commons.apigateway.MediaType;
 import nva.commons.apigateway.RequestInfo;
@@ -35,26 +35,20 @@ import nva.commons.apigateway.exceptions.UnsupportedAcceptHeaderException;
 import nva.commons.core.Environment;
 import nva.commons.core.JacocoGenerated;
 import nva.commons.core.StringUtils;
-import nva.commons.core.paths.UriWrapper;
 import org.apache.hc.core5.http.HttpHeaders;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 public class FetchApprovalHandler extends ApiGatewayHandler<Void, Object> {
 
-  private static final Logger logger = LoggerFactory.getLogger(FetchApprovalHandler.class);
   private static final String APPROVAL_ID_PATH_PARAMETER = "approvalId";
   private static final String APPROVAL_NOT_FOUND_MESSAGE = "Approval not found";
-  private static final String CLINICAL_TRIAL_PATH = "clinical-trial";
   private static final String TEMPLATE_NAME = "approval.jte";
-  private static final String DMP_IDENTIFIER_NAME = "DMP";
   private static final String APPLICATION_DOMAIN_ENV = "APPLICATION_DOMAIN";
 
   private final ApprovalService approvalService;
   private final String apiHost;
   private final String applicationDomain;
   private final TemplateEngine templateEngine;
-  private final SourceClient dmpClient;
+  private final SourceClient sourceClient;
 
   @JacocoGenerated
   public FetchApprovalHandler() {
@@ -62,20 +56,20 @@ public class FetchApprovalHandler extends ApiGatewayHandler<Void, Object> {
         ApprovalServiceImpl.defaultInstance(new Environment()),
         new Environment(),
         createTemplateEngine(),
-        DmpClientSupplier.getDmpClientSupplier().get());
+        SourceClient.defaultInstance(new Environment()));
   }
 
   public FetchApprovalHandler(
       ApprovalService approvalService,
       Environment environment,
       TemplateEngine templateEngine,
-      SourceClient dmpClient) {
+      SourceClient sourceClient) {
     super(Void.class, environment);
     this.approvalService = approvalService;
     this.apiHost = getApiHost(environment);
     this.applicationDomain = environment.readEnv(APPLICATION_DOMAIN_ENV);
     this.templateEngine = templateEngine;
-    this.dmpClient = dmpClient;
+    this.sourceClient = sourceClient;
   }
 
   @JacocoGenerated
@@ -178,7 +172,7 @@ public class FetchApprovalHandler extends ApiGatewayHandler<Void, Object> {
 
   private String renderHtml(Approval approval) {
     var model =
-        fetchClinicalTrialIfDmpIdentifierPresent(approval)
+        fetchClinicalTrial(approval)
             .map(
                 clinicalTrial ->
                     ApprovalHtmlModel.fromApprovalAndClinicalTrial(
@@ -189,35 +183,20 @@ public class FetchApprovalHandler extends ApiGatewayHandler<Void, Object> {
     return output.toString();
   }
 
-  private Optional<ClinicalTrial> fetchClinicalTrialIfDmpIdentifierPresent(Approval approval) {
-    return getDmpIdentifierValue(approval).flatMap(this::fetchClinicalTrial);
+  private Optional<ClinicalTrial> fetchClinicalTrial(Approval approval) {
+    var customerIdentifier = approval.customerIdentifier();
+    return fetchSource(approval.source(), customerIdentifier)
+        .flatMap(FetchApprovalHandler::toClinicalTrial);
   }
 
-  private Optional<String> getDmpIdentifierValue(Approval approval) {
-    return approval.namedIdentifiers().stream()
-        .filter(identifier -> DMP_IDENTIFIER_NAME.equals(identifier.name()))
-        .map(NamedIdentifier::value)
-        .findFirst();
+  private Optional<SourceResponse> fetchSource(URI source, UUID customerIdentifier) {
+    return attempt(() -> sourceClient.fetchSource(source, customerIdentifier))
+        .orElse(_ -> Optional.<SourceResponse>empty());
   }
 
-  private Optional<ClinicalTrial> fetchClinicalTrial(String dmpIdentifier) {
-    try {
-      var uri = createClinicalTrialUri(dmpIdentifier);
-      return dmpClient
-          .fetch(uri)
-          .filter(ClinicalTrial.class::isInstance)
-          .map(ClinicalTrial.class::cast);
-    } catch (SourceClientException exception) {
-      logger.warn(
-          "Failed to fetch clinical trial data for identifier: {}", dmpIdentifier, exception);
-      return Optional.empty();
-    }
-  }
-
-  private URI createClinicalTrialUri(String dmpIdentifier) {
-    return UriWrapper.fromUri(dmpClient.getBaseUrl())
-        .addChild(CLINICAL_TRIAL_PATH)
-        .addChild(dmpIdentifier)
-        .getUri();
+  private static Optional<ClinicalTrial> toClinicalTrial(SourceResponse sourceResponse) {
+    return attempt(
+            () -> JsonUtils.dtoObjectMapper.readValue(sourceResponse.body(), ClinicalTrial.class))
+        .toOptional();
   }
 }

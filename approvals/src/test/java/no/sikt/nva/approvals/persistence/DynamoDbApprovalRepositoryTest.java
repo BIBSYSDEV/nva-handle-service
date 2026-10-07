@@ -453,7 +453,7 @@ class DynamoDbApprovalRepositoryTest {
     var customerIdentifier = randomUUID();
     var sourceConfigs =
         List.of(randomSourceConfig(), new SourceConfig(randomUri(), new NoAuthentication()));
-    var identifierPolicy = new IdentifierPolicy(Set.of(DMP), sourceConfigs);
+    var identifierPolicy = new IdentifierPolicy(Set.of(DMP), false, sourceConfigs);
     approvalRepository.saveIdentifierPolicy(customerIdentifier, identifierPolicy);
 
     assertEquals(

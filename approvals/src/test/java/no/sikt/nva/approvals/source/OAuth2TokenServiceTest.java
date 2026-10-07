@@ -1,112 +1,190 @@
 package no.sikt.nva.approvals.source;
 
+import static java.net.HttpURLConnection.HTTP_OK;
+import static java.net.HttpURLConnection.HTTP_UNAUTHORIZED;
+import static no.unit.nva.testutils.RandomDataGenerator.randomString;
+import static no.unit.nva.testutils.RandomDataGenerator.randomUri;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.is;
-import static org.hamcrest.Matchers.notNullValue;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.hamcrest.Matchers.equalTo;
+import static org.junit.jupiter.api.Assertions.assertThrowsExactly;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
 
 import java.io.IOException;
+import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
+import java.time.Duration;
+import java.util.Map;
+import java.util.Optional;
+import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentMatcher;
 
 class OAuth2TokenServiceTest {
 
-  private static final String ACCESS_TOKEN = "test-access-token";
   private static final String TOKEN_RESPONSE =
       """
-      {
-          "access_token": "%s",
-          "expires_in": 3600,
-          "token_type": "Bearer"
-      }
-      """
-          .formatted(ACCESS_TOKEN);
-  private static final String ERROR_RESPONSE = "Invalid client credentials";
+      { "access_token": "%s", "expires_in": %d, "token_type": "Bearer" }
+      """;
+  private static final long ONE_HOUR_IN_SECONDS = 3600;
+  private static final long EXPIRED_IMMEDIATELY = 0;
+  private static final Duration REQUEST_TIMEOUT = Duration.ofSeconds(5);
 
   private HttpClient httpClient;
-  private OAuth2Credentials credentials;
+  private String credentialsKey;
+  private URI tokenUri;
+  private String otherCredentialsKey;
+  private URI otherTokenUri;
+  private AtomicReference<SourceCredentials> storedCredentials;
   private OAuth2TokenService tokenService;
 
   @BeforeEach
   void setUp() {
     httpClient = mock(HttpClient.class);
-    credentials =
-        new OAuth2Credentials(
-            "client-id", "client-secret", "https://auth.example.com/oauth/token", "api://default");
+    credentialsKey = randomString();
+    tokenUri = randomUri();
+    otherCredentialsKey = randomString();
+    otherTokenUri = randomUri();
+    storedCredentials =
+        new AtomicReference<>(
+            new SourceCredentials(
+                Map.of(
+                    credentialsKey, randomCredentials(tokenUri),
+                    otherCredentialsKey, randomCredentials(otherTokenUri))));
+    tokenService = new OAuth2TokenService(storedCredentials::get, httpClient);
   }
 
   @Test
-  void shouldFetchAccessToken() throws Exception {
-    var response = createMockResponse(200, TOKEN_RESPONSE);
-    when(httpClient.send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class)))
-        .thenReturn(response);
-    tokenService = new OAuth2TokenService(credentials, httpClient);
+  void shouldReturnAccessTokenFromTokenEndpointOfCredentials() throws Exception {
+    var accessToken = randomString();
+    stubTokenEndpoint(tokenUri, HTTP_OK, tokenResponse(accessToken, ONE_HOUR_IN_SECONDS));
 
-    var token = tokenService.getAccessToken();
-
-    assertThat(token, is(ACCESS_TOKEN));
+    assertThat(tokenService.getAccessToken(credentialsKey), equalTo(accessToken));
   }
 
   @Test
-  void shouldCacheTokenAndReuseIt() throws Exception {
-    var response = createMockResponse(200, TOKEN_RESPONSE);
-    when(httpClient.send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class)))
-        .thenReturn(response);
-    tokenService = new OAuth2TokenService(credentials, httpClient);
+  void shouldReuseAccessTokenOfSameCredentialsUntilItExpires() throws Exception {
+    stubTokenEndpoint(tokenUri, HTTP_OK, tokenResponse(randomString(), ONE_HOUR_IN_SECONDS));
 
-    tokenService.getAccessToken();
-    tokenService.getAccessToken();
+    tokenService.getAccessToken(credentialsKey);
+    tokenService.getAccessToken(credentialsKey);
 
-    verify(httpClient, times(1)).send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class));
+    verify(httpClient, times(1)).send(argThat(isRequestTo(tokenUri)), any());
   }
 
   @Test
-  void shouldThrowExceptionOnAuthenticationFailure() throws Exception {
-    var response = createMockResponse(401, ERROR_RESPONSE);
-    when(httpClient.send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class)))
-        .thenReturn(response);
-    tokenService = new OAuth2TokenService(credentials, httpClient);
+  void shouldRequestNewAccessTokenWhenCachedOneHasExpired() throws Exception {
+    stubTokenEndpoint(tokenUri, HTTP_OK, tokenResponse(randomString(), EXPIRED_IMMEDIATELY));
 
-    var exception = assertThrows(SourceClientException.class, () -> tokenService.getAccessToken());
+    tokenService.getAccessToken(credentialsKey);
+    tokenService.getAccessToken(credentialsKey);
 
-    assertThat(exception.getMessage(), notNullValue());
+    verify(httpClient, times(2)).send(argThat(isRequestTo(tokenUri)), any());
   }
 
   @Test
-  void shouldThrowExceptionOnNetworkError() throws Exception {
-    when(httpClient.send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class)))
-        .thenThrow(new IOException("Network error"));
-    tokenService = new OAuth2TokenService(credentials, httpClient);
+  void shouldRequestNewAccessTokenAfterCachedOneIsDiscarded() throws Exception {
+    stubTokenEndpoint(tokenUri, HTTP_OK, tokenResponse(randomString(), ONE_HOUR_IN_SECONDS));
 
-    var exception = assertThrows(SourceClientException.class, () -> tokenService.getAccessToken());
+    tokenService.getAccessToken(credentialsKey);
+    tokenService.discardAccessToken(credentialsKey);
+    tokenService.getAccessToken(credentialsKey);
 
-    assertThat(exception.getMessage(), notNullValue());
-    assertThat(exception.getCause(), notNullValue());
+    verify(httpClient, times(2)).send(argThat(isRequestTo(tokenUri)), any());
   }
 
   @Test
-  void shouldThrowExceptionWhenCredentialsAreNull() {
-    assertThrows(NullPointerException.class, () -> new OAuth2TokenService(null, httpClient));
+  void shouldReadCredentialsWhenFirstAccessTokenIsRequested() throws Exception {
+    var storedTokenUri = randomUri();
+    stubTokenEndpoint(storedTokenUri, HTTP_OK, tokenResponse(randomString(), ONE_HOUR_IN_SECONDS));
+    storedCredentials.set(
+        new SourceCredentials(Map.of(credentialsKey, randomCredentials(storedTokenUri))));
+
+    tokenService.getAccessToken(credentialsKey);
+
+    verify(httpClient).send(argThat(isRequestTo(storedTokenUri)), any());
   }
 
   @Test
-  void shouldThrowExceptionWhenHttpClientIsNull() {
-    assertThrows(NullPointerException.class, () -> new OAuth2TokenService(credentials, null));
+  void shouldKeepCredentialsReadForFirstAccessToken() throws Exception {
+    stubTokenEndpoint(tokenUri, HTTP_OK, tokenResponse(randomString(), ONE_HOUR_IN_SECONDS));
+
+    tokenService.getAccessToken(credentialsKey);
+    storedCredentials.set(
+        new SourceCredentials(Map.of(credentialsKey, randomCredentials(randomUri()))));
+    tokenService.discardAccessToken(credentialsKey);
+    tokenService.getAccessToken(credentialsKey);
+
+    verify(httpClient, times(2)).send(argThat(isRequestTo(tokenUri)), any());
   }
 
-  @SuppressWarnings("unchecked")
-  private HttpResponse<String> createMockResponse(int statusCode, String body) {
-    var response = mock(HttpResponse.class);
-    when(response.statusCode()).thenReturn(statusCode);
-    when(response.body()).thenReturn(body);
-    return response;
+  @Test
+  void shouldLimitHowLongTokenRequestWaitsForResponse() throws Exception {
+    stubTokenEndpoint(tokenUri, HTTP_OK, tokenResponse(randomString(), ONE_HOUR_IN_SECONDS));
+
+    tokenService.getAccessToken(credentialsKey);
+
+    verify(httpClient)
+        .send(argThat(request -> request.timeout().equals(Optional.of(REQUEST_TIMEOUT))), any());
+  }
+
+  @Test
+  void shouldKeepSeparateAccessTokenPerCredentialsKey() throws Exception {
+    var otherAccessToken = randomString();
+    stubTokenEndpoint(tokenUri, HTTP_OK, tokenResponse(randomString(), ONE_HOUR_IN_SECONDS));
+    stubTokenEndpoint(otherTokenUri, HTTP_OK, tokenResponse(otherAccessToken, ONE_HOUR_IN_SECONDS));
+
+    tokenService.getAccessToken(credentialsKey);
+
+    assertThat(tokenService.getAccessToken(otherCredentialsKey), equalTo(otherAccessToken));
+  }
+
+  @Test
+  void shouldThrowWhenNoCredentialsAreStoredUnderKey() {
+    assertThrowsExactly(
+        SourceClientException.class, () -> tokenService.getAccessToken(randomString()));
+  }
+
+  @Test
+  void shouldThrowWhenTokenEndpointRejectsCredentials() throws Exception {
+    stubTokenEndpoint(tokenUri, HTTP_UNAUTHORIZED, randomString());
+
+    assertThrowsExactly(
+        SourceClientException.class, () -> tokenService.getAccessToken(credentialsKey));
+  }
+
+  @Test
+  void shouldThrowWhenTokenEndpointCannotBeReached() throws Exception {
+    doThrow(new IOException()).when(httpClient).send(argThat(isRequestTo(tokenUri)), any());
+
+    assertThrowsExactly(
+        SourceClientException.class, () -> tokenService.getAccessToken(credentialsKey));
+  }
+
+  private void stubTokenEndpoint(URI uri, int status, String body)
+      throws IOException, InterruptedException {
+    doReturn(new StubResponse(status, body, Map.of()))
+        .when(httpClient)
+        .send(argThat(isRequestTo(uri)), any());
+  }
+
+  private static String tokenResponse(String accessToken, long expiresInSeconds) {
+    return TOKEN_RESPONSE.formatted(accessToken, expiresInSeconds);
+  }
+
+  private static ArgumentMatcher<HttpRequest> isRequestTo(URI uri) {
+    return request -> request.uri().equals(uri);
+  }
+
+  private static OAuth2Credentials randomCredentials(URI tokenUri) {
+    return new OAuth2Credentials(
+        randomString(), randomString(), tokenUri.toString(), randomString());
   }
 }
