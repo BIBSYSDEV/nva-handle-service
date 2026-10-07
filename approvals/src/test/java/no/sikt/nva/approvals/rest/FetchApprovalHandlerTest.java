@@ -571,7 +571,7 @@ class FetchApprovalHandlerTest {
 
   private static SourceClient sourceClientFor(IdentifierPolicyService identifierPolicyService) {
     return new SourceClient(
-        identifierPolicyService, new SourceCredentials(Map.of()), HttpClient.newHttpClient());
+        identifierPolicyService, () -> new SourceCredentials(Map.of()), HttpClient.newHttpClient());
   }
 
   private GatewayResponse<String> requestHtml(Approval approval) {

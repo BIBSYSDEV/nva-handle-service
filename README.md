@@ -40,12 +40,12 @@ flowchart TB
         end
 
         DDB[("DynamoDB<br/>nva-approvals-*")]
-        SM[["Secrets Manager<br/>HandleDatabase, DmpClientCredentials"]]
+        SM[["Secrets Manager<br/>HandleDatabase, ApprovalCredentials"]]
     end
 
     subgraph external["External systems"]
         PG[("Handle database<br/>PostgreSQL")]
-        DMP["DMP API<br/>(OAuth2)"]
+        DMP["Customer sources<br/>e.g. DMP API (OAuth2)"]
     end
 
     NVA --> handleApi

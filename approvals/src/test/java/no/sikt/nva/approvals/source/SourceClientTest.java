@@ -77,7 +77,7 @@ class SourceClientTest {
         new SourceClient(
             customer ->
                 customerIdentifier.equals(customer) ? identifierPolicy : IdentifierPolicy.DENY_ALL,
-            new SourceCredentials(Map.of(credentialsKey, randomOAuth2Credentials())),
+            () -> new SourceCredentials(Map.of(credentialsKey, randomOAuth2Credentials())),
             httpClient);
   }
 

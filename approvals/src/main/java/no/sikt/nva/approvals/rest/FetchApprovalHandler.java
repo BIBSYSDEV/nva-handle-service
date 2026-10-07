@@ -24,7 +24,6 @@ import no.sikt.nva.approvals.domain.ApprovalService;
 import no.sikt.nva.approvals.domain.ApprovalServiceImpl;
 import no.sikt.nva.approvals.source.SourceClient;
 import no.sikt.nva.approvals.source.SourceResponse;
-import no.sikt.nva.approvals.source.UnregisteredSourceException;
 import no.unit.nva.commons.json.JsonUtils;
 import nva.commons.apigateway.ApiGatewayHandler;
 import nva.commons.apigateway.MediaType;
@@ -37,21 +36,13 @@ import nva.commons.core.Environment;
 import nva.commons.core.JacocoGenerated;
 import nva.commons.core.StringUtils;
 import org.apache.hc.core5.http.HttpHeaders;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 public class FetchApprovalHandler extends ApiGatewayHandler<Void, Object> {
 
-  private static final Logger logger = LoggerFactory.getLogger(FetchApprovalHandler.class);
   private static final String APPROVAL_ID_PATH_PARAMETER = "approvalId";
   private static final String APPROVAL_NOT_FOUND_MESSAGE = "Approval not found";
   private static final String TEMPLATE_NAME = "approval.jte";
   private static final String APPLICATION_DOMAIN_ENV = "APPLICATION_DOMAIN";
-  private static final String SOURCE_FETCH_FAILED_MESSAGE = "Failed to fetch source {}";
-  private static final String FETCHING_SOURCE_MESSAGE =
-      "Fetching source {} of customer {} for approval page";
-  private static final String CLINICAL_TRIAL_PARSE_FAILED_MESSAGE =
-      "Source is not a clinical trial {}";
 
   private final ApprovalService approvalService;
   private final String apiHost;
@@ -194,31 +185,18 @@ public class FetchApprovalHandler extends ApiGatewayHandler<Void, Object> {
 
   private Optional<ClinicalTrial> fetchClinicalTrial(Approval approval) {
     var customerIdentifier = approval.customerIdentifier();
-    logger.info(FETCHING_SOURCE_MESSAGE, approval.source(), customerIdentifier);
     return fetchSource(approval.source(), customerIdentifier)
         .flatMap(FetchApprovalHandler::toClinicalTrial);
   }
 
   private Optional<SourceResponse> fetchSource(URI source, UUID customerIdentifier) {
     return attempt(() -> sourceClient.fetchSource(source, customerIdentifier))
-        .orElse(failure -> skipSource(source, failure.getException()));
-  }
-
-  private static Optional<SourceResponse> skipSource(URI source, Exception exception) {
-    if (exception instanceof UnregisteredSourceException) {
-      logger.info(exception.getMessage());
-    } else {
-      logger.warn(SOURCE_FETCH_FAILED_MESSAGE, source, exception);
-    }
-    return Optional.empty();
+        .orElse(_ -> Optional.<SourceResponse>empty());
   }
 
   private static Optional<ClinicalTrial> toClinicalTrial(SourceResponse sourceResponse) {
     return attempt(
             () -> JsonUtils.dtoObjectMapper.readValue(sourceResponse.body(), ClinicalTrial.class))
-        .toOptional(
-            failure ->
-                logger.warn(
-                    CLINICAL_TRIAL_PARSE_FAILED_MESSAGE, failure.getException().getMessage()));
+        .toOptional();
   }
 }

@@ -22,6 +22,7 @@ import java.net.http.HttpRequest;
 import java.time.Duration;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentMatcher;
@@ -41,6 +42,7 @@ class OAuth2TokenServiceTest {
   private URI tokenUri;
   private String otherCredentialsKey;
   private URI otherTokenUri;
+  private AtomicReference<SourceCredentials> storedCredentials;
   private OAuth2TokenService tokenService;
 
   @BeforeEach
@@ -50,12 +52,13 @@ class OAuth2TokenServiceTest {
     tokenUri = randomUri();
     otherCredentialsKey = randomString();
     otherTokenUri = randomUri();
-    var sourceCredentials =
-        new SourceCredentials(
-            Map.of(
-                credentialsKey, randomCredentials(tokenUri),
-                otherCredentialsKey, randomCredentials(otherTokenUri)));
-    tokenService = new OAuth2TokenService(sourceCredentials, httpClient);
+    storedCredentials =
+        new AtomicReference<>(
+            new SourceCredentials(
+                Map.of(
+                    credentialsKey, randomCredentials(tokenUri),
+                    otherCredentialsKey, randomCredentials(otherTokenUri))));
+    tokenService = new OAuth2TokenService(storedCredentials::get, httpClient);
   }
 
   @Test
@@ -91,6 +94,31 @@ class OAuth2TokenServiceTest {
     stubTokenEndpoint(tokenUri, HTTP_OK, tokenResponse(randomString(), ONE_HOUR_IN_SECONDS));
 
     tokenService.getAccessToken(credentialsKey);
+    tokenService.discardAccessToken(credentialsKey);
+    tokenService.getAccessToken(credentialsKey);
+
+    verify(httpClient, times(2)).send(argThat(isRequestTo(tokenUri)), any());
+  }
+
+  @Test
+  void shouldReadCredentialsWhenFirstAccessTokenIsRequested() throws Exception {
+    var storedTokenUri = randomUri();
+    stubTokenEndpoint(storedTokenUri, HTTP_OK, tokenResponse(randomString(), ONE_HOUR_IN_SECONDS));
+    storedCredentials.set(
+        new SourceCredentials(Map.of(credentialsKey, randomCredentials(storedTokenUri))));
+
+    tokenService.getAccessToken(credentialsKey);
+
+    verify(httpClient).send(argThat(isRequestTo(storedTokenUri)), any());
+  }
+
+  @Test
+  void shouldKeepCredentialsReadForFirstAccessToken() throws Exception {
+    stubTokenEndpoint(tokenUri, HTTP_OK, tokenResponse(randomString(), ONE_HOUR_IN_SECONDS));
+
+    tokenService.getAccessToken(credentialsKey);
+    storedCredentials.set(
+        new SourceCredentials(Map.of(credentialsKey, randomCredentials(randomUri()))));
     tokenService.discardAccessToken(credentialsKey);
     tokenService.getAccessToken(credentialsKey);
 

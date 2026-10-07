@@ -15,14 +15,17 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.Base64;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Supplier;
 import no.unit.nva.commons.json.JsonUtils;
 
 /**
  * Requests OAuth2 client credentials access tokens with the source credentials stored under a key,
- * and reuses each key's token until shortly before it expires. Tokens are requested on first use,
- * so they live only in the warm Lambda that requested them.
+ * and reuses each key's token until shortly before it expires. Credentials are read when the first
+ * token is requested and kept after that, so neither credentials nor tokens are captured in a
+ * SnapStart snapshot.
  */
 public class OAuth2TokenService {
 
@@ -41,12 +44,14 @@ public class OAuth2TokenService {
   private static final String TOKEN_REJECTED_MESSAGE = "Failed to obtain access token. Status: %s";
   private static final String TOKEN_FAILED_MESSAGE = "Failed to fetch OAuth2 token";
 
-  private final SourceCredentials sourceCredentials;
+  private final Supplier<SourceCredentials> sourceCredentialsSupplier;
   private final HttpClient httpClient;
   private final Map<String, AccessToken> accessTokens = new ConcurrentHashMap<>();
+  private SourceCredentials sourceCredentials;
 
-  public OAuth2TokenService(SourceCredentials sourceCredentials, HttpClient httpClient) {
-    this.sourceCredentials = sourceCredentials;
+  public OAuth2TokenService(
+      Supplier<SourceCredentials> sourceCredentialsSupplier, HttpClient httpClient) {
+    this.sourceCredentialsSupplier = sourceCredentialsSupplier;
     this.httpClient = httpClient;
   }
 
@@ -69,10 +74,17 @@ public class OAuth2TokenService {
   }
 
   private OAuth2Credentials findCredentials(String credentialsKey) throws SourceClientException {
-    return sourceCredentials
+    return readSourceCredentials()
         .findCredentials(credentialsKey)
         .orElseThrow(
             () -> new SourceClientException(MISSING_CREDENTIALS_MESSAGE.formatted(credentialsKey)));
+  }
+
+  private SourceCredentials readSourceCredentials() {
+    if (Objects.isNull(sourceCredentials)) {
+      sourceCredentials = sourceCredentialsSupplier.get();
+    }
+    return sourceCredentials;
   }
 
   private AccessToken requestAccessToken(OAuth2Credentials credentials)

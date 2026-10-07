@@ -15,6 +15,7 @@ import java.net.http.HttpResponse.BodyHandlers;
 import java.time.Duration;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.function.Supplier;
 import no.sikt.nva.approvals.domain.IdentifierPolicyService;
 import no.sikt.nva.approvals.domain.IdentifierPolicyServiceImpl;
 import no.sikt.nva.approvals.domain.NoAuthentication;
@@ -25,13 +26,9 @@ import nva.commons.core.Environment;
 import nva.commons.core.JacocoGenerated;
 import nva.commons.core.attempt.Failure;
 import nva.commons.secrets.SecretsReader;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /** Fetches a source using the matching source config of the customer. */
 public class SourceClient {
-
-  private static final Logger logger = LoggerFactory.getLogger(SourceClient.class);
 
   private static final Duration CONNECT_TIMEOUT = Duration.ofSeconds(15);
   private static final Duration REQUEST_TIMEOUT = Duration.ofSeconds(5);
@@ -45,7 +42,6 @@ public class SourceClient {
   private static final String FETCH_FAILED_MESSAGE = "Failed to fetch source %s";
   private static final String REJECTED_CREDENTIALS_MESSAGE =
       "Source %s rejected the credentials with status %s";
-  private static final String SOURCE_NOT_FOUND_MESSAGE = "Source {} not found";
   private static final String UNEXPECTED_STATUS_MESSAGE = "Source %s responded with status %s";
 
   private final IdentifierPolicyService identifierPolicyService;
@@ -54,10 +50,10 @@ public class SourceClient {
 
   public SourceClient(
       IdentifierPolicyService identifierPolicyService,
-      SourceCredentials sourceCredentials,
+      Supplier<SourceCredentials> sourceCredentialsSupplier,
       HttpClient httpClient) {
     this.identifierPolicyService = identifierPolicyService;
-    this.tokenService = new OAuth2TokenService(sourceCredentials, httpClient);
+    this.tokenService = new OAuth2TokenService(sourceCredentialsSupplier, httpClient);
     this.httpClient = httpClient;
   }
 
@@ -65,14 +61,15 @@ public class SourceClient {
   public static SourceClient defaultInstance(Environment environment) {
     return new SourceClient(
         IdentifierPolicyServiceImpl.defaultInstance(environment),
-        readSourceCredentials(environment),
+        SourceClient::readSourceCredentials,
         HttpClient.newBuilder().connectTimeout(CONNECT_TIMEOUT).build());
   }
 
   @JacocoGenerated
-  private static SourceCredentials readSourceCredentials(Environment environment) {
+  private static SourceCredentials readSourceCredentials() {
     return new SecretsReader()
-        .fetchClassSecret(environment.readEnv(APPROVAL_CREDENTIALS_ENV), SourceCredentials.class);
+        .fetchClassSecret(
+            new Environment().readEnv(APPROVAL_CREDENTIALS_ENV), SourceCredentials.class);
   }
 
   public Optional<SourceResponse> fetchSource(URI source, UUID customerIdentifier)
@@ -142,7 +139,7 @@ public class SourceClient {
       URI source, HttpResponse<String> response) throws SourceClientException {
     return switch (response.statusCode()) {
       case HTTP_OK -> Optional.of(new SourceResponse(contentType(response), response.body()));
-      case HTTP_NOT_FOUND -> notFound(source);
+      case HTTP_NOT_FOUND -> Optional.empty();
       case HTTP_UNAUTHORIZED, HTTP_FORBIDDEN ->
           throw new SourceAuthenticationException(
               REJECTED_CREDENTIALS_MESSAGE.formatted(source, response.statusCode()));
@@ -150,11 +147,6 @@ public class SourceClient {
           throw new SourceClientException(
               UNEXPECTED_STATUS_MESSAGE.formatted(source, response.statusCode()));
     };
-  }
-
-  private static Optional<SourceResponse> notFound(URI source) {
-    logger.info(SOURCE_NOT_FOUND_MESSAGE, source);
-    return Optional.empty();
   }
 
   private static String contentType(HttpResponse<String> response) {
