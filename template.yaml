@@ -245,7 +245,7 @@ Resources:
             - Pattern: '{"eventName": ["INSERT"], "dynamodb": {"NewImage": {"PK0": {"S": [{"prefix": "Event:"}]}}}}'
       Target: !GetAtt CreateSnapshotQueue.Arn
       TargetParameters:
-        InputTemplate: '{"eventIdentifier": "<$.dynamodb.NewImage.identifier.S>", "approvalIdentifier": "<$.dynamodb.NewImage.approvalIdentifier.S>", "handle": "<$.dynamodb.NewImage.handle.S>", "source": "<$.dynamodb.NewImage.source.S>", "timestamp": "<$.dynamodb.NewImage.timestamp.S>"}'
+        InputTemplate: '{"eventIdentifier": "<$.dynamodb.NewImage.identifier.S>", "approvalIdentifier": "<$.dynamodb.NewImage.approvalIdentifier.S>", "customerIdentifier": "<$.dynamodb.NewImage.customerIdentifier.S>", "handle": "<$.dynamodb.NewImage.handle.S>", "source": "<$.dynamodb.NewImage.source.S>", "timestamp": "<$.dynamodb.NewImage.timestamp.S>"}'
         SqsQueueParameters:
           MessageGroupId: $.dynamodb.NewImage.handle.S
           MessageDeduplicationId: $.eventID
@@ -643,9 +643,11 @@ Resources:
       Timeout: 300
       Policies:
         - !Ref DynamoDbTableAccessPolicy
+        - !Ref ReadApprovalCredentialsManagedPolicy
       Environment:
         Variables:
           TABLE: !Ref ApprovalsTable
+          APPROVAL_CREDENTIALS: !Ref ApprovalCredentialsName
       Events:
         SourceChanged:
           Type: SQS

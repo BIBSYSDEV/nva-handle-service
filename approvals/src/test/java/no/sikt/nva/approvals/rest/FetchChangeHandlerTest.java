@@ -10,7 +10,7 @@ import static no.sikt.nva.approvals.persistence.DynamoDbLocal.dynamoDBLocal;
 import static no.sikt.nva.approvals.utils.TestUtils.randomApproval;
 import static no.sikt.nva.approvals.utils.TestUtils.randomHandle;
 import static no.sikt.nva.approvals.utils.TestUtils.randomRevision;
-import static no.sikt.nva.approvals.utils.TestUtils.randomSourceChange;
+import static no.sikt.nva.approvals.utils.TestUtils.randomSourceSnapshot;
 import static no.unit.nva.testutils.RandomDataGenerator.randomString;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
@@ -24,7 +24,6 @@ import java.util.Map;
 import java.util.UUID;
 import no.sikt.nva.approvals.domain.ApprovalRevision;
 import no.sikt.nva.approvals.domain.ChangeServiceImpl;
-import no.sikt.nva.approvals.domain.SourceSnapshot;
 import no.sikt.nva.approvals.persistence.DynamoDbApprovalRepository;
 import no.sikt.nva.approvals.persistence.DynamoDbChangeRepository;
 import no.sikt.nva.approvals.persistence.DynamoDbConstants;
@@ -84,7 +83,7 @@ class FetchChangeHandlerTest {
 
   @Test
   void shouldReturnSourceSnapshotWhenChangeIsSnapshotOfApprovalSource() throws IOException {
-    var snapshot = SourceSnapshot.create(randomSourceChange());
+    var snapshot = randomSourceSnapshot();
     approvalRepository.save(snapshot);
 
     var response =

@@ -5,4 +5,8 @@ import java.time.Instant;
 import java.util.UUID;
 
 public record SourceChange(
-    UUID approvalIdentifier, String eventIdentifier, URI source, Instant timestamp) {}
+    UUID approvalIdentifier,
+    UUID customerIdentifier,
+    String eventIdentifier,
+    URI source,
+    Instant timestamp) {}
