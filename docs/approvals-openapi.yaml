@@ -312,7 +312,7 @@ paths:
         content:
           application/cloudevents+json:
             schema:
-              $ref: "#/components/schemas/SourceChangedEvent"
+              $ref: "#/components/schemas/SourceChangedCloudEvent"
       security:
         - CognitoUserPool:
             ["https://api.nva.unit.no/scopes/third-party/approval-upsert", "https://api.nva.unit.no/scopes/backend"]
@@ -786,7 +786,7 @@ components:
             name: DMP
             value: dmp-456
         source: https://example.com/source/12345
-    SourceChangedEvent:
+    SourceChangedCloudEvent:
       type: object
       description: >
         CloudEvent (version 1.0, structured JSON mode) telling NVA that the source of an approval
@@ -938,18 +938,25 @@ components:
               required:
                 - type
                 - trigger
-                - eventId
               properties:
                 type:
                   type: string
                   enum:
                     - HarvestSource
                 trigger:
-                  type: string
-                  enum:
-                    - SourceChangeEvent
-                eventId:
-                  type: string
+                  type: object
+                  description: The event that started the harvest
+                  required:
+                    - type
+                    - identifier
+                  properties:
+                    type:
+                      type: string
+                      enum:
+                        - SourceChangedEvent
+                    identifier:
+                      type: string
+                      description: The id of the CloudEvent that reported the change
     Problem:
       type: object
       description: NVA error reporting object
