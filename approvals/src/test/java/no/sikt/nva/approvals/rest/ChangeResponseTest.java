@@ -14,6 +14,7 @@ import java.net.URI;
 import no.sikt.nva.approvals.domain.ApprovalActivity;
 import no.sikt.nva.approvals.domain.ApprovalRevision;
 import no.sikt.nva.approvals.domain.SourceSnapshot;
+import no.sikt.nva.approvals.rest.HarvestSource.Trigger;
 import org.junit.jupiter.api.Test;
 
 class ChangeResponseTest {
@@ -53,14 +54,14 @@ class ChangeResponseTest {
   }
 
   @Test
-  void shouldDescribeSnapshotAsGeneratedByHarvestOfSourceChangeEvent() {
+  void shouldDescribeSnapshotAsGeneratedByHarvestTriggeredBySourceChangedEvent() {
     var snapshot = randomSourceSnapshot();
 
     var response = snapshotResponse(snapshot);
 
     assertThat(
         response.wasGeneratedBy(),
-        equalTo(new HarvestSource("SourceChangeEvent", snapshot.eventIdentifier())));
+        equalTo(new HarvestSource(new Trigger(snapshot.eventIdentifier()))));
   }
 
   @Test

@@ -11,6 +11,7 @@ import no.sikt.nva.approvals.domain.ApprovalActivity;
 import no.sikt.nva.approvals.domain.ApprovalRevision;
 import no.sikt.nva.approvals.domain.Change;
 import no.sikt.nva.approvals.domain.SourceSnapshot;
+import no.sikt.nva.approvals.rest.HarvestSource.Trigger;
 
 @JsonTypeInfo(use = Id.NAME, property = "type")
 @JsonSubTypes({
@@ -36,7 +37,7 @@ public sealed interface ChangeResponse permits ApprovalRevisionResponse, SourceS
         snapshot.createdDate(),
         snapshot.content().type(),
         snapshot.content().hash(),
-        HarvestSource.create(snapshot.eventIdentifier()));
+        new HarvestSource(new Trigger(snapshot.eventIdentifier())));
   }
 
   private static ApprovalRevisionResponse createApprovalRevisionResponse(
