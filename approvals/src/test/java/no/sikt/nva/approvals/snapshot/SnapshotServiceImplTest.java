@@ -1,10 +1,10 @@
 package no.sikt.nva.approvals.snapshot;
 
 import static no.sikt.nva.approvals.utils.TestUtils.randomSourceChange;
-import static no.unit.nva.testutils.RandomDataGenerator.randomInstant;
 import static no.unit.nva.testutils.RandomDataGenerator.randomString;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
@@ -12,9 +12,6 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import java.time.Clock;
-import java.time.Instant;
-import java.time.ZoneOffset;
 import java.util.Optional;
 import no.sikt.nva.approvals.domain.Content;
 import no.sikt.nva.approvals.domain.SourceSnapshot;
@@ -24,10 +21,9 @@ import no.sikt.nva.approvals.source.SourceClientException;
 import no.sikt.nva.approvals.source.SourceResponse;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 
 class SnapshotServiceImplTest {
-
-  private static final Instant NOW = randomInstant();
 
   private ApprovalRepository approvalRepository;
   private SourceClient sourceClient;
@@ -37,8 +33,7 @@ class SnapshotServiceImplTest {
   void setUp() {
     approvalRepository = mock(ApprovalRepository.class);
     sourceClient = mock(SourceClient.class);
-    snapshotService =
-        new SnapshotServiceImpl(approvalRepository, sourceClient, Clock.fixed(NOW, ZoneOffset.UTC));
+    snapshotService = new SnapshotServiceImpl(approvalRepository, sourceClient);
   }
 
   @Test
@@ -51,7 +46,11 @@ class SnapshotServiceImplTest {
     snapshotService.createSnapshot(sourceChange);
 
     var content = Content.create(sourceResponse.contentType(), sourceResponse.body());
-    verify(approvalRepository).save(SourceSnapshot.create(sourceChange, content, NOW));
+    var saved = ArgumentCaptor.forClass(SourceSnapshot.class);
+    verify(approvalRepository).save(saved.capture());
+    assertThat(
+        saved.getValue(),
+        equalTo(SourceSnapshot.create(sourceChange, content, saved.getValue().createdDate())));
   }
 
   @Test
