@@ -1,5 +1,7 @@
 package no.sikt.nva.approvals.rest;
 
+import static no.sikt.nva.approvals.rest.RestConstants.APPROVAL_PATH;
+
 import com.amazonaws.services.lambda.runtime.Context;
 import java.net.HttpURLConnection;
 import java.util.Map;
@@ -16,7 +18,6 @@ import nva.commons.core.paths.UriWrapper;
 abstract class FetchVersionedDocumentHandler extends ApiGatewayHandler<Void, String> {
 
   private static final String VERSION_PATH_PARAMETER = "version";
-  private static final String APPROVAL_PATH = "approval";
   private static final String CONTENT_LOCATION_HEADER = "Content-Location";
   private static final String VERSION_NOT_FOUND_MESSAGE = "Version not found: %s";
 
