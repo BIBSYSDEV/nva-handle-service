@@ -1,8 +1,10 @@
 package no.sikt.nva.approvals.rest;
 
+import static no.sikt.nva.approvals.rest.RestConstants.CONTEXT_PROPERTY;
 import static no.sikt.nva.approvals.rest.RestConstants.CURSOR_QUERY_PARAMETER;
 import static no.sikt.nva.approvals.rest.RestConstants.changeListId;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.annotation.JsonTypeInfo.Id;
 import com.fasterxml.jackson.annotation.JsonTypeName;
@@ -15,7 +17,8 @@ import nva.commons.core.paths.UriWrapper;
 
 @JsonTypeInfo(use = Id.NAME, property = "type")
 @JsonTypeName("ChangeList")
-public record ChangeListResponse(List<ChangeResponse> changes, URI next) {
+public record ChangeListResponse(
+    @JsonProperty(CONTEXT_PROPERTY) URI context, List<ChangeResponse> changes, URI next) {
 
   public static ChangeListResponse fromChangeList(
       ChangeList changeList, UUID approvalIdentifier, String apiHost) {
@@ -25,7 +28,7 @@ public record ChangeListResponse(List<ChangeResponse> changes, URI next) {
             .toList();
     var next =
         changeList.next().map(cursor -> nextUri(apiHost, approvalIdentifier, cursor)).orElse(null);
-    return new ChangeListResponse(changes, next);
+    return new ChangeListResponse(RestConstants.context(apiHost), changes, next);
   }
 
   private static URI nextUri(String apiHost, UUID approvalIdentifier, SortableIdentifier cursor) {
