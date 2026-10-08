@@ -1,6 +1,7 @@
 package no.sikt.nva.approvals.utils;
 
 import static no.sikt.nva.approvals.rest.RestConstants.CURSOR_QUERY_PARAMETER;
+import static no.sikt.nva.approvals.rest.RestConstants.approvalId;
 import static no.sikt.nva.approvals.validation.RequestConstraints.INVALID_APPROVAL_IDENTIFIER_MESSAGE;
 import static no.sikt.nva.approvals.validation.RequestConstraints.INVALID_CHANGE_IDENTIFIER_MESSAGE;
 import static no.sikt.nva.approvals.validation.RequestConstraints.INVALID_CURSOR_MESSAGE;
@@ -32,7 +33,6 @@ public final class RequestUtils {
   private static final String BAD_GATEWAY_EXCEPTION_MESSAGE = "Something went wrong!";
   private static final String APPROVAL_ID_PATH_PARAMETER = "approvalId";
   private static final String CHANGE_ID_PATH_PARAMETER = "changeId";
-  private static final String APPROVAL_PATH_PARAM = "approval";
   private static final String LOCATION_HEADER = "Location";
   private static final String RETRY_AFTER_HEADER = "Retry-After";
   private static final String RETRY_AFTER_VALUE = "5";
@@ -111,9 +111,6 @@ public final class RequestUtils {
   }
 
   private static String createApprovalLocationHeader(UUID identifier, String host) {
-    return UriWrapper.fromHost(host)
-        .addChild(APPROVAL_PATH_PARAM)
-        .addChild(identifier.toString())
-        .toString();
+    return approvalId(host, identifier).toString();
   }
 }

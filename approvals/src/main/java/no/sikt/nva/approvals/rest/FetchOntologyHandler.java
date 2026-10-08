@@ -1,5 +1,7 @@
 package no.sikt.nva.approvals.rest;
 
+import static no.sikt.nva.approvals.rest.RestConstants.ONTOLOGY_PATH;
+
 import java.util.List;
 import nva.commons.apigateway.MediaType;
 import nva.commons.core.Environment;
@@ -7,7 +9,6 @@ import nva.commons.core.JacocoGenerated;
 
 public class FetchOntologyHandler extends FetchVersionedDocumentHandler {
 
-  private static final String ONTOLOGY_PATH = "ontology";
   private static final List<String> ONTOLOGY_VERSIONS = List.of("1.0.0");
   private static final String ONTOLOGY_FILE_FORMAT = "ontology/approval-ontology-%s.ttl";
   private static final MediaType TEXT_TURTLE = MediaType.parse("text/turtle");
