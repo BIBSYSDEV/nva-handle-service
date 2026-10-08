@@ -11,6 +11,7 @@ import com.fasterxml.jackson.annotation.JsonTypeName;
 import java.net.URI;
 import java.time.Instant;
 import java.util.UUID;
+import no.sikt.nva.approvals.domain.Content;
 import no.sikt.nva.approvals.domain.SourceSnapshot;
 import no.unit.nva.commons.json.JsonSerializable;
 import no.unit.nva.identifiers.SortableIdentifier;
@@ -23,6 +24,9 @@ public record SourceSnapshotDao(
     UUID approvalIdentifier,
     String eventIdentifier,
     URI source,
+    String contentType,
+    String body,
+    String contentHash,
     Instant createdDate)
     implements JsonSerializable, ChangeDao {
 
@@ -34,12 +38,20 @@ public record SourceSnapshotDao(
         snapshot.approvalIdentifier(),
         snapshot.eventIdentifier(),
         snapshot.source(),
+        snapshot.content().type(),
+        snapshot.content().body(),
+        snapshot.content().hash(),
         createdDate);
   }
 
   @Override
   public SourceSnapshot toChange() {
-    return new SourceSnapshot(identifier, approvalIdentifier, eventIdentifier, source);
+    return new SourceSnapshot(
+        identifier,
+        approvalIdentifier,
+        eventIdentifier,
+        source,
+        new Content(contentType, body, contentHash));
   }
 
   public EnhancedDocument toEnhancedDocument() {

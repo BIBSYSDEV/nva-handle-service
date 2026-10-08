@@ -16,11 +16,13 @@ import java.util.stream.IntStream;
 import no.sikt.nva.approvals.domain.Approval;
 import no.sikt.nva.approvals.domain.ApprovalActivity;
 import no.sikt.nva.approvals.domain.ApprovalRevision;
+import no.sikt.nva.approvals.domain.Content;
 import no.sikt.nva.approvals.domain.Handle;
 import no.sikt.nva.approvals.domain.IdentifierPolicy;
 import no.sikt.nva.approvals.domain.NamedIdentifier;
 import no.sikt.nva.approvals.domain.OAuth2ClientCredentials;
 import no.sikt.nva.approvals.domain.SourceConfig;
+import no.sikt.nva.approvals.domain.SourceSnapshot;
 import no.sikt.nva.approvals.persistence.ApprovalDao;
 import no.sikt.nva.approvals.persistence.HandleDao;
 import no.sikt.nva.approvals.persistence.NamedIdentifierQueryObject;
@@ -114,7 +116,21 @@ public class TestUtils {
   }
 
   public static SourceChange randomSourceChange(UUID approvalIdentifier, String eventIdentifier) {
-    return new SourceChange(approvalIdentifier, eventIdentifier, randomUri(), Instant.now());
+    return new SourceChange(
+        approvalIdentifier, randomUUID(), eventIdentifier, randomUri(), Instant.now());
+  }
+
+  public static SourceSnapshot randomSourceSnapshot() {
+    return randomSourceSnapshot(randomUUID());
+  }
+
+  public static SourceSnapshot randomSourceSnapshot(UUID approvalIdentifier) {
+    return SourceSnapshot.create(
+        randomSourceChange(approvalIdentifier, randomString()), randomContent());
+  }
+
+  public static Content randomContent() {
+    return Content.create(randomString(), randomString());
   }
 
   public static Handle randomHandle() {

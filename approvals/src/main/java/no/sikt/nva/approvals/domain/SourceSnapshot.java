@@ -8,17 +8,22 @@ import no.sikt.nva.approvals.snapshot.SourceChange;
 import no.unit.nva.identifiers.SortableIdentifier;
 
 public record SourceSnapshot(
-    SortableIdentifier identifier, UUID approvalIdentifier, String eventIdentifier, URI source)
+    SortableIdentifier identifier,
+    UUID approvalIdentifier,
+    String eventIdentifier,
+    URI source,
+    Content content)
     implements Change {
 
   private static final String IDENTIFIER_SEED = "%s:%s";
 
-  public static SourceSnapshot create(SourceChange sourceChange) {
+  public static SourceSnapshot create(SourceChange sourceChange, Content content) {
     return new SourceSnapshot(
         createIdentifier(sourceChange),
         sourceChange.approvalIdentifier(),
         sourceChange.eventIdentifier(),
-        sourceChange.source());
+        sourceChange.source(),
+        content);
   }
 
   /**

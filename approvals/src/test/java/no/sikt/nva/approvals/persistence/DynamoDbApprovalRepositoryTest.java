@@ -13,6 +13,7 @@ import static no.sikt.nva.approvals.persistence.DynamoDbConstants.SK1;
 import static no.sikt.nva.approvals.persistence.DynamoDbConstants.SK2;
 import static no.sikt.nva.approvals.persistence.DynamoDbLocal.dynamoDBLocal;
 import static no.sikt.nva.approvals.utils.TestUtils.randomApproval;
+import static no.sikt.nva.approvals.utils.TestUtils.randomContent;
 import static no.sikt.nva.approvals.utils.TestUtils.randomHandle;
 import static no.sikt.nva.approvals.utils.TestUtils.randomIdentifier;
 import static no.sikt.nva.approvals.utils.TestUtils.randomIdentifierPolicy;
@@ -20,6 +21,7 @@ import static no.sikt.nva.approvals.utils.TestUtils.randomIdentifiers;
 import static no.sikt.nva.approvals.utils.TestUtils.randomRevision;
 import static no.sikt.nva.approvals.utils.TestUtils.randomSourceChange;
 import static no.sikt.nva.approvals.utils.TestUtils.randomSourceConfig;
+import static no.sikt.nva.approvals.utils.TestUtils.randomSourceSnapshot;
 import static no.sikt.nva.approvals.utils.TestUtils.randomTimestamp;
 import static no.sikt.nva.approvals.validation.RequestConstraints.MAX_IDENTIFIER_NAME_LENGTH;
 import static no.sikt.nva.approvals.validation.RequestConstraints.MAX_IDENTIFIER_VALUE_BYTES;
@@ -1028,7 +1030,7 @@ class DynamoDbApprovalRepositoryTest {
 
   @Test
   void shouldNotFindApprovalWhenOnlySnapshotExistsForApprovalIdentifier() {
-    var snapshot = SourceSnapshot.create(randomSourceChange());
+    var snapshot = randomSourceSnapshot();
     approvalRepository.save(snapshot);
 
     var approval = approvalRepository.findByApprovalIdentifier(snapshot.approvalIdentifier());
@@ -1038,7 +1040,7 @@ class DynamoDbApprovalRepositoryTest {
 
   @Test
   void shouldPersistSnapshot() {
-    var snapshot = SourceSnapshot.create(randomSourceChange());
+    var snapshot = randomSourceSnapshot();
     approvalRepository.save(snapshot);
 
     var persisted = storedSnapshot(snapshot);
@@ -1051,11 +1053,11 @@ class DynamoDbApprovalRepositoryTest {
   @Test
   void shouldNotOverwriteSnapshotWhenSameEventIsSavedAgain() {
     var sourceChange = randomSourceChange();
-    var snapshot = SourceSnapshot.create(sourceChange);
+    var snapshot = SourceSnapshot.create(sourceChange, randomContent());
     approvalRepository.save(snapshot);
     var stored = storedSnapshot(snapshot);
 
-    approvalRepository.save(SourceSnapshot.create(sourceChange));
+    approvalRepository.save(SourceSnapshot.create(sourceChange, randomContent()));
     var redelivered = storedSnapshot(snapshot);
 
     assertThat(stored, equalTo(redelivered));

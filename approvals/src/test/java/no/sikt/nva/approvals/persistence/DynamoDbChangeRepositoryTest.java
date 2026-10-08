@@ -8,7 +8,7 @@ import static no.sikt.nva.approvals.persistence.DynamoDbLocal.dynamoDBLocal;
 import static no.sikt.nva.approvals.utils.TestUtils.randomApproval;
 import static no.sikt.nva.approvals.utils.TestUtils.randomHandle;
 import static no.sikt.nva.approvals.utils.TestUtils.randomRevision;
-import static no.sikt.nva.approvals.utils.TestUtils.randomSourceChange;
+import static no.sikt.nva.approvals.utils.TestUtils.randomSourceSnapshot;
 import static no.unit.nva.testutils.RandomDataGenerator.randomString;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsInAnyOrder;
@@ -62,8 +62,7 @@ class DynamoDbChangeRepositoryTest {
   void shouldListRevisionsAndSnapshotsOfApprovalAsChanges() {
     var approval = randomApproval(randomHandle());
     saveApproval(approval);
-    approvalRepository.save(
-        SourceSnapshot.create(randomSourceChange(approval.identifier(), randomString())));
+    approvalRepository.save(randomSourceSnapshot(approval.identifier()));
 
     var changes =
         changeRepository
@@ -90,7 +89,7 @@ class DynamoDbChangeRepositoryTest {
   void shouldNotListChangesOfOtherApprovals() {
     var approval = randomApproval(randomHandle());
     saveApproval(approval);
-    approvalRepository.save(SourceSnapshot.create(randomSourceChange()));
+    approvalRepository.save(randomSourceSnapshot());
 
     var changes =
         changeRepository.listChangesByApproval(approval.identifier(), null, PAGE_SIZE).changes();
@@ -109,8 +108,7 @@ class DynamoDbChangeRepositoryTest {
   void shouldReportMoreChangesWhenPageIsFull() {
     var approval = randomApproval(randomHandle());
     saveApproval(approval);
-    approvalRepository.save(
-        SourceSnapshot.create(randomSourceChange(approval.identifier(), randomString())));
+    approvalRepository.save(randomSourceSnapshot(approval.identifier()));
 
     var page = changeRepository.listChangesByApproval(approval.identifier(), null, 1);
 
@@ -121,8 +119,7 @@ class DynamoDbChangeRepositoryTest {
   void shouldNotReportMoreChangesWhenApprovalHasExactlyPageSizeChanges() {
     var approval = randomApproval(randomHandle());
     saveApproval(approval);
-    approvalRepository.save(
-        SourceSnapshot.create(randomSourceChange(approval.identifier(), randomString())));
+    approvalRepository.save(randomSourceSnapshot(approval.identifier()));
 
     var page = changeRepository.listChangesByApproval(approval.identifier(), null, 2);
 
@@ -133,8 +130,7 @@ class DynamoDbChangeRepositoryTest {
   void shouldReturnNoMoreThanPageSizeChanges() {
     var approval = randomApproval(randomHandle());
     saveApproval(approval);
-    approvalRepository.save(
-        SourceSnapshot.create(randomSourceChange(approval.identifier(), randomString())));
+    approvalRepository.save(randomSourceSnapshot(approval.identifier()));
 
     var page = changeRepository.listChangesByApproval(approval.identifier(), null, 1);
 
@@ -145,10 +141,8 @@ class DynamoDbChangeRepositoryTest {
   void shouldListEveryChangeExactlyOnceWhenPagingWithNext() {
     var approval = randomApproval(randomHandle());
     saveApproval(approval);
-    approvalRepository.save(
-        SourceSnapshot.create(randomSourceChange(approval.identifier(), randomString())));
-    approvalRepository.save(
-        SourceSnapshot.create(randomSourceChange(approval.identifier(), randomString())));
+    approvalRepository.save(randomSourceSnapshot(approval.identifier()));
+    approvalRepository.save(randomSourceSnapshot(approval.identifier()));
 
     var identifiers =
         Stream.iterate(
@@ -172,7 +166,7 @@ class DynamoDbChangeRepositoryTest {
   @Test
   void shouldReturnChangeOfApproval() {
     var approval = randomApproval(randomHandle());
-    var snapshot = SourceSnapshot.create(randomSourceChange(approval.identifier(), randomString()));
+    var snapshot = randomSourceSnapshot(approval.identifier());
     saveApproval(approval);
     approvalRepository.save(snapshot);
 
@@ -183,7 +177,7 @@ class DynamoDbChangeRepositoryTest {
 
   @Test
   void shouldReturnOptionalEmtpyWhenChangeDoesNotExist() {
-    var snapshot = SourceSnapshot.create(randomSourceChange());
+    var snapshot = randomSourceSnapshot();
     approvalRepository.save(snapshot);
 
     var change = changeRepository.findChange(randomUUID(), snapshot.identifier());

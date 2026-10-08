@@ -9,7 +9,12 @@ import no.unit.nva.commons.json.JsonSerializable;
 import no.unit.nva.commons.json.JsonUtils;
 
 public record SourceChangedMessage(
-    String eventIdentifier, UUID approvalIdentifier, URI handle, URI source, Instant timestamp)
+    String eventIdentifier,
+    UUID approvalIdentifier,
+    UUID customerIdentifier,
+    URI handle,
+    URI source,
+    Instant timestamp)
     implements JsonSerializable {
 
   private static final String INVALID_MESSAGE = "Could not parse source changed message: %s";
@@ -23,6 +28,7 @@ public record SourceChangedMessage(
   }
 
   public SourceChange toSourceChange() {
-    return new SourceChange(approvalIdentifier, eventIdentifier, source, timestamp);
+    return new SourceChange(
+        approvalIdentifier, customerIdentifier, eventIdentifier, source, timestamp);
   }
 }

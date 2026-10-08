@@ -18,7 +18,12 @@ class SourceChangedMessageTest {
   void shouldParseSourceChangedMessageFromJson() {
     var expected =
         new SourceChangedMessage(
-            randomString(), randomUUID(), randomHandle().value(), randomUri(), Instant.now());
+            randomString(),
+            randomUUID(),
+            randomUUID(),
+            randomHandle().value(),
+            randomUri(),
+            Instant.now());
 
     var actual = SourceChangedMessage.fromString(expected.toJsonString());
 

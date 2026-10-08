@@ -8,6 +8,7 @@ import static java.util.UUID.randomUUID;
 import static no.sikt.nva.approvals.domain.ApprovalActivity.CREATE_APPROVAL;
 import static no.sikt.nva.approvals.persistence.DynamoDbLocal.dynamoDBLocal;
 import static no.sikt.nva.approvals.utils.TestUtils.randomApproval;
+import static no.sikt.nva.approvals.utils.TestUtils.randomContent;
 import static no.sikt.nva.approvals.utils.TestUtils.randomHandle;
 import static no.sikt.nva.approvals.utils.TestUtils.randomRevision;
 import static no.sikt.nva.approvals.utils.TestUtils.randomTimestamp;
@@ -228,7 +229,9 @@ class FetchApprovalChangesHandlerTest {
   private SourceSnapshot saveSnapshotOfSourceChangedAt(UUID approvalIdentifier, Instant timestamp) {
     var snapshot =
         SourceSnapshot.create(
-            new SourceChange(approvalIdentifier, randomString(), randomUri(), timestamp));
+            new SourceChange(
+                approvalIdentifier, randomUUID(), randomString(), randomUri(), timestamp),
+            randomContent());
     approvalRepository.save(snapshot);
     return snapshot;
   }
