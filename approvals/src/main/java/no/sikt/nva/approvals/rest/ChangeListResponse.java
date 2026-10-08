@@ -18,7 +18,7 @@ import nva.commons.core.paths.UriWrapper;
 @JsonTypeInfo(use = Id.NAME, property = "type")
 @JsonTypeName("ChangeList")
 public record ChangeListResponse(
-    @JsonProperty(CONTEXT_PROPERTY) URI context, List<ChangeResponse> changes, URI next) {
+    @JsonProperty(CONTEXT_PROPERTY) URI context, URI id, List<ChangeResponse> changes, URI next) {
 
   public static ChangeListResponse fromChangeList(
       ChangeList changeList, UUID approvalIdentifier, String apiHost) {
@@ -28,7 +28,8 @@ public record ChangeListResponse(
             .toList();
     var next =
         changeList.next().map(cursor -> nextUri(apiHost, approvalIdentifier, cursor)).orElse(null);
-    return new ChangeListResponse(RestConstants.context(apiHost), changes, next);
+    return new ChangeListResponse(
+        RestConstants.context(apiHost), changeListId(apiHost, approvalIdentifier), changes, next);
   }
 
   private static URI nextUri(String apiHost, UUID approvalIdentifier, SortableIdentifier cursor) {
