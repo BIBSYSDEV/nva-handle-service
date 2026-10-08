@@ -15,6 +15,7 @@ class ChangeListResponseTest {
   private static final String API_HOST = "api.unittest.nva.unit.no";
   private static final String CHANGE_LIST_FORMAT =
       "https://api.unittest.nva.unit.no/approval/%s/change";
+  private static final String APPROVAL_FORMAT = "https://api.unittest.nva.unit.no/approval/%s";
 
   @Test
   void shouldIdentifyChangeListAsChangesOfItsApproval() {
@@ -25,5 +26,16 @@ class ChangeListResponseTest {
 
     assertThat(
         response.id(), equalTo(URI.create(CHANGE_LIST_FORMAT.formatted(approvalIdentifier))));
+  }
+
+  @Test
+  void shouldPointChangeListToItsApproval() {
+    var approvalIdentifier = randomUUID();
+    var changeList = new ChangeList(List.of(randomSourceSnapshot(approvalIdentifier)), false);
+
+    var response = ChangeListResponse.fromChangeList(changeList, approvalIdentifier, API_HOST);
+
+    assertThat(
+        response.approval(), equalTo(URI.create(APPROVAL_FORMAT.formatted(approvalIdentifier))));
   }
 }
