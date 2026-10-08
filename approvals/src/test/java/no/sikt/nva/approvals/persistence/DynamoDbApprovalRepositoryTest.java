@@ -25,6 +25,7 @@ import static no.sikt.nva.approvals.utils.TestUtils.randomSourceSnapshot;
 import static no.sikt.nva.approvals.utils.TestUtils.randomTimestamp;
 import static no.sikt.nva.approvals.validation.RequestConstraints.MAX_IDENTIFIER_NAME_LENGTH;
 import static no.sikt.nva.approvals.validation.RequestConstraints.MAX_IDENTIFIER_VALUE_BYTES;
+import static no.unit.nva.testutils.RandomDataGenerator.randomInstant;
 import static no.unit.nva.testutils.RandomDataGenerator.randomString;
 import static no.unit.nva.testutils.RandomDataGenerator.randomUri;
 import static nva.commons.core.attempt.Try.attempt;
@@ -1045,19 +1046,17 @@ class DynamoDbApprovalRepositoryTest {
 
     var persisted = storedSnapshot(snapshot);
 
-    assertThat(
-        persisted,
-        equalTo(SourceSnapshotDao.fromSourceSnapshot(snapshot, persisted.createdDate())));
+    assertThat(persisted, equalTo(SourceSnapshotDao.fromSourceSnapshot(snapshot)));
   }
 
   @Test
   void shouldNotOverwriteSnapshotWhenSameEventIsSavedAgain() {
     var sourceChange = randomSourceChange();
-    var snapshot = SourceSnapshot.create(sourceChange, randomContent());
+    var snapshot = SourceSnapshot.create(sourceChange, randomContent(), randomInstant());
     approvalRepository.save(snapshot);
     var stored = storedSnapshot(snapshot);
 
-    approvalRepository.save(SourceSnapshot.create(sourceChange, randomContent()));
+    approvalRepository.save(SourceSnapshot.create(sourceChange, randomContent(), randomInstant()));
     var redelivered = storedSnapshot(snapshot);
 
     assertThat(stored, equalTo(redelivered));
@@ -1073,8 +1072,7 @@ class DynamoDbApprovalRepositoryTest {
   }
 
   private SourceSnapshotDao storedSnapshot(SourceSnapshot snapshot) {
-    var databaseIdentifier =
-        SourceSnapshotDao.fromSourceSnapshot(snapshot, Instant.now()).getDatabaseIdentifier();
+    var databaseIdentifier = SourceSnapshotDao.fromSourceSnapshot(snapshot).getDatabaseIdentifier();
     return scanItems().stream()
         .filter(item -> databaseIdentifier.equals(item.get(SK0).s()))
         .findFirst()

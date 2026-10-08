@@ -3,6 +3,7 @@ package no.sikt.nva.approvals.domain;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
 import java.net.URI;
+import java.time.Instant;
 import java.util.UUID;
 import no.sikt.nva.approvals.snapshot.SourceChange;
 import no.unit.nva.identifiers.SortableIdentifier;
@@ -12,18 +13,21 @@ public record SourceSnapshot(
     UUID approvalIdentifier,
     String eventIdentifier,
     URI source,
-    Content content)
+    Content content,
+    Instant createdDate)
     implements Change {
 
   private static final String IDENTIFIER_SEED = "%s:%s";
 
-  public static SourceSnapshot create(SourceChange sourceChange, Content content) {
+  public static SourceSnapshot create(
+      SourceChange sourceChange, Content content, Instant createdDate) {
     return new SourceSnapshot(
         createIdentifier(sourceChange),
         sourceChange.approvalIdentifier(),
         sourceChange.eventIdentifier(),
         sourceChange.source(),
-        content);
+        content,
+        createdDate);
   }
 
   /**

@@ -148,7 +148,8 @@ class ChangeServiceTest {
         SourceSnapshot.create(
             new SourceChange(
                 approvalIdentifier, randomUUID(), randomString(), randomUri(), timestamp),
-            randomContent());
+            randomContent(),
+            timestamp);
     approvalRepository.save(snapshot);
     return snapshot;
   }

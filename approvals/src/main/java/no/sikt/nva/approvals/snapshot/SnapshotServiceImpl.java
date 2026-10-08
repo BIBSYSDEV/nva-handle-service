@@ -1,5 +1,6 @@
 package no.sikt.nva.approvals.snapshot;
 
+import java.time.Clock;
 import no.sikt.nva.approvals.domain.Content;
 import no.sikt.nva.approvals.domain.SourceSnapshot;
 import no.sikt.nva.approvals.persistence.ApprovalRepository;
@@ -16,23 +17,27 @@ public class SnapshotServiceImpl implements SnapshotService {
 
   private final ApprovalRepository approvalRepository;
   private final SourceClient sourceClient;
+  private final Clock clock;
 
-  public SnapshotServiceImpl(ApprovalRepository approvalRepository, SourceClient sourceClient) {
+  public SnapshotServiceImpl(
+      ApprovalRepository approvalRepository, SourceClient sourceClient, Clock clock) {
     this.approvalRepository = approvalRepository;
     this.sourceClient = sourceClient;
+    this.clock = clock;
   }
 
   @JacocoGenerated
   public static SnapshotService defaultInstance(Environment environment) {
     return new SnapshotServiceImpl(
         DynamoDbApprovalRepository.defaultInstance(environment),
-        SourceClient.defaultInstance(environment));
+        SourceClient.defaultInstance(environment),
+        Clock.systemUTC());
   }
 
   @Override
   public void createSnapshot(SourceChange sourceChange) throws SourceClientException {
     var content = fetchContent(sourceChange);
-    approvalRepository.save(SourceSnapshot.create(sourceChange, content));
+    approvalRepository.save(SourceSnapshot.create(sourceChange, content, clock.instant()));
   }
 
   private Content fetchContent(SourceChange sourceChange) throws SourceClientException {

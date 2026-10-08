@@ -32,7 +32,7 @@ public record SourceSnapshotDao(
 
   private static final String SNAPSHOT_KEY = "Change:%s";
 
-  public static SourceSnapshotDao fromSourceSnapshot(SourceSnapshot snapshot, Instant createdDate) {
+  public static SourceSnapshotDao fromSourceSnapshot(SourceSnapshot snapshot) {
     return new SourceSnapshotDao(
         snapshot.identifier(),
         snapshot.approvalIdentifier(),
@@ -41,7 +41,7 @@ public record SourceSnapshotDao(
         snapshot.content().type(),
         snapshot.content().body(),
         snapshot.content().hash(),
-        createdDate);
+        snapshot.createdDate());
   }
 
   @Override
@@ -51,7 +51,8 @@ public record SourceSnapshotDao(
         approvalIdentifier,
         eventIdentifier,
         source,
-        new Content(contentType, body, contentHash));
+        new Content(contentType, body, contentHash),
+        createdDate);
   }
 
   public EnhancedDocument toEnhancedDocument() {

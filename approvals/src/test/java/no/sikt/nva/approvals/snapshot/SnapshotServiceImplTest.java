@@ -1,6 +1,7 @@
 package no.sikt.nva.approvals.snapshot;
 
 import static no.sikt.nva.approvals.utils.TestUtils.randomSourceChange;
+import static no.unit.nva.testutils.RandomDataGenerator.randomInstant;
 import static no.unit.nva.testutils.RandomDataGenerator.randomString;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
@@ -11,6 +12,9 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.time.Clock;
+import java.time.Instant;
+import java.time.ZoneOffset;
 import java.util.Optional;
 import no.sikt.nva.approvals.domain.Content;
 import no.sikt.nva.approvals.domain.SourceSnapshot;
@@ -23,6 +27,8 @@ import org.junit.jupiter.api.Test;
 
 class SnapshotServiceImplTest {
 
+  private static final Instant NOW = randomInstant();
+
   private ApprovalRepository approvalRepository;
   private SourceClient sourceClient;
   private SnapshotService snapshotService;
@@ -31,7 +37,8 @@ class SnapshotServiceImplTest {
   void setUp() {
     approvalRepository = mock(ApprovalRepository.class);
     sourceClient = mock(SourceClient.class);
-    snapshotService = new SnapshotServiceImpl(approvalRepository, sourceClient);
+    snapshotService =
+        new SnapshotServiceImpl(approvalRepository, sourceClient, Clock.fixed(NOW, ZoneOffset.UTC));
   }
 
   @Test
@@ -44,7 +51,7 @@ class SnapshotServiceImplTest {
     snapshotService.createSnapshot(sourceChange);
 
     var content = Content.create(sourceResponse.contentType(), sourceResponse.body());
-    verify(approvalRepository).save(SourceSnapshot.create(sourceChange, content));
+    verify(approvalRepository).save(SourceSnapshot.create(sourceChange, content, NOW));
   }
 
   @Test
