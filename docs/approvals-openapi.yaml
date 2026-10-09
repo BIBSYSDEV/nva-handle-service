@@ -937,13 +937,13 @@ components:
               type: object
               required:
                 - type
-                - trigger
+                - wasStartedBy
               properties:
                 type:
                   type: string
                   enum:
                     - HarvestSource
-                trigger:
+                wasStartedBy:
                   type: object
                   description: The event that started the harvest
                   required:
