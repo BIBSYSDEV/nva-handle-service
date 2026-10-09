@@ -5,7 +5,7 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo.Id;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 
 @JsonTypeName("HarvestSource")
-public record HarvestSource(Trigger trigger) implements WasGeneratedBy {
+public record HarvestSource(Trigger wasStartedBy) implements WasGeneratedBy {
 
   @JsonTypeInfo(use = Id.NAME, property = "type")
   @JsonTypeName("SourceChangedEvent")

@@ -54,7 +54,7 @@ class ChangeResponseTest {
   }
 
   @Test
-  void shouldDescribeSnapshotAsGeneratedByHarvestTriggeredBySourceChangedEvent() {
+  void shouldDescribeSnapshotAsGeneratedByHarvestStartedBySourceChangedEvent() {
     var snapshot = randomSourceSnapshot();
 
     var response = snapshotResponse(snapshot);
