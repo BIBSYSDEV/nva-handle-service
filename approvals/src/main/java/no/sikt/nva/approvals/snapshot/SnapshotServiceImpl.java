@@ -1,5 +1,6 @@
 package no.sikt.nva.approvals.snapshot;
 
+import java.time.Instant;
 import no.sikt.nva.approvals.domain.Content;
 import no.sikt.nva.approvals.domain.SourceSnapshot;
 import no.sikt.nva.approvals.persistence.ApprovalRepository;
@@ -32,7 +33,7 @@ public class SnapshotServiceImpl implements SnapshotService {
   @Override
   public void createSnapshot(SourceChange sourceChange) throws SourceClientException {
     var content = fetchContent(sourceChange);
-    approvalRepository.save(SourceSnapshot.create(sourceChange, content));
+    approvalRepository.save(SourceSnapshot.create(sourceChange, content, Instant.now()));
   }
 
   private Content fetchContent(SourceChange sourceChange) throws SourceClientException {

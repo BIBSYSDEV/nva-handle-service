@@ -4,6 +4,7 @@ import static no.sikt.nva.approvals.utils.TestUtils.randomSourceChange;
 import static no.unit.nva.testutils.RandomDataGenerator.randomString;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
@@ -20,6 +21,7 @@ import no.sikt.nva.approvals.source.SourceClientException;
 import no.sikt.nva.approvals.source.SourceResponse;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 
 class SnapshotServiceImplTest {
 
@@ -44,7 +46,11 @@ class SnapshotServiceImplTest {
     snapshotService.createSnapshot(sourceChange);
 
     var content = Content.create(sourceResponse.contentType(), sourceResponse.body());
-    verify(approvalRepository).save(SourceSnapshot.create(sourceChange, content));
+    var saved = ArgumentCaptor.forClass(SourceSnapshot.class);
+    verify(approvalRepository).save(saved.capture());
+    assertThat(
+        saved.getValue(),
+        equalTo(SourceSnapshot.create(sourceChange, content, saved.getValue().createdDate())));
   }
 
   @Test

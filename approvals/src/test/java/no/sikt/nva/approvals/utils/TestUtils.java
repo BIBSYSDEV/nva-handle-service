@@ -2,6 +2,7 @@ package no.sikt.nva.approvals.utils;
 
 import static java.time.temporal.ChronoUnit.MILLIS;
 import static java.util.UUID.randomUUID;
+import static no.unit.nva.testutils.RandomDataGenerator.randomInstant;
 import static no.unit.nva.testutils.RandomDataGenerator.randomString;
 import static no.unit.nva.testutils.RandomDataGenerator.randomUri;
 
@@ -126,7 +127,7 @@ public class TestUtils {
 
   public static SourceSnapshot randomSourceSnapshot(UUID approvalIdentifier) {
     return SourceSnapshot.create(
-        randomSourceChange(approvalIdentifier, randomString()), randomContent());
+        randomSourceChange(approvalIdentifier, randomString()), randomContent(), randomInstant());
   }
 
   public static Content randomContent() {
