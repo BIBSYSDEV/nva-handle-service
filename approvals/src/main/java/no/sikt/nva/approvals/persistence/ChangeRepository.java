@@ -4,6 +4,7 @@ import java.util.Optional;
 import java.util.UUID;
 import no.sikt.nva.approvals.domain.Change;
 import no.sikt.nva.approvals.domain.ChangeList;
+import no.sikt.nva.approvals.domain.SourceSnapshot;
 import no.unit.nva.identifiers.SortableIdentifier;
 
 public interface ChangeRepository {
@@ -11,4 +12,6 @@ public interface ChangeRepository {
   ChangeList listChangesByApproval(UUID approvalIdentifier, SortableIdentifier after, int pageSize);
 
   Optional<Change> findChange(UUID approvalIdentifier, SortableIdentifier changeIdentifier);
+
+  Optional<SourceSnapshot> findLatestSnapshot(UUID approvalIdentifier);
 }

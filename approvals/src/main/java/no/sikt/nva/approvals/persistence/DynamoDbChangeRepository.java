@@ -12,6 +12,7 @@ import java.util.Optional;
 import java.util.UUID;
 import no.sikt.nva.approvals.domain.Change;
 import no.sikt.nva.approvals.domain.ChangeList;
+import no.sikt.nva.approvals.domain.SourceSnapshot;
 import no.unit.nva.identifiers.SortableIdentifier;
 import nva.commons.core.Environment;
 import nva.commons.core.JacocoGenerated;
@@ -25,6 +26,8 @@ import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 
 public class DynamoDbChangeRepository implements ChangeRepository {
+
+  private static final int LATEST_SNAPSHOT_PAGE_SIZE = 1;
 
   private final DynamoDbTable<EnhancedDocument> table;
 
@@ -57,6 +60,20 @@ public class DynamoDbChangeRepository implements ChangeRepository {
         createChangeKey(
             approvalIdentifier, ApprovalRevisionDao.CHANGE_KEY_PREFIX + changeIdentifier);
     return Optional.ofNullable(table.getItem(key)).map(DynamoDbChangeRepository::toChange);
+  }
+
+  @Override
+  public Optional<SourceSnapshot> findLatestSnapshot(UUID approvalIdentifier) {
+    return table
+        .query(request(approvalIdentifier, LATEST_SNAPSHOT_PAGE_SIZE).build())
+        .items()
+        .stream()
+        .map(EnhancedDocument::toJson)
+        .map(ChangeDao::fromJson)
+        .filter(SourceSnapshotDao.class::isInstance)
+        .map(SourceSnapshotDao.class::cast)
+        .map(SourceSnapshotDao::toChange)
+        .findFirst();
   }
 
   private static Change toChange(EnhancedDocument document) {

@@ -116,8 +116,13 @@ public class TestUtils {
   }
 
   public static SourceChange randomSourceChange(UUID approvalIdentifier, String eventIdentifier) {
+    return randomSourceChange(approvalIdentifier, eventIdentifier, Instant.now());
+  }
+
+  public static SourceChange randomSourceChange(
+      UUID approvalIdentifier, String eventIdentifier, Instant timestamp) {
     return new SourceChange(
-        approvalIdentifier, randomUUID(), eventIdentifier, randomUri(), Instant.now());
+        approvalIdentifier, randomUUID(), eventIdentifier, randomUri(), timestamp);
   }
 
   public static SourceSnapshot randomSourceSnapshot() {
@@ -127,6 +132,11 @@ public class TestUtils {
   public static SourceSnapshot randomSourceSnapshot(UUID approvalIdentifier) {
     return SourceSnapshot.create(
         randomSourceChange(approvalIdentifier, randomString()), randomContent());
+  }
+
+  public static SourceSnapshot randomSourceSnapshot(UUID approvalIdentifier, Instant timestamp) {
+    return SourceSnapshot.create(
+        randomSourceChange(approvalIdentifier, randomString(), timestamp), randomContent());
   }
 
   public static Content randomContent() {

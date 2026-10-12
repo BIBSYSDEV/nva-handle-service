@@ -2,6 +2,7 @@ package no.sikt.nva.approvals.persistence;
 
 import static java.util.UUID.randomUUID;
 import static no.sikt.nva.approvals.domain.ApprovalActivity.CREATE_APPROVAL;
+import static no.sikt.nva.approvals.domain.ApprovalActivity.UPDATE_APPROVAL;
 import static no.sikt.nva.approvals.persistence.DynamoDbConstants.PK0;
 import static no.sikt.nva.approvals.persistence.DynamoDbConstants.SK0;
 import static no.sikt.nva.approvals.persistence.DynamoDbLocal.dynamoDBLocal;
@@ -17,6 +18,7 @@ import static org.hamcrest.Matchers.hasSize;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.time.Instant;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -41,6 +43,8 @@ class DynamoDbChangeRepositoryTest {
   private static final int PAGE_SIZE = 100;
   private static final String CHANGE_KEY = "Change:%s";
   private static final String TYPE_FIELD = "type";
+  private static final long OLDER_SNAPSHOT_AGE_IN_SECONDS = 60;
+  private static final long NEWER_SNAPSHOT_AGE_IN_SECONDS = 30;
 
   private DynamoDbLocal dynamoDbLocal;
   private ApprovalRepository approvalRepository;
@@ -183,6 +187,50 @@ class DynamoDbChangeRepositoryTest {
     var change = changeRepository.findChange(randomUUID(), snapshot.identifier());
 
     assertTrue(change.isEmpty());
+  }
+
+  @Test
+  void shouldReturnLatestSnapshotOfApprovalWhenNewerRevisionExists() {
+    var approval = randomApproval(randomHandle());
+    var now = Instant.now();
+    var newerSnapshot =
+        randomSourceSnapshot(
+            approval.identifier(), now.minusSeconds(NEWER_SNAPSHOT_AGE_IN_SECONDS));
+    approvalRepository.save(
+        randomSourceSnapshot(
+            approval.identifier(), now.minusSeconds(OLDER_SNAPSHOT_AGE_IN_SECONDS)));
+    approvalRepository.save(newerSnapshot);
+    saveApproval(approval);
+
+    var latestSnapshot = changeRepository.findLatestSnapshot(approval.identifier());
+
+    assertThat(latestSnapshot, equalTo(Optional.of(newerSnapshot)));
+  }
+
+  @Test
+  void shouldReturnLatestSnapshotWhenSeveralRevisionsAreNewer() {
+    var approval = randomApproval(randomHandle());
+    var snapshot =
+        randomSourceSnapshot(
+            approval.identifier(), Instant.now().minusSeconds(OLDER_SNAPSHOT_AGE_IN_SECONDS));
+    approvalRepository.save(snapshot);
+    saveApproval(approval);
+    approvalRepository.updateApproval(randomRevision(approval, UPDATE_APPROVAL));
+    approvalRepository.updateApproval(randomRevision(approval, UPDATE_APPROVAL));
+
+    var latestSnapshot = changeRepository.findLatestSnapshot(approval.identifier());
+
+    assertThat(latestSnapshot, equalTo(Optional.of(snapshot)));
+  }
+
+  @Test
+  void shouldReturnNoLatestSnapshotWhenApprovalHasNoSnapshot() {
+    var approval = randomApproval(randomHandle());
+    saveApproval(approval);
+
+    var latestSnapshot = changeRepository.findLatestSnapshot(approval.identifier());
+
+    assertTrue(latestSnapshot.isEmpty());
   }
 
   private void saveApproval(Approval approval) {
