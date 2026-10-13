@@ -7,8 +7,8 @@ import nva.commons.core.paths.UriWrapper;
 
 public final class RestConstants {
 
-  public static final String APPROVAL_PATH = "approval";
-  public static final String CHANGE_PATH = "change";
+  private static final String APPROVAL_PATH = "approval";
+  private static final String CHANGE_PATH = "change";
   public static final String CONTEXT_PATH = "context";
   public static final String ONTOLOGY_PATH = "ontology";
   public static final String CURSOR_QUERY_PARAMETER = "cursor";
@@ -27,6 +27,14 @@ public final class RestConstants {
 
   public static URI ontology(String apiHost) {
     return UriWrapper.fromHost(apiHost).addChild(APPROVAL_PATH).addChild(ONTOLOGY_PATH).getUri();
+  }
+
+  public static URI version(String apiHost, String documentPath, String version) {
+    return UriWrapper.fromHost(apiHost)
+        .addChild(APPROVAL_PATH)
+        .addChild(documentPath)
+        .addChild(version)
+        .getUri();
   }
 
   public static URI approvalId(String apiHost, UUID approvalIdentifier) {

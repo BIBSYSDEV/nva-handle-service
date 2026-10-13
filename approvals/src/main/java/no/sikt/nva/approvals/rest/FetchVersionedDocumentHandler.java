@@ -1,7 +1,5 @@
 package no.sikt.nva.approvals.rest;
 
-import static no.sikt.nva.approvals.rest.RestConstants.APPROVAL_PATH;
-
 import com.amazonaws.services.lambda.runtime.Context;
 import java.net.HttpURLConnection;
 import java.util.Map;
@@ -13,7 +11,6 @@ import nva.commons.apigateway.RequestInfo;
 import nva.commons.apigateway.exceptions.ApiGatewayException;
 import nva.commons.apigateway.exceptions.NotFoundException;
 import nva.commons.core.Environment;
-import nva.commons.core.paths.UriWrapper;
 
 abstract class FetchVersionedDocumentHandler extends ApiGatewayHandler<Void, String> {
 
@@ -44,7 +41,11 @@ abstract class FetchVersionedDocumentHandler extends ApiGatewayHandler<Void, Str
         documents
             .find(version)
             .orElseThrow(() -> new NotFoundException(VERSION_NOT_FOUND_MESSAGE.formatted(version)));
-    addAdditionalHeaders(() -> Map.of(CONTENT_LOCATION_HEADER, createVersionUri(version)));
+    addAdditionalHeaders(
+        () ->
+            Map.of(
+                CONTENT_LOCATION_HEADER,
+                RestConstants.version(apiHost, documentPath, version).toString()));
     return document;
   }
 
@@ -64,13 +65,5 @@ abstract class FetchVersionedDocumentHandler extends ApiGatewayHandler<Void, Str
     return Optional.ofNullable(requestInfo.getPathParameters())
         .map(pathParameters -> pathParameters.get(VERSION_PATH_PARAMETER))
         .orElse(documents.getLatestVersion());
-  }
-
-  private String createVersionUri(String version) {
-    return UriWrapper.fromHost(apiHost)
-        .addChild(APPROVAL_PATH)
-        .addChild(documentPath)
-        .addChild(version)
-        .toString();
   }
 }
