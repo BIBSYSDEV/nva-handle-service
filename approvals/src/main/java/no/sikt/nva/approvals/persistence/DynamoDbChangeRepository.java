@@ -12,6 +12,7 @@ import java.util.Optional;
 import java.util.UUID;
 import no.sikt.nva.approvals.domain.Change;
 import no.sikt.nva.approvals.domain.ChangeList;
+import no.sikt.nva.approvals.domain.SourceSnapshot;
 import no.unit.nva.identifiers.SortableIdentifier;
 import nva.commons.core.Environment;
 import nva.commons.core.JacocoGenerated;
@@ -57,6 +58,17 @@ public class DynamoDbChangeRepository implements ChangeRepository {
         createChangeKey(
             approvalIdentifier, ApprovalRevisionDao.CHANGE_KEY_PREFIX + changeIdentifier);
     return Optional.ofNullable(table.getItem(key)).map(DynamoDbChangeRepository::toChange);
+  }
+
+  @Override
+  public Optional<SourceSnapshot> findLatestSnapshot(UUID approvalIdentifier) {
+    return table.query(request(approvalIdentifier, 25).build()).items().stream()
+        .map(EnhancedDocument::toJson)
+        .map(ChangeDao::fromJson)
+        .filter(SourceSnapshotDao.class::isInstance)
+        .map(SourceSnapshotDao.class::cast)
+        .map(SourceSnapshotDao::toChange)
+        .findFirst();
   }
 
   private static Change toChange(EnhancedDocument document) {
