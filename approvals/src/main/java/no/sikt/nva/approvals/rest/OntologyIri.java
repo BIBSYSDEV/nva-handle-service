@@ -1,6 +1,6 @@
 package no.sikt.nva.approvals.rest;
 
-import static no.sikt.nva.approvals.rest.RestConstants.ontology;
+import static no.sikt.nva.approvals.utils.UriConstants.ontology;
 
 final class OntologyIri {
 

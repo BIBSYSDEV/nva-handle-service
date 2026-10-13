@@ -1,8 +1,8 @@
 package no.sikt.nva.approvals.rest;
 
 import static java.util.Objects.nonNull;
-import static no.sikt.nva.approvals.rest.RestConstants.CONTEXT_PROPERTY;
-import static no.sikt.nva.approvals.rest.RestConstants.approvalId;
+import static no.sikt.nva.approvals.utils.UriConstants.CONTEXT_PROPERTY;
+import static no.sikt.nva.approvals.utils.UriConstants.approvalId;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
@@ -13,6 +13,7 @@ import java.util.Collection;
 import java.util.UUID;
 import no.sikt.nva.approvals.domain.Approval;
 import no.sikt.nva.approvals.domain.NamedIdentifier;
+import no.sikt.nva.approvals.utils.UriConstants;
 
 @JsonTypeInfo(use = Id.NAME, property = "type")
 @JsonTypeName("Approval")
@@ -26,7 +27,7 @@ public record ApprovalResponse(
 
   public static ApprovalResponse fromApproval(Approval approval, String apiHost) {
     var id = approvalId(apiHost, approval.identifier());
-    var contextUri = RestConstants.context(apiHost);
+    var contextUri = UriConstants.context(apiHost);
     return new ApprovalResponse(
         contextUri,
         id,

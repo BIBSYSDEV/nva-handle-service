@@ -1,7 +1,7 @@
 package no.sikt.nva.approvals.rest;
 
-import static no.sikt.nva.approvals.rest.RestConstants.CURSOR_QUERY_PARAMETER;
-import static no.sikt.nva.approvals.rest.RestConstants.changeListId;
+import static no.sikt.nva.approvals.utils.UriConstants.CURSOR_QUERY_PARAMETER;
+import static no.sikt.nva.approvals.utils.UriConstants.changeListId;
 
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.annotation.JsonTypeInfo.Id;

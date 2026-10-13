@@ -1,7 +1,7 @@
 package no.sikt.nva.approvals.rest;
 
-import static no.sikt.nva.approvals.rest.RestConstants.approvalId;
-import static no.sikt.nva.approvals.rest.RestConstants.changeId;
+import static no.sikt.nva.approvals.utils.UriConstants.approvalId;
+import static no.sikt.nva.approvals.utils.UriConstants.changeId;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;

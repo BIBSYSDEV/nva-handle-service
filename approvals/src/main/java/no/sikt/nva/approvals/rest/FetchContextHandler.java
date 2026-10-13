@@ -1,7 +1,7 @@
 package no.sikt.nva.approvals.rest;
 
-import static no.sikt.nva.approvals.rest.RestConstants.CONTEXT_PATH;
-import static no.sikt.nva.approvals.rest.RestConstants.CURRENT_CONTEXT_VERSION;
+import static no.sikt.nva.approvals.utils.UriConstants.CONTEXT_PATH;
+import static no.sikt.nva.approvals.utils.UriConstants.CURRENT_CONTEXT_VERSION;
 import static nva.commons.apigateway.MediaTypes.APPLICATION_JSON_LD;
 
 import java.util.List;

@@ -1,6 +1,6 @@
 package no.sikt.nva.approvals.rest;
 
-import static no.sikt.nva.approvals.rest.RestConstants.ONTOLOGY_PATH;
+import static no.sikt.nva.approvals.utils.UriConstants.ONTOLOGY_PATH;
 
 import java.util.List;
 import nva.commons.apigateway.MediaType;

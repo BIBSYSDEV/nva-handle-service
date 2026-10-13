@@ -6,6 +6,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.SequencedCollection;
 import no.sikt.nva.approvals.utils.RequestUtils;
+import no.sikt.nva.approvals.utils.UriConstants;
 import nva.commons.apigateway.ApiGatewayHandler;
 import nva.commons.apigateway.RequestInfo;
 import nva.commons.apigateway.exceptions.ApiGatewayException;
@@ -45,7 +46,7 @@ abstract class FetchVersionedDocumentHandler extends ApiGatewayHandler<Void, Str
         () ->
             Map.of(
                 CONTENT_LOCATION_HEADER,
-                RestConstants.version(apiHost, documentPath, version).toString()));
+                UriConstants.version(apiHost, documentPath, version).toString()));
     return document;
   }
 

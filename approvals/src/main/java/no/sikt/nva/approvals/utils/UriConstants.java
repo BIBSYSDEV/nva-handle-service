@@ -1,11 +1,11 @@
-package no.sikt.nva.approvals.rest;
+package no.sikt.nva.approvals.utils;
 
 import java.net.URI;
 import java.util.UUID;
 import no.unit.nva.identifiers.SortableIdentifier;
 import nva.commons.core.paths.UriWrapper;
 
-public final class RestConstants {
+public final class UriConstants {
 
   private static final String APPROVAL_PATH = "approval";
   private static final String CHANGE_PATH = "change";
@@ -15,7 +15,7 @@ public final class RestConstants {
   public static final String CONTEXT_PROPERTY = "@context";
   public static final String CURRENT_CONTEXT_VERSION = "v1";
 
-  private RestConstants() {}
+  private UriConstants() {}
 
   public static URI context(String apiHost) {
     return UriWrapper.fromHost(apiHost)

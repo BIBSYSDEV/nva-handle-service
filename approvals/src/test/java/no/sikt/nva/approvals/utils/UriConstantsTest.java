@@ -1,11 +1,11 @@
-package no.sikt.nva.approvals.rest;
+package no.sikt.nva.approvals.utils;
 
 import static java.util.UUID.randomUUID;
-import static no.sikt.nva.approvals.rest.RestConstants.approvalId;
-import static no.sikt.nva.approvals.rest.RestConstants.changeId;
-import static no.sikt.nva.approvals.rest.RestConstants.changeListId;
-import static no.sikt.nva.approvals.rest.RestConstants.context;
-import static no.sikt.nva.approvals.rest.RestConstants.ontology;
+import static no.sikt.nva.approvals.utils.UriConstants.approvalId;
+import static no.sikt.nva.approvals.utils.UriConstants.changeId;
+import static no.sikt.nva.approvals.utils.UriConstants.changeListId;
+import static no.sikt.nva.approvals.utils.UriConstants.context;
+import static no.sikt.nva.approvals.utils.UriConstants.ontology;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 
@@ -13,7 +13,7 @@ import java.net.URI;
 import no.unit.nva.identifiers.SortableIdentifier;
 import org.junit.jupiter.api.Test;
 
-class RestConstantsTest {
+class UriConstantsTest {
 
   private static final String API_HOST = "api.unittest.nva.unit.no";
   private static final String APPROVAL_FORMAT = "https://api.unittest.nva.unit.no/approval/%s";
