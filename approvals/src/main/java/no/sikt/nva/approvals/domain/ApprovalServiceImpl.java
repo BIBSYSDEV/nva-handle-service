@@ -20,16 +20,15 @@ import java.util.stream.Collectors;
 import no.sikt.nva.approvals.persistence.ApprovalRepository;
 import no.sikt.nva.approvals.persistence.DynamoDbApprovalRepository;
 import no.sikt.nva.approvals.persistence.NamedIdentifierQueryObject;
+import no.sikt.nva.approvals.utils.UriConstants;
 import no.sikt.nva.handle.HandleDatabase;
 import nva.commons.core.Environment;
 import nva.commons.core.JacocoGenerated;
-import nva.commons.core.paths.UriWrapper;
 
 public class ApprovalServiceImpl implements ApprovalService {
 
   private static final String HANDLE_PREFIX = "HANDLE_PREFIX";
   private static final String API_HOST = "API_HOST";
-  private static final String APPROVAL_PATH = "approval";
   private static final URI CONTEXT_PATH = URI.create("approval/context");
   private static final URI ONTOLOGY_PATH = URI.create("approval/ontology");
   private static final String VALUE_DELIMITER = ", ";
@@ -64,7 +63,7 @@ public class ApprovalServiceImpl implements ApprovalService {
       throws ApprovalServiceException, ApprovalConflictException {
     ensureIdentifiersDoesNotExist(namedIdentifiers);
     var approvalId = randomUUID();
-    var approvalUri = createApprovalUri(approvalId);
+    var approvalUri = UriConstants.approvalId(environment.readEnv(API_HOST), approvalId);
     var handle = createHandle(approvalUri);
     var approval = new Approval(approvalId, namedIdentifiers, source, handle, customerIdentifier);
     approvalRepository.save(createRevision(approval, CREATE_APPROVAL));
@@ -169,14 +168,6 @@ public class ApprovalServiceImpl implements ApprovalService {
 
   private ApprovalRevision createRevision(Approval approval, ApprovalActivity activity) {
     return ApprovalRevision.create(approval, activity, CONTEXT_PATH, ONTOLOGY_PATH, Instant.now());
-  }
-
-  private URI createApprovalUri(UUID approvalId) {
-    var apiHost = environment.readEnv(API_HOST);
-    return UriWrapper.fromHost(apiHost)
-        .addChild(APPROVAL_PATH)
-        .addChild(approvalId.toString())
-        .getUri();
   }
 
   @SuppressWarnings("PMD.AvoidCatchingGenericException")

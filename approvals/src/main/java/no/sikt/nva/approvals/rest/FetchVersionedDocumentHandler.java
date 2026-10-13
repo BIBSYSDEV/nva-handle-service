@@ -6,17 +6,16 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.SequencedCollection;
 import no.sikt.nva.approvals.utils.RequestUtils;
+import no.sikt.nva.approvals.utils.UriConstants;
 import nva.commons.apigateway.ApiGatewayHandler;
 import nva.commons.apigateway.RequestInfo;
 import nva.commons.apigateway.exceptions.ApiGatewayException;
 import nva.commons.apigateway.exceptions.NotFoundException;
 import nva.commons.core.Environment;
-import nva.commons.core.paths.UriWrapper;
 
 abstract class FetchVersionedDocumentHandler extends ApiGatewayHandler<Void, String> {
 
   private static final String VERSION_PATH_PARAMETER = "version";
-  private static final String APPROVAL_PATH = "approval";
   private static final String CONTENT_LOCATION_HEADER = "Content-Location";
   private static final String VERSION_NOT_FOUND_MESSAGE = "Version not found: %s";
 
@@ -43,7 +42,11 @@ abstract class FetchVersionedDocumentHandler extends ApiGatewayHandler<Void, Str
         documents
             .find(version)
             .orElseThrow(() -> new NotFoundException(VERSION_NOT_FOUND_MESSAGE.formatted(version)));
-    addAdditionalHeaders(() -> Map.of(CONTENT_LOCATION_HEADER, createVersionUri(version)));
+    addAdditionalHeaders(
+        () ->
+            Map.of(
+                CONTENT_LOCATION_HEADER,
+                UriConstants.version(apiHost, documentPath, version).toString()));
     return document;
   }
 
@@ -63,13 +66,5 @@ abstract class FetchVersionedDocumentHandler extends ApiGatewayHandler<Void, Str
     return Optional.ofNullable(requestInfo.getPathParameters())
         .map(pathParameters -> pathParameters.get(VERSION_PATH_PARAMETER))
         .orElse(documents.getLatestVersion());
-  }
-
-  private String createVersionUri(String version) {
-    return UriWrapper.fromHost(apiHost)
-        .addChild(APPROVAL_PATH)
-        .addChild(documentPath)
-        .addChild(version)
-        .toString();
   }
 }
