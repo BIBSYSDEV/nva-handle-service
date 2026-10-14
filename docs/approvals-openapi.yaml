@@ -887,8 +887,6 @@ components:
       oneOf:
         - $ref: "#/components/schemas/ApprovalRevision"
         - $ref: "#/components/schemas/SourceSnapshot"
-      discriminator:
-        propertyName: type
     ApprovalRevision:
       type: object
       description: A revision of the approval itself
