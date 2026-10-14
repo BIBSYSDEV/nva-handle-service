@@ -23,6 +23,12 @@
     },
     "value": {
       "@type": "xsd:string"
+    },
+    "changes": {
+      "@container": "@set"
+    },
+    "next": {
+      "@type": "@id"
     }
   }
 }

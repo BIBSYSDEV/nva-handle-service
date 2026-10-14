@@ -186,13 +186,16 @@ are versioned independently, and every published version is immutable.
 How JSON fields map to the vocabulary in context `v1` (terms relative to the namespace above):
 
 | JSON field    | Ontology term  | Meaning                                     |
-| ------------- | -------------- | ------------------------------------------- |
+| ------------- | -------------- |---------------------------------------------|
 | `identifier`  | `#approvalId`  | The approval's UUID (alias)                 |
 | `identifiers` | `#identifiers` | The approval's namespaced identifiers       |
 | `name`        | `#namespace`   | Namespace of an identifier, e.g. REK or DMP |
 | `value`       | `#value`       | Identifier value, unique within namespace   |
 | `source`      | `#source`      | The source URI                              |
 | `handle`      | `#handle`      | The handle URI                              |
+| `about`       | `#about`       | The approval a change list is about         |
+| `changes`     | `#changes`     | The changes on a page of the change list    |
+| `next`        | `#next`        | The next page of the change list            |
 
 ## Persistence
 

@@ -19,15 +19,15 @@ import no.unit.nva.identifiers.SortableIdentifier;
 import nva.commons.core.paths.UriWrapper;
 
 @JsonTypeInfo(use = Id.NAME, property = "type")
-@JsonTypeName("ChangeHistory")
-public record ChangeHistoryResponse(
+@JsonTypeName("ChangeList")
+public record ChangeListResponse(
     @JsonProperty(CONTEXT_PROPERTY) URI context,
     URI id,
     AboutApproval about,
     List<ChangeResponse> changes,
     URI next) {
 
-  public static ChangeHistoryResponse fromChangeList(ChangeList changeList, String apiHost) {
+  public static ChangeListResponse fromChangeList(ChangeList changeList, String apiHost) {
     var approval = changeList.approval();
     var changes =
         changeList.changes().stream()
@@ -38,7 +38,7 @@ public record ChangeHistoryResponse(
             .next()
             .map(cursor -> nextUri(apiHost, approval.identifier(), cursor))
             .orElse(null);
-    return new ChangeHistoryResponse(
+    return new ChangeListResponse(
         UriConstants.context(apiHost),
         changeListId(apiHost, approval.identifier()),
         AboutApproval.fromApproval(approval, apiHost),

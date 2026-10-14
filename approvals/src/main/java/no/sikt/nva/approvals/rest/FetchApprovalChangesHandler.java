@@ -19,7 +19,7 @@ import nva.commons.apigateway.exceptions.ApiGatewayException;
 import nva.commons.core.Environment;
 import nva.commons.core.JacocoGenerated;
 
-public class FetchApprovalChangesHandler extends ApiGatewayHandler<Void, ChangeHistoryResponse> {
+public class FetchApprovalChangesHandler extends ApiGatewayHandler<Void, ChangeListResponse> {
 
   private final ChangeService changeService;
   private final String apiHost;
@@ -52,17 +52,17 @@ public class FetchApprovalChangesHandler extends ApiGatewayHandler<Void, ChangeH
   }
 
   @Override
-  protected ChangeHistoryResponse processInput(Void input, RequestInfo requestInfo, Context context)
+  protected ChangeListResponse processInput(Void input, RequestInfo requestInfo, Context context)
       throws ApiGatewayException {
     var approvalIdentifier = getApprovalIdentifier(requestInfo);
     var cursor = getCursor(requestInfo);
     return attempt(() -> changeService.listChangesByApproval(approvalIdentifier, cursor))
-        .map(changes -> ChangeHistoryResponse.fromChangeList(changes, apiHost))
+        .map(changes -> ChangeListResponse.fromChangeList(changes, apiHost))
         .orElseThrow(failure -> toApiGatewayException(failure.getException()));
   }
 
   @Override
-  protected Integer getSuccessStatusCode(Void input, ChangeHistoryResponse output) {
+  protected Integer getSuccessStatusCode(Void input, ChangeListResponse output) {
     return HTTP_OK;
   }
 }

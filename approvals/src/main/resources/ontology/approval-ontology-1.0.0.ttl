@@ -29,6 +29,10 @@
     rdfs:label "Identifier" ;
     rdfs:comment "An identifier used to reference an approval, consisting of a namespace and a value. A value is unique within its namespace across all approvals in the system, while the same value may exist in another namespace." .
 
+:ChangeList a rdfs:Class ;
+    rdfs:label "ChangeList" ;
+    rdfs:comment "A page of the recorded changes to an approval" .
+
 #################################################################
 #    Properties
 #################################################################
@@ -68,3 +72,20 @@
     rdfs:comment "The unique UUID identifier of the approval" ;
     rdfs:domain :Approval ;
     rdfs:range xsd:string .
+
+:about a rdf:Property ;
+    rdfs:label "about" ;
+    rdfs:comment "The approval whose changes the change list is about" ;
+    rdfs:domain :ChangeList ;
+    rdfs:range :Approval .
+
+:changes a rdf:Property ;
+    rdfs:label "changes" ;
+    rdfs:comment "The recorded changes on this page of the change list" ;
+    rdfs:domain :ChangeList .
+
+:next a rdf:Property ;
+    rdfs:label "next" ;
+    rdfs:comment "The next page of the change history" ;
+    rdfs:domain :ChangeList ;
+    rdfs:range :ChangeList .

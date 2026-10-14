@@ -12,7 +12,7 @@ import no.sikt.nva.approvals.domain.Approval;
 import no.sikt.nva.approvals.domain.ChangeList;
 import org.junit.jupiter.api.Test;
 
-class ChangeHistoryResponseTest {
+class ChangeListResponseTest {
 
   private static final String API_HOST = "api.unittest.nva.unit.no";
 
@@ -20,7 +20,7 @@ class ChangeHistoryResponseTest {
   void shouldIdentifyApprovalTheChangesAreAbout() {
     var approval = randomApproval(randomHandle());
 
-    var response = ChangeHistoryResponse.fromChangeList(changeListOf(approval), API_HOST);
+    var response = ChangeListResponse.fromChangeList(changeListOf(approval), API_HOST);
 
     var expectedId = URI.create("https://" + API_HOST + "/approval/" + approval.identifier());
     assertThat(response.about().id(), equalTo(expectedId));
@@ -31,7 +31,7 @@ class ChangeHistoryResponseTest {
     var handle = randomHandle();
 
     var response =
-        ChangeHistoryResponse.fromChangeList(changeListOf(randomApproval(handle)), API_HOST);
+        ChangeListResponse.fromChangeList(changeListOf(randomApproval(handle)), API_HOST);
 
     assertThat(response.about().handle(), equalTo(handle.value()));
   }
@@ -39,8 +39,7 @@ class ChangeHistoryResponseTest {
   @Test
   void shouldReferenceVersionedContext() {
     var response =
-        ChangeHistoryResponse.fromChangeList(
-            changeListOf(randomApproval(randomHandle())), API_HOST);
+        ChangeListResponse.fromChangeList(changeListOf(randomApproval(randomHandle())), API_HOST);
 
     var expectedContext = URI.create("https://" + API_HOST + "/approval/context/v1");
     assertThat(response.context(), equalTo(expectedContext));
