@@ -41,10 +41,10 @@ public class ChangeServiceImpl implements ChangeService {
   @Override
   public ChangeList listChangesByApproval(UUID approvalIdentifier, SortableIdentifier cursor)
       throws ApprovalNotFoundException, InvalidCursorException {
-    var approval = fetchApproval(approvalIdentifier);
     if (nonNull(cursor) && changeRepository.findChange(approvalIdentifier, cursor).isEmpty()) {
       throw new InvalidCursorException(approvalIdentifier, cursor);
     }
+    var approval = fetchApproval(approvalIdentifier);
     return changeRepository.listChangesByApproval(approval, cursor, PAGE_SIZE);
   }
 
