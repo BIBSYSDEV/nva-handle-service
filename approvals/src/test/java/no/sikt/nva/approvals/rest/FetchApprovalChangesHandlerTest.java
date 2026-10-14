@@ -92,7 +92,17 @@ class FetchApprovalChangesHandlerTest {
     var response = send(request(revision.approval().identifier(), Map.of(), Map.of()));
 
     assertThat(response.getStatusCode(), equalTo(HTTP_OK));
-    assertThat(response.getBodyObject(ChangeListResponse.class).changes(), hasSize(2));
+    assertThat(response.getBodyObject(ChangeHistoryResponse.class).changes(), hasSize(2));
+  }
+
+  @Test
+  void shouldReturnHandleOfApprovalTheChangesAreAbout() throws IOException {
+    var revision = saveRevision();
+
+    var response = send(request(revision.approval().identifier(), Map.of(), Map.of()));
+
+    var handle = response.getBodyObject(ChangeHistoryResponse.class).about().handle();
+    assertThat(handle, equalTo(revision.approval().handle().value()));
   }
 
   @Test
@@ -101,7 +111,7 @@ class FetchApprovalChangesHandlerTest {
 
     var response = send(request(revision.approval().identifier(), Map.of(), Map.of()));
 
-    assertThat(response.getBodyObject(ChangeListResponse.class).next(), nullValue());
+    assertThat(response.getBodyObject(ChangeHistoryResponse.class).next(), nullValue());
   }
 
   @Test
@@ -115,7 +125,7 @@ class FetchApprovalChangesHandlerTest {
 
     var response = send(request(approvalIdentifier, Map.of(), Map.of()));
 
-    var next = response.getBodyObject(ChangeListResponse.class).next();
+    var next = response.getBodyObject(ChangeHistoryResponse.class).next();
     assertThat(next.getQuery(), startsWith(CURSOR + "="));
   }
 
@@ -126,13 +136,13 @@ class FetchApprovalChangesHandlerTest {
         .forEach(index -> saveSnapshotOfSourceChangedAt(approvalIdentifier, randomTimestamp()));
     var firstPage =
         send(request(approvalIdentifier, Map.of(), Map.of()))
-            .getBodyObject(ChangeListResponse.class);
+            .getBodyObject(ChangeHistoryResponse.class);
     var cursor = firstPage.next().getQuery().replaceFirst(CURSOR + "=", "");
 
     output = new ByteArrayOutputStream();
     var secondPage =
         send(request(approvalIdentifier, Map.of(CURSOR, cursor), Map.of()))
-            .getBodyObject(ChangeListResponse.class);
+            .getBodyObject(ChangeHistoryResponse.class);
 
     var changes =
         Stream.concat(firstPage.changes().stream(), secondPage.changes().stream()).toList();
@@ -236,9 +246,9 @@ class FetchApprovalChangesHandlerTest {
     return snapshot;
   }
 
-  private GatewayResponse<ChangeListResponse> send(InputStream request) throws IOException {
+  private GatewayResponse<ChangeHistoryResponse> send(InputStream request) throws IOException {
     handler.handleRequest(request, output, CONTEXT);
-    return GatewayResponse.fromOutputStream(output, ChangeListResponse.class);
+    return GatewayResponse.fromOutputStream(output, ChangeHistoryResponse.class);
   }
 
   private GatewayResponse<Problem> sendForProblem(InputStream request) throws IOException {
