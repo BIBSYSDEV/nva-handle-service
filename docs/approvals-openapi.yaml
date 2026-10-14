@@ -401,10 +401,10 @@ paths:
           content:
             application/ld+json:
               schema:
-                $ref: "#/components/schemas/ChangeHistory"
+                $ref: "#/components/schemas/ChangeList"
             application/json:
               schema:
-                $ref: "#/components/schemas/ChangeHistory"
+                $ref: "#/components/schemas/ChangeList"
         "400":
           description: Bad Request
           content:
@@ -833,7 +833,7 @@ components:
         type: no.sikt.nva.approval.source.changed
         subject: https://hdl.handle.net/11250.1/98765
         time: "2026-09-28T10:15:30Z"
-    ChangeHistory:
+    ChangeList:
       type: object
       description: A page of recorded changes to an approval, newest first
       required:
@@ -848,7 +848,7 @@ components:
           format: uri
         type:
           type: string
-          default: ChangeHistory
+          default: ChangeList
         id:
           type: string
           format: uri
