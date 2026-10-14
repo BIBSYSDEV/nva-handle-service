@@ -52,6 +52,8 @@ public record ChangeHistoryResponse(
         .getUri();
   }
 
+  @JsonTypeInfo(use = Id.NAME, property = "type")
+  @JsonTypeName("Approval")
   public record AboutApproval(URI id, URI handle) {
 
     private static AboutApproval fromApproval(Approval approval, String apiHost) {
