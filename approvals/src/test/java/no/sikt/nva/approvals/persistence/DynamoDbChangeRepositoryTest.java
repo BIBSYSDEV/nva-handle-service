@@ -69,10 +69,7 @@ class DynamoDbChangeRepositoryTest {
     approvalRepository.save(randomSourceSnapshot(approval.identifier()));
 
     var changes =
-        changeRepository
-            .listChangesByApproval(approval.identifier(), null, PAGE_SIZE)
-            .changes()
-            .stream()
+        changeRepository.listChangesByApproval(approval, null, PAGE_SIZE).changes().stream()
             .map(Change::getClass)
             .toList();
 
@@ -81,12 +78,12 @@ class DynamoDbChangeRepositoryTest {
 
   @Test
   void shouldFailWhenChangeItemCannotBeRead() {
-    var approvalIdentifier = randomUUID();
-    insertChangeItemOfUnknownType(approvalIdentifier);
+    var approval = randomApproval(randomHandle());
+    insertChangeItemOfUnknownType(approval.identifier());
 
     assertThrows(
         IllegalStateException.class,
-        () -> changeRepository.listChangesByApproval(approvalIdentifier, null, PAGE_SIZE));
+        () -> changeRepository.listChangesByApproval(approval, null, PAGE_SIZE));
   }
 
   @Test
@@ -95,15 +92,16 @@ class DynamoDbChangeRepositoryTest {
     saveApproval(approval);
     approvalRepository.save(randomSourceSnapshot());
 
-    var changes =
-        changeRepository.listChangesByApproval(approval.identifier(), null, PAGE_SIZE).changes();
+    var changes = changeRepository.listChangesByApproval(approval, null, PAGE_SIZE).changes();
 
     assertThat(changes, hasSize(1));
   }
 
   @Test
   void shouldReturnNoMoreChangesWhenApprovalHasNone() {
-    var page = changeRepository.listChangesByApproval(randomUUID(), null, PAGE_SIZE);
+    var approval = randomApproval(randomHandle());
+
+    var page = changeRepository.listChangesByApproval(approval, null, PAGE_SIZE);
 
     assertThat(page.hasMore(), equalTo(false));
   }
@@ -114,7 +112,7 @@ class DynamoDbChangeRepositoryTest {
     saveApproval(approval);
     approvalRepository.save(randomSourceSnapshot(approval.identifier()));
 
-    var page = changeRepository.listChangesByApproval(approval.identifier(), null, 1);
+    var page = changeRepository.listChangesByApproval(approval, null, 1);
 
     assertThat(page.hasMore(), equalTo(true));
   }
@@ -125,7 +123,7 @@ class DynamoDbChangeRepositoryTest {
     saveApproval(approval);
     approvalRepository.save(randomSourceSnapshot(approval.identifier()));
 
-    var page = changeRepository.listChangesByApproval(approval.identifier(), null, 2);
+    var page = changeRepository.listChangesByApproval(approval, null, 2);
 
     assertThat(page.hasMore(), equalTo(false));
   }
@@ -136,7 +134,7 @@ class DynamoDbChangeRepositoryTest {
     saveApproval(approval);
     approvalRepository.save(randomSourceSnapshot(approval.identifier()));
 
-    var page = changeRepository.listChangesByApproval(approval.identifier(), null, 1);
+    var page = changeRepository.listChangesByApproval(approval, null, 1);
 
     assertThat(page.changes(), hasSize(1));
   }
@@ -150,14 +148,11 @@ class DynamoDbChangeRepositoryTest {
 
     var identifiers =
         Stream.iterate(
-                Optional.of(changeRepository.listChangesByApproval(approval.identifier(), null, 1)),
+                Optional.of(changeRepository.listChangesByApproval(approval, null, 1)),
                 Optional::isPresent,
                 page ->
                     page.flatMap(ChangeList::next)
-                        .map(
-                            after ->
-                                changeRepository.listChangesByApproval(
-                                    approval.identifier(), after, 1)))
+                        .map(after -> changeRepository.listChangesByApproval(approval, after, 1)))
             .flatMap(Optional::stream)
             .flatMap(page -> page.changes().stream())
             .map(Change::identifier)

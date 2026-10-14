@@ -86,6 +86,15 @@ class ChangeServiceTest {
   }
 
   @Test
+  void shouldListChangesTogetherWithTheirApproval() throws ApprovalServiceException {
+    var revision = saveRevision();
+
+    var changeList = changeService.listChangesByApproval(revision.approval().identifier(), null);
+
+    assertThat(changeList.approval(), equalTo(revision.approval()));
+  }
+
+  @Test
   void shouldListChangesAfterCursor() throws ApprovalServiceException {
     var revision = saveRevision();
     var approvalIdentifier = revision.approval().identifier();

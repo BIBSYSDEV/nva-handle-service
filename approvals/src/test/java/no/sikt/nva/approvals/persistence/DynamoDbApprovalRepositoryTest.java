@@ -1065,7 +1065,7 @@ class DynamoDbApprovalRepositoryTest {
 
   private List<ApprovalRevision> revisions(UUID approvalIdentifier) {
     return changeRepository
-        .listChangesByApproval(approvalIdentifier, null, PAGE_SIZE)
+        .listChangesByApproval(randomApproval(approvalIdentifier, randomUri()), null, PAGE_SIZE)
         .changes()
         .stream()
         .map(ApprovalRevision.class::cast)

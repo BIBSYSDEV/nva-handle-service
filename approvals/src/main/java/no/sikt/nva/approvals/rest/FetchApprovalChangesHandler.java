@@ -57,7 +57,7 @@ public class FetchApprovalChangesHandler extends ApiGatewayHandler<Void, ChangeL
     var approvalIdentifier = getApprovalIdentifier(requestInfo);
     var cursor = getCursor(requestInfo);
     return attempt(() -> changeService.listChangesByApproval(approvalIdentifier, cursor))
-        .map(changes -> ChangeListResponse.fromChangeList(changes, approvalIdentifier, apiHost))
+        .map(changes -> ChangeListResponse.fromChangeList(changes, apiHost))
         .orElseThrow(failure -> toApiGatewayException(failure.getException()));
   }
 

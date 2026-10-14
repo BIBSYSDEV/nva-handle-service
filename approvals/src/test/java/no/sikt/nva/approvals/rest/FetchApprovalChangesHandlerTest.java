@@ -96,6 +96,16 @@ class FetchApprovalChangesHandlerTest {
   }
 
   @Test
+  void shouldReturnHandleOfApprovalTheChangesAreAbout() throws IOException {
+    var revision = saveRevision();
+
+    var response = send(request(revision.approval().identifier(), Map.of(), Map.of()));
+
+    var handle = response.getBodyObject(ChangeListResponse.class).about().handle();
+    assertThat(handle, equalTo(revision.approval().handle().value()));
+  }
+
+  @Test
   void shouldNotReturnNextWhenAllChangesFitOnPage() throws IOException {
     var revision = saveRevision();
 

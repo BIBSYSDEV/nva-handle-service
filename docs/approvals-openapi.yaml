@@ -836,10 +836,39 @@ components:
     ChangeList:
       type: object
       description: A page of recorded changes to an approval, newest first
+      required:
+        - "@context"
+        - id
+        - type
+        - about
+        - changes
       properties:
+        "@context":
+          type: string
+          format: uri
         type:
           type: string
           default: ChangeList
+        id:
+          type: string
+          format: uri
+        about:
+          type: object
+          description: The approval the changes are about
+          required:
+            - type
+            - id
+            - handle
+          properties:
+            type:
+              type: string
+              default: Approval
+            id:
+              type: string
+              format: uri
+            handle:
+              type: string
+              format: uri
         changes:
           type: array
           items:

@@ -186,13 +186,16 @@ are versioned independently, and every published version is immutable.
 How JSON fields map to the vocabulary in context `v1` (terms relative to the namespace above):
 
 | JSON field    | Ontology term  | Meaning                                     |
-| ------------- | -------------- | ------------------------------------------- |
+| ------------- | -------------- |---------------------------------------------|
 | `identifier`  | `#approvalId`  | The approval's UUID (alias)                 |
 | `identifiers` | `#identifiers` | The approval's namespaced identifiers       |
 | `name`        | `#namespace`   | Namespace of an identifier, e.g. REK or DMP |
 | `value`       | `#value`       | Identifier value, unique within namespace   |
 | `source`      | `#source`      | The source URI                              |
 | `handle`      | `#handle`      | The handle URI                              |
+| `about`       | `#about`       | The approval a change list is about         |
+| `changes`     | `#changes`     | The changes on a page of the change list    |
+| `next`        | `#next`        | The next page of the change list            |
 
 ## Persistence
 
@@ -222,7 +225,8 @@ items and an update at most 42, so every write fits in one transaction.
   host, since the host differs per environment. Resolve them against `API_HOST` when reading.
 - `ChangeRepository.listChangesByApproval` lists all changes of an approval (revisions and source snapshots) newest
   first with a query on `PK0 = Approval:<uuid>` and `SK0 begins_with Change:`, a page at a time. The next page starts
-  after the last change of the previous one (`ChangeList.next()`).
+  after the last change of the previous one (`ChangeList.next()`). The list carries the approval it belongs to, so
+  the `ChangeHistory` response can say which approval (`about`, with `id` and `handle`) the changes are about.
 
 ## Endpoints
 

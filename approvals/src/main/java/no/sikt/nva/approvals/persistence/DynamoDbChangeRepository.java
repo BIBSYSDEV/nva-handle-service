@@ -10,6 +10,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
+import no.sikt.nva.approvals.domain.Approval;
 import no.sikt.nva.approvals.domain.Change;
 import no.sikt.nva.approvals.domain.ChangeList;
 import no.sikt.nva.approvals.domain.SourceSnapshot;
@@ -44,12 +45,12 @@ public class DynamoDbChangeRepository implements ChangeRepository {
 
   @Override
   public ChangeList listChangesByApproval(
-      UUID approvalIdentifier, SortableIdentifier after, int pageSize) {
-    var request = request(approvalIdentifier, pageSize);
+      Approval approval, SortableIdentifier after, int pageSize) {
+    var request = request(approval.identifier(), pageSize);
     Optional.ofNullable(after)
-        .map(identifier -> exclusiveStartKey(approvalIdentifier, identifier))
+        .map(identifier -> exclusiveStartKey(approval.identifier(), identifier))
         .ifPresent(request::exclusiveStartKey);
-    return sendRequest(request.build(), pageSize);
+    return sendRequest(approval, request.build(), pageSize);
   }
 
   @Override
@@ -101,7 +102,7 @@ public class DynamoDbChangeRepository implements ChangeRepository {
     return Objects.nonNull(page.lastEvaluatedKey()) && !page.lastEvaluatedKey().isEmpty();
   }
 
-  private ChangeList sendRequest(QueryEnhancedRequest request, int pageSize) {
+  private ChangeList sendRequest(Approval approval, QueryEnhancedRequest request, int pageSize) {
     var page = table.query(request).iterator().next();
     var changes =
         page.items().stream()
@@ -110,6 +111,6 @@ public class DynamoDbChangeRepository implements ChangeRepository {
             .map(ChangeDao::fromJson)
             .map(ChangeDao::toChange)
             .toList();
-    return new ChangeList(changes, hasMore(page));
+    return new ChangeList(approval, changes, hasMore(page));
   }
 }
