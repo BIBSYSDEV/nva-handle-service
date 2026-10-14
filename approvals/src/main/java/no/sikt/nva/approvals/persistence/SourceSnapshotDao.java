@@ -22,6 +22,7 @@ import software.amazon.awssdk.enhanced.dynamodb.document.EnhancedDocument;
 public record SourceSnapshotDao(
     SortableIdentifier identifier,
     UUID approvalIdentifier,
+    UUID customerIdentifier,
     String eventIdentifier,
     URI source,
     String contentType,
@@ -32,16 +33,17 @@ public record SourceSnapshotDao(
 
   private static final String SNAPSHOT_KEY = "Change:%s";
 
-  public static SourceSnapshotDao fromSourceSnapshot(SourceSnapshot snapshot, Instant createdDate) {
+  public static SourceSnapshotDao fromSourceSnapshot(SourceSnapshot snapshot) {
     return new SourceSnapshotDao(
         snapshot.identifier(),
         snapshot.approvalIdentifier(),
+        snapshot.customerIdentifier(),
         snapshot.eventIdentifier(),
         snapshot.source(),
         snapshot.content().type(),
         snapshot.content().body(),
         snapshot.content().hash(),
-        createdDate);
+        snapshot.createdDate());
   }
 
   @Override
@@ -49,9 +51,11 @@ public record SourceSnapshotDao(
     return new SourceSnapshot(
         identifier,
         approvalIdentifier,
+        customerIdentifier,
         eventIdentifier,
         source,
-        new Content(contentType, body, contentHash));
+        new Content(contentType, body, contentHash),
+        createdDate);
   }
 
   public EnhancedDocument toEnhancedDocument() {

@@ -1,8 +1,10 @@
 package no.sikt.nva.approvals.domain;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
+import static java.time.temporal.ChronoUnit.MICROS;
 
 import java.net.URI;
+import java.time.Instant;
 import java.util.UUID;
 import no.sikt.nva.approvals.snapshot.SourceChange;
 import no.unit.nva.identifiers.SortableIdentifier;
@@ -10,20 +12,25 @@ import no.unit.nva.identifiers.SortableIdentifier;
 public record SourceSnapshot(
     SortableIdentifier identifier,
     UUID approvalIdentifier,
+    UUID customerIdentifier,
     String eventIdentifier,
     URI source,
-    Content content)
+    Content content,
+    Instant createdDate)
     implements Change {
 
   private static final String IDENTIFIER_SEED = "%s:%s";
 
-  public static SourceSnapshot create(SourceChange sourceChange, Content content) {
+  public static SourceSnapshot create(
+      SourceChange sourceChange, Content content, Instant createdDate) {
     return new SourceSnapshot(
         createIdentifier(sourceChange),
         sourceChange.approvalIdentifier(),
+        sourceChange.customerIdentifier(),
         sourceChange.eventIdentifier(),
         sourceChange.source(),
-        content);
+        content,
+        createdDate.truncatedTo(MICROS));
   }
 
   /**

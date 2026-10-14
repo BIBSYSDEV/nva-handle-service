@@ -9,6 +9,8 @@ public final class UriConstants {
 
   private static final String APPROVAL_PATH = "approval";
   private static final String CHANGE_PATH = "change";
+  private static final String EVENT_PATH = "event";
+  private static final String CUSTOMER_PATH = "customer";
   public static final String CONTEXT_PATH = "context";
   public static final String ONTOLOGY_PATH = "ontology";
   public static final String CURSOR_QUERY_PARAMETER = "cursor";
@@ -47,6 +49,20 @@ public final class UriConstants {
   public static URI changeListId(String apiHost, UUID approvalIdentifier) {
     return UriWrapper.fromUri(approvalId(apiHost, approvalIdentifier))
         .addChild(CHANGE_PATH)
+        .getUri();
+  }
+
+  public static URI customerId(String apiHost, UUID customerIdentifier) {
+    return UriWrapper.fromHost(apiHost)
+        .addChild(CUSTOMER_PATH)
+        .addChild(customerIdentifier.toString())
+        .getUri();
+  }
+
+  public static URI eventId(String apiHost, UUID approvalIdentifier, String eventIdentifier) {
+    return UriWrapper.fromUri(approvalId(apiHost, approvalIdentifier))
+        .addChild(EVENT_PATH)
+        .addChild(eventIdentifier)
         .getUri();
   }
 

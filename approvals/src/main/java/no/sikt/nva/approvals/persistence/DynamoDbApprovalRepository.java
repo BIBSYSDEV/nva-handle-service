@@ -93,8 +93,7 @@ public class DynamoDbApprovalRepository implements ApprovalRepository {
   public void save(SourceSnapshot snapshot) {
     var request =
         PutItemEnhancedRequest.builder(EnhancedDocument.class)
-            .item(
-                SourceSnapshotDao.fromSourceSnapshot(snapshot, Instant.now()).toEnhancedDocument())
+            .item(SourceSnapshotDao.fromSourceSnapshot(snapshot).toEnhancedDocument())
             .conditionExpression(newDaoCondition())
             .build();
     try {

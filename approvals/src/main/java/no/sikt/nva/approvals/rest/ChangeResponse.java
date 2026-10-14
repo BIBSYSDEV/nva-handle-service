@@ -1,11 +1,10 @@
 package no.sikt.nva.approvals.rest;
 
-import static no.sikt.nva.approvals.utils.UriConstants.approvalId;
-import static no.sikt.nva.approvals.utils.UriConstants.changeId;
-
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.annotation.JsonTypeInfo.Id;
+import java.net.URI;
+import java.time.Instant;
 import no.sikt.nva.approvals.domain.ApprovalRevision;
 import no.sikt.nva.approvals.domain.Change;
 import no.sikt.nva.approvals.domain.SourceSnapshot;
@@ -19,22 +18,14 @@ public sealed interface ChangeResponse permits ApprovalRevisionResponse, SourceS
 
   static ChangeResponse fromChange(Change change, String apiHost) {
     return switch (change) {
-      case ApprovalRevision revision -> createApprovalRevisionResponse(revision, apiHost);
-      case SourceSnapshot snapshot -> createSourceSnapshotResponse(apiHost, snapshot);
+      case ApprovalRevision revision -> ApprovalRevisionResponse.create(revision, apiHost);
+      case SourceSnapshot snapshot -> SourceSnapshotResponse.create(snapshot, apiHost);
     };
   }
 
-  private static SourceSnapshotResponse createSourceSnapshotResponse(
-      String apiHost, SourceSnapshot snapshot) {
-    return new SourceSnapshotResponse(
-        changeId(apiHost, snapshot.approvalIdentifier(), snapshot.identifier()),
-        approvalId(apiHost, snapshot.approvalIdentifier()));
-  }
+  URI specializationOf();
 
-  private static ApprovalRevisionResponse createApprovalRevisionResponse(
-      ApprovalRevision revision, String apiHost) {
-    return new ApprovalRevisionResponse(
-        changeId(apiHost, revision.approval().identifier(), revision.identifier()),
-        approvalId(apiHost, revision.approval().identifier()));
-  }
+  Instant generatedAtTime();
+
+  Activity wasGeneratedBy();
 }

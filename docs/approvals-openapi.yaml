@@ -848,7 +848,8 @@ components:
           format: uri
         type:
           type: string
-          default: ChangeList
+          enum:
+            - ChangeList
         id:
           type: string
           format: uri
@@ -858,17 +859,21 @@ components:
           required:
             - type
             - id
-            - handle
+            - sameAs
           properties:
             type:
               type: string
-              default: Approval
+              enum:
+                - Approval
             id:
               type: string
               format: uri
-            handle:
-              type: string
-              format: uri
+            sameAs:
+              type: array
+              description: Other URIs of the approval, such as its handle
+              items:
+                type: string
+                format: uri
         changes:
           type: array
           items:
@@ -878,25 +883,156 @@ components:
           format: uri
           description: The next page. Absent on the last page.
     Change:
+      description: A recorded change to an approval, as a PROV entity
+      oneOf:
+        - $ref: "#/components/schemas/ApprovalRevision"
+        - $ref: "#/components/schemas/SourceSnapshot"
+      discriminator:
+        propertyName: type
+    ApprovalRevision:
       type: object
-      description: A recorded change to an approval
+      description: A revision of the approval itself
       required:
         - type
         - id
-        - approval
+        - specializationOf
+        - generatedAtTime
+        - wasGeneratedBy
       properties:
         type:
           type: string
           enum:
             - ApprovalRevision
+        id:
+          type: string
+          format: uri
+        specializationOf:
+          type: string
+          format: uri
+          description: The approval the revision is a fixed version of
+        generatedAtTime:
+          type: string
+          format: date-time
+        wasGeneratedBy:
+          type: object
+          description: The creation or update that produced the revision
+          required:
+            - type
+            - wasAssociatedWith
+          properties:
+            type:
+              type: string
+              enum:
+                - ApprovalCreation
+                - ApprovalUpdate
+            wasAssociatedWith:
+              $ref: "#/components/schemas/SoftwareAgent"
+    SourceSnapshot:
+      type: object
+      description: The content of the approval's source as it was when a source change was ingested
+      required:
+        - type
+        - id
+        - specializationOf
+        - generatedAtTime
+        - mediaType
+        - checksum
+        - wasGeneratedBy
+      properties:
+        type:
+          type: string
+          enum:
             - SourceSnapshot
         id:
           type: string
           format: uri
-        approval:
+        specializationOf:
           type: string
           format: uri
-          description: The approval the change belongs to
+          description: The source URI the snapshot is a fixed version of
+        generatedAtTime:
+          type: string
+          format: date-time
+          description: When the snapshot was taken
+        mediaType:
+          type: string
+          description: Media type of the snapshot content
+        checksum:
+          type: object
+          required:
+            - type
+            - algorithm
+            - checksumValue
+          properties:
+            type:
+              type: string
+              enum:
+                - Checksum
+            algorithm:
+              type: string
+              enum:
+                - sha256
+            checksumValue:
+              type: string
+        wasGeneratedBy:
+          type: object
+          description: The ingestion that produced the snapshot
+          required:
+            - type
+            - used
+            - wasStartedBy
+            - wasAssociatedWith
+          properties:
+            type:
+              type: string
+              enum:
+                - SourceIngestion
+            used:
+              type: string
+              format: uri
+              description: The source URI that was fetched
+            wasStartedBy:
+              type: object
+              required:
+                - type
+                - id
+              properties:
+                type:
+                  type: string
+                  enum:
+                    - SourceChangedEvent
+                id:
+                  type: string
+                  format: uri
+            wasAssociatedWith:
+              $ref: "#/components/schemas/SoftwareAgent"
+    SoftwareAgent:
+      type: object
+      description: The client that caused the change. Its id is not recorded yet.
+      required:
+        - type
+        - actedOnBehalfOf
+      properties:
+        type:
+          type: string
+          enum:
+            - SoftwareAgent
+        id:
+          type: string
+          format: uri
+        actedOnBehalfOf:
+          type: object
+          required:
+            - type
+            - id
+          properties:
+            type:
+              type: string
+              enum:
+                - Customer
+            id:
+              type: string
+              format: uri
     Problem:
       type: object
       description: NVA error reporting object

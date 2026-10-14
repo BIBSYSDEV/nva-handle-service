@@ -1,7 +1,32 @@
 package no.sikt.nva.approvals.rest;
 
+import static no.sikt.nva.approvals.utils.UriConstants.approvalId;
+import static no.sikt.nva.approvals.utils.UriConstants.changeId;
+
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import java.net.URI;
+import java.time.Instant;
+import no.sikt.nva.approvals.domain.ApprovalRevision;
 
 @JsonTypeName("ApprovalRevision")
-public record ApprovalRevisionResponse(URI id, URI approval) implements ChangeResponse {}
+public record ApprovalRevisionResponse(
+    URI id, URI specializationOf, Instant generatedAtTime, Activity wasGeneratedBy)
+    implements ChangeResponse {
+
+  public static ApprovalRevisionResponse create(ApprovalRevision revision, String apiHost) {
+    var approval = revision.approval();
+    return new ApprovalRevisionResponse(
+        changeId(apiHost, approval.identifier(), revision.identifier()),
+        approvalId(apiHost, approval.identifier()),
+        revision.createdDate(),
+        activity(revision, apiHost));
+  }
+
+  private static Activity activity(ApprovalRevision revision, String apiHost) {
+    var agent = SoftwareAgent.actingFor(revision.approval().customerIdentifier(), apiHost);
+    return switch (revision.activity()) {
+      case CREATE_APPROVAL -> new ApprovalCreation(agent);
+      case UPDATE_APPROVAL -> new ApprovalUpdate(agent);
+    };
+  }
+}
