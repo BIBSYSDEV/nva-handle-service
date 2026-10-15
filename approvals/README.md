@@ -185,18 +185,27 @@ are versioned independently, and every published version is immutable.
 
 How JSON fields map to the vocabulary in context `v1` (terms relative to the namespace above):
 
-| JSON field    | Ontology term   | Meaning                                     |
-| ------------- | --------------- | ------------------------------------------- |
-| `identifier`  | `#approvalId`   | The approval's UUID (alias)                 |
-| `identifiers` | `#identifiers`  | The approval's namespaced identifiers       |
-| `name`        | `#namespace`    | Namespace of an identifier, e.g. REK or DMP |
-| `value`       | `#value`        | Identifier value, unique within namespace   |
-| `source`      | `#source`       | The source URI                              |
-| `handle`      | `#handle`       | The handle URI                              |
-| `about`       | `#about`        | The approval a change list is about         |
-| `changes`     | `#changes`      | The changes on a page of the change list    |
-| `next`        | `#next`         | The next page of the change list            |
-| `sameAs`      | `schema:sameAs` | Other URIs of the approval, e.g. the handle |
+| JSON field    | Ontology term           | Meaning                                     |
+| ------------- | ----------------------- | ------------------------------------------- |
+| `identifier`  | `#approvalId`           | The approval's UUID (alias)                 |
+| `identifiers` | `#identifiers`          | The approval's namespaced identifiers       |
+| `name`        | `#namespace`            | Namespace of an identifier, e.g. REK or DMP |
+| `value`       | `#value`                | Identifier value, unique within namespace   |
+| `source`      | `#source`               | The source URI                              |
+| `handle`      | `#handle`               | The handle URI                              |
+| `about`       | `schema:about`          | The approval a change list is about         |
+| `changes`     | `prov:hadMember`        | The changes on a page of the change list    |
+| `next`        | `#next`                 | The next page of the change list            |
+| `sameAs`      | `schema:sameAs`         | Other URIs of the approval, e.g. the handle |
+| `mediaType`   | `schema:encodingFormat` | Media type of a source snapshot's content   |
+
+Changes are described with [PROV-O](https://www.w3.org/TR/prov-o/). `ApprovalRevision` and `SourceSnapshot` are
+`prov:Entity`, `ApprovalCreation`, `ApprovalUpdate` and `SourceIngestion` are `prov:Activity`, `Customer` is a
+`prov:Organization`, and a change list is a `prov:Collection` whose `changes` are its `prov:hadMember`. The context maps
+`specializationOf`, `generatedAtTime`, `wasGeneratedBy`, `used`, `wasStartedBy`, `wasAssociatedWith`,
+`actedOnBehalfOf` and `SoftwareAgent` to the `prov:` namespace, and `checksum`, `Checksum`, `algorithm` and
+`checksumValue` to `spdx:`, with `sha256` as the individual `spdx:checksumAlgorithm_sha256`. Inside a
+`SourceChangedEvent`, `identifier` is `schema:identifier`.
 
 ## Persistence
 

@@ -83,6 +83,7 @@ class SourceSnapshotResponseTest {
     assertThat(
         event.id(),
         equalTo(eventId(API_HOST, snapshot.approvalIdentifier(), snapshot.eventIdentifier())));
+    assertThat(event.identifier(), equalTo(snapshot.eventIdentifier()));
   }
 
   @Test

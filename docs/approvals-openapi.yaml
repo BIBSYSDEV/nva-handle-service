@@ -994,6 +994,7 @@ components:
               required:
                 - type
                 - id
+                - identifier
               properties:
                 type:
                   type: string
@@ -1002,6 +1003,9 @@ components:
                 id:
                   type: string
                   format: uri
+                identifier:
+                  type: string
+                  description: The id of the CloudEvent that reported the source change
             wasAssociatedWith:
               $ref: "#/components/schemas/SoftwareAgent"
     SoftwareAgent:

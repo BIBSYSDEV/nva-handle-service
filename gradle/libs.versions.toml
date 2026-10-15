@@ -4,6 +4,7 @@ jte = { strictly = '3.2.4' }
 glassfish-jakarta-json = { strictly = '2.0.1' }
 jakarta-validation-api = { strictly = '3.1.1' }
 apache-bval = { strictly = '3.1.0' }
+titanium-rdf-api = { strictly = '1.0.0' }
 
 [libraries]
 jakarta-validation-api = { group = 'jakarta.validation', name = 'jakarta.validation-api', version.ref = 'jakarta-validation-api' }
@@ -12,6 +13,7 @@ postgres = { group = 'org.postgresql', name = 'postgresql', version.ref = 'postg
 jte = { group = 'gg.jte', name = 'jte', version.ref = 'jte' }
 jte-runtime = { group = 'gg.jte', name = 'jte-runtime', version.ref = 'jte' }
 glassfish-jakarta-json = { group = 'org.glassfish', name = 'jakarta.json', version.ref = 'glassfish-jakarta-json' }
+titanium-rdf-api = { group = 'com.apicatalog', name = 'titanium-rdf-api', version.ref = 'titanium-rdf-api' }
 
 [plugins]
 jte = { id = 'gg.jte.gradle', version.ref = 'jte' }

@@ -128,6 +128,45 @@ class FetchOntologyHandlerTest {
   }
 
   @Test
+  void shouldDeclareChangesAsProvEntities() throws IOException {
+    handler.handleRequest(createRequest(), outputStream, CONTEXT);
+
+    var ontology = GatewayResponse.fromOutputStream(outputStream, String.class).getBody();
+    assertThat(
+        ontology,
+        containsString(":ApprovalRevision a rdfs:Class ;\n    rdfs:subClassOf prov:Entity"));
+    assertThat(
+        ontology,
+        containsString(":SourceSnapshot a rdfs:Class ;\n    rdfs:subClassOf prov:Entity"));
+  }
+
+  @Test
+  void shouldDeclareChangeListAsProvCollectionAndCustomerAsProvOrganization() throws IOException {
+    handler.handleRequest(createRequest(), outputStream, CONTEXT);
+
+    var ontology = GatewayResponse.fromOutputStream(outputStream, String.class).getBody();
+    assertThat(
+        ontology,
+        containsString(":ChangeList a rdfs:Class ;\n    rdfs:subClassOf prov:Collection"));
+    assertThat(
+        ontology,
+        containsString(":Customer a rdfs:Class ;\n    rdfs:subClassOf prov:Organization"));
+  }
+
+  @Test
+  void shouldDeclareChangeActivitiesAsProvActivities() throws IOException {
+    handler.handleRequest(createRequest(), outputStream, CONTEXT);
+
+    var ontology = GatewayResponse.fromOutputStream(outputStream, String.class).getBody();
+    assertThat(
+        ontology,
+        containsString(":SourceIngestion a rdfs:Class ;\n    rdfs:subClassOf prov:Activity"));
+    assertThat(
+        ontology,
+        containsString(":ApprovalCreation a rdfs:Class ;\n    rdfs:subClassOf prov:Activity"));
+  }
+
+  @Test
   void shouldContainIdentifierClass() throws IOException {
     handler.handleRequest(createRequest(), outputStream, CONTEXT);
 
