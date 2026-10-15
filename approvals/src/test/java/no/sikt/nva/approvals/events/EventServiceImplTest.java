@@ -3,6 +3,7 @@ package no.sikt.nva.approvals.events;
 import static java.util.UUID.randomUUID;
 import static no.sikt.nva.approvals.utils.TestUtils.randomApproval;
 import static no.sikt.nva.approvals.utils.TestUtils.randomHandle;
+import static no.unit.nva.testutils.RandomDataGenerator.randomString;
 import static no.unit.nva.testutils.RandomDataGenerator.randomUri;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
@@ -81,6 +82,11 @@ class EventServiceImplTest {
 
   private static SourceChangedEvent randomEvent(UUID customerIdentifier, URI source) {
     return new SourceChangedEvent(
-        randomUUID().toString(), source, randomHandle(), Instant.now(), customerIdentifier);
+        randomUUID().toString(),
+        source,
+        randomHandle(),
+        Instant.now(),
+        customerIdentifier,
+        randomString());
   }
 }

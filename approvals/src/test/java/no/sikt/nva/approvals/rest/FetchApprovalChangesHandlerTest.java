@@ -241,7 +241,12 @@ class FetchApprovalChangesHandlerTest {
     var snapshot =
         SourceSnapshot.create(
             new SourceChange(
-                approvalIdentifier, randomUUID(), randomString(), randomUri(), timestamp),
+                approvalIdentifier,
+                randomUUID(),
+                randomString(),
+                randomString(),
+                randomUri(),
+                timestamp),
             randomContent(),
             timestamp);
     approvalRepository.save(snapshot);

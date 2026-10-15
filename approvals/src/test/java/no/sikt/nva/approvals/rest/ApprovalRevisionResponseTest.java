@@ -11,6 +11,7 @@ import static no.sikt.nva.approvals.utils.UriConstants.customerId;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.instanceOf;
+import static org.hamcrest.Matchers.nullValue;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import no.unit.nva.commons.json.JsonUtils;
@@ -76,6 +77,15 @@ class ApprovalRevisionResponseTest {
     var customer = response.wasGeneratedBy().wasAssociatedWith().actedOnBehalfOf();
     var expectedCustomer = customerId(API_HOST, revision.approval().customerIdentifier());
     assertThat(customer, equalTo(expectedCustomer));
+  }
+
+  @Test
+  void shouldReturnEmptySoftwareAgentWhenClientIdentifierIsMissing() {
+    var revision = randomRevision(randomApproval(randomHandle()), CREATE_APPROVAL);
+
+    var response = ApprovalRevisionResponse.create(revision, API_HOST);
+
+    assertThat(response.wasGeneratedBy().wasAssociatedWith().id(), nullValue());
   }
 
   @Test

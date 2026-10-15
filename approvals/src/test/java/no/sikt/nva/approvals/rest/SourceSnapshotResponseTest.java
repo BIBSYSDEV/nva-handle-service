@@ -2,11 +2,11 @@ package no.sikt.nva.approvals.rest;
 
 import static no.sikt.nva.approvals.utils.TestUtils.randomSourceSnapshot;
 import static no.sikt.nva.approvals.utils.UriConstants.changeId;
+import static no.sikt.nva.approvals.utils.UriConstants.clientId;
 import static no.sikt.nva.approvals.utils.UriConstants.customerId;
 import static no.sikt.nva.approvals.utils.UriConstants.eventId;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
-import static org.hamcrest.Matchers.nullValue;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import no.unit.nva.commons.json.JsonUtils;
@@ -97,10 +97,13 @@ class SourceSnapshotResponseTest {
   }
 
   @Test
-  void shouldNotNameClientUntilItIsRecorded() {
-    var response = SourceSnapshotResponse.create(randomSourceSnapshot(), API_HOST);
+  void shouldBeGeneratedByClientThatReportedTheSourceChange() {
+    var snapshot = randomSourceSnapshot();
 
-    assertThat(response.wasGeneratedBy().wasAssociatedWith().id(), nullValue());
+    var response = SourceSnapshotResponse.create(snapshot, API_HOST);
+
+    var agent = response.wasGeneratedBy().wasAssociatedWith();
+    assertThat(agent.id(), equalTo(clientId(API_HOST, snapshot.clientIdentifier())));
   }
 
   @Test

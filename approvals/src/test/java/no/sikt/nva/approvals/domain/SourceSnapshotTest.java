@@ -34,6 +34,15 @@ class SourceSnapshotTest {
   }
 
   @Test
+  void shouldCreateSnapshotWithClientFromTheSourceChange() {
+    var sourceChange = randomSourceChange();
+
+    var snapshot = SourceSnapshot.create(sourceChange, randomContent(), randomTimestamp());
+
+    assertThat(snapshot.clientIdentifier(), equalTo(sourceChange.clientIdentifier()));
+  }
+
+  @Test
   void shouldReturnCustomer() {
     var sourceChange = randomSourceChange();
 

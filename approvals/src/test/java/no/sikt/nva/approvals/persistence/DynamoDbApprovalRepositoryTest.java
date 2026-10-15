@@ -999,6 +999,16 @@ class DynamoDbApprovalRepositoryTest {
   }
 
   @Test
+  void shouldPersistEventWithProvidedClientIdentifier() {
+    var event = randomEvent();
+    approvalRepository.save(event, randomUUID());
+
+    var persisted = storedEvent(event);
+
+    assertEquals(event.clientIdentifier(), persisted.clientIdentifier());
+  }
+
+  @Test
   void shouldPersistEventWithProvidedApprovalIdentifier() {
     var event = randomEvent();
     var approvalIdentifier = randomUUID();
@@ -1020,7 +1030,8 @@ class DynamoDbApprovalRepositoryTest {
             event.source(),
             event.handle(),
             event.timestamp().plusSeconds(1),
-            event.customerIdentifier());
+            event.customerIdentifier(),
+            event.clientIdentifier());
 
     approvalRepository.save(duplicate, randomUUID());
     var persistedAfterSecondInvocation = storedEvent(event);
@@ -1086,7 +1097,12 @@ class DynamoDbApprovalRepositoryTest {
 
   private static SourceChangedEvent randomEvent() {
     return new SourceChangedEvent(
-        randomUUID().toString(), randomUri(), randomHandle(), Instant.now(), randomUUID());
+        randomUUID().toString(),
+        randomUri(),
+        randomHandle(),
+        Instant.now(),
+        randomUUID(),
+        randomString());
   }
 
   private EventDao storedEvent(SourceChangedEvent event) {

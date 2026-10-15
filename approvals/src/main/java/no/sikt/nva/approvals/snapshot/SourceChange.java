@@ -7,6 +7,7 @@ import java.util.UUID;
 public record SourceChange(
     UUID approvalIdentifier,
     UUID customerIdentifier,
+    String clientIdentifier,
     String eventIdentifier,
     URI source,
     Instant timestamp) {}
