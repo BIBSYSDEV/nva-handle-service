@@ -56,7 +56,8 @@ public class CreateApprovalHandler extends ApiGatewayHandler<CreateApprovalReque
       CreateApprovalRequest request, RequestInfo requestInfo, Context context)
       throws ApiGatewayException {
     var customerIdentifier =
-        identifierAuthorizer.authorizeIdentifiers(requestInfo, request.identifiers());
+        identifierAuthorizer.authorizeIdentifiersAndSource(
+            requestInfo, request.identifiers(), request.source());
     try {
       var approval =
           approvalService.create(request.identifiers(), request.source(), customerIdentifier);

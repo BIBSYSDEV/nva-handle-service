@@ -60,7 +60,8 @@ public class UpdateApprovalHandler extends ApiGatewayHandler<UpdateApprovalReque
       throws ApiGatewayException {
     var identifier = getApprovalIdentifier(requestInfo);
     var customerIdentifier =
-        identifierAuthorizer.authorizeIdentifiers(requestInfo, request.identifiers());
+        identifierAuthorizer.authorizeIdentifiersAndSource(
+            requestInfo, request.identifiers(), request.source());
     try {
       var approval =
           approvalService.updateApproval(

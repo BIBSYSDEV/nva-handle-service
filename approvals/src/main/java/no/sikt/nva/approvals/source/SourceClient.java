@@ -39,7 +39,6 @@ public class SourceClient {
   private static final String BEARER_PREFIX = "Bearer ";
   private static final String CONTENT_TYPE_HEADER = "Content-Type";
   private static final String DEFAULT_CONTENT_TYPE = "application/octet-stream";
-  private static final String FETCH_FAILED_MESSAGE = "Failed to fetch source %s";
   private static final String REJECTED_CREDENTIALS_MESSAGE =
       "Source %s rejected the credentials with status %s";
   private static final String UNEXPECTED_STATUS_MESSAGE = "Source %s responded with status %s";
@@ -108,7 +107,7 @@ public class SourceClient {
   private static SourceClientException throwSourceClientException(
       HttpRequest request, Failure<HttpResponse<String>> failure) {
     return new SourceClientException(
-        FETCH_FAILED_MESSAGE.formatted(request.uri()), failure.getException());
+        "Failed to fetch source %s".formatted(request.uri()), failure.getException());
   }
 
   private HttpRequest createRequest(URI source, SourceAuthentication authentication)

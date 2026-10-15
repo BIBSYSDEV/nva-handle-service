@@ -3,7 +3,9 @@ package no.sikt.nva.approvals.rest;
 import static java.net.HttpURLConnection.HTTP_FORBIDDEN;
 import static java.util.UUID.randomUUID;
 import static no.sikt.nva.approvals.utils.TestUtils.randomIdentifiers;
+import static no.sikt.nva.approvals.utils.TestUtils.randomSourceConfig;
 import static no.unit.nva.testutils.RandomDataGenerator.randomString;
+import static no.unit.nva.testutils.RandomDataGenerator.randomUri;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -24,6 +26,7 @@ import no.sikt.nva.approvals.domain.NamedIdentifier;
 import no.unit.nva.commons.json.JsonUtils;
 import no.unit.nva.testutils.HandlerRequestBuilder;
 import nva.commons.apigateway.RequestInfo;
+import nva.commons.apigateway.exceptions.ForbiddenException;
 import nva.commons.apigateway.exceptions.UnauthorizedException;
 import nva.commons.core.paths.UriWrapper;
 import org.junit.jupiter.api.BeforeEach;
@@ -50,26 +53,50 @@ class IdentifierAuthorizerTest {
   void shouldAllowIdentifiersWhenAllNamesAreAllowedForCustomer() throws Exception {
     var requestInfo = requestInfo(THIRD_PARTY_SCOPE, customerUri(randomUUID()));
     var namedIdentifier = new NamedIdentifier(REK, randomString());
+    var sourceConfig = randomSourceConfig();
     when(identifierPolicyService.getIdentifierPolicy(any()))
-        .thenReturn(new IdentifierPolicy(Set.of(REK)));
+        .thenReturn(new IdentifierPolicy(Set.of(REK), List.of(sourceConfig)));
 
     assertDoesNotThrow(
-        () -> identifierAuthorizer.authorizeIdentifiers(requestInfo, List.of(namedIdentifier)));
+        () ->
+            identifierAuthorizer.authorizeIdentifiersAndSource(
+                requestInfo, List.of(namedIdentifier), sourceConfig.baseUri()));
   }
 
   @Test
   void shouldRejectIdentifiersWhenNameIsNotAllowedForCustomer() throws Exception {
     var requestInfo = requestInfo(THIRD_PARTY_SCOPE, customerUri(randomUUID()));
     var namedIdentifier = new NamedIdentifier(REK, randomString());
-    when(identifierPolicyService.getIdentifierPolicy(any())).thenReturn(IdentifierPolicy.DENY_ALL);
+    var sourceConfig = randomSourceConfig();
+    when(identifierPolicyService.getIdentifierPolicy(any()))
+        .thenReturn(new IdentifierPolicy(Set.of(), List.of(sourceConfig)));
 
     var exception =
         assertThrows(
             DisallowedIdentifierNamesException.class,
-            () -> identifierAuthorizer.authorizeIdentifiers(requestInfo, List.of(namedIdentifier)));
+            () ->
+                identifierAuthorizer.authorizeIdentifiersAndSource(
+                    requestInfo, List.of(namedIdentifier), sourceConfig.baseUri()));
 
     assertEquals(HTTP_FORBIDDEN, exception.getStatusCode());
     assertTrue(exception.getMessage().contains(REK));
+  }
+
+  @Test
+  void shouldThrowForbiddenWhenSourceDoesNotMatchSourceInCustomerConfig() throws Exception {
+    var requestInfo = requestInfo(THIRD_PARTY_SCOPE, customerUri(randomUUID()));
+    var source = randomUri();
+    when(identifierPolicyService.getIdentifierPolicy(any()))
+        .thenReturn(new IdentifierPolicy(Set.of(REK), List.of(randomSourceConfig())));
+
+    var exception =
+        assertThrows(
+            ForbiddenException.class,
+            () ->
+                identifierAuthorizer.authorizeIdentifiersAndSource(
+                    requestInfo, randomIdentifiers(), source));
+
+    assertTrue(exception.getMessage().contains(source.toString()));
   }
 
   @Test
@@ -79,7 +106,8 @@ class IdentifierAuthorizerTest {
     when(identifierPolicyService.getIdentifierPolicy(customerIdentifier))
         .thenReturn(IdentifierPolicy.ALLOW_ALL);
 
-    identifierAuthorizer.authorizeIdentifiers(requestInfo, randomIdentifiers());
+    identifierAuthorizer.authorizeIdentifiersAndSource(
+        requestInfo, randomIdentifiers(), randomUri());
 
     verify(identifierPolicyService).getIdentifierPolicy(customerIdentifier);
   }
@@ -89,7 +117,9 @@ class IdentifierAuthorizerTest {
     var requestInfo = requestInfo(BACKEND_SCOPE, customerUri(randomUUID()));
 
     assertDoesNotThrow(
-        () -> identifierAuthorizer.authorizeIdentifiers(requestInfo, randomIdentifiers()));
+        () ->
+            identifierAuthorizer.authorizeIdentifiersAndSource(
+                requestInfo, randomIdentifiers(), randomUri()));
 
     verifyNoInteractions(identifierPolicyService);
   }
@@ -101,7 +131,8 @@ class IdentifierAuthorizerTest {
 
     assertEquals(
         customerIdentifier,
-        identifierAuthorizer.authorizeIdentifiers(requestInfo, randomIdentifiers()));
+        identifierAuthorizer.authorizeIdentifiersAndSource(
+            requestInfo, randomIdentifiers(), randomUri()));
   }
 
   @Test
@@ -112,7 +143,8 @@ class IdentifierAuthorizerTest {
 
     assertEquals(
         customerIdentifier,
-        identifierAuthorizer.authorizeIdentifiers(requestInfo, randomIdentifiers()));
+        identifierAuthorizer.authorizeIdentifiersAndSource(
+            requestInfo, randomIdentifiers(), randomUri()));
   }
 
   @Test
@@ -121,7 +153,9 @@ class IdentifierAuthorizerTest {
 
     assertThrows(
         UnauthorizedException.class,
-        () -> identifierAuthorizer.authorizeIdentifiers(requestInfo, randomIdentifiers()));
+        () ->
+            identifierAuthorizer.authorizeIdentifiersAndSource(
+                requestInfo, randomIdentifiers(), randomUri()));
   }
 
   private static URI customerUri(UUID customerIdentifier) {
