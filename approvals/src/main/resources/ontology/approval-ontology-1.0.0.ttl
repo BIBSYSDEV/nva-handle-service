@@ -66,11 +66,6 @@
     rdfs:label "SourceChangedEvent" ;
     rdfs:comment "The event a source reported to say that the resource behind an approval changed, which started a source ingestion" .
 
-:Customer a rdfs:Class ;
-    rdfs:subClassOf prov:Organization ;
-    rdfs:label "Customer" ;
-    rdfs:comment "The NVA customer on whose behalf a client created, updated or reported a change to an approval" .
-
 #################################################################
 #    Properties
 #################################################################

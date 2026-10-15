@@ -141,16 +141,13 @@ class FetchOntologyHandlerTest {
   }
 
   @Test
-  void shouldDeclareChangeListAsProvCollectionAndCustomerAsProvOrganization() throws IOException {
+  void shouldDeclareChangeListAsProvCollection() throws IOException {
     handler.handleRequest(createRequest(), outputStream, CONTEXT);
 
     var ontology = GatewayResponse.fromOutputStream(outputStream, String.class).getBody();
     assertThat(
         ontology,
         containsString(":ChangeList a rdfs:Class ;\n    rdfs:subClassOf prov:Collection"));
-    assertThat(
-        ontology,
-        containsString(":Customer a rdfs:Class ;\n    rdfs:subClassOf prov:Organization"));
   }
 
   @Test

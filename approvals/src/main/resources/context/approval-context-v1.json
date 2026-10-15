@@ -85,7 +85,10 @@
       "@type": "@vocab"
     },
     "sha256": "spdx:checksumAlgorithm_sha256",
-    "checksumValue": "spdx:checksumValue",
+    "checksumValue": {
+      "@id": "spdx:checksumValue",
+      "@type": "xsd:hexBinary"
+    },
     "SourceChangedEvent": {
       "@id": "SourceChangedEvent",
       "@context": {

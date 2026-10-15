@@ -21,6 +21,7 @@ class ChangeContextTriplesTest {
   private static final String SPDX = "http://spdx.org/rdf/terms#";
   private static final String SCHEMA = "https://schema.org/";
   private static final String XSD_DATE_TIME = "http://www.w3.org/2001/XMLSchema#dateTime";
+  private static final String XSD_HEX_BINARY = "http://www.w3.org/2001/XMLSchema#hexBinary";
   private static final String EVENT_IDENTIFIER = "13";
   private static final String SOURCE = "https://source.example.org/trial/1";
   private static final String APPROVAL_ID =
@@ -45,7 +46,7 @@ class ChangeContextTriplesTest {
           "wasStartedBy": { "id": "%s", "type": "SourceChangedEvent", "identifier": "%s" },
           "wasAssociatedWith": {
             "type": "SoftwareAgent",
-            "actedOnBehalfOf": { "id": "%s", "type": "Customer" }
+            "actedOnBehalfOf": "%s"
           }
         }
       }
@@ -62,7 +63,7 @@ class ChangeContextTriplesTest {
           "type": "ApprovalCreation",
           "wasAssociatedWith": {
             "type": "SoftwareAgent",
-            "actedOnBehalfOf": { "id": "%s", "type": "Customer" }
+            "actedOnBehalfOf": "%s"
           }
         }
       }
@@ -137,7 +138,7 @@ class ChangeContextTriplesTest {
         triples,
         hasItems(
             Triple.of(checksum, RDF_TYPE, termIri(SPDX, "Checksum")),
-            Triple.literal(checksum, termIri(SPDX, "checksumValue"), "4c87")));
+            Triple.typed(checksum, termIri(SPDX, "checksumValue"), "4c87", XSD_HEX_BINARY)));
   }
 
   @Test
@@ -242,19 +243,14 @@ class ChangeContextTriplesTest {
   }
 
   @Test
-  void shouldReturnTriplesOfSoftwareAgentActingForCustomer() throws IOException, JsonLdError {
+  void shouldReturnTripleOfSoftwareAgentActingOnBehalfOfCustomer() throws IOException, JsonLdError {
     var triples = toTriplesWithApprovalContext(APPROVAL_REVISION_JSON);
 
     var creation = objectOf(triples, REVISION_ID, termIri(PROV, "wasGeneratedBy"));
     var agent = objectOf(triples, creation, termIri(PROV, "wasAssociatedWith"));
     assertThat(
         triples,
-        hasItems(
-            Triple.of(agent, termIri(PROV, "actedOnBehalfOf"), CUSTOMER_ID.toString()),
-            Triple.of(
-                CUSTOMER_ID.toString(),
-                RDF_TYPE,
-                termIri(APPROVAL_ONTOLOGY_NAMESPACE, "Customer"))));
+        hasItem(Triple.of(agent, termIri(PROV, "actedOnBehalfOf"), CUSTOMER_ID.toString())));
   }
 
   private static String termIri(String namespace, String localName) {
