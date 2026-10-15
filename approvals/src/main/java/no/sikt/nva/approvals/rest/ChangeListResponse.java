@@ -54,11 +54,11 @@ public record ChangeListResponse(
 
   @JsonTypeInfo(use = Id.NAME, property = "type")
   @JsonTypeName("Approval")
-  public record AboutApproval(URI id, URI handle) {
+  public record AboutApproval(URI id, List<URI> sameAs) {
 
     private static AboutApproval fromApproval(Approval approval, String apiHost) {
       return new AboutApproval(
-          approvalId(apiHost, approval.identifier()), approval.handle().value());
+          approvalId(apiHost, approval.identifier()), List.of(approval.handle().value()));
     }
   }
 }

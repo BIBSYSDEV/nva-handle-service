@@ -5,11 +5,13 @@ import static no.sikt.nva.approvals.utils.TestUtils.randomSourceSnapshot;
 import static no.unit.nva.testutils.RandomDataGenerator.randomString;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import java.util.Optional;
@@ -22,6 +24,7 @@ import no.sikt.nva.approvals.source.SourceClientException;
 import no.sikt.nva.approvals.source.SourceResponse;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 
 class SnapshotServiceImplTest {
 
@@ -47,8 +50,9 @@ class SnapshotServiceImplTest {
 
     snapshotService.createSnapshot(sourceChange);
 
+    var saved = savedSnapshot();
     var content = Content.create(sourceResponse.contentType(), sourceResponse.body());
-    verify(approvalRepository).save(SourceSnapshot.create(sourceChange, content));
+    assertThat(saved, equalTo(SourceSnapshot.create(sourceChange, content, saved.createdDate())));
   }
 
   @Test
@@ -64,8 +68,7 @@ class SnapshotServiceImplTest {
 
     snapshotService.createSnapshot(sourceChange);
 
-    var content = Content.create(sourceResponse.contentType(), sourceResponse.body());
-    verify(approvalRepository, never()).save(SourceSnapshot.create(sourceChange, content));
+    verifyNoInteractions(approvalRepository);
   }
 
   @Test
@@ -80,8 +83,9 @@ class SnapshotServiceImplTest {
 
     snapshotService.createSnapshot(sourceChange);
 
+    var saved = savedSnapshot();
     var content = Content.create(sourceResponse.contentType(), sourceResponse.body());
-    verify(approvalRepository).save(SourceSnapshot.create(sourceChange, content));
+    assertThat(saved, equalTo(SourceSnapshot.create(sourceChange, content, saved.createdDate())));
   }
 
   @Test
@@ -105,5 +109,11 @@ class SnapshotServiceImplTest {
     assertThrows(SourceClientException.class, () -> snapshotService.createSnapshot(sourceChange));
 
     verify(approvalRepository, never()).save(any(SourceSnapshot.class));
+  }
+
+  private SourceSnapshot savedSnapshot() {
+    var captor = ArgumentCaptor.forClass(SourceSnapshot.class);
+    verify(approvalRepository).save(captor.capture());
+    return captor.getValue();
   }
 }

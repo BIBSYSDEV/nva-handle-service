@@ -131,12 +131,14 @@ public class TestUtils {
 
   public static SourceSnapshot randomSourceSnapshot(UUID approvalIdentifier) {
     return SourceSnapshot.create(
-        randomSourceChange(approvalIdentifier, randomString()), randomContent());
+        randomSourceChange(approvalIdentifier, randomString()), randomContent(), randomTimestamp());
   }
 
   public static SourceSnapshot randomSourceSnapshot(UUID approvalIdentifier, Instant timestamp) {
     return SourceSnapshot.create(
-        randomSourceChange(approvalIdentifier, randomString(), timestamp), randomContent());
+        randomSourceChange(approvalIdentifier, randomString(), timestamp),
+        randomContent(),
+        timestamp);
   }
 
   public static Content randomContent() {

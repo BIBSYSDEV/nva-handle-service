@@ -2,6 +2,12 @@
   "@context": {
     "@vocab": "__ONTOLOGY_IRI__#",
     "xsd": "http://www.w3.org/2001/XMLSchema#",
+    "schema": "https://schema.org/",
+    "sameAs": {
+      "@id": "schema:sameAs",
+      "@type": "@id",
+      "@container": "@set"
+    },
     "type": "@type",
     "id": "@id",
     "identifier": {
