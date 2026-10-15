@@ -994,6 +994,7 @@ components:
               required:
                 - type
                 - id
+                - identifier
               properties:
                 type:
                   type: string
@@ -1002,6 +1003,9 @@ components:
                 id:
                   type: string
                   format: uri
+                identifier:
+                  type: string
+                  description: The id of the CloudEvent that reported the source change
             wasAssociatedWith:
               $ref: "#/components/schemas/SoftwareAgent"
     SoftwareAgent:
@@ -1019,18 +1023,9 @@ components:
           type: string
           format: uri
         actedOnBehalfOf:
-          type: object
-          required:
-            - type
-            - id
-          properties:
-            type:
-              type: string
-              enum:
-                - Customer
-            id:
-              type: string
-              format: uri
+          type: string
+          format: uri
+          description: The NVA customer on whose behalf the client acted
     Problem:
       type: object
       description: NVA error reporting object

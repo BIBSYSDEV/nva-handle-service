@@ -83,6 +83,7 @@ class SourceSnapshotResponseTest {
     assertThat(
         event.id(),
         equalTo(eventId(API_HOST, snapshot.approvalIdentifier(), snapshot.eventIdentifier())));
+    assertThat(event.identifier(), equalTo(snapshot.eventIdentifier()));
   }
 
   @Test
@@ -92,7 +93,7 @@ class SourceSnapshotResponseTest {
     var response = SourceSnapshotResponse.create(snapshot, API_HOST);
 
     var customer = response.wasGeneratedBy().wasAssociatedWith().actedOnBehalfOf();
-    assertThat(customer.id(), equalTo(customerId(API_HOST, snapshot.customerIdentifier())));
+    assertThat(customer, equalTo(customerId(API_HOST, snapshot.customerIdentifier())));
   }
 
   @Test

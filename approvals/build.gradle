@@ -30,6 +30,7 @@ dependencies {
     testImplementation(libs.glassfish.jakarta.json)
     testImplementation(libs.jte)
     testImplementation(nvaCatalog.titanium.json.ld)
+    testImplementation(libs.titanium.rdf.api)
     testImplementation(nvaCatalog.aws.sdk2.dynamodblocal)
     testImplementation(nvaCatalog.hamcrest)
     testImplementation(nvaCatalog.jackson.core)

@@ -75,7 +75,7 @@ class ApprovalRevisionResponseTest {
 
     var customer = response.wasGeneratedBy().wasAssociatedWith().actedOnBehalfOf();
     var expectedCustomer = customerId(API_HOST, revision.approval().customerIdentifier());
-    assertThat(customer.id(), equalTo(expectedCustomer));
+    assertThat(customer, equalTo(expectedCustomer));
   }
 
   @Test

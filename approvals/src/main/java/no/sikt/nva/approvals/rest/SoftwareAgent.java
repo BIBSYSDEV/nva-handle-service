@@ -11,15 +11,15 @@ import java.util.UUID;
 
 @JsonTypeInfo(use = Id.NAME, property = "type")
 @JsonTypeName("SoftwareAgent")
-public record SoftwareAgent(URI id, Customer actedOnBehalfOf) {
+public record SoftwareAgent(URI id, URI actedOnBehalfOf) {
 
   static SoftwareAgent actingFor(UUID customerIdentifier, String apiHost) {
     return new SoftwareAgent(null, constructCustomer(customerIdentifier, apiHost));
   }
 
-  private static Customer constructCustomer(UUID customerIdentifier, String apiHost) {
+  private static URI constructCustomer(UUID customerIdentifier, String apiHost) {
     return Optional.ofNullable(customerIdentifier)
-        .map(identifier -> new Customer(customerId(apiHost, identifier)))
+        .map(identifier -> customerId(apiHost, identifier))
         .orElse(null);
   }
 }
