@@ -1,13 +1,18 @@
 package no.sikt.nva.approvals.utils;
 
+import static nva.commons.core.attempt.Try.attempt;
+
 import com.apicatalog.jsonld.JsonLd;
 import com.apicatalog.jsonld.JsonLdError;
+import com.apicatalog.jsonld.document.Document;
 import com.apicatalog.jsonld.document.JsonDocument;
+import com.apicatalog.jsonld.loader.DocumentLoaderOptions;
 import jakarta.json.Json;
 import jakarta.json.JsonObject;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.StringReader;
+import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
 import no.sikt.nva.approvals.rest.FetchContextHandler;
@@ -32,11 +37,13 @@ public final class JsonLdTestUtils {
         .getJsonObject(0);
   }
 
-  public static List<Triple> toTriplesWithApprovalContext(String document)
+  public static List<Triple> toTriplesWithApprovalContext(Object response)
       throws IOException, JsonLdError {
+    var document = JsonUtils.dtoObjectMapper.writeValueAsString(response);
     var triples = new ArrayList<Triple>();
     JsonLd.toRdf(JsonDocument.of(new StringReader(document)))
         .context(fetchServedContext())
+        .loader(JsonLdTestUtils::loadServedContext)
         .provide(
             (subject, predicate, object, datatype, language, direction, graph) -> {
               triples.add(new Triple(subject, predicate, object, datatype));
@@ -66,6 +73,10 @@ public final class JsonLdTestUtils {
     public static Triple typed(String subject, String predicate, String value, String datatype) {
       return new Triple(subject, predicate, value, datatype);
     }
+  }
+
+  private static Document loadServedContext(URI url, DocumentLoaderOptions options) {
+    return JsonDocument.of(attempt(JsonLdTestUtils::fetchServedContext).orElseThrow());
   }
 
   private static JsonObject fetchServedContext() throws IOException {

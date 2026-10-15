@@ -1,151 +1,135 @@
 package no.sikt.nva.approvals.rest;
 
+import static no.sikt.nva.approvals.domain.ApprovalActivity.CREATE_APPROVAL;
 import static no.sikt.nva.approvals.utils.JsonLdTestUtils.APPROVAL_ONTOLOGY_NAMESPACE;
 import static no.sikt.nva.approvals.utils.JsonLdTestUtils.RDF_TYPE;
 import static no.sikt.nva.approvals.utils.JsonLdTestUtils.objectOf;
 import static no.sikt.nva.approvals.utils.JsonLdTestUtils.toTriplesWithApprovalContext;
-import static no.unit.nva.testutils.RandomDataGenerator.randomUri;
+import static no.sikt.nva.approvals.utils.TestUtils.randomApproval;
+import static no.sikt.nva.approvals.utils.TestUtils.randomHandle;
+import static no.sikt.nva.approvals.utils.TestUtils.randomRevision;
+import static no.sikt.nva.approvals.utils.TestUtils.randomSourceSnapshot;
+import static no.sikt.nva.approvals.utils.UriConstants.approvalId;
+import static no.sikt.nva.approvals.utils.UriConstants.changeId;
+import static no.sikt.nva.approvals.utils.UriConstants.changeListId;
+import static no.sikt.nva.approvals.utils.UriConstants.customerId;
+import static no.sikt.nva.approvals.utils.UriConstants.eventId;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.hasItems;
 
 import com.apicatalog.jsonld.JsonLdError;
 import java.io.IOException;
-import java.net.URI;
+import java.util.List;
+import java.util.UUID;
+import no.sikt.nva.approvals.domain.Approval;
+import no.sikt.nva.approvals.domain.ApprovalRevision;
+import no.sikt.nva.approvals.domain.ChangeList;
+import no.sikt.nva.approvals.domain.SourceSnapshot;
 import no.sikt.nva.approvals.utils.JsonLdTestUtils.Triple;
 import org.junit.jupiter.api.Test;
 
 class ChangeContextTriplesTest {
 
+  private static final String API_HOST = "localhost";
   private static final String PROV = "http://www.w3.org/ns/prov#";
   private static final String SPDX = "http://spdx.org/rdf/terms#";
   private static final String SCHEMA = "https://schema.org/";
   private static final String XSD_DATE_TIME = "http://www.w3.org/2001/XMLSchema#dateTime";
   private static final String XSD_HEX_BINARY = "http://www.w3.org/2001/XMLSchema#hexBinary";
-  private static final String EVENT_IDENTIFIER = "13";
-  private static final String SOURCE = "https://source.example.org/trial/1";
-  private static final String APPROVAL_ID =
-      "https://localhost/approval/6ff5f1b5-97c1-40f0-86ad-2cbd9006eee2";
-  private static final String SNAPSHOT_ID = APPROVAL_ID + "/change/01a0f1cfea4b-3f2a";
-  private static final String REVISION_ID = APPROVAL_ID + "/change/01a0f1cfea4b-0000";
-  private static final URI EVENT_ID = randomUri();
-  private static final URI CUSTOMER_ID = randomUri();
-  private static final String CHANGE_LIST_ID = APPROVAL_ID + "/change";
-  private static final String SOURCE_SNAPSHOT_JSON =
-      """
-      {
-        "id": "%s",
-        "type": "SourceSnapshot",
-        "specializationOf": "%s",
-        "generatedAtTime": "2026-10-08T09:42:36.000000Z",
-        "mediaType": "application/ld+json",
-        "checksum": { "type": "Checksum", "algorithm": "sha256", "checksumValue": "4c87" },
-        "wasGeneratedBy": {
-          "type": "SourceIngestion",
-          "used": "%s",
-          "wasStartedBy": { "id": "%s", "type": "SourceChangedEvent", "identifier": "%s" },
-          "wasAssociatedWith": {
-            "type": "SoftwareAgent",
-            "actedOnBehalfOf": "%s"
-          }
-        }
-      }
-      """
-          .formatted(SNAPSHOT_ID, SOURCE, SOURCE, EVENT_ID, EVENT_IDENTIFIER, CUSTOMER_ID);
-  private static final String APPROVAL_REVISION_JSON =
-      """
-      {
-        "id": "%s",
-        "type": "ApprovalRevision",
-        "specializationOf": "%s",
-        "generatedAtTime": "2026-10-08T09:38:16.302439Z",
-        "wasGeneratedBy": {
-          "type": "ApprovalCreation",
-          "wasAssociatedWith": {
-            "type": "SoftwareAgent",
-            "actedOnBehalfOf": "%s"
-          }
-        }
-      }
-      """
-          .formatted(REVISION_ID, APPROVAL_ID, CUSTOMER_ID);
-  private static final String CHANGE_LIST_JSON =
-      """
-      {
-        "id": "%s",
-        "type": "ChangeList",
-        "about": { "id": "%s", "type": "Approval" },
-        "changes": [{ "id": "%s", "type": "SourceSnapshot" }]
-      }
-      """
-          .formatted(CHANGE_LIST_ID, APPROVAL_ID, SNAPSHOT_ID);
 
   @Test
   void shouldReturnTriplesOfChangeListAboutApprovalWithChangesAsMembers()
       throws IOException, JsonLdError {
-    var triples = toTriplesWithApprovalContext(CHANGE_LIST_JSON);
+    var approval = randomApproval(randomHandle());
+    var snapshot = randomSourceSnapshot(approval.identifier());
+    var changeList = new ChangeList(approval, List.of(snapshot), false);
+
+    var triples = toTriplesWithApprovalContext(changeListResponse(changeList));
 
     assertThat(
         triples,
         hasItems(
-            Triple.of(CHANGE_LIST_ID, termIri(SCHEMA, "about"), APPROVAL_ID),
-            Triple.of(CHANGE_LIST_ID, termIri(PROV, "hadMember"), SNAPSHOT_ID)));
+            Triple.of(changeListIri(approval), termIri(SCHEMA, "about"), approvalIri(approval)),
+            Triple.of(changeListIri(approval), termIri(PROV, "hadMember"), snapshotIri(snapshot))));
   }
 
   @Test
   void shouldReturnTriplesOfSnapshotTypeAndSpecializationOfSource()
       throws IOException, JsonLdError {
-    var triples = toTriplesWithApprovalContext(SOURCE_SNAPSHOT_JSON);
+    var snapshot = randomSourceSnapshot();
+
+    var triples = toTriplesWithApprovalContext(snapshotResponse(snapshot));
 
     assertThat(
         triples,
         hasItems(
             Triple.of(
-                SNAPSHOT_ID, RDF_TYPE, termIri(APPROVAL_ONTOLOGY_NAMESPACE, "SourceSnapshot")),
-            Triple.of(SNAPSHOT_ID, termIri(PROV, "specializationOf"), SOURCE)));
+                snapshotIri(snapshot),
+                RDF_TYPE,
+                termIri(APPROVAL_ONTOLOGY_NAMESPACE, "SourceSnapshot")),
+            Triple.of(
+                snapshotIri(snapshot),
+                termIri(PROV, "specializationOf"),
+                snapshot.source().toString())));
   }
 
   @Test
   void shouldReturnTripleOfSnapshotGeneratedAtTimeAsDateTime() throws IOException, JsonLdError {
-    var triples = toTriplesWithApprovalContext(SOURCE_SNAPSHOT_JSON);
+    var snapshot = randomSourceSnapshot();
+
+    var triples = toTriplesWithApprovalContext(snapshotResponse(snapshot));
 
     assertThat(
         triples,
         hasItem(
             Triple.typed(
-                SNAPSHOT_ID,
+                snapshotIri(snapshot),
                 termIri(PROV, "generatedAtTime"),
-                "2026-10-08T09:42:36.000000Z",
+                snapshot.createdDate().toString(),
                 XSD_DATE_TIME)));
   }
 
   @Test
   void shouldReturnTripleOfSnapshotMediaTypeAsEncodingFormat() throws IOException, JsonLdError {
-    var triples = toTriplesWithApprovalContext(SOURCE_SNAPSHOT_JSON);
+    var snapshot = randomSourceSnapshot();
+
+    var triples = toTriplesWithApprovalContext(snapshotResponse(snapshot));
 
     assertThat(
         triples,
         hasItem(
-            Triple.literal(SNAPSHOT_ID, termIri(SCHEMA, "encodingFormat"), "application/ld+json")));
+            Triple.literal(
+                snapshotIri(snapshot),
+                termIri(SCHEMA, "encodingFormat"),
+                snapshot.content().type())));
   }
 
   @Test
   void shouldReturnTriplesOfChecksumTypeAndValueWithSpdxTerms() throws IOException, JsonLdError {
-    var triples = toTriplesWithApprovalContext(SOURCE_SNAPSHOT_JSON);
+    var snapshot = randomSourceSnapshot();
 
-    var checksum = objectOf(triples, SNAPSHOT_ID, termIri(SPDX, "checksum"));
+    var triples = toTriplesWithApprovalContext(snapshotResponse(snapshot));
+
+    var checksum = objectOf(triples, snapshotIri(snapshot), termIri(SPDX, "checksum"));
     assertThat(
         triples,
         hasItems(
             Triple.of(checksum, RDF_TYPE, termIri(SPDX, "Checksum")),
-            Triple.typed(checksum, termIri(SPDX, "checksumValue"), "4c87", XSD_HEX_BINARY)));
+            Triple.typed(
+                checksum,
+                termIri(SPDX, "checksumValue"),
+                snapshot.content().hash(),
+                XSD_HEX_BINARY)));
   }
 
   @Test
   void shouldReturnTripleOfChecksumAlgorithmAsSpdxTerm() throws IOException, JsonLdError {
-    var triples = toTriplesWithApprovalContext(SOURCE_SNAPSHOT_JSON);
+    var snapshot = randomSourceSnapshot();
 
-    var checksum = objectOf(triples, SNAPSHOT_ID, termIri(SPDX, "checksum"));
+    var triples = toTriplesWithApprovalContext(snapshotResponse(snapshot));
+
+    var checksum = objectOf(triples, snapshotIri(snapshot), termIri(SPDX, "checksum"));
     assertThat(
         triples,
         hasItem(
@@ -155,73 +139,91 @@ class ChangeContextTriplesTest {
 
   @Test
   void shouldReturnTriplesOfIngestionTypeAndUsedSource() throws IOException, JsonLdError {
-    var triples = toTriplesWithApprovalContext(SOURCE_SNAPSHOT_JSON);
+    var snapshot = randomSourceSnapshot();
 
-    var ingestion = objectOf(triples, SNAPSHOT_ID, termIri(PROV, "wasGeneratedBy"));
+    var triples = toTriplesWithApprovalContext(snapshotResponse(snapshot));
+
+    var ingestion = objectOf(triples, snapshotIri(snapshot), termIri(PROV, "wasGeneratedBy"));
     assertThat(
         triples,
         hasItems(
             Triple.of(ingestion, RDF_TYPE, termIri(APPROVAL_ONTOLOGY_NAMESPACE, "SourceIngestion")),
-            Triple.of(ingestion, termIri(PROV, "used"), SOURCE)));
+            Triple.of(ingestion, termIri(PROV, "used"), snapshot.source().toString())));
   }
 
   @Test
   void shouldReturnTriplesOfIngestionStartedBySourceChangedEvent() throws IOException, JsonLdError {
-    var triples = toTriplesWithApprovalContext(SOURCE_SNAPSHOT_JSON);
+    var snapshot = randomSourceSnapshot();
 
-    var ingestion = objectOf(triples, SNAPSHOT_ID, termIri(PROV, "wasGeneratedBy"));
+    var triples = toTriplesWithApprovalContext(snapshotResponse(snapshot));
+
+    var ingestion = objectOf(triples, snapshotIri(snapshot), termIri(PROV, "wasGeneratedBy"));
     assertThat(
         triples,
         hasItems(
-            Triple.of(ingestion, termIri(PROV, "wasStartedBy"), EVENT_ID.toString()),
+            Triple.of(ingestion, termIri(PROV, "wasStartedBy"), eventIri(snapshot)),
             Triple.of(
-                EVENT_ID.toString(),
+                eventIri(snapshot),
                 RDF_TYPE,
                 termIri(APPROVAL_ONTOLOGY_NAMESPACE, "SourceChangedEvent"))));
   }
 
   @Test
   void shouldReturnTripleOfEventIdentifierAsSchemaIdentifier() throws IOException, JsonLdError {
-    var triples = toTriplesWithApprovalContext(SOURCE_SNAPSHOT_JSON);
+    var snapshot = randomSourceSnapshot();
+
+    var triples = toTriplesWithApprovalContext(snapshotResponse(snapshot));
 
     assertThat(
         triples,
         hasItem(
-            Triple.literal(EVENT_ID.toString(), termIri(SCHEMA, "identifier"), EVENT_IDENTIFIER)));
+            Triple.literal(
+                eventIri(snapshot), termIri(SCHEMA, "identifier"), snapshot.eventIdentifier())));
   }
 
   @Test
   void shouldReturnTriplesOfRevisionTypeAndSpecializationOfApproval()
       throws IOException, JsonLdError {
-    var triples = toTriplesWithApprovalContext(APPROVAL_REVISION_JSON);
+    var revision = randomApprovalCreation();
+
+    var triples = toTriplesWithApprovalContext(revisionResponse(revision));
 
     assertThat(
         triples,
         hasItems(
             Triple.of(
-                REVISION_ID, RDF_TYPE, termIri(APPROVAL_ONTOLOGY_NAMESPACE, "ApprovalRevision")),
-            Triple.of(REVISION_ID, termIri(PROV, "specializationOf"), APPROVAL_ID)));
+                revisionIri(revision),
+                RDF_TYPE,
+                termIri(APPROVAL_ONTOLOGY_NAMESPACE, "ApprovalRevision")),
+            Triple.of(
+                revisionIri(revision),
+                termIri(PROV, "specializationOf"),
+                approvalIri(revision.approval()))));
   }
 
   @Test
   void shouldReturnTripleOfRevisionGeneratedAtTimeAsDateTime() throws IOException, JsonLdError {
-    var triples = toTriplesWithApprovalContext(APPROVAL_REVISION_JSON);
+    var revision = randomApprovalCreation();
+
+    var triples = toTriplesWithApprovalContext(revisionResponse(revision));
 
     assertThat(
         triples,
         hasItem(
             Triple.typed(
-                REVISION_ID,
+                revisionIri(revision),
                 termIri(PROV, "generatedAtTime"),
-                "2026-10-08T09:38:16.302439Z",
+                revision.createdDate().toString(),
                 XSD_DATE_TIME)));
   }
 
   @Test
   void shouldReturnTripleOfRevisionGeneratedByApprovalCreation() throws IOException, JsonLdError {
-    var triples = toTriplesWithApprovalContext(APPROVAL_REVISION_JSON);
+    var revision = randomApprovalCreation();
 
-    var creation = objectOf(triples, REVISION_ID, termIri(PROV, "wasGeneratedBy"));
+    var triples = toTriplesWithApprovalContext(revisionResponse(revision));
+
+    var creation = objectOf(triples, revisionIri(revision), termIri(PROV, "wasGeneratedBy"));
     assertThat(
         triples,
         hasItem(
@@ -231,9 +233,11 @@ class ChangeContextTriplesTest {
 
   @Test
   void shouldReturnTriplesOfCreationAssociatedWithSoftwareAgent() throws IOException, JsonLdError {
-    var triples = toTriplesWithApprovalContext(APPROVAL_REVISION_JSON);
+    var revision = randomApprovalCreation();
 
-    var creation = objectOf(triples, REVISION_ID, termIri(PROV, "wasGeneratedBy"));
+    var triples = toTriplesWithApprovalContext(revisionResponse(revision));
+
+    var creation = objectOf(triples, revisionIri(revision), termIri(PROV, "wasGeneratedBy"));
     var agent = objectOf(triples, creation, termIri(PROV, "wasAssociatedWith"));
     assertThat(
         triples,
@@ -244,13 +248,59 @@ class ChangeContextTriplesTest {
 
   @Test
   void shouldReturnTripleOfSoftwareAgentActingOnBehalfOfCustomer() throws IOException, JsonLdError {
-    var triples = toTriplesWithApprovalContext(APPROVAL_REVISION_JSON);
+    var revision = randomApprovalCreation();
 
-    var creation = objectOf(triples, REVISION_ID, termIri(PROV, "wasGeneratedBy"));
+    var triples = toTriplesWithApprovalContext(revisionResponse(revision));
+
+    var creation = objectOf(triples, revisionIri(revision), termIri(PROV, "wasGeneratedBy"));
     var agent = objectOf(triples, creation, termIri(PROV, "wasAssociatedWith"));
     assertThat(
         triples,
-        hasItem(Triple.of(agent, termIri(PROV, "actedOnBehalfOf"), CUSTOMER_ID.toString())));
+        hasItem(
+            Triple.of(
+                agent,
+                termIri(PROV, "actedOnBehalfOf"),
+                customerIri(revision.approval().customerIdentifier()))));
+  }
+
+  private static ApprovalRevision randomApprovalCreation() {
+    return randomRevision(randomApproval(randomHandle()), CREATE_APPROVAL);
+  }
+
+  private static ChangeListResponse changeListResponse(ChangeList changeList) {
+    return ChangeListResponse.fromChangeList(changeList, API_HOST);
+  }
+
+  private static SourceSnapshotResponse snapshotResponse(SourceSnapshot snapshot) {
+    return SourceSnapshotResponse.create(snapshot, API_HOST);
+  }
+
+  private static ApprovalRevisionResponse revisionResponse(ApprovalRevision revision) {
+    return ApprovalRevisionResponse.create(revision, API_HOST);
+  }
+
+  private static String changeListIri(Approval approval) {
+    return changeListId(API_HOST, approval.identifier()).toString();
+  }
+
+  private static String approvalIri(Approval approval) {
+    return approvalId(API_HOST, approval.identifier()).toString();
+  }
+
+  private static String snapshotIri(SourceSnapshot snapshot) {
+    return changeId(API_HOST, snapshot.approvalIdentifier(), snapshot.identifier()).toString();
+  }
+
+  private static String revisionIri(ApprovalRevision revision) {
+    return changeId(API_HOST, revision.approval().identifier(), revision.identifier()).toString();
+  }
+
+  private static String eventIri(SourceSnapshot snapshot) {
+    return eventId(API_HOST, snapshot.approvalIdentifier(), snapshot.eventIdentifier()).toString();
+  }
+
+  private static String customerIri(UUID customerIdentifier) {
+    return customerId(API_HOST, customerIdentifier).toString();
   }
 
   private static String termIri(String namespace, String localName) {
