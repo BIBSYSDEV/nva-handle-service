@@ -199,15 +199,6 @@ How JSON fields map to the vocabulary in context `v1` (terms relative to the nam
 | `sameAs`      | `schema:sameAs`         | Other URIs of the approval, e.g. the handle |
 | `mediaType`   | `schema:encodingFormat` | Media type of a source snapshot's content   |
 
-Changes are described with [PROV-O](https://www.w3.org/TR/prov-o/). `ApprovalRevision` and `SourceSnapshot` are
-`prov:Entity`, `ApprovalCreation`, `ApprovalUpdate` and `SourceIngestion` are `prov:Activity`, and a change list is a
-`prov:Collection` whose `changes` are its `prov:hadMember`. The `SoftwareAgent` of a change acts on behalf of a
-customer, given as the customer URI in `actedOnBehalfOf`. The context maps `specializationOf`, `generatedAtTime`,
-`wasGeneratedBy`, `used`, `wasStartedBy`, `wasAssociatedWith`, `actedOnBehalfOf` and `SoftwareAgent` to the `prov:`
-namespace, and `checksum`, `Checksum`, `algorithm` and `checksumValue` to `spdx:`, with `sha256` as the individual
-`spdx:checksumAlgorithm_sha256` and `checksumValue` typed as `xsd:hexBinary`. Inside a `SourceChangedEvent`,
-`identifier` is `schema:identifier`.
-
 ## Persistence
 
 A single DynamoDB table with `PK0`/`SK0` plus two global secondary indexes (`GSI1`, `GSI2`), giving lookup by handle and
