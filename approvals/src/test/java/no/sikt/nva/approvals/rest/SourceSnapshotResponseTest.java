@@ -2,6 +2,7 @@ package no.sikt.nva.approvals.rest;
 
 import static no.sikt.nva.approvals.utils.TestUtils.randomSourceSnapshot;
 import static no.sikt.nva.approvals.utils.UriConstants.changeId;
+import static no.sikt.nva.approvals.utils.UriConstants.clientId;
 import static no.sikt.nva.approvals.utils.UriConstants.customerId;
 import static no.sikt.nva.approvals.utils.UriConstants.eventId;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -9,6 +10,7 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.nullValue;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import no.sikt.nva.approvals.domain.SourceSnapshot;
 import no.unit.nva.commons.json.JsonUtils;
 import org.junit.jupiter.api.Test;
 
@@ -97,8 +99,30 @@ class SourceSnapshotResponseTest {
   }
 
   @Test
-  void shouldNotNameClientUntilItIsRecorded() {
-    var response = SourceSnapshotResponse.create(randomSourceSnapshot(), API_HOST);
+  void shouldBeGeneratedByClientThatReportedTheSourceChange() {
+    var snapshot = randomSourceSnapshot();
+
+    var response = SourceSnapshotResponse.create(snapshot, API_HOST);
+
+    var agent = response.wasGeneratedBy().wasAssociatedWith();
+    assertThat(agent.id(), equalTo(clientId(API_HOST, snapshot.clientIdentifier())));
+  }
+
+  @Test
+  void shouldNotNameClientWhenSnapshotWasStoredWithoutOne() {
+    var stored = randomSourceSnapshot();
+    var snapshot =
+        new SourceSnapshot(
+            stored.identifier(),
+            stored.approvalIdentifier(),
+            stored.customerIdentifier(),
+            null,
+            stored.eventIdentifier(),
+            stored.source(),
+            stored.content(),
+            stored.createdDate());
+
+    var response = SourceSnapshotResponse.create(snapshot, API_HOST);
 
     assertThat(response.wasGeneratedBy().wasAssociatedWith().id(), nullValue());
   }

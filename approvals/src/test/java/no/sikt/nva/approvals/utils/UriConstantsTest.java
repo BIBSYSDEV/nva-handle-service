@@ -4,6 +4,7 @@ import static java.util.UUID.randomUUID;
 import static no.sikt.nva.approvals.utils.UriConstants.approvalId;
 import static no.sikt.nva.approvals.utils.UriConstants.changeId;
 import static no.sikt.nva.approvals.utils.UriConstants.changeListId;
+import static no.sikt.nva.approvals.utils.UriConstants.clientId;
 import static no.sikt.nva.approvals.utils.UriConstants.context;
 import static no.sikt.nva.approvals.utils.UriConstants.customerId;
 import static no.sikt.nva.approvals.utils.UriConstants.eventId;
@@ -45,6 +46,17 @@ class UriConstantsTest {
     assertThat(
         changeListId(API_HOST, approvalIdentifier),
         equalTo(URI.create(CHANGE_LIST_FORMAT.formatted(approvalIdentifier))));
+  }
+
+  @Test
+  void shouldBuildClientIdUnderExternalClientsPathOnApiHost() {
+    var clientIdentifier = randomString();
+
+    assertThat(
+        clientId(API_HOST, clientIdentifier),
+        equalTo(
+            URI.create(
+                "https://" + API_HOST + "/users-roles/external-clients/" + clientIdentifier)));
   }
 
   @Test

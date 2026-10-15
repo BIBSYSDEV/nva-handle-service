@@ -22,6 +22,7 @@ public record EventDao(
     URI handle,
     Instant timestamp,
     UUID customerIdentifier,
+    String clientIdentifier,
     UUID approvalIdentifier,
     Instant createdDate)
     implements JsonSerializable, DatabaseEntry {
@@ -36,6 +37,7 @@ public record EventDao(
         event.handle().value(),
         event.timestamp(),
         event.customerIdentifier(),
+        event.clientIdentifier(),
         approvalIdentifier,
         createdDate);
   }

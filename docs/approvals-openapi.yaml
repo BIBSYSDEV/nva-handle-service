@@ -1010,7 +1010,7 @@ components:
               $ref: "#/components/schemas/SoftwareAgent"
     SoftwareAgent:
       type: object
-      description: The client that caused the change. Its id is not recorded yet.
+      description: The client that caused the change
       required:
         - type
         - actedOnBehalfOf

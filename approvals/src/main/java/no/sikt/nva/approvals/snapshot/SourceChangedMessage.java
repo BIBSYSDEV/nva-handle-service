@@ -12,6 +12,7 @@ public record SourceChangedMessage(
     String eventIdentifier,
     UUID approvalIdentifier,
     UUID customerIdentifier,
+    String clientIdentifier,
     URI handle,
     URI source,
     Instant timestamp)
@@ -29,6 +30,11 @@ public record SourceChangedMessage(
 
   public SourceChange toSourceChange() {
     return new SourceChange(
-        approvalIdentifier, customerIdentifier, eventIdentifier, source, timestamp);
+        approvalIdentifier,
+        customerIdentifier,
+        clientIdentifier,
+        eventIdentifier,
+        source,
+        timestamp);
   }
 }

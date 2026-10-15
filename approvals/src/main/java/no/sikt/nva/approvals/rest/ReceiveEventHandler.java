@@ -1,6 +1,7 @@
 package no.sikt.nva.approvals.rest;
 
 import static java.net.HttpURLConnection.HTTP_ACCEPTED;
+import static no.sikt.nva.approvals.utils.RequestUtils.getClientIdentifier;
 import static no.sikt.nva.approvals.utils.RequestUtils.getCustomerIdentifier;
 import static no.sikt.nva.approvals.utils.RequestUtils.handleException;
 import static no.sikt.nva.approvals.validation.RequestValidator.validateBody;
@@ -47,6 +48,7 @@ public class ReceiveEventHandler extends ApiGatewayHandler<CloudEvent, Void> {
   protected void validateRequest(CloudEvent cloudEvent, RequestInfo requestInfo, Context context)
       throws ApiGatewayException {
     getCustomerIdentifier(requestInfo);
+    getClientIdentifier(requestInfo);
     validateContentType(requestInfo);
     validateBody(cloudEvent);
   }
@@ -56,7 +58,8 @@ public class ReceiveEventHandler extends ApiGatewayHandler<CloudEvent, Void> {
       throws ApiGatewayException {
     try {
       var customerIdentifier = getCustomerIdentifier(requestInfo);
-      var event = cloudEvent.toSourceChangedEvent(customerIdentifier);
+      var clientIdentifier = getClientIdentifier(requestInfo);
+      var event = cloudEvent.toSourceChangedEvent(customerIdentifier, clientIdentifier);
       eventService.receive(event);
     } catch (ApprovalServiceException exception) {
       handleException(exception);

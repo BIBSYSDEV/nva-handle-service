@@ -11,6 +11,8 @@ public final class UriConstants {
   private static final String CHANGE_PATH = "change";
   private static final String EVENT_PATH = "event";
   private static final String CUSTOMER_PATH = "customer";
+  private static final String USERS_ROLES_PATH = "users-roles";
+  private static final String EXTERNAL_CLIENTS_PATH = "external-clients";
   public static final String CONTEXT_PATH = "context";
   public static final String ONTOLOGY_PATH = "ontology";
   public static final String CURSOR_QUERY_PARAMETER = "cursor";
@@ -56,6 +58,14 @@ public final class UriConstants {
     return UriWrapper.fromHost(apiHost)
         .addChild(CUSTOMER_PATH)
         .addChild(customerIdentifier.toString())
+        .getUri();
+  }
+
+  public static URI clientId(String apiHost, String clientIdentifier) {
+    return UriWrapper.fromHost(apiHost)
+        .addChild(USERS_ROLES_PATH)
+        .addChild(EXTERNAL_CLIENTS_PATH)
+        .addChild(clientIdentifier)
         .getUri();
   }
 
