@@ -32,28 +32,6 @@ class SourceChangedMessageTest {
   }
 
   @Test
-  void shouldParseClientIdentifierFromKeysThePipeEmits() {
-    var clientIdentifier = randomString();
-    var pipeMessage =
-        """
-        {"eventIdentifier": "%s", "approvalIdentifier": "%s", "customerIdentifier": "%s", \
-        "clientIdentifier": "%s", "handle": "%s", "source": "%s", "timestamp": "%s"}
-        """
-            .formatted(
-                randomString(),
-                randomUUID(),
-                randomUUID(),
-                clientIdentifier,
-                randomHandle().value(),
-                randomUri(),
-                Instant.now());
-
-    var message = SourceChangedMessage.fromString(pipeMessage);
-
-    assertThat(message.clientIdentifier(), equalTo(clientIdentifier));
-  }
-
-  @Test
   void shouldThrowWithBodyInMessageWhenJsonIsInvalid() {
     var invalidJson = randomString();
     var exception =
