@@ -17,6 +17,7 @@ import no.sikt.nva.approvals.domain.Approval;
 import no.sikt.nva.approvals.domain.ApprovalActivity;
 import no.sikt.nva.approvals.domain.ApprovalRevision;
 import no.sikt.nva.approvals.domain.Content;
+import no.sikt.nva.approvals.domain.Customer;
 import no.sikt.nva.approvals.domain.Handle;
 import no.sikt.nva.approvals.domain.IdentifierPolicy;
 import no.sikt.nva.approvals.domain.NamedIdentifier;
@@ -74,7 +75,21 @@ public class TestUtils {
   }
 
   public static ApprovalRevision randomRevision(Approval approval, ApprovalActivity activity) {
-    return ApprovalRevision.create(approval, activity, randomUri(), randomUri(), Instant.now());
+    return ApprovalRevision.create(
+        approval,
+        randomCustomer(approval.customerIdentifier()),
+        activity,
+        randomUri(),
+        randomUri(),
+        Instant.now());
+  }
+
+  public static Customer randomCustomer() {
+    return randomCustomer(randomUUID());
+  }
+
+  public static Customer randomCustomer(UUID customerIdentifier) {
+    return new Customer(customerIdentifier, randomString());
   }
 
   public static Instant randomTimestamp() {

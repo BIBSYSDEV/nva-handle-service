@@ -3,6 +3,7 @@ package no.sikt.nva.approvals.rest;
 import static java.net.HttpURLConnection.HTTP_ACCEPTED;
 import static no.sikt.nva.approvals.utils.RequestUtils.createAdditionalApprovalHeaders;
 import static no.sikt.nva.approvals.utils.RequestUtils.getApiHost;
+import static no.sikt.nva.approvals.utils.RequestUtils.getClientIdentifier;
 import static no.sikt.nva.approvals.utils.RequestUtils.handleException;
 import static no.sikt.nva.approvals.validation.RequestValidator.validateBody;
 
@@ -10,6 +11,7 @@ import com.amazonaws.services.lambda.runtime.Context;
 import no.sikt.nva.approvals.domain.Approval;
 import no.sikt.nva.approvals.domain.ApprovalService;
 import no.sikt.nva.approvals.domain.ApprovalServiceImpl;
+import no.sikt.nva.approvals.domain.Customer;
 import nva.commons.apigateway.ApiGatewayHandler;
 import nva.commons.apigateway.RequestInfo;
 import nva.commons.apigateway.exceptions.ApiGatewayException;
@@ -55,11 +57,15 @@ public class CreateApprovalHandler extends ApiGatewayHandler<CreateApprovalReque
   protected Void processInput(
       CreateApprovalRequest request, RequestInfo requestInfo, Context context)
       throws ApiGatewayException {
+    var clientIdentifier = getClientIdentifier(requestInfo);
     var customerIdentifier =
         identifierAuthorizer.authorizeIdentifiers(requestInfo, request.identifiers());
     try {
       var approval =
-          approvalService.create(request.identifiers(), request.source(), customerIdentifier);
+          approvalService.create(
+              request.identifiers(),
+              request.source(),
+              new Customer(customerIdentifier, clientIdentifier));
       addHeaders(approval);
     } catch (Exception e) {
       handleException(e);

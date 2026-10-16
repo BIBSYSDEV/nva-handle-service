@@ -14,11 +14,6 @@ import java.util.UUID;
 @JsonTypeName("SoftwareAgent")
 public record SoftwareAgent(URI id, URI actedOnBehalfOf) {
 
-  /** Revisions do not record the client yet, so they name only the customer. */
-  static SoftwareAgent actingFor(UUID customerIdentifier, String apiHost) {
-    return actingFor(null, customerIdentifier, apiHost);
-  }
-
   static SoftwareAgent actingFor(String clientIdentifier, UUID customerIdentifier, String apiHost) {
     return new SoftwareAgent(
         constructClient(clientIdentifier, apiHost), constructCustomer(customerIdentifier, apiHost));

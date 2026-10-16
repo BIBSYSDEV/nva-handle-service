@@ -59,14 +59,15 @@ public class ApprovalServiceImpl implements ApprovalService {
 
   @Override
   public Approval create(
-      Collection<NamedIdentifier> namedIdentifiers, URI source, UUID customerIdentifier)
+      Collection<NamedIdentifier> namedIdentifiers, URI source, Customer customer)
       throws ApprovalServiceException, ApprovalConflictException {
     ensureIdentifiersDoesNotExist(namedIdentifiers);
     var approvalId = randomUUID();
     var approvalUri = UriConstants.approvalId(environment.readEnv(API_HOST), approvalId);
     var handle = createHandle(approvalUri);
-    var approval = new Approval(approvalId, namedIdentifiers, source, handle, customerIdentifier);
-    approvalRepository.save(createRevision(approval, CREATE_APPROVAL));
+    var approval =
+        new Approval(approvalId, namedIdentifiers, source, handle, customer.identifier());
+    approvalRepository.save(createRevision(approval, customer, CREATE_APPROVAL));
     return approval;
   }
 
@@ -87,16 +88,13 @@ public class ApprovalServiceImpl implements ApprovalService {
 
   @Override
   public Approval updateApproval(
-      UUID approvalId,
-      Collection<NamedIdentifier> namedIdentifiers,
-      URI source,
-      UUID customerIdentifier)
+      UUID approvalId, Collection<NamedIdentifier> namedIdentifiers, URI source, Customer customer)
       throws ApprovalServiceException, ApprovalConflictException {
     var identifiers = approvalRepository.findIdentifiers(namedIdentifiers);
     var approval =
         getApprovalByIdentifier(approvalId)
             .orElseThrow(() -> new ApprovalNotFoundException(approvalId));
-    approval.ensureOwnedBy(customerIdentifier);
+    approval.ensureOwnedBy(customer.identifier());
     ensureIdentifiersAreNotUsedByOtherApproval(identifiers, approval);
     if (isUnchanged(approval, namedIdentifiers, source)) {
       return approval;
@@ -105,7 +103,7 @@ public class ApprovalServiceImpl implements ApprovalService {
     var updatedApproval =
         new Approval(
             approvalId, namedIdentifiers, source, approval.handle(), approval.customerIdentifier());
-    approvalRepository.updateApproval(createRevision(updatedApproval, UPDATE_APPROVAL));
+    approvalRepository.updateApproval(createRevision(updatedApproval, customer, UPDATE_APPROVAL));
 
     return updatedApproval;
   }
@@ -166,8 +164,10 @@ public class ApprovalServiceImpl implements ApprovalService {
                         values -> String.join(VALUE_DELIMITER, values)))));
   }
 
-  private ApprovalRevision createRevision(Approval approval, ApprovalActivity activity) {
-    return ApprovalRevision.create(approval, activity, CONTEXT_PATH, ONTOLOGY_PATH, Instant.now());
+  private ApprovalRevision createRevision(
+      Approval approval, Customer customer, ApprovalActivity activity) {
+    return ApprovalRevision.create(
+        approval, customer, activity, CONTEXT_PATH, ONTOLOGY_PATH, Instant.now());
   }
 
   @SuppressWarnings("PMD.AvoidCatchingGenericException")

@@ -7,11 +7,11 @@ import static no.sikt.nva.approvals.utils.TestUtils.randomHandle;
 import static no.sikt.nva.approvals.utils.TestUtils.randomRevision;
 import static no.sikt.nva.approvals.utils.UriConstants.approvalId;
 import static no.sikt.nva.approvals.utils.UriConstants.changeId;
+import static no.sikt.nva.approvals.utils.UriConstants.clientId;
 import static no.sikt.nva.approvals.utils.UriConstants.customerId;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.instanceOf;
-import static org.hamcrest.Matchers.nullValue;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import no.unit.nva.commons.json.JsonUtils;
@@ -80,12 +80,13 @@ class ApprovalRevisionResponseTest {
   }
 
   @Test
-  void shouldReturnEmptySoftwareAgentWhenClientIdentifierIsMissing() {
+  void shouldBeGeneratedByClientThatChangedApproval() {
     var revision = randomRevision(randomApproval(randomHandle()), CREATE_APPROVAL);
 
     var response = ApprovalRevisionResponse.create(revision, API_HOST);
 
-    assertThat(response.wasGeneratedBy().wasAssociatedWith().id(), nullValue());
+    var expectedClient = clientId(API_HOST, revision.customer().clientIdentifier());
+    assertThat(response.wasGeneratedBy().wasAssociatedWith().id(), equalTo(expectedClient));
   }
 
   @Test

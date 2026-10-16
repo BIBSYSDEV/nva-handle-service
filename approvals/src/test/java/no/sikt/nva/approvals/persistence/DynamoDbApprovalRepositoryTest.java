@@ -82,6 +82,7 @@ class DynamoDbApprovalRepositoryTest {
   private static final String IDENTIFIER_POLICY_TYPE = "IdentifierPolicy";
   private static final String TYPE_FIELD = "type";
   private static final String CUSTOMER_IDENTIFIER_FIELD = "customerIdentifier";
+  private static final String CLIENT_IDENTIFIER_FIELD = "clientIdentifier";
   private static final String CREATED_DATE_FIELD = "createdDate";
   private static final String CHANGE_KEY = "Change:%s";
   private static final String APPROVAL_REVISION_TYPE = "ApprovalRevision";
@@ -762,6 +763,17 @@ class DynamoDbApprovalRepositoryTest {
 
     assertEquals(
         approvalItem.get(CUSTOMER_IDENTIFIER_FIELD), revisionItem.get(CUSTOMER_IDENTIFIER_FIELD));
+  }
+
+  @Test
+  void shouldStoreClientIdentifierOnRevisionItem() {
+    var revision = randomRevision(randomApproval(randomHandle()), CREATE_APPROVAL);
+    approvalRepository.save(revision);
+
+    var revisionItem = scanItem(changeKey(revision));
+
+    assertEquals(
+        revision.customer().clientIdentifier(), revisionItem.get(CLIENT_IDENTIFIER_FIELD).s());
   }
 
   @Test

@@ -5,6 +5,7 @@ import static java.net.HttpURLConnection.HTTP_BAD_GATEWAY;
 import static java.net.HttpURLConnection.HTTP_BAD_REQUEST;
 import static java.net.HttpURLConnection.HTTP_FORBIDDEN;
 import static java.net.HttpURLConnection.HTTP_NOT_FOUND;
+import static java.net.HttpURLConnection.HTTP_UNAUTHORIZED;
 import static no.sikt.nva.approvals.utils.TestUtils.randomApproval;
 import static no.sikt.nva.approvals.utils.TestUtils.randomIdentifier;
 import static no.sikt.nva.approvals.utils.TestUtils.randomIdentifiers;
@@ -36,6 +37,7 @@ import java.util.UUID;
 import no.sikt.nva.approvals.domain.ApprovalNotFoundException;
 import no.sikt.nva.approvals.domain.ApprovalService;
 import no.sikt.nva.approvals.domain.ApprovalServiceException;
+import no.sikt.nva.approvals.domain.Customer;
 import no.sikt.nva.approvals.domain.CustomerMismatchException;
 import no.sikt.nva.approvals.domain.FakeApprovalService;
 import no.sikt.nva.approvals.domain.NamedIdentifier;
@@ -68,6 +70,8 @@ class UpdateApprovalHandlerTest {
   private static final String DETAIL_FIELD = "detail";
   private static final String POINTER_FIELD = "pointer";
   private static final String CHARACTER = "a";
+  private static final String CLIENT_ID = randomString();
+  private static final String MISSING_CLIENT_ID_MESSAGE = "Token carries no client id";
   private static final String BASE_URI = "https://hdl.handle.net/11250.1/";
   private static final String URI_TOO_LONG_MESSAGE = "Must be at most 1024 characters long";
   private static final String HANDLE_POINTER = "/handle";
@@ -359,7 +363,22 @@ class UpdateApprovalHandlerTest {
   }
 
   @Test
-  void shouldPassSourceFromRequestToApprovalService() throws Exception {
+  void shouldReturnUnauthorizedWhenTokenCarriesNoClientId() throws Exception {
+    var request =
+        new HandlerRequestBuilder<UpdateApprovalRequest>(JsonUtils.dtoObjectMapper)
+            .withBody(randomUpdateApprovalRequest())
+            .withPathParameters(Map.of(APPROVAL_ID_PATH_PARAMETER, approvalId.toString()))
+            .build();
+
+    handler.handleRequest(request, output, context);
+
+    var response = GatewayResponse.fromOutputStream(output, Problem.class);
+    assertEquals(HTTP_UNAUTHORIZED, response.getStatusCode());
+    assertEquals(MISSING_CLIENT_ID_MESSAGE, problemDetail(response));
+  }
+
+  @Test
+  void shouldPassSourceCustomerAndClientFromRequestToApprovalService() throws Exception {
     var approvalService = mock(ApprovalService.class);
     when(approvalService.updateApproval(any(), any(), any(), any()))
         .thenReturn(randomApproval(approvalId, randomUri()));
@@ -375,7 +394,7 @@ class UpdateApprovalHandlerTest {
             eq(approvalId),
             eq(updateApprovalRequest.identifiers()),
             eq(updateApprovalRequest.source()),
-            eq(customerIdentifier));
+            eq(new Customer(customerIdentifier, CLIENT_ID)));
   }
 
   @Test
@@ -511,6 +530,7 @@ class UpdateApprovalHandlerTest {
       throws JsonProcessingException {
     return new HandlerRequestBuilder<UpdateApprovalRequest>(JsonUtils.dtoObjectMapper)
         .withBody(request)
+        .withClientId(CLIENT_ID)
         .withPathParameters(Map.of(APPROVAL_ID_PATH_PARAMETER, approvalId.toString()))
         .build();
   }
@@ -519,6 +539,7 @@ class UpdateApprovalHandlerTest {
       throws JsonProcessingException {
     return new HandlerRequestBuilder<UpdateApprovalRequest>(JsonUtils.dtoObjectMapper)
         .withBody(request)
+        .withClientId(CLIENT_ID)
         .withPathParameters(Map.of(APPROVAL_ID_PATH_PARAMETER, "invalid-uuid"))
         .build();
   }
@@ -527,6 +548,7 @@ class UpdateApprovalHandlerTest {
       throws JsonProcessingException {
     return new HandlerRequestBuilder<String>(JsonUtils.dtoObjectMapper)
         .withBody(jsonBody)
+        .withClientId(CLIENT_ID)
         .withPathParameters(Map.of(APPROVAL_ID_PATH_PARAMETER, approvalId.toString()))
         .build();
   }

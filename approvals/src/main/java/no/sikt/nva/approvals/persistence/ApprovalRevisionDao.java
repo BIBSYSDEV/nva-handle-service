@@ -11,6 +11,7 @@ import java.time.Instant;
 import java.util.UUID;
 import no.sikt.nva.approvals.domain.ApprovalActivity;
 import no.sikt.nva.approvals.domain.ApprovalRevision;
+import no.sikt.nva.approvals.domain.Customer;
 import no.unit.nva.identifiers.SortableIdentifier;
 import software.amazon.awssdk.enhanced.dynamodb.document.EnhancedDocument;
 
@@ -20,6 +21,7 @@ public record ApprovalRevisionDao(
     SortableIdentifier identifier,
     UUID approvalIdentifier,
     UUID customerIdentifier,
+    String clientIdentifier,
     Instant createdDate,
     ApprovalActivity activity,
     int schemaVersion,
@@ -35,11 +37,12 @@ public record ApprovalRevisionDao(
       "Unsupported schema version %s on approval revision %s";
 
   public static ApprovalRevisionDao fromApprovalRevision(ApprovalRevision revision) {
-    var approval = revision.approval();
+    var customer = revision.customer();
     return new ApprovalRevisionDao(
         revision.identifier(),
-        approval.identifier(),
-        approval.customerIdentifier(),
+        revision.approval().identifier(),
+        customer.identifier(),
+        customer.clientIdentifier(),
         revision.createdDate(),
         revision.activity(),
         ApprovalImage.SCHEMA_VERSION,
@@ -53,6 +56,7 @@ public record ApprovalRevisionDao(
     return new ApprovalRevision(
         identifier,
         image.toApproval(approvalIdentifier, customerIdentifier),
+        new Customer(customerIdentifier, clientIdentifier),
         createdDate,
         activity,
         image.context(),
