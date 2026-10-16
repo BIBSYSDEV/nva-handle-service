@@ -24,5 +24,5 @@ public record SourceIngestion(
 
   @JsonTypeInfo(use = Id.NAME, property = "type")
   @JsonTypeName("SourceChangedEvent")
-  public record SourceChangedEvent(URI id, String identifier) {}
+  public record SourceChangedEvent(URI id, String eventIdentifier) {}
 }

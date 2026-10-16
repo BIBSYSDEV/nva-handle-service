@@ -37,6 +37,6 @@ public record CloudEvent(
   }
 
   public SourceChangedEvent toSourceChangedEvent(Agent agent) {
-    return new SourceChangedEvent(id, source, handle(), time, agent);
+    return SourceChangedEvent.create(id, source, handle(), time, agent);
   }
 }

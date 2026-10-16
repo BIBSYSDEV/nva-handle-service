@@ -92,7 +92,7 @@
     "SourceChangedEvent": {
       "@id": "SourceChangedEvent",
       "@context": {
-        "identifier": "schema:identifier"
+        "eventIdentifier": "schema:identifier"
       }
     }
   }

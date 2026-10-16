@@ -86,6 +86,8 @@ class DynamoDbApprovalRepositoryTest {
   private static final String CLIENT_IDENTIFIER_FIELD = "clientIdentifier";
   private static final String CREATED_DATE_FIELD = "createdDate";
   private static final String CHANGE_KEY = "Change:%s";
+  private static final String EVENT_KEY = "Event:%s";
+  private static final String EVENT_IDENTIFIER_FIELD = "eventIdentifier";
   private static final String APPROVAL_REVISION_TYPE = "ApprovalRevision";
   private static final String CHANGE_IDENTIFIER_FIELD = "identifier";
   private static final String APPROVAL_IDENTIFIER_FIELD = "approvalIdentifier";
@@ -1033,16 +1035,36 @@ class DynamoDbApprovalRepositoryTest {
   }
 
   @Test
-  void shouldNotUpdateEventWhenEventWithSameHandleIdentifierAndCustomerAlreadyExists() {
+  void shouldStoreEventUnderSeededIdentifier() {
+    var event = randomEvent();
+    approvalRepository.save(event, randomUUID());
+
+    var eventItem = scanItem(EVENT_KEY.formatted(event.identifier()));
+
+    assertEquals(event.identifier().toString(), eventItem.get(CHANGE_IDENTIFIER_FIELD).s());
+  }
+
+  @Test
+  void shouldStoreEventIdentifierOnEventItem() {
+    var event = randomEvent();
+    approvalRepository.save(event, randomUUID());
+
+    var eventItem = scanItem(EVENT_KEY.formatted(event.identifier()));
+
+    assertEquals(event.eventIdentifier(), eventItem.get(EVENT_IDENTIFIER_FIELD).s());
+  }
+
+  @Test
+  void shouldNotUpdateEventWhenSameEventIsRedelivered() {
     var event = randomEvent();
     approvalRepository.save(event, randomUUID());
     var persisted = storedEvent(event);
     var duplicate =
-        new SourceChangedEvent(
-            event.eventId(),
+        SourceChangedEvent.create(
+            event.eventIdentifier(),
             event.source(),
             event.handle(),
-            event.timestamp().plusSeconds(1),
+            event.timestamp(),
             event.agent());
 
     approvalRepository.save(duplicate, randomUUID());
@@ -1108,7 +1130,7 @@ class DynamoDbApprovalRepositoryTest {
   }
 
   private static SourceChangedEvent randomEvent() {
-    return new SourceChangedEvent(
+    return SourceChangedEvent.create(
         randomUUID().toString(), randomUri(), randomHandle(), Instant.now(), randomAgent());
   }
 

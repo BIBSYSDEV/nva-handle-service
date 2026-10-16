@@ -81,7 +81,7 @@ class EventServiceImplTest {
   }
 
   private static SourceChangedEvent randomEvent(UUID customerIdentifier, URI source) {
-    return new SourceChangedEvent(
+    return SourceChangedEvent.create(
         randomUUID().toString(),
         source,
         randomHandle(),
