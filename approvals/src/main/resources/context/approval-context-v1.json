@@ -1,7 +1,16 @@
 {
   "@context": {
+    "@version": 1.1,
     "@vocab": "__ONTOLOGY_IRI__#",
     "xsd": "http://www.w3.org/2001/XMLSchema#",
+    "schema": "https://schema.org/",
+    "prov": "http://www.w3.org/ns/prov#",
+    "spdx": "http://spdx.org/rdf/terms#",
+    "sameAs": {
+      "@id": "schema:sameAs",
+      "@type": "@id",
+      "@container": "@set"
+    },
     "type": "@type",
     "id": "@id",
     "identifier": {
@@ -25,10 +34,66 @@
       "@type": "xsd:string"
     },
     "changes": {
+      "@id": "prov:hadMember",
+      "@type": "@id",
       "@container": "@set"
     },
     "next": {
       "@type": "@id"
+    },
+    "about": {
+      "@id": "schema:about",
+      "@type": "@id"
+    },
+    "mediaType": "schema:encodingFormat",
+    "specializationOf": {
+      "@id": "prov:specializationOf",
+      "@type": "@id"
+    },
+    "generatedAtTime": {
+      "@id": "prov:generatedAtTime",
+      "@type": "xsd:dateTime"
+    },
+    "wasGeneratedBy": {
+      "@id": "prov:wasGeneratedBy",
+      "@type": "@id"
+    },
+    "used": {
+      "@id": "prov:used",
+      "@type": "@id"
+    },
+    "wasStartedBy": {
+      "@id": "prov:wasStartedBy",
+      "@type": "@id"
+    },
+    "wasAssociatedWith": {
+      "@id": "prov:wasAssociatedWith",
+      "@type": "@id"
+    },
+    "actedOnBehalfOf": {
+      "@id": "prov:actedOnBehalfOf",
+      "@type": "@id"
+    },
+    "SoftwareAgent": "prov:SoftwareAgent",
+    "checksum": {
+      "@id": "spdx:checksum",
+      "@type": "@id"
+    },
+    "Checksum": "spdx:Checksum",
+    "algorithm": {
+      "@id": "spdx:algorithm",
+      "@type": "@vocab"
+    },
+    "sha256": "spdx:checksumAlgorithm_sha256",
+    "checksumValue": {
+      "@id": "spdx:checksumValue",
+      "@type": "xsd:hexBinary"
+    },
+    "SourceChangedEvent": {
+      "@id": "SourceChangedEvent",
+      "@context": {
+        "identifier": "schema:identifier"
+      }
     }
   }
 }

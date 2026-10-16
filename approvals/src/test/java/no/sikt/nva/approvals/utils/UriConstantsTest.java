@@ -4,8 +4,12 @@ import static java.util.UUID.randomUUID;
 import static no.sikt.nva.approvals.utils.UriConstants.approvalId;
 import static no.sikt.nva.approvals.utils.UriConstants.changeId;
 import static no.sikt.nva.approvals.utils.UriConstants.changeListId;
+import static no.sikt.nva.approvals.utils.UriConstants.clientId;
 import static no.sikt.nva.approvals.utils.UriConstants.context;
+import static no.sikt.nva.approvals.utils.UriConstants.customerId;
+import static no.sikt.nva.approvals.utils.UriConstants.eventId;
 import static no.sikt.nva.approvals.utils.UriConstants.ontology;
+import static no.unit.nva.testutils.RandomDataGenerator.randomString;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 
@@ -42,6 +46,39 @@ class UriConstantsTest {
     assertThat(
         changeListId(API_HOST, approvalIdentifier),
         equalTo(URI.create(CHANGE_LIST_FORMAT.formatted(approvalIdentifier))));
+  }
+
+  @Test
+  void shouldBuildClientIdUnderExternalClientsPathOnApiHost() {
+    var clientIdentifier = randomString();
+
+    assertThat(
+        clientId(API_HOST, clientIdentifier),
+        equalTo(
+            URI.create(
+                "https://" + API_HOST + "/users-roles/external-clients/" + clientIdentifier)));
+  }
+
+  @Test
+  void shouldBuildCustomerIdUnderCustomerPathOnApiHost() {
+    var customerIdentifier = randomUUID();
+
+    assertThat(
+        customerId(API_HOST, customerIdentifier),
+        equalTo(URI.create("https://" + API_HOST + "/customer/" + customerIdentifier)));
+  }
+
+  @Test
+  void shouldBuildEventIdUnderApproval() {
+    var approvalIdentifier = randomUUID();
+    var eventIdentifier = randomString();
+
+    assertThat(
+        eventId(API_HOST, approvalIdentifier, eventIdentifier),
+        equalTo(
+            URI.create(
+                "https://%s/approval/%s/event/%s"
+                    .formatted(API_HOST, approvalIdentifier, eventIdentifier))));
   }
 
   @Test

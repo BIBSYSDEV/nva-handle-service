@@ -185,17 +185,19 @@ are versioned independently, and every published version is immutable.
 
 How JSON fields map to the vocabulary in context `v1` (terms relative to the namespace above):
 
-| JSON field    | Ontology term  | Meaning                                     |
-| ------------- | -------------- | ------------------------------------------- |
-| `identifier`  | `#approvalId`  | The approval's UUID (alias)                 |
-| `identifiers` | `#identifiers` | The approval's namespaced identifiers       |
-| `name`        | `#namespace`   | Namespace of an identifier, e.g. REK or DMP |
-| `value`       | `#value`       | Identifier value, unique within namespace   |
-| `source`      | `#source`      | The source URI                              |
-| `handle`      | `#handle`      | The handle URI                              |
-| `about`       | `#about`       | The approval a change list is about         |
-| `changes`     | `#changes`     | The changes on a page of the change list    |
-| `next`        | `#next`        | The next page of the change list            |
+| JSON field    | Ontology term           | Meaning                                     |
+| ------------- | ----------------------- | ------------------------------------------- |
+| `identifier`  | `#approvalId`           | The approval's UUID (alias)                 |
+| `identifiers` | `#identifiers`          | The approval's namespaced identifiers       |
+| `name`        | `#namespace`            | Namespace of an identifier, e.g. REK or DMP |
+| `value`       | `#value`                | Identifier value, unique within namespace   |
+| `source`      | `#source`               | The source URI                              |
+| `handle`      | `#handle`               | The handle URI                              |
+| `about`       | `schema:about`          | The approval a change list is about         |
+| `changes`     | `prov:hadMember`        | The changes on a page of the change list    |
+| `next`        | `#next`                 | The next page of the change list            |
+| `sameAs`      | `schema:sameAs`         | Other URIs of the approval, e.g. the handle |
+| `mediaType`   | `schema:encodingFormat` | Media type of a source snapshot's content   |
 
 ## Persistence
 
@@ -214,7 +216,8 @@ items and an update at most 42, so every write fits in one transaction.
 
 - `identifier` is a `SortableIdentifier` from nva-commons (`<epoch millis as 12 hex digits>-<random uuid>`,
   e.g. `01a0f1cfea4b-3f2a…`), so it sorts by time as a string. Source snapshots use the same identifier type, so all
-  `Change:` items for an approval sort together.
+  `Change:` items for an approval sort together. A snapshot carries the `createdDate` it was taken at, served as
+  `generatedAtTime`.
 - The item is an envelope with a few stable attributes: `identifier`, `approvalIdentifier`,
   `customerIdentifier`, `createdDate`, `activity` (`CreateApproval` / `UpdateApproval`), `schemaVersion` and
   `contentType`.

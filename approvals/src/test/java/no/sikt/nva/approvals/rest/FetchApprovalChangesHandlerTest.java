@@ -25,6 +25,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -101,8 +102,8 @@ class FetchApprovalChangesHandlerTest {
 
     var response = send(request(revision.approval().identifier(), Map.of(), Map.of()));
 
-    var handle = response.getBodyObject(ChangeListResponse.class).about().handle();
-    assertThat(handle, equalTo(revision.approval().handle().value()));
+    var sameAs = response.getBodyObject(ChangeListResponse.class).about().sameAs();
+    assertThat(sameAs, equalTo(List.of(revision.approval().handle().value())));
   }
 
   @Test
@@ -240,8 +241,14 @@ class FetchApprovalChangesHandlerTest {
     var snapshot =
         SourceSnapshot.create(
             new SourceChange(
-                approvalIdentifier, randomUUID(), randomString(), randomUri(), timestamp),
-            randomContent());
+                approvalIdentifier,
+                randomUUID(),
+                randomString(),
+                randomString(),
+                randomUri(),
+                timestamp),
+            randomContent(),
+            timestamp);
     approvalRepository.save(snapshot);
     return snapshot;
   }

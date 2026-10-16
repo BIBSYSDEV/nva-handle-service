@@ -26,6 +26,7 @@ import nva.commons.apigateway.exceptions.ForbiddenException;
 import nva.commons.apigateway.exceptions.NotFoundException;
 import nva.commons.apigateway.exceptions.UnauthorizedException;
 import nva.commons.core.Environment;
+import nva.commons.core.StringUtils;
 import nva.commons.core.paths.UriWrapper;
 
 public final class RequestUtils {
@@ -37,6 +38,7 @@ public final class RequestUtils {
   private static final String RETRY_AFTER_HEADER = "Retry-After";
   private static final String RETRY_AFTER_VALUE = "5";
   private static final String API_HOST = "API_HOST";
+  private static final String MISSING_CLIENT_ID_MESSAGE = "Token carries no client id";
 
   private RequestUtils() {}
 
@@ -71,6 +73,13 @@ public final class RequestUtils {
         .map(UriWrapper::getLastPathElement)
         .map(UUID::fromString)
         .orElseThrow();
+  }
+
+  public static String getClientIdentifier(RequestInfo requestInfo) throws UnauthorizedException {
+    return requestInfo
+        .getClientId()
+        .filter(StringUtils::isNotBlank)
+        .orElseThrow(() -> new UnauthorizedException(MISSING_CLIENT_ID_MESSAGE));
   }
 
   public static String getApiHost(Environment environment) {

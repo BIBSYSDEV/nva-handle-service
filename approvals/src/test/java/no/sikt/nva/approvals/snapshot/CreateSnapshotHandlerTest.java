@@ -62,6 +62,7 @@ class CreateSnapshotHandlerTest {
         randomString(),
         randomUUID(),
         randomUUID(),
+        randomString(),
         randomHandle().value(),
         randomUri(),
         Instant.now());

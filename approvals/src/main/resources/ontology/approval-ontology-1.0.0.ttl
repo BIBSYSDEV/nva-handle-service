@@ -1,5 +1,6 @@
 @prefix : <__ONTOLOGY_IRI__#> .
 @prefix owl: <http://www.w3.org/2002/07/owl#> .
+@prefix prov: <http://www.w3.org/ns/prov#> .
 @prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
 @prefix vann: <http://purl.org/vocab/vann/> .
@@ -22,6 +23,7 @@
 #################################################################
 
 :Approval a rdfs:Class ;
+    rdfs:subClassOf prov:Entity ;
     rdfs:label "Approval" ;
     rdfs:comment "An approval record that associates a persistent handle identifier with a source URI and named identifiers" .
 
@@ -30,8 +32,39 @@
     rdfs:comment "An identifier used to reference an approval, consisting of a namespace and a value. A value is unique within its namespace across all approvals in the system, while the same value may exist in another namespace." .
 
 :ChangeList a rdfs:Class ;
+    rdfs:subClassOf prov:Collection ;
     rdfs:label "ChangeList" ;
     rdfs:comment "A page of the recorded changes to an approval" .
+
+:ApprovalRevision a rdfs:Class ;
+    rdfs:subClassOf prov:Entity ;
+    rdfs:label "ApprovalRevision" ;
+    rdfs:comment "A version of an approval, recorded every time the approval is created or updated" .
+
+:SourceSnapshot a rdfs:Class ;
+    rdfs:subClassOf prov:Entity ;
+    rdfs:label "SourceSnapshot" ;
+    rdfs:comment "A version of the approval's source, taken when a source change was ingested" .
+
+:ApprovalCreation a rdfs:Class ;
+    rdfs:subClassOf prov:Activity ;
+    rdfs:label "ApprovalCreation" ;
+    rdfs:comment "The activity that created an approval and generated its first revision" .
+
+:ApprovalUpdate a rdfs:Class ;
+    rdfs:subClassOf prov:Activity ;
+    rdfs:label "ApprovalUpdate" ;
+    rdfs:comment "The activity that updated an approval and generated a new revision" .
+
+:SourceIngestion a rdfs:Class ;
+    rdfs:subClassOf prov:Activity ;
+    rdfs:label "SourceIngestion" ;
+    rdfs:comment "The activity that fetched the approval's source and generated a source snapshot" .
+
+:SourceChangedEvent a rdfs:Class ;
+    rdfs:subClassOf prov:Entity ;
+    rdfs:label "SourceChangedEvent" ;
+    rdfs:comment "The event a source reported to say that the resource behind an approval changed, which started a source ingestion" .
 
 #################################################################
 #    Properties
@@ -72,17 +105,6 @@
     rdfs:comment "The unique UUID identifier of the approval" ;
     rdfs:domain :Approval ;
     rdfs:range xsd:string .
-
-:about a rdf:Property ;
-    rdfs:label "about" ;
-    rdfs:comment "The approval whose changes the change list is about" ;
-    rdfs:domain :ChangeList ;
-    rdfs:range :Approval .
-
-:changes a rdf:Property ;
-    rdfs:label "changes" ;
-    rdfs:comment "The recorded changes on this page of the change list" ;
-    rdfs:domain :ChangeList .
 
 :next a rdf:Property ;
     rdfs:label "next" ;

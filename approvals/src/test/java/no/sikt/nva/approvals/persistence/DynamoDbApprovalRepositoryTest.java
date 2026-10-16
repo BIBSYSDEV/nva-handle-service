@@ -999,6 +999,16 @@ class DynamoDbApprovalRepositoryTest {
   }
 
   @Test
+  void shouldPersistEventWithProvidedClientIdentifier() {
+    var event = randomEvent();
+    approvalRepository.save(event, randomUUID());
+
+    var persisted = storedEvent(event);
+
+    assertEquals(event.clientIdentifier(), persisted.clientIdentifier());
+  }
+
+  @Test
   void shouldPersistEventWithProvidedApprovalIdentifier() {
     var event = randomEvent();
     var approvalIdentifier = randomUUID();
@@ -1020,7 +1030,8 @@ class DynamoDbApprovalRepositoryTest {
             event.source(),
             event.handle(),
             event.timestamp().plusSeconds(1),
-            event.customerIdentifier());
+            event.customerIdentifier(),
+            event.clientIdentifier());
 
     approvalRepository.save(duplicate, randomUUID());
     var persistedAfterSecondInvocation = storedEvent(event);
@@ -1045,19 +1056,18 @@ class DynamoDbApprovalRepositoryTest {
 
     var persisted = storedSnapshot(snapshot);
 
-    assertThat(
-        persisted,
-        equalTo(SourceSnapshotDao.fromSourceSnapshot(snapshot, persisted.createdDate())));
+    assertThat(persisted, equalTo(SourceSnapshotDao.fromSourceSnapshot(snapshot)));
   }
 
   @Test
   void shouldNotOverwriteSnapshotWhenSameEventIsSavedAgain() {
     var sourceChange = randomSourceChange();
-    var snapshot = SourceSnapshot.create(sourceChange, randomContent());
+    var snapshot = SourceSnapshot.create(sourceChange, randomContent(), randomTimestamp());
     approvalRepository.save(snapshot);
     var stored = storedSnapshot(snapshot);
 
-    approvalRepository.save(SourceSnapshot.create(sourceChange, randomContent()));
+    approvalRepository.save(
+        SourceSnapshot.create(sourceChange, randomContent(), randomTimestamp()));
     var redelivered = storedSnapshot(snapshot);
 
     assertThat(stored, equalTo(redelivered));
@@ -1073,8 +1083,7 @@ class DynamoDbApprovalRepositoryTest {
   }
 
   private SourceSnapshotDao storedSnapshot(SourceSnapshot snapshot) {
-    var databaseIdentifier =
-        SourceSnapshotDao.fromSourceSnapshot(snapshot, Instant.now()).getDatabaseIdentifier();
+    var databaseIdentifier = SourceSnapshotDao.fromSourceSnapshot(snapshot).getDatabaseIdentifier();
     return scanItems().stream()
         .filter(item -> databaseIdentifier.equals(item.get(SK0).s()))
         .findFirst()
@@ -1088,7 +1097,12 @@ class DynamoDbApprovalRepositoryTest {
 
   private static SourceChangedEvent randomEvent() {
     return new SourceChangedEvent(
-        randomUUID().toString(), randomUri(), randomHandle(), Instant.now(), randomUUID());
+        randomUUID().toString(),
+        randomUri(),
+        randomHandle(),
+        Instant.now(),
+        randomUUID(),
+        randomString());
   }
 
   private EventDao storedEvent(SourceChangedEvent event) {

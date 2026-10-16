@@ -16,6 +16,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 
 import com.amazonaws.services.lambda.runtime.Context;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -26,6 +27,7 @@ import java.net.URI;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import no.sikt.nva.approvals.domain.ApprovalNotFoundException;
 import no.sikt.nva.approvals.domain.ApprovalServiceException;
 import no.sikt.nva.approvals.domain.CustomerMismatchException;
@@ -47,10 +49,12 @@ class ReceiveEventHandlerTest {
   private static final Context CONTEXT = new FakeContext();
   private static final Environment ENVIRONMENT = new Environment();
   private static final String SPEC_VERSION = "1.0";
+  private static final UUID CUSTOMER_IDENTIFIER = randomUUID();
   private static final URI CUSTOMER_ID =
       UriWrapper.fromUri("https://api.nva.unit.no/customer/")
-          .addChild(randomUUID().toString())
+          .addChild(CUSTOMER_IDENTIFIER.toString())
           .getUri();
+  private static final String CLIENT_ID = randomString();
   private static final String APPROVAL_NOT_FOUND_MESSAGE = "Approval not found for handle %s";
   private static final String INTERNAL_SERVER_ERROR_MESSAGE =
       "Internal server error. Contact application administrator.";
@@ -119,6 +123,7 @@ class ReceiveEventHandlerTest {
         new HandlerRequestBuilder<CloudEvent>(JsonUtils.dtoObjectMapper)
             .withBody(validEvent())
             .withCurrentCustomer(CUSTOMER_ID)
+            .withClientId(CLIENT_ID)
             .build();
 
     handler.handleRequest(request, output, CONTEXT);
@@ -160,6 +165,32 @@ class ReceiveEventHandlerTest {
 
     assertEquals(
         HTTP_UNAUTHORIZED, GatewayResponse.fromOutputStream(output, Problem.class).getStatusCode());
+  }
+
+  @Test
+  void shouldReturnUnauthorizedWhenTokenCarriesNoClientId() throws IOException {
+    var request =
+        new HandlerRequestBuilder<CloudEvent>(JsonUtils.dtoObjectMapper)
+            .withBody(validEvent())
+            .withHeaders(Map.of(CONTENT_TYPE_HEADER, CLOUD_EVENTS_CONTENT_TYPE))
+            .withCurrentCustomer(CUSTOMER_ID)
+            .build();
+
+    handler.handleRequest(request, output, CONTEXT);
+
+    assertProblem(
+        GatewayResponse.fromOutputStream(output, Problem.class),
+        HTTP_UNAUTHORIZED,
+        "Token carries no client id");
+  }
+
+  @Test
+  void shouldPassClientOfTokenToEventService() throws IOException, ApprovalServiceException {
+    var cloudEvent = validEvent();
+
+    send(cloudEvent);
+
+    verify(eventService).receive(cloudEvent.toSourceChangedEvent(CUSTOMER_IDENTIFIER, CLIENT_ID));
   }
 
   @Test
@@ -209,7 +240,8 @@ class ReceiveEventHandlerTest {
   private static HandlerRequestBuilder<CloudEvent> authorizedRequestBuilder() {
     return new HandlerRequestBuilder<CloudEvent>(JsonUtils.dtoObjectMapper)
         .withHeaders(Map.of(CONTENT_TYPE_HEADER, CLOUD_EVENTS_CONTENT_TYPE))
-        .withCurrentCustomer(CUSTOMER_ID);
+        .withCurrentCustomer(CUSTOMER_ID)
+        .withClientId(CLIENT_ID);
   }
 
   private GatewayResponse<Problem> send(CloudEvent cloudEvent) throws IOException {
@@ -225,6 +257,7 @@ class ReceiveEventHandlerTest {
             .withBody(cloudEvent)
             .withHeaders(Map.of(CONTENT_TYPE_HEADER, contentType))
             .withCurrentCustomer(CUSTOMER_ID)
+            .withClientId(CLIENT_ID)
             .build();
     handler.handleRequest(request, output, CONTEXT);
     return GatewayResponse.fromOutputStream(output, Problem.class);

@@ -27,13 +27,13 @@ class ChangeListResponseTest {
   }
 
   @Test
-  void shouldIncludeHandleOfApprovalTheChangesAreAbout() {
+  void shouldListHandleAsOtherUriOfApprovalTheChangesAreAbout() {
     var handle = randomHandle();
 
     var response =
         ChangeListResponse.fromChangeList(changeListOf(randomApproval(handle)), API_HOST);
 
-    assertThat(response.about().handle(), equalTo(handle.value()));
+    assertThat(response.about().sameAs(), equalTo(List.of(handle.value())));
   }
 
   @Test

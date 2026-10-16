@@ -21,6 +21,7 @@ class SourceChangedMessageTest {
             randomString(),
             randomUUID(),
             randomUUID(),
+            randomString(),
             randomHandle().value(),
             randomUri(),
             Instant.now());

@@ -36,7 +36,7 @@ public record CloudEvent(
     return new Handle(subject);
   }
 
-  public SourceChangedEvent toSourceChangedEvent(UUID customerIdentifier) {
-    return new SourceChangedEvent(id, source, handle(), time, customerIdentifier);
+  public SourceChangedEvent toSourceChangedEvent(UUID customerIdentifier, String clientIdentifier) {
+    return new SourceChangedEvent(id, source, handle(), time, customerIdentifier, clientIdentifier);
   }
 }
