@@ -7,7 +7,7 @@ import java.util.UUID;
 
 public interface ApprovalService {
 
-  Approval create(Collection<NamedIdentifier> namedIdentifiers, URI source, Customer customer)
+  Approval create(Collection<NamedIdentifier> namedIdentifiers, URI source, Agent agent)
       throws ApprovalServiceException, ApprovalConflictException;
 
   Optional<Approval> getApprovalByIdentifier(UUID approvalId);
@@ -17,6 +17,6 @@ public interface ApprovalService {
   Optional<Approval> getApprovalByNamedIdentifier(NamedIdentifier namedIdentifier);
 
   Approval updateApproval(
-      UUID approvalId, Collection<NamedIdentifier> namedIdentifiers, URI source, Customer customer)
+      UUID approvalId, Collection<NamedIdentifier> namedIdentifiers, URI source, Agent agent)
       throws ApprovalServiceException, ApprovalConflictException;
 }

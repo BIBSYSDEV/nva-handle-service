@@ -773,7 +773,7 @@ class DynamoDbApprovalRepositoryTest {
     var revisionItem = scanItem(changeKey(revision));
 
     assertEquals(
-        revision.customer().clientIdentifier(), revisionItem.get(CLIENT_IDENTIFIER_FIELD).s());
+        revision.agent().clientIdentifier(), revisionItem.get(CLIENT_IDENTIFIER_FIELD).s());
   }
 
   @Test

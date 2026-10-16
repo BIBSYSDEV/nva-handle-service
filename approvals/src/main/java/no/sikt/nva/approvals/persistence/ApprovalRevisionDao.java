@@ -9,9 +9,9 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo.Id;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import java.time.Instant;
 import java.util.UUID;
+import no.sikt.nva.approvals.domain.Agent;
 import no.sikt.nva.approvals.domain.ApprovalActivity;
 import no.sikt.nva.approvals.domain.ApprovalRevision;
-import no.sikt.nva.approvals.domain.Customer;
 import no.unit.nva.identifiers.SortableIdentifier;
 import software.amazon.awssdk.enhanced.dynamodb.document.EnhancedDocument;
 
@@ -37,12 +37,12 @@ public record ApprovalRevisionDao(
       "Unsupported schema version %s on approval revision %s";
 
   public static ApprovalRevisionDao fromApprovalRevision(ApprovalRevision revision) {
-    var customer = revision.customer();
+    var agent = revision.agent();
     return new ApprovalRevisionDao(
         revision.identifier(),
         revision.approval().identifier(),
-        customer.identifier(),
-        customer.clientIdentifier(),
+        agent.customerIdentifier(),
+        agent.clientIdentifier(),
         revision.createdDate(),
         revision.activity(),
         ApprovalImage.SCHEMA_VERSION,
@@ -56,7 +56,7 @@ public record ApprovalRevisionDao(
     return new ApprovalRevision(
         identifier,
         image.toApproval(approvalIdentifier, customerIdentifier),
-        new Customer(customerIdentifier, clientIdentifier),
+        new Agent(customerIdentifier, clientIdentifier),
         createdDate,
         activity,
         image.context(),

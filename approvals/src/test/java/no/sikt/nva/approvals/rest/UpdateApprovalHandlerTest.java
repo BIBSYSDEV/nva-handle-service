@@ -34,10 +34,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import no.sikt.nva.approvals.domain.Agent;
 import no.sikt.nva.approvals.domain.ApprovalNotFoundException;
 import no.sikt.nva.approvals.domain.ApprovalService;
 import no.sikt.nva.approvals.domain.ApprovalServiceException;
-import no.sikt.nva.approvals.domain.Customer;
 import no.sikt.nva.approvals.domain.CustomerMismatchException;
 import no.sikt.nva.approvals.domain.FakeApprovalService;
 import no.sikt.nva.approvals.domain.NamedIdentifier;
@@ -394,7 +394,7 @@ class UpdateApprovalHandlerTest {
             eq(approvalId),
             eq(updateApprovalRequest.identifiers()),
             eq(updateApprovalRequest.source()),
-            eq(new Customer(customerIdentifier, CLIENT_ID)));
+            eq(new Agent(customerIdentifier, CLIENT_ID)));
   }
 
   @Test

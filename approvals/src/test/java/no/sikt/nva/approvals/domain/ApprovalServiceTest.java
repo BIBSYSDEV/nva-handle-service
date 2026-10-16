@@ -2,8 +2,8 @@ package no.sikt.nva.approvals.domain;
 
 import static java.time.temporal.ChronoUnit.MICROS;
 import static java.util.UUID.randomUUID;
+import static no.sikt.nva.approvals.utils.TestUtils.randomAgent;
 import static no.sikt.nva.approvals.utils.TestUtils.randomApproval;
-import static no.sikt.nva.approvals.utils.TestUtils.randomCustomer;
 import static no.sikt.nva.approvals.utils.TestUtils.randomHandle;
 import static no.sikt.nva.approvals.utils.TestUtils.randomIdentifier;
 import static no.sikt.nva.approvals.utils.TestUtils.randomIdentifierQueryObject;
@@ -76,7 +76,7 @@ class ApprovalServiceTest {
 
     assertThrows(
         ApprovalServiceException.class,
-        () -> approvalService.create(randomIdentifiers(), randomUri(), randomCustomer()));
+        () -> approvalService.create(randomIdentifiers(), randomUri(), randomAgent()));
   }
 
   @Test
@@ -91,9 +91,7 @@ class ApprovalServiceTest {
 
     assertThrows(
         ApprovalServiceException.class,
-        () ->
-            serviceWithFailingConnection.create(
-                randomIdentifiers(), randomUri(), randomCustomer()));
+        () -> serviceWithFailingConnection.create(randomIdentifiers(), randomUri(), randomAgent()));
   }
 
   @Test
@@ -104,7 +102,7 @@ class ApprovalServiceTest {
         .thenReturn(handle);
     doNothing().when(approvalRepository).save((ApprovalRevision) any());
 
-    var approval = approvalService.create(randomIdentifiers(), randomUri(), randomCustomer());
+    var approval = approvalService.create(randomIdentifiers(), randomUri(), randomAgent());
 
     assertEquals(handle, approval.handle().value());
   }
@@ -117,7 +115,7 @@ class ApprovalServiceTest {
         .thenReturn(randomHandle().value());
     doNothing().when(approvalRepository).save((ApprovalRevision) any());
 
-    var approval = approvalService.create(randomIdentifiers(), source, randomCustomer());
+    var approval = approvalService.create(randomIdentifiers(), source, randomAgent());
 
     assertEquals(source, approval.source());
   }
@@ -129,7 +127,7 @@ class ApprovalServiceTest {
         .thenReturn(randomHandle().value());
     doNothing().when(approvalRepository).save((ApprovalRevision) any());
 
-    var approval = approvalService.create(randomIdentifiers(), randomUri(), randomCustomer());
+    var approval = approvalService.create(randomIdentifiers(), randomUri(), randomAgent());
 
     var expectedApprovalUri =
         UriWrapper.fromHost(API_HOST)
@@ -146,7 +144,7 @@ class ApprovalServiceTest {
     doNothing().when(approvalRepository).save((ApprovalRevision) any());
 
     var identifiers = randomIdentifiers();
-    var approval = approvalService.create(identifiers, randomUri(), randomCustomer());
+    var approval = approvalService.create(identifiers, randomUri(), randomAgent());
 
     assertEquals(identifiers, approval.namedIdentifiers());
   }
@@ -227,7 +225,7 @@ class ApprovalServiceTest {
     when(handleDatabase.createHandle(any(), any(), any())).thenReturn(randomHandle().value());
     doNothing().when(approvalRepository).save((ApprovalRevision) any());
 
-    var approval = approvalService.create(identifiers, randomUri(), randomCustomer());
+    var approval = approvalService.create(identifiers, randomUri(), randomAgent());
 
     assertEquals(identifiers, approval.namedIdentifiers());
   }
@@ -243,7 +241,7 @@ class ApprovalServiceTest {
     when(handleDatabase.createHandle(any(), any(), any())).thenReturn(randomHandle().value());
     doNothing().when(approvalRepository).save((ApprovalRevision) any());
 
-    var approval = approvalService.create(identifiers, randomUri(), randomCustomer());
+    var approval = approvalService.create(identifiers, randomUri(), randomAgent());
 
     assertEquals(identifiers, approval.namedIdentifiers());
   }
@@ -257,7 +255,7 @@ class ApprovalServiceTest {
 
     assertThrows(
         ApprovalConflictException.class,
-        () -> approvalService.create(existingIdentifiers, randomUri(), randomCustomer()));
+        () -> approvalService.create(existingIdentifiers, randomUri(), randomAgent()));
   }
 
   @Test
@@ -271,7 +269,7 @@ class ApprovalServiceTest {
     var exception =
         assertThrows(
             ApprovalConflictException.class,
-            () -> approvalService.create(identifiers, randomUri(), randomCustomer()));
+            () -> approvalService.create(identifiers, randomUri(), randomAgent()));
     assertEquals(
         "Following identifiers already exist: [%s: %s]"
             .formatted(existingIdentifier.name(), existingIdentifier.value()),
@@ -294,7 +292,7 @@ class ApprovalServiceTest {
     var exception =
         assertThrows(
             ApprovalConflictException.class,
-            () -> approvalService.create(identifiers, randomUri(), randomCustomer()));
+            () -> approvalService.create(identifiers, randomUri(), randomAgent()));
 
     assertEquals(Map.of(name, EXPECTED_JOINED_VALUES), exception.getConflictingKeys());
   }
@@ -314,7 +312,7 @@ class ApprovalServiceTest {
             approval.identifier(),
             newIdentifiers,
             approval.source(),
-            randomCustomer(approval.customerIdentifier()));
+            randomAgent(approval.customerIdentifier()));
 
     assertEquals(newIdentifiers, updatedApproval.namedIdentifiers());
   }
@@ -332,7 +330,7 @@ class ApprovalServiceTest {
         approval.identifier(),
         unchangedIdentifiers,
         approval.source(),
-        randomCustomer(approval.customerIdentifier()));
+        randomAgent(approval.customerIdentifier()));
 
     verify(approvalRepository, never()).updateApproval(any());
   }
@@ -351,7 +349,7 @@ class ApprovalServiceTest {
             approval.identifier(),
             unchangedIdentifiers,
             approval.source(),
-            randomCustomer(approval.customerIdentifier()));
+            randomAgent(approval.customerIdentifier()));
 
     assertEquals(approval, result);
   }
@@ -371,7 +369,7 @@ class ApprovalServiceTest {
         approval.identifier(),
         reorderedIdentifiers,
         approval.source(),
-        randomCustomer(approval.customerIdentifier()));
+        randomAgent(approval.customerIdentifier()));
 
     verify(approvalRepository, never()).updateApproval(any());
   }
@@ -389,7 +387,7 @@ class ApprovalServiceTest {
         approval.identifier(),
         newIdentifiers,
         approval.source(),
-        randomCustomer(approval.customerIdentifier()));
+        randomAgent(approval.customerIdentifier()));
 
     verify(approvalRepository).updateApproval(any());
   }
@@ -407,7 +405,7 @@ class ApprovalServiceTest {
         approval.identifier(),
         unchangedIdentifiers,
         randomUri(),
-        randomCustomer(approval.customerIdentifier()));
+        randomAgent(approval.customerIdentifier()));
 
     verify(approvalRepository).updateApproval(any());
   }
@@ -427,7 +425,7 @@ class ApprovalServiceTest {
             approval.identifier(),
             unchangedIdentifiers,
             newSource,
-            randomCustomer(approval.customerIdentifier()));
+            randomAgent(approval.customerIdentifier()));
 
     assertEquals(newSource, updatedApproval.source());
   }
@@ -445,7 +443,7 @@ class ApprovalServiceTest {
         approval.identifier(),
         unchangedIdentifiers,
         approval.source(),
-        randomCustomer(approval.customerIdentifier()));
+        randomAgent(approval.customerIdentifier()));
 
     verify(approvalRepository, never()).updateApproval(any());
   }
@@ -459,7 +457,7 @@ class ApprovalServiceTest {
         ApprovalNotFoundException.class,
         () ->
             approvalService.updateApproval(
-                approvalId, randomIdentifiers(), randomUri(), randomCustomer()));
+                approvalId, randomIdentifiers(), randomUri(), randomAgent()));
   }
 
   @Test
@@ -474,7 +472,7 @@ class ApprovalServiceTest {
         CustomerMismatchException.class,
         () ->
             approvalService.updateApproval(
-                approval.identifier(), newIdentifiers, approval.source(), randomCustomer()));
+                approval.identifier(), newIdentifiers, approval.source(), randomAgent()));
     verify(approvalRepository, never()).updateApproval(any());
   }
 
@@ -501,7 +499,7 @@ class ApprovalServiceTest {
                 approval.identifier(),
                 List.of(newIdentifier),
                 approval.source(),
-                randomCustomer(approval.customerIdentifier())));
+                randomAgent(approval.customerIdentifier())));
   }
 
   @Test
@@ -528,7 +526,7 @@ class ApprovalServiceTest {
                     approval.identifier(),
                     newIdentifiers,
                     approval.source(),
-                    randomCustomer(approval.customerIdentifier())));
+                    randomAgent(approval.customerIdentifier())));
 
     assertEquals(Map.of(name, EXPECTED_JOINED_VALUES), exception.getConflictingKeys());
   }
@@ -542,8 +540,7 @@ class ApprovalServiceTest {
     doNothing().when(approvalRepository).save((ApprovalRevision) any());
 
     var approval =
-        approvalService.create(
-            randomIdentifiers(), randomUri(), randomCustomer(customerIdentifier));
+        approvalService.create(randomIdentifiers(), randomUri(), randomAgent(customerIdentifier));
 
     assertEquals(customerIdentifier, approval.customerIdentifier());
   }
@@ -562,7 +559,7 @@ class ApprovalServiceTest {
             approval.identifier(),
             newIdentifiers,
             approval.source(),
-            randomCustomer(approval.customerIdentifier()));
+            randomAgent(approval.customerIdentifier()));
 
     assertEquals(approval.customerIdentifier(), updatedApproval.customerIdentifier());
   }
@@ -572,7 +569,7 @@ class ApprovalServiceTest {
       throws SQLException, ApprovalServiceException, ApprovalConflictException {
     when(handleDatabase.createHandle(any(), any(), any())).thenReturn(randomHandle().value());
 
-    var approval = approvalService.create(randomIdentifiers(), randomUri(), randomCustomer());
+    var approval = approvalService.create(randomIdentifiers(), randomUri(), randomAgent());
 
     var revision = capturedSavedRevision();
     assertEquals(approval, revision.approval());
@@ -593,7 +590,7 @@ class ApprovalServiceTest {
             approval.identifier(),
             newIdentifiers,
             approval.source(),
-            randomCustomer(approval.customerIdentifier()));
+            randomAgent(approval.customerIdentifier()));
 
     var revision = capturedUpdatedRevision();
     assertEquals(updatedApproval, revision.approval());
@@ -601,30 +598,29 @@ class ApprovalServiceTest {
   }
 
   @Test
-  void shouldCreateApprovalRevisionWithCustomer()
+  void shouldCreateApprovalRevisionWithAgent()
       throws SQLException, ApprovalServiceException, ApprovalConflictException {
-    var customer = randomCustomer();
+    var agent = randomAgent();
     when(handleDatabase.createHandle(any(), any(), any())).thenReturn(randomHandle().value());
 
-    approvalService.create(randomIdentifiers(), randomUri(), customer);
+    approvalService.create(randomIdentifiers(), randomUri(), agent);
 
-    assertEquals(customer, capturedSavedRevision().customer());
+    assertEquals(agent, capturedSavedRevision().agent());
   }
 
   @Test
-  void shouldPersistCustomerWhenUpdatingApproval()
+  void shouldPersistAgentWhenUpdatingApproval()
       throws ApprovalServiceException, ApprovalConflictException {
     var approval = randomApproval(randomUUID(), randomUri());
-    var customer = randomCustomer(approval.customerIdentifier());
+    var agent = randomAgent(approval.customerIdentifier());
     var newIdentifiers = randomIdentifiers(2);
     when(approvalRepository.findByApprovalIdentifier(approval.identifier()))
         .thenReturn(Optional.of(approval));
     when(approvalRepository.findIdentifiers(newIdentifiers)).thenReturn(List.of());
 
-    approvalService.updateApproval(
-        approval.identifier(), newIdentifiers, approval.source(), customer);
+    approvalService.updateApproval(approval.identifier(), newIdentifiers, approval.source(), agent);
 
-    assertEquals(customer, capturedUpdatedRevision().customer());
+    assertEquals(agent, capturedUpdatedRevision().agent());
   }
 
   @Test
@@ -633,7 +629,7 @@ class ApprovalServiceTest {
     when(handleDatabase.createHandle(any(), any(), any())).thenReturn(randomHandle().value());
     var beforeCreate = Instant.now().truncatedTo(MICROS);
 
-    approvalService.create(randomIdentifiers(), randomUri(), randomCustomer());
+    approvalService.create(randomIdentifiers(), randomUri(), randomAgent());
 
     var revision = capturedSavedRevision();
     assertEquals(RELATIVE_CONTEXT_URI, revision.context());
@@ -646,7 +642,7 @@ class ApprovalServiceTest {
       throws SQLException, ApprovalServiceException, ApprovalConflictException {
     when(handleDatabase.createHandle(any(), any(), any())).thenReturn(randomHandle().value());
 
-    approvalService.create(randomIdentifiers(), randomUri(), randomCustomer());
+    approvalService.create(randomIdentifiers(), randomUri(), randomAgent());
 
     var revision = capturedSavedRevision();
     assertFalse(revision.context().isAbsolute());
@@ -658,7 +654,7 @@ class ApprovalServiceTest {
       throws SQLException, ApprovalServiceException, ApprovalConflictException {
     when(handleDatabase.createHandle(any(), any(), any())).thenReturn(randomHandle().value());
 
-    approvalService.create(randomIdentifiers(), randomUri(), randomCustomer());
+    approvalService.create(randomIdentifiers(), randomUri(), randomAgent());
 
     var revision = capturedSavedRevision();
     var expectedPrefix = SORTABLE_TIMESTAMP_PREFIX.formatted(revision.createdDate().toEpochMilli());

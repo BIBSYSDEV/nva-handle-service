@@ -9,10 +9,10 @@ import static no.sikt.nva.approvals.utils.RequestUtils.handleException;
 import static no.sikt.nva.approvals.validation.RequestValidator.validateBody;
 
 import com.amazonaws.services.lambda.runtime.Context;
+import no.sikt.nva.approvals.domain.Agent;
 import no.sikt.nva.approvals.domain.Approval;
 import no.sikt.nva.approvals.domain.ApprovalService;
 import no.sikt.nva.approvals.domain.ApprovalServiceImpl;
-import no.sikt.nva.approvals.domain.Customer;
 import nva.commons.apigateway.ApiGatewayHandler;
 import nva.commons.apigateway.RequestInfo;
 import nva.commons.apigateway.exceptions.ApiGatewayException;
@@ -70,7 +70,7 @@ public class UpdateApprovalHandler extends ApiGatewayHandler<UpdateApprovalReque
               identifier,
               request.identifiers(),
               request.source(),
-              new Customer(customerIdentifier, clientIdentifier));
+              new Agent(customerIdentifier, clientIdentifier));
       addHeaders(approval);
     } catch (Exception exception) {
       handleException(exception);
