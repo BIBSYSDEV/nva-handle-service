@@ -42,6 +42,10 @@ public record IdentifierPolicy(
     return sourceConfigs.stream().filter(sourceConfig -> sourceConfig.matches(source)).findFirst();
   }
 
+  public boolean allowsSource(URI source) {
+    return allowsAllNames || findSourceConfig(source).isPresent();
+  }
+
   public Set<String> disallowedNames(Collection<NamedIdentifier> namedIdentifiers) {
     if (allowsAllNames) {
       return Set.of();

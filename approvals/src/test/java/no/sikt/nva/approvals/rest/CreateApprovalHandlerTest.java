@@ -182,7 +182,7 @@ class CreateApprovalHandlerTest {
   void shouldReturnForbiddenWhenIdentifierNameIsNotAllowedForCustomer() throws Exception {
     doThrow(new DisallowedIdentifierNamesException(Set.of(REK)))
         .when(identifierAuthorizer)
-        .authorizeIdentifiers(any(), any());
+        .authorizeIdentifiersAndSource(any(), any(), any());
     var request = createRequest(randomApprovalRequest(randomUri()));
 
     handler.handleRequest(request, output, context);
@@ -199,13 +199,15 @@ class CreateApprovalHandlerTest {
 
     handler.handleRequest(request, output, context);
 
-    verify(identifierAuthorizer).authorizeIdentifiers(any(), eq(approvalRequest.identifiers()));
+    verify(identifierAuthorizer)
+        .authorizeIdentifiersAndSource(any(), eq(approvalRequest.identifiers()), any());
   }
 
   @Test
   void shouldPersistCustomerIdResolvedByAuthorizer() throws Exception {
     var customerIdentifier = UUID.randomUUID();
-    when(identifierAuthorizer.authorizeIdentifiers(any(), any())).thenReturn(customerIdentifier);
+    when(identifierAuthorizer.authorizeIdentifiersAndSource(any(), any(), any()))
+        .thenReturn(customerIdentifier);
     var request = createRequest(randomApprovalRequest(randomUri()));
 
     handler.handleRequest(request, output, context);

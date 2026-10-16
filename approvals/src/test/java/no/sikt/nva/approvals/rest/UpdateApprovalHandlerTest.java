@@ -329,7 +329,7 @@ class UpdateApprovalHandlerTest {
   void shouldReturnForbiddenWhenIdentifierNameIsNotAllowedForCustomer() throws Exception {
     doThrow(new DisallowedIdentifierNamesException(Set.of(REK)))
         .when(identifierAuthorizer)
-        .authorizeIdentifiers(any(), any());
+        .authorizeIdentifiersAndSource(any(), any(), any());
     var request = createRequest(randomUpdateApprovalRequest(), approvalId);
 
     handler.handleRequest(request, output, context);
@@ -364,7 +364,8 @@ class UpdateApprovalHandlerTest {
     when(approvalService.updateApproval(any(), any(), any(), any()))
         .thenReturn(randomApproval(approvalId, randomUri()));
     var customerIdentifier = UUID.randomUUID();
-    when(identifierAuthorizer.authorizeIdentifiers(any(), any())).thenReturn(customerIdentifier);
+    when(identifierAuthorizer.authorizeIdentifiersAndSource(any(), any(), any()))
+        .thenReturn(customerIdentifier);
     handler = new UpdateApprovalHandler(approvalService, identifierAuthorizer, new Environment());
     var updateApprovalRequest = randomUpdateApprovalRequest();
 
@@ -421,7 +422,7 @@ class UpdateApprovalHandlerTest {
     handler.handleRequest(request, output, context);
 
     verify(identifierAuthorizer)
-        .authorizeIdentifiers(any(), eq(updateApprovalRequest.identifiers()));
+        .authorizeIdentifiersAndSource(any(), eq(updateApprovalRequest.identifiers()), any());
   }
 
   private static String requestBodyWithoutIdentifiers() {

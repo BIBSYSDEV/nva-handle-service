@@ -146,6 +146,11 @@ class IdentifierPolicyTest {
   }
 
   @Test
+  void shouldAllowAnySourceWhenPolicyAllowsAll() {
+    assertTrue(IdentifierPolicy.ALLOW_ALL.allowsSource(randomUri()));
+  }
+
+  @Test
   void shouldThrowExceptionWhenAllowedIdentifierNamesIsNull() {
     assertThrows(NullPointerException.class, () -> new IdentifierPolicy(null));
   }

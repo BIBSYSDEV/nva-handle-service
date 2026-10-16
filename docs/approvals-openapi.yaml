@@ -95,7 +95,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/Problem"
         "403":
-          description: Forbidden - one or more identifier names are not allowed for the customer of the client
+          description: Forbidden - one or more identifier names are not allowed for the customer of the client or source differ from customer source
           content:
             "application/json":
               schema:

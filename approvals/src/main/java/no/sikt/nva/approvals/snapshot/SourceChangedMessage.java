@@ -18,14 +18,13 @@ public record SourceChangedMessage(
     Instant timestamp)
     implements JsonSerializable {
 
-  private static final String INVALID_MESSAGE = "Could not parse source changed message: %s";
-
   public static SourceChangedMessage fromString(String value) {
     return attempt(() -> JsonUtils.dtoObjectMapper.readValue(value, SourceChangedMessage.class))
         .orElseThrow(
             failure ->
                 new IllegalArgumentException(
-                    INVALID_MESSAGE.formatted(value), failure.getException()));
+                    "Could not parse source changed message: %s".formatted(value),
+                    failure.getException()));
   }
 
   public SourceChange toSourceChange() {

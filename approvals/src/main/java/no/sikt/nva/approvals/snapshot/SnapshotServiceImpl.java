@@ -15,8 +15,6 @@ import nva.commons.core.JacocoGenerated;
 
 public class SnapshotServiceImpl implements SnapshotService {
 
-  private static final String SOURCE_NOT_FOUND_MESSAGE = "Source %s of approval %s was not found";
-
   private final ApprovalRepository approvalRepository;
   private final ChangeRepository changeRepository;
   private final SourceClient sourceClient;
@@ -60,8 +58,8 @@ public class SnapshotServiceImpl implements SnapshotService {
         .orElseThrow(
             () ->
                 new SourceClientException(
-                    SOURCE_NOT_FOUND_MESSAGE.formatted(
-                        sourceChange.source(), sourceChange.approvalIdentifier())));
+                    "Source %s of approval %s was not found"
+                        .formatted(sourceChange.source(), sourceChange.approvalIdentifier())));
   }
 
   private static Content toContent(SourceResponse sourceResponse) {
