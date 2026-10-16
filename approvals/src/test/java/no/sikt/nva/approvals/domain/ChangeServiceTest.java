@@ -157,7 +157,12 @@ class ChangeServiceTest {
     var snapshot =
         SourceSnapshot.create(
             new SourceChange(
-                approvalIdentifier, randomAgent(), randomString(), randomUri(), timestamp),
+                approvalIdentifier,
+                randomAgent(),
+                SortableIdentifier.next(),
+                randomString(),
+                randomUri(),
+                timestamp),
             randomContent(),
             timestamp);
     approvalRepository.save(snapshot);

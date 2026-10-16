@@ -178,7 +178,9 @@ class ChangeContextTriplesTest {
         triples,
         hasItem(
             Triple.literal(
-                eventIri(snapshot), termIri(SCHEMA, "identifier"), snapshot.eventIdentifier())));
+                eventIri(snapshot),
+                termIri(SCHEMA, "identifier"),
+                snapshot.cloudEventIdentifier())));
   }
 
   @Test

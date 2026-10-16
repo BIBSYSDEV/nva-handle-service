@@ -13,7 +13,8 @@ public record SourceSnapshot(
     SortableIdentifier identifier,
     UUID approvalIdentifier,
     Agent agent,
-    String eventIdentifier,
+    SortableIdentifier eventIdentifier,
+    String cloudEventIdentifier,
     URI source,
     Content content,
     Instant createdDate)
@@ -28,6 +29,7 @@ public record SourceSnapshot(
         sourceChange.approvalIdentifier(),
         sourceChange.agent(),
         sourceChange.eventIdentifier(),
+        sourceChange.cloudEventIdentifier(),
         sourceChange.source(),
         content,
         createdDate.truncatedTo(MICROS));
@@ -40,7 +42,7 @@ public record SourceSnapshot(
   private static SortableIdentifier createIdentifier(SourceChange sourceChange) {
     var seed =
         IDENTIFIER_SEED.formatted(
-            sourceChange.approvalIdentifier(), sourceChange.eventIdentifier());
+            sourceChange.approvalIdentifier(), sourceChange.cloudEventIdentifier());
     var uuid = UUID.nameUUIDFromBytes(seed.getBytes(UTF_8));
     return SortableIdentifier.create(sourceChange.timestamp(), uuid);
   }

@@ -12,12 +12,14 @@ import java.time.Instant;
 import java.util.UUID;
 import no.sikt.nva.approvals.events.SourceChangedEvent;
 import no.unit.nva.commons.json.JsonSerializable;
+import no.unit.nva.identifiers.SortableIdentifier;
 import software.amazon.awssdk.enhanced.dynamodb.document.EnhancedDocument;
 
 @JsonTypeInfo(use = Id.NAME, property = "type")
 @JsonTypeName("SourceChangedEvent")
 public record EventDao(
-    String identifier,
+    SortableIdentifier identifier,
+    String cloudEventIdentifier,
     URI source,
     URI handle,
     Instant timestamp,
@@ -27,13 +29,14 @@ public record EventDao(
     Instant createdDate)
     implements JsonSerializable, DatabaseEntry {
 
-  private static final String EVENT_KEY = "Event:%s:Handle:%s:Customer:%s";
+  private static final String EVENT_KEY = "Event:%s";
 
   public static EventDao fromEvent(
       SourceChangedEvent event, UUID approvalIdentifier, Instant createdDate) {
     var agent = event.agent();
     return new EventDao(
-        event.eventId(),
+        event.identifier(),
+        event.cloudEventIdentifier(),
         event.source(),
         event.handle().value(),
         event.timestamp(),
@@ -54,6 +57,6 @@ public record EventDao(
 
   @Override
   public String getDatabaseIdentifier() {
-    return EVENT_KEY.formatted(identifier, handle, customerIdentifier);
+    return EVENT_KEY.formatted(identifier);
   }
 }
