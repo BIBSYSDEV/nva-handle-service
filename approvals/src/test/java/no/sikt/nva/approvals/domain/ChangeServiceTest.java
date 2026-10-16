@@ -3,6 +3,7 @@ package no.sikt.nva.approvals.domain;
 import static java.util.UUID.randomUUID;
 import static no.sikt.nva.approvals.domain.ApprovalActivity.CREATE_APPROVAL;
 import static no.sikt.nva.approvals.persistence.DynamoDbLocal.dynamoDBLocal;
+import static no.sikt.nva.approvals.utils.TestUtils.randomAgent;
 import static no.sikt.nva.approvals.utils.TestUtils.randomApproval;
 import static no.sikt.nva.approvals.utils.TestUtils.randomContent;
 import static no.sikt.nva.approvals.utils.TestUtils.randomHandle;
@@ -156,12 +157,7 @@ class ChangeServiceTest {
     var snapshot =
         SourceSnapshot.create(
             new SourceChange(
-                approvalIdentifier,
-                randomUUID(),
-                randomString(),
-                randomString(),
-                randomUri(),
-                timestamp),
+                approvalIdentifier, randomAgent(), randomString(), randomUri(), timestamp),
             randomContent(),
             timestamp);
     approvalRepository.save(snapshot);

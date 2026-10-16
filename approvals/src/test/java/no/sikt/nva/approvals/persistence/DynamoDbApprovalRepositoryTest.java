@@ -12,6 +12,7 @@ import static no.sikt.nva.approvals.persistence.DynamoDbConstants.SK0;
 import static no.sikt.nva.approvals.persistence.DynamoDbConstants.SK1;
 import static no.sikt.nva.approvals.persistence.DynamoDbConstants.SK2;
 import static no.sikt.nva.approvals.persistence.DynamoDbLocal.dynamoDBLocal;
+import static no.sikt.nva.approvals.utils.TestUtils.randomAgent;
 import static no.sikt.nva.approvals.utils.TestUtils.randomApproval;
 import static no.sikt.nva.approvals.utils.TestUtils.randomContent;
 import static no.sikt.nva.approvals.utils.TestUtils.randomHandle;
@@ -1007,7 +1008,7 @@ class DynamoDbApprovalRepositoryTest {
 
     var persisted = storedEvent(event);
 
-    assertEquals(event.customerIdentifier(), persisted.customerIdentifier());
+    assertEquals(event.agent().customerIdentifier(), persisted.customerIdentifier());
   }
 
   @Test
@@ -1017,7 +1018,7 @@ class DynamoDbApprovalRepositoryTest {
 
     var persisted = storedEvent(event);
 
-    assertEquals(event.clientIdentifier(), persisted.clientIdentifier());
+    assertEquals(event.agent().clientIdentifier(), persisted.clientIdentifier());
   }
 
   @Test
@@ -1042,8 +1043,7 @@ class DynamoDbApprovalRepositoryTest {
             event.source(),
             event.handle(),
             event.timestamp().plusSeconds(1),
-            event.customerIdentifier(),
-            event.clientIdentifier());
+            event.agent());
 
     approvalRepository.save(duplicate, randomUUID());
     var persistedAfterSecondInvocation = storedEvent(event);
@@ -1109,12 +1109,7 @@ class DynamoDbApprovalRepositoryTest {
 
   private static SourceChangedEvent randomEvent() {
     return new SourceChangedEvent(
-        randomUUID().toString(),
-        randomUri(),
-        randomHandle(),
-        Instant.now(),
-        randomUUID(),
-        randomString());
+        randomUUID().toString(), randomUri(), randomHandle(), Instant.now(), randomAgent());
   }
 
   private EventDao storedEvent(SourceChangedEvent event) {

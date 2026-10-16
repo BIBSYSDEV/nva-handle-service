@@ -28,6 +28,7 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import no.sikt.nva.approvals.domain.Agent;
 import no.sikt.nva.approvals.domain.ApprovalNotFoundException;
 import no.sikt.nva.approvals.domain.ApprovalServiceException;
 import no.sikt.nva.approvals.domain.CustomerMismatchException;
@@ -190,7 +191,8 @@ class ReceiveEventHandlerTest {
 
     send(cloudEvent);
 
-    verify(eventService).receive(cloudEvent.toSourceChangedEvent(CUSTOMER_IDENTIFIER, CLIENT_ID));
+    verify(eventService)
+        .receive(cloudEvent.toSourceChangedEvent(new Agent(CUSTOMER_IDENTIFIER, CLIENT_ID)));
   }
 
   @Test

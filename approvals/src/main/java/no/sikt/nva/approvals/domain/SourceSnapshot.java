@@ -12,8 +12,7 @@ import no.unit.nva.identifiers.SortableIdentifier;
 public record SourceSnapshot(
     SortableIdentifier identifier,
     UUID approvalIdentifier,
-    UUID customerIdentifier,
-    String clientIdentifier,
+    Agent agent,
     String eventIdentifier,
     URI source,
     Content content,
@@ -27,8 +26,7 @@ public record SourceSnapshot(
     return new SourceSnapshot(
         createIdentifier(sourceChange),
         sourceChange.approvalIdentifier(),
-        sourceChange.customerIdentifier(),
-        sourceChange.clientIdentifier(),
+        sourceChange.agent(),
         sourceChange.eventIdentifier(),
         sourceChange.source(),
         content,

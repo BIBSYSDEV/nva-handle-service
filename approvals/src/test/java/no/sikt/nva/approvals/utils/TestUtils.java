@@ -137,7 +137,7 @@ public class TestUtils {
   public static SourceChange randomSourceChange(
       UUID approvalIdentifier, String eventIdentifier, Instant timestamp) {
     return new SourceChange(
-        approvalIdentifier, randomUUID(), randomString(), eventIdentifier, randomUri(), timestamp);
+        approvalIdentifier, randomAgent(), eventIdentifier, randomUri(), timestamp);
   }
 
   public static SourceSnapshot randomSourceSnapshot() {

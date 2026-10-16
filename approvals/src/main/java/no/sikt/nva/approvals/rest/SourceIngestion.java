@@ -19,8 +19,7 @@ public record SourceIngestion(
         new SourceChangedEvent(
             eventId(apiHost, snapshot.approvalIdentifier(), snapshot.eventIdentifier()),
             snapshot.eventIdentifier()),
-        SoftwareAgent.actingFor(
-            snapshot.clientIdentifier(), snapshot.customerIdentifier(), apiHost));
+        SoftwareAgent.actingFor(snapshot.agent(), apiHost));
   }
 
   @JsonTypeInfo(use = Id.NAME, property = "type")

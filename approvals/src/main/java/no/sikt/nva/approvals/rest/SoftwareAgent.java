@@ -9,14 +9,16 @@ import com.fasterxml.jackson.annotation.JsonTypeName;
 import java.net.URI;
 import java.util.Optional;
 import java.util.UUID;
+import no.sikt.nva.approvals.domain.Agent;
 
 @JsonTypeInfo(use = Id.NAME, property = "type")
 @JsonTypeName("SoftwareAgent")
 public record SoftwareAgent(URI id, URI actedOnBehalfOf) {
 
-  static SoftwareAgent actingFor(String clientIdentifier, UUID customerIdentifier, String apiHost) {
+  static SoftwareAgent actingFor(Agent agent, String apiHost) {
     return new SoftwareAgent(
-        constructClient(clientIdentifier, apiHost), constructCustomer(customerIdentifier, apiHost));
+        constructClient(agent.clientIdentifier(), apiHost),
+        constructCustomer(agent.customerIdentifier(), apiHost));
   }
 
   private static URI constructClient(String clientIdentifier, String apiHost) {

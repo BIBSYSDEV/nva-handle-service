@@ -7,6 +7,7 @@ import static no.sikt.nva.approvals.utils.RequestUtils.handleException;
 import static no.sikt.nva.approvals.validation.RequestValidator.validateBody;
 
 import com.amazonaws.services.lambda.runtime.Context;
+import no.sikt.nva.approvals.domain.Agent;
 import no.sikt.nva.approvals.domain.ApprovalServiceException;
 import no.sikt.nva.approvals.events.CloudEvent;
 import no.sikt.nva.approvals.events.EventService;
@@ -57,9 +58,8 @@ public class ReceiveEventHandler extends ApiGatewayHandler<CloudEvent, Void> {
   protected Void processInput(CloudEvent cloudEvent, RequestInfo requestInfo, Context context)
       throws ApiGatewayException {
     try {
-      var customerIdentifier = getCustomerIdentifier(requestInfo);
-      var clientIdentifier = getClientIdentifier(requestInfo);
-      var event = cloudEvent.toSourceChangedEvent(customerIdentifier, clientIdentifier);
+      var agent = new Agent(getCustomerIdentifier(requestInfo), getClientIdentifier(requestInfo));
+      var event = cloudEvent.toSourceChangedEvent(agent);
       eventService.receive(event);
     } catch (ApprovalServiceException exception) {
       handleException(exception);

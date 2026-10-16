@@ -39,7 +39,8 @@ class SourceSnapshotTest {
 
     var snapshot = SourceSnapshot.create(sourceChange, randomContent(), randomTimestamp());
 
-    assertThat(snapshot.clientIdentifier(), equalTo(sourceChange.clientIdentifier()));
+    assertThat(
+        snapshot.agent().clientIdentifier(), equalTo(sourceChange.agent().clientIdentifier()));
   }
 
   @Test
@@ -48,7 +49,8 @@ class SourceSnapshotTest {
 
     var snapshot = SourceSnapshot.create(sourceChange, randomContent(), randomTimestamp());
 
-    assertThat(snapshot.customerIdentifier(), equalTo(sourceChange.customerIdentifier()));
+    assertThat(
+        snapshot.agent().customerIdentifier(), equalTo(sourceChange.agent().customerIdentifier()));
   }
 
   @Test

@@ -23,12 +23,10 @@ public record ApprovalRevisionResponse(
   }
 
   private static Activity activity(ApprovalRevision revision, String apiHost) {
-    var agent = revision.agent();
-    var softwareAgent =
-        SoftwareAgent.actingFor(agent.clientIdentifier(), agent.customerIdentifier(), apiHost);
+    var agent = SoftwareAgent.actingFor(revision.agent(), apiHost);
     return switch (revision.activity()) {
-      case CREATE_APPROVAL -> new ApprovalCreation(softwareAgent);
-      case UPDATE_APPROVAL -> new ApprovalUpdate(softwareAgent);
+      case CREATE_APPROVAL -> new ApprovalCreation(agent);
+      case UPDATE_APPROVAL -> new ApprovalUpdate(agent);
     };
   }
 }

@@ -31,13 +31,14 @@ public record EventDao(
 
   public static EventDao fromEvent(
       SourceChangedEvent event, UUID approvalIdentifier, Instant createdDate) {
+    var agent = event.agent();
     return new EventDao(
         event.eventId(),
         event.source(),
         event.handle().value(),
         event.timestamp(),
-        event.customerIdentifier(),
-        event.clientIdentifier(),
+        agent.customerIdentifier(),
+        agent.clientIdentifier(),
         approvalIdentifier,
         createdDate);
   }
