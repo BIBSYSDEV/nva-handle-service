@@ -11,7 +11,7 @@ import no.unit.nva.identifiers.SortableIdentifier;
 
 public record SourceChangedEvent(
     SortableIdentifier identifier,
-    String eventIdentifier,
+    String cloudEventIdentifier,
     URI source,
     Handle handle,
     Instant timestamp,
@@ -20,10 +20,10 @@ public record SourceChangedEvent(
   private static final String IDENTIFIER_SEED = "%s:%s:%s";
 
   public static SourceChangedEvent create(
-      String eventIdentifier, URI source, Handle handle, Instant timestamp, Agent agent) {
+      String cloudEventIdentifier, URI source, Handle handle, Instant timestamp, Agent agent) {
     return new SourceChangedEvent(
-        createIdentifier(eventIdentifier, handle, timestamp, agent),
-        eventIdentifier,
+        createIdentifier(cloudEventIdentifier, handle, timestamp, agent),
+        cloudEventIdentifier,
         source,
         handle,
         timestamp,
@@ -36,9 +36,9 @@ public record SourceChangedEvent(
    * conditional write stores it only once.
    */
   private static SortableIdentifier createIdentifier(
-      String eventIdentifier, Handle handle, Instant timestamp, Agent agent) {
+      String cloudEventIdentifier, Handle handle, Instant timestamp, Agent agent) {
     var seed =
-        IDENTIFIER_SEED.formatted(eventIdentifier, handle.value(), agent.customerIdentifier());
+        IDENTIFIER_SEED.formatted(cloudEventIdentifier, handle.value(), agent.customerIdentifier());
     var uuid = UUID.nameUUIDFromBytes(seed.getBytes(UTF_8));
     return SortableIdentifier.create(timestamp, uuid);
   }

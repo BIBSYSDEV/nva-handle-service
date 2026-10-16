@@ -71,7 +71,7 @@ class UriConstantsTest {
   @Test
   void shouldBuildEventIdUnderApproval() {
     var approvalIdentifier = randomUUID();
-    var eventIdentifier = randomString();
+    var eventIdentifier = SortableIdentifier.next();
 
     assertThat(
         eventId(API_HOST, approvalIdentifier, eventIdentifier),

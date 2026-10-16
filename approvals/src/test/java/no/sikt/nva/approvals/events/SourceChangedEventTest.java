@@ -18,42 +18,47 @@ class SourceChangedEventTest {
 
   @Test
   void shouldCreateSameIdentifierWhenEventIsRedelivered() {
-    var eventIdentifier = randomString();
+    var cloudEventIdentifier = randomString();
     var source = randomUri();
     var handle = randomHandle();
     var timestamp = randomTimestamp();
     var agent = randomAgent();
 
-    var first = SourceChangedEvent.create(eventIdentifier, source, handle, timestamp, agent);
-    var redelivered = SourceChangedEvent.create(eventIdentifier, source, handle, timestamp, agent);
+    var first = SourceChangedEvent.create(cloudEventIdentifier, source, handle, timestamp, agent);
+    var redelivered =
+        SourceChangedEvent.create(cloudEventIdentifier, source, handle, timestamp, agent);
 
     assertThat(redelivered.identifier(), equalTo(first.identifier()));
   }
 
   @Test
   void shouldCreateDifferentIdentifiersForSameEventIdentifierOnDifferentHandles() {
-    var eventIdentifier = randomString();
+    var cloudEventIdentifier = randomString();
     var timestamp = randomTimestamp();
     var agent = randomAgent();
 
     var first =
-        SourceChangedEvent.create(eventIdentifier, randomUri(), randomHandle(), timestamp, agent);
+        SourceChangedEvent.create(
+            cloudEventIdentifier, randomUri(), randomHandle(), timestamp, agent);
     var second =
-        SourceChangedEvent.create(eventIdentifier, randomUri(), randomHandle(), timestamp, agent);
+        SourceChangedEvent.create(
+            cloudEventIdentifier, randomUri(), randomHandle(), timestamp, agent);
 
     assertThat(second.identifier(), not(equalTo(first.identifier())));
   }
 
   @Test
   void shouldCreateDifferentIdentifiersForSameEventIdentifierOnDifferentCustomers() {
-    var eventIdentifier = randomString();
+    var cloudEventIdentifier = randomString();
     var handle = randomHandle();
     var timestamp = randomTimestamp();
 
     var first =
-        SourceChangedEvent.create(eventIdentifier, randomUri(), handle, timestamp, randomAgent());
+        SourceChangedEvent.create(
+            cloudEventIdentifier, randomUri(), handle, timestamp, randomAgent());
     var second =
-        SourceChangedEvent.create(eventIdentifier, randomUri(), handle, timestamp, randomAgent());
+        SourceChangedEvent.create(
+            cloudEventIdentifier, randomUri(), handle, timestamp, randomAgent());
 
     assertThat(second.identifier(), not(equalTo(first.identifier())));
   }

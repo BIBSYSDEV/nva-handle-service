@@ -87,7 +87,7 @@ class DynamoDbApprovalRepositoryTest {
   private static final String CREATED_DATE_FIELD = "createdDate";
   private static final String CHANGE_KEY = "Change:%s";
   private static final String EVENT_KEY = "Event:%s";
-  private static final String EVENT_IDENTIFIER_FIELD = "eventIdentifier";
+  private static final String CLOUD_EVENT_IDENTIFIER_FIELD = "cloudEventIdentifier";
   private static final String APPROVAL_REVISION_TYPE = "ApprovalRevision";
   private static final String CHANGE_IDENTIFIER_FIELD = "identifier";
   private static final String APPROVAL_IDENTIFIER_FIELD = "approvalIdentifier";
@@ -1051,7 +1051,7 @@ class DynamoDbApprovalRepositoryTest {
 
     var eventItem = scanItem(EVENT_KEY.formatted(event.identifier()));
 
-    assertEquals(event.eventIdentifier(), eventItem.get(EVENT_IDENTIFIER_FIELD).s());
+    assertEquals(event.cloudEventIdentifier(), eventItem.get(CLOUD_EVENT_IDENTIFIER_FIELD).s());
   }
 
   @Test
@@ -1061,7 +1061,7 @@ class DynamoDbApprovalRepositoryTest {
     var persisted = storedEvent(event);
     var duplicate =
         SourceChangedEvent.create(
-            event.eventIdentifier(),
+            event.cloudEventIdentifier(),
             event.source(),
             event.handle(),
             event.timestamp(),

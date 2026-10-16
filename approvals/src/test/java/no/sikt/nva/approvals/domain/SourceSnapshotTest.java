@@ -73,14 +73,18 @@ class SourceSnapshotTest {
 
   @Test
   void shouldCreateDifferentIdentifiersForSameEventIdentifierOnDifferentApprovals() {
-    var eventIdentifier = randomString();
+    var cloudEventIdentifier = randomString();
 
     var first =
         SourceSnapshot.create(
-            randomSourceChange(randomUUID(), eventIdentifier), randomContent(), randomTimestamp());
+            randomSourceChange(randomUUID(), cloudEventIdentifier),
+            randomContent(),
+            randomTimestamp());
     var second =
         SourceSnapshot.create(
-            randomSourceChange(randomUUID(), eventIdentifier), randomContent(), randomTimestamp());
+            randomSourceChange(randomUUID(), cloudEventIdentifier),
+            randomContent(),
+            randomTimestamp());
 
     assertThat(second.identifier(), not(equalTo(first.identifier())));
   }

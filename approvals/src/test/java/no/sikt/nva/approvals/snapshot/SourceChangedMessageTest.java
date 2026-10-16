@@ -10,6 +10,7 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.time.Instant;
+import no.unit.nva.identifiers.SortableIdentifier;
 import org.junit.jupiter.api.Test;
 
 class SourceChangedMessageTest {
@@ -18,6 +19,7 @@ class SourceChangedMessageTest {
   void shouldParseSourceChangedMessageFromJson() {
     var expected =
         new SourceChangedMessage(
+            SortableIdentifier.next(),
             randomString(),
             randomUUID(),
             randomUUID(),

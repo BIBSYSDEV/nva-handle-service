@@ -28,6 +28,7 @@ import no.sikt.nva.approvals.persistence.ApprovalDao;
 import no.sikt.nva.approvals.persistence.HandleDao;
 import no.sikt.nva.approvals.persistence.NamedIdentifierQueryObject;
 import no.sikt.nva.approvals.snapshot.SourceChange;
+import no.unit.nva.identifiers.SortableIdentifier;
 import nva.commons.core.paths.UriWrapper;
 
 public class TestUtils {
@@ -130,14 +131,20 @@ public class TestUtils {
     return randomSourceChange(randomUUID(), randomString());
   }
 
-  public static SourceChange randomSourceChange(UUID approvalIdentifier, String eventIdentifier) {
-    return randomSourceChange(approvalIdentifier, eventIdentifier, Instant.now());
+  public static SourceChange randomSourceChange(
+      UUID approvalIdentifier, String cloudEventIdentifier) {
+    return randomSourceChange(approvalIdentifier, cloudEventIdentifier, Instant.now());
   }
 
   public static SourceChange randomSourceChange(
-      UUID approvalIdentifier, String eventIdentifier, Instant timestamp) {
+      UUID approvalIdentifier, String cloudEventIdentifier, Instant timestamp) {
     return new SourceChange(
-        approvalIdentifier, randomAgent(), eventIdentifier, randomUri(), timestamp);
+        approvalIdentifier,
+        randomAgent(),
+        SortableIdentifier.create(timestamp, randomUUID()),
+        cloudEventIdentifier,
+        randomUri(),
+        timestamp);
   }
 
   public static SourceSnapshot randomSourceSnapshot() {

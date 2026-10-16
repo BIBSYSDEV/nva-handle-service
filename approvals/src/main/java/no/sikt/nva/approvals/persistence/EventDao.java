@@ -19,7 +19,7 @@ import software.amazon.awssdk.enhanced.dynamodb.document.EnhancedDocument;
 @JsonTypeName("SourceChangedEvent")
 public record EventDao(
     SortableIdentifier identifier,
-    String eventIdentifier,
+    String cloudEventIdentifier,
     URI source,
     URI handle,
     Instant timestamp,
@@ -36,7 +36,7 @@ public record EventDao(
     var agent = event.agent();
     return new EventDao(
         event.identifier(),
-        event.eventIdentifier(),
+        event.cloudEventIdentifier(),
         event.source(),
         event.handle().value(),
         event.timestamp(),

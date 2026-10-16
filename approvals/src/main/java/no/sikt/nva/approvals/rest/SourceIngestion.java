@@ -18,11 +18,11 @@ public record SourceIngestion(
         snapshot.source(),
         new SourceChangedEvent(
             eventId(apiHost, snapshot.approvalIdentifier(), snapshot.eventIdentifier()),
-            snapshot.eventIdentifier()),
+            snapshot.cloudEventIdentifier()),
         SoftwareAgent.actingFor(snapshot.agent(), apiHost));
   }
 
   @JsonTypeInfo(use = Id.NAME, property = "type")
   @JsonTypeName("SourceChangedEvent")
-  public record SourceChangedEvent(URI id, String eventIdentifier) {}
+  public record SourceChangedEvent(URI id, String cloudEventIdentifier) {}
 }
