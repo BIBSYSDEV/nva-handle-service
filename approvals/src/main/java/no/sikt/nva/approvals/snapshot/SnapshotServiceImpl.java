@@ -53,7 +53,7 @@ public class SnapshotServiceImpl implements SnapshotService {
 
   private Content fetchContent(SourceChange sourceChange) throws SourceClientException {
     return sourceClient
-        .fetchSource(sourceChange.source(), sourceChange.customerIdentifier())
+        .fetchSource(sourceChange.source(), sourceChange.agent().customerIdentifier())
         .map(SnapshotServiceImpl::toContent)
         .orElseThrow(
             () ->

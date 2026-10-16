@@ -9,6 +9,7 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo.Id;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import java.time.Instant;
 import java.util.UUID;
+import no.sikt.nva.approvals.domain.Agent;
 import no.sikt.nva.approvals.domain.ApprovalActivity;
 import no.sikt.nva.approvals.domain.ApprovalRevision;
 import no.unit.nva.identifiers.SortableIdentifier;
@@ -20,6 +21,7 @@ public record ApprovalRevisionDao(
     SortableIdentifier identifier,
     UUID approvalIdentifier,
     UUID customerIdentifier,
+    String clientIdentifier,
     Instant createdDate,
     ApprovalActivity activity,
     int schemaVersion,
@@ -35,11 +37,12 @@ public record ApprovalRevisionDao(
       "Unsupported schema version %s on approval revision %s";
 
   public static ApprovalRevisionDao fromApprovalRevision(ApprovalRevision revision) {
-    var approval = revision.approval();
+    var agent = revision.agent();
     return new ApprovalRevisionDao(
         revision.identifier(),
-        approval.identifier(),
-        approval.customerIdentifier(),
+        revision.approval().identifier(),
+        agent.customerIdentifier(),
+        agent.clientIdentifier(),
         revision.createdDate(),
         revision.activity(),
         ApprovalImage.SCHEMA_VERSION,
@@ -53,6 +56,7 @@ public record ApprovalRevisionDao(
     return new ApprovalRevision(
         identifier,
         image.toApproval(approvalIdentifier, customerIdentifier),
+        new Agent(customerIdentifier, clientIdentifier),
         createdDate,
         activity,
         image.context(),

@@ -10,6 +10,7 @@ import no.unit.nva.identifiers.SortableIdentifier;
 public record ApprovalRevision(
     SortableIdentifier identifier,
     Approval approval,
+    Agent agent,
     Instant createdDate,
     ApprovalActivity activity,
     URI context,
@@ -18,6 +19,7 @@ public record ApprovalRevision(
 
   public static ApprovalRevision create(
       Approval approval,
+      Agent agent,
       ApprovalActivity activity,
       URI context,
       URI ontology,
@@ -26,6 +28,7 @@ public record ApprovalRevision(
     return new ApprovalRevision(
         SortableIdentifier.create(timestamp, UUID.randomUUID()),
         approval,
+        agent,
         timestamp,
         activity,
         context,

@@ -45,7 +45,7 @@ class SnapshotServiceImplTest {
   void shouldSaveSnapshotWithContentOfSourceFetchedForCustomer() throws SourceClientException {
     var sourceChange = randomSourceChange();
     var sourceResponse = new SourceResponse(randomString(), randomString());
-    when(sourceClient.fetchSource(sourceChange.source(), sourceChange.customerIdentifier()))
+    when(sourceClient.fetchSource(sourceChange.source(), sourceChange.agent().customerIdentifier()))
         .thenReturn(Optional.of(sourceResponse));
 
     snapshotService.createSnapshot(sourceChange);
@@ -61,7 +61,7 @@ class SnapshotServiceImplTest {
     var sourceChange = randomSourceChange();
     var latestSnapshot = randomSourceSnapshot(sourceChange.approvalIdentifier());
     var sourceResponse = new SourceResponse(randomString(), latestSnapshot.content().body());
-    when(sourceClient.fetchSource(sourceChange.source(), sourceChange.customerIdentifier()))
+    when(sourceClient.fetchSource(sourceChange.source(), sourceChange.agent().customerIdentifier()))
         .thenReturn(Optional.of(sourceResponse));
     when(changeRepository.findLatestSnapshot(sourceChange.approvalIdentifier()))
         .thenReturn(Optional.of(latestSnapshot));
@@ -76,7 +76,7 @@ class SnapshotServiceImplTest {
       throws SourceClientException {
     var sourceChange = randomSourceChange();
     var sourceResponse = new SourceResponse(randomString(), randomString());
-    when(sourceClient.fetchSource(sourceChange.source(), sourceChange.customerIdentifier()))
+    when(sourceClient.fetchSource(sourceChange.source(), sourceChange.agent().customerIdentifier()))
         .thenReturn(Optional.of(sourceResponse));
     when(changeRepository.findLatestSnapshot(sourceChange.approvalIdentifier()))
         .thenReturn(Optional.of(randomSourceSnapshot(sourceChange.approvalIdentifier())));

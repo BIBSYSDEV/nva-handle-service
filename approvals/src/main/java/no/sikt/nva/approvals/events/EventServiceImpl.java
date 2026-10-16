@@ -26,7 +26,7 @@ public class EventServiceImpl implements EventService {
         approvalRepository
             .findByHandle(event.handle())
             .orElseThrow(() -> new ApprovalNotFoundException(event.handle()));
-    approval.ensureOwnedBy(event.customerIdentifier());
+    approval.ensureOwnedBy(event.agent().customerIdentifier());
     approval.ensureSourceIs(event.source());
 
     approvalRepository.save(event, approval.identifier());

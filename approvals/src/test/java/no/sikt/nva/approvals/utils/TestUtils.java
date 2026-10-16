@@ -13,6 +13,7 @@ import java.util.Random;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.IntStream;
+import no.sikt.nva.approvals.domain.Agent;
 import no.sikt.nva.approvals.domain.Approval;
 import no.sikt.nva.approvals.domain.ApprovalActivity;
 import no.sikt.nva.approvals.domain.ApprovalRevision;
@@ -74,7 +75,21 @@ public class TestUtils {
   }
 
   public static ApprovalRevision randomRevision(Approval approval, ApprovalActivity activity) {
-    return ApprovalRevision.create(approval, activity, randomUri(), randomUri(), Instant.now());
+    return ApprovalRevision.create(
+        approval,
+        randomAgent(approval.customerIdentifier()),
+        activity,
+        randomUri(),
+        randomUri(),
+        Instant.now());
+  }
+
+  public static Agent randomAgent() {
+    return randomAgent(randomUUID());
+  }
+
+  public static Agent randomAgent(UUID customerIdentifier) {
+    return new Agent(customerIdentifier, randomString());
   }
 
   public static Instant randomTimestamp() {
@@ -122,7 +137,7 @@ public class TestUtils {
   public static SourceChange randomSourceChange(
       UUID approvalIdentifier, String eventIdentifier, Instant timestamp) {
     return new SourceChange(
-        approvalIdentifier, randomUUID(), randomString(), eventIdentifier, randomUri(), timestamp);
+        approvalIdentifier, randomAgent(), eventIdentifier, randomUri(), timestamp);
   }
 
   public static SourceSnapshot randomSourceSnapshot() {

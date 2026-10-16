@@ -11,6 +11,7 @@ import com.fasterxml.jackson.annotation.JsonTypeName;
 import java.net.URI;
 import java.time.Instant;
 import java.util.UUID;
+import no.sikt.nva.approvals.domain.Agent;
 import no.sikt.nva.approvals.domain.Content;
 import no.sikt.nva.approvals.domain.SourceSnapshot;
 import no.unit.nva.commons.json.JsonSerializable;
@@ -35,11 +36,12 @@ public record SourceSnapshotDao(
   private static final String SNAPSHOT_KEY = "Change:%s";
 
   public static SourceSnapshotDao fromSourceSnapshot(SourceSnapshot snapshot) {
+    var agent = snapshot.agent();
     return new SourceSnapshotDao(
         snapshot.identifier(),
         snapshot.approvalIdentifier(),
-        snapshot.customerIdentifier(),
-        snapshot.clientIdentifier(),
+        agent.customerIdentifier(),
+        agent.clientIdentifier(),
         snapshot.eventIdentifier(),
         snapshot.source(),
         snapshot.content().type(),
@@ -53,8 +55,7 @@ public record SourceSnapshotDao(
     return new SourceSnapshot(
         identifier,
         approvalIdentifier,
-        customerIdentifier,
-        clientIdentifier,
+        new Agent(customerIdentifier, clientIdentifier),
         eventIdentifier,
         source,
         new Content(contentType, body, contentHash),

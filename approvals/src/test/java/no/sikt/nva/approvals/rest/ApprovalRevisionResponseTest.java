@@ -7,13 +7,18 @@ import static no.sikt.nva.approvals.utils.TestUtils.randomHandle;
 import static no.sikt.nva.approvals.utils.TestUtils.randomRevision;
 import static no.sikt.nva.approvals.utils.UriConstants.approvalId;
 import static no.sikt.nva.approvals.utils.UriConstants.changeId;
+import static no.sikt.nva.approvals.utils.UriConstants.clientId;
 import static no.sikt.nva.approvals.utils.UriConstants.customerId;
+import static no.unit.nva.testutils.RandomDataGenerator.randomUri;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.instanceOf;
 import static org.hamcrest.Matchers.nullValue;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import java.time.Instant;
+import no.sikt.nva.approvals.domain.Agent;
+import no.sikt.nva.approvals.domain.ApprovalRevision;
 import no.unit.nva.commons.json.JsonUtils;
 import org.junit.jupiter.api.Test;
 
@@ -80,10 +85,28 @@ class ApprovalRevisionResponseTest {
   }
 
   @Test
-  void shouldReturnEmptySoftwareAgentWhenClientIdentifierIsMissing() {
+  void shouldBeGeneratedByClientThatChangedApproval() {
     var revision = randomRevision(randomApproval(randomHandle()), CREATE_APPROVAL);
 
     var response = ApprovalRevisionResponse.create(revision, API_HOST);
+
+    var expectedClient = clientId(API_HOST, revision.agent().clientIdentifier());
+    assertThat(response.wasGeneratedBy().wasAssociatedWith().id(), equalTo(expectedClient));
+  }
+
+  @Test
+  void shouldReturnEmptySoftwareAgentWhenClientIdentifierIsMissing() {
+    var approval = randomApproval(randomHandle());
+    var revisionWithoutClient =
+        ApprovalRevision.create(
+            approval,
+            new Agent(approval.customerIdentifier(), null),
+            CREATE_APPROVAL,
+            randomUri(),
+            randomUri(),
+            Instant.now());
+
+    var response = ApprovalRevisionResponse.create(revisionWithoutClient, API_HOST);
 
     assertThat(response.wasGeneratedBy().wasAssociatedWith().id(), nullValue());
   }

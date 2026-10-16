@@ -5,6 +5,7 @@ import static nva.commons.core.attempt.Try.attempt;
 import java.net.URI;
 import java.time.Instant;
 import java.util.UUID;
+import no.sikt.nva.approvals.domain.Agent;
 import no.unit.nva.commons.json.JsonSerializable;
 import no.unit.nva.commons.json.JsonUtils;
 
@@ -30,8 +31,7 @@ public record SourceChangedMessage(
   public SourceChange toSourceChange() {
     return new SourceChange(
         approvalIdentifier,
-        customerIdentifier,
-        clientIdentifier,
+        new Agent(customerIdentifier, clientIdentifier),
         eventIdentifier,
         source,
         timestamp);

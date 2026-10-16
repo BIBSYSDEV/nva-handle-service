@@ -93,7 +93,7 @@ class SourceSnapshotResponseTest {
     var response = SourceSnapshotResponse.create(snapshot, API_HOST);
 
     var customer = response.wasGeneratedBy().wasAssociatedWith().actedOnBehalfOf();
-    assertThat(customer, equalTo(customerId(API_HOST, snapshot.customerIdentifier())));
+    assertThat(customer, equalTo(customerId(API_HOST, snapshot.agent().customerIdentifier())));
   }
 
   @Test
@@ -103,7 +103,7 @@ class SourceSnapshotResponseTest {
     var response = SourceSnapshotResponse.create(snapshot, API_HOST);
 
     var agent = response.wasGeneratedBy().wasAssociatedWith();
-    assertThat(agent.id(), equalTo(clientId(API_HOST, snapshot.clientIdentifier())));
+    assertThat(agent.id(), equalTo(clientId(API_HOST, snapshot.agent().clientIdentifier())));
   }
 
   @Test

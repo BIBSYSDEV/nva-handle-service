@@ -4,10 +4,12 @@ import static java.net.HttpURLConnection.HTTP_ACCEPTED;
 import static no.sikt.nva.approvals.utils.RequestUtils.createAdditionalApprovalHeaders;
 import static no.sikt.nva.approvals.utils.RequestUtils.getApiHost;
 import static no.sikt.nva.approvals.utils.RequestUtils.getApprovalIdentifier;
+import static no.sikt.nva.approvals.utils.RequestUtils.getClientIdentifier;
 import static no.sikt.nva.approvals.utils.RequestUtils.handleException;
 import static no.sikt.nva.approvals.validation.RequestValidator.validateBody;
 
 import com.amazonaws.services.lambda.runtime.Context;
+import no.sikt.nva.approvals.domain.Agent;
 import no.sikt.nva.approvals.domain.Approval;
 import no.sikt.nva.approvals.domain.ApprovalService;
 import no.sikt.nva.approvals.domain.ApprovalServiceImpl;
@@ -59,13 +61,17 @@ public class UpdateApprovalHandler extends ApiGatewayHandler<UpdateApprovalReque
       UpdateApprovalRequest request, RequestInfo requestInfo, Context context)
       throws ApiGatewayException {
     var identifier = getApprovalIdentifier(requestInfo);
+    var clientIdentifier = getClientIdentifier(requestInfo);
     var customerIdentifier =
         identifierAuthorizer.authorizeIdentifiersAndSource(
             requestInfo, request.identifiers(), request.source());
     try {
       var approval =
           approvalService.updateApproval(
-              identifier, request.identifiers(), request.source(), customerIdentifier);
+              identifier,
+              request.identifiers(),
+              request.source(),
+              new Agent(customerIdentifier, clientIdentifier));
       addHeaders(approval);
     } catch (Exception exception) {
       handleException(exception);

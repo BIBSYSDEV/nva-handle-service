@@ -13,7 +13,7 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import java.net.URI;
 import java.time.Instant;
-import java.util.UUID;
+import no.sikt.nva.approvals.domain.Agent;
 import no.sikt.nva.approvals.domain.Handle;
 import no.sikt.nva.approvals.validation.HandleUri;
 import no.sikt.nva.approvals.validation.UriSize;
@@ -36,7 +36,7 @@ public record CloudEvent(
     return new Handle(subject);
   }
 
-  public SourceChangedEvent toSourceChangedEvent(UUID customerIdentifier, String clientIdentifier) {
-    return new SourceChangedEvent(id, source, handle(), time, customerIdentifier, clientIdentifier);
+  public SourceChangedEvent toSourceChangedEvent(Agent agent) {
+    return new SourceChangedEvent(id, source, handle(), time, agent);
   }
 }

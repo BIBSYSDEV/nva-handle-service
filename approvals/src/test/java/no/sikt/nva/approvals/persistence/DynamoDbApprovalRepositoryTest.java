@@ -12,6 +12,7 @@ import static no.sikt.nva.approvals.persistence.DynamoDbConstants.SK0;
 import static no.sikt.nva.approvals.persistence.DynamoDbConstants.SK1;
 import static no.sikt.nva.approvals.persistence.DynamoDbConstants.SK2;
 import static no.sikt.nva.approvals.persistence.DynamoDbLocal.dynamoDBLocal;
+import static no.sikt.nva.approvals.utils.TestUtils.randomAgent;
 import static no.sikt.nva.approvals.utils.TestUtils.randomApproval;
 import static no.sikt.nva.approvals.utils.TestUtils.randomContent;
 import static no.sikt.nva.approvals.utils.TestUtils.randomHandle;
@@ -82,6 +83,7 @@ class DynamoDbApprovalRepositoryTest {
   private static final String IDENTIFIER_POLICY_TYPE = "IdentifierPolicy";
   private static final String TYPE_FIELD = "type";
   private static final String CUSTOMER_IDENTIFIER_FIELD = "customerIdentifier";
+  private static final String CLIENT_IDENTIFIER_FIELD = "clientIdentifier";
   private static final String CREATED_DATE_FIELD = "createdDate";
   private static final String CHANGE_KEY = "Change:%s";
   private static final String APPROVAL_REVISION_TYPE = "ApprovalRevision";
@@ -765,6 +767,17 @@ class DynamoDbApprovalRepositoryTest {
   }
 
   @Test
+  void shouldStoreClientIdentifierOnRevisionItem() {
+    var revision = randomRevision(randomApproval(randomHandle()), CREATE_APPROVAL);
+    approvalRepository.save(revision);
+
+    var revisionItem = scanItem(changeKey(revision));
+
+    assertEquals(
+        revision.agent().clientIdentifier(), revisionItem.get(CLIENT_IDENTIFIER_FIELD).s());
+  }
+
+  @Test
   void shouldReturnEmptyListWhenApprovalHasNoRevisions() {
     assertTrue(revisions(randomUUID()).isEmpty());
   }
@@ -995,7 +1008,7 @@ class DynamoDbApprovalRepositoryTest {
 
     var persisted = storedEvent(event);
 
-    assertEquals(event.customerIdentifier(), persisted.customerIdentifier());
+    assertEquals(event.agent().customerIdentifier(), persisted.customerIdentifier());
   }
 
   @Test
@@ -1005,7 +1018,7 @@ class DynamoDbApprovalRepositoryTest {
 
     var persisted = storedEvent(event);
 
-    assertEquals(event.clientIdentifier(), persisted.clientIdentifier());
+    assertEquals(event.agent().clientIdentifier(), persisted.clientIdentifier());
   }
 
   @Test
@@ -1030,8 +1043,7 @@ class DynamoDbApprovalRepositoryTest {
             event.source(),
             event.handle(),
             event.timestamp().plusSeconds(1),
-            event.customerIdentifier(),
-            event.clientIdentifier());
+            event.agent());
 
     approvalRepository.save(duplicate, randomUUID());
     var persistedAfterSecondInvocation = storedEvent(event);
@@ -1097,12 +1109,7 @@ class DynamoDbApprovalRepositoryTest {
 
   private static SourceChangedEvent randomEvent() {
     return new SourceChangedEvent(
-        randomUUID().toString(),
-        randomUri(),
-        randomHandle(),
-        Instant.now(),
-        randomUUID(),
-        randomString());
+        randomUUID().toString(), randomUri(), randomHandle(), Instant.now(), randomAgent());
   }
 
   private EventDao storedEvent(SourceChangedEvent event) {

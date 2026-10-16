@@ -5,6 +5,7 @@ import static java.net.HttpURLConnection.HTTP_BAD_GATEWAY;
 import static java.net.HttpURLConnection.HTTP_BAD_REQUEST;
 import static java.net.HttpURLConnection.HTTP_CONFLICT;
 import static java.net.HttpURLConnection.HTTP_FORBIDDEN;
+import static java.net.HttpURLConnection.HTTP_UNAUTHORIZED;
 import static no.sikt.nva.approvals.utils.TestUtils.randomIdentifiers;
 import static no.sikt.nva.approvals.validation.RequestConstraints.MAX_IDENTIFIERS;
 import static no.unit.nva.testutils.RandomDataGenerator.randomString;
@@ -47,6 +48,8 @@ class CreateApprovalHandlerTest {
 
   private static final Context context = new FakeContext();
   private static final String REK = "REK";
+  private static final String CLIENT_ID = randomString();
+  private static final String MISSING_CLIENT_ID_MESSAGE = "Token carries no client id";
   private static final String MANDATORY_MESSAGE = "Is mandatory";
   private static final String IDENTIFIERS_SIZE_MESSAGE =
       "Between 1 and 20 identifiers are required";
@@ -216,6 +219,20 @@ class CreateApprovalHandlerTest {
   }
 
   @Test
+  void shouldReturnUnauthorizedWhenTokenCarriesNoClientId() throws Exception {
+    var request =
+        new HandlerRequestBuilder<CreateApprovalRequest>(JsonUtils.dtoObjectMapper)
+            .withBody(randomApprovalRequest(randomUri()))
+            .build();
+
+    handler.handleRequest(request, output, context);
+
+    var response = GatewayResponse.fromOutputStream(output, Problem.class);
+    assertEquals(HTTP_UNAUTHORIZED, response.getStatusCode());
+    assertEquals(MISSING_CLIENT_ID_MESSAGE, response.getBodyObject(Problem.class).getDetail());
+  }
+
+  @Test
   void shouldAcceptMaximumNumberOfIdentifiers() throws IOException {
     var request =
         createRequest(new CreateApprovalRequest(randomIdentifiers(MAX_IDENTIFIERS), randomUri()));
@@ -268,6 +285,7 @@ class CreateApprovalHandlerTest {
   private InputStream createRequest(CreateApprovalRequest request) throws JsonProcessingException {
     return new HandlerRequestBuilder<CreateApprovalRequest>(JsonUtils.dtoObjectMapper)
         .withBody(request)
+        .withClientId(CLIENT_ID)
         .build();
   }
 }
