@@ -41,6 +41,7 @@ import no.sikt.nva.approvals.persistence.DynamoDbConstants;
 import no.sikt.nva.approvals.persistence.DynamoDbLocal;
 import no.sikt.nva.approvals.snapshot.SourceChange;
 import no.unit.nva.commons.json.JsonUtils;
+import no.unit.nva.identifiers.SortableIdentifier;
 import no.unit.nva.stubs.FakeContext;
 import no.unit.nva.testutils.HandlerRequestBuilder;
 import nva.commons.apigateway.GatewayResponse;
@@ -242,7 +243,12 @@ class FetchApprovalChangesHandlerTest {
     var snapshot =
         SourceSnapshot.create(
             new SourceChange(
-                approvalIdentifier, randomAgent(), randomString(), randomUri(), timestamp),
+                approvalIdentifier,
+                randomAgent(),
+                SortableIdentifier.next(),
+                randomString(),
+                randomUri(),
+                timestamp),
             randomContent(),
             timestamp);
     approvalRepository.save(snapshot);

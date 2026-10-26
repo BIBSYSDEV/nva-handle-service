@@ -16,6 +16,7 @@ import com.amazonaws.services.lambda.runtime.events.SQSEvent.SQSMessage;
 import java.time.Instant;
 import java.util.List;
 import no.sikt.nva.approvals.source.SourceClientException;
+import no.unit.nva.identifiers.SortableIdentifier;
 import no.unit.nva.stubs.FakeContext;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -59,6 +60,7 @@ class CreateSnapshotHandlerTest {
 
   private static SourceChangedMessage randomSourceChangedMessage() {
     return new SourceChangedMessage(
+        SortableIdentifier.next(),
         randomString(),
         randomUUID(),
         randomUUID(),

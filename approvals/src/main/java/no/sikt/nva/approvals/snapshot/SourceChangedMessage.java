@@ -8,9 +8,11 @@ import java.util.UUID;
 import no.sikt.nva.approvals.domain.Agent;
 import no.unit.nva.commons.json.JsonSerializable;
 import no.unit.nva.commons.json.JsonUtils;
+import no.unit.nva.identifiers.SortableIdentifier;
 
 public record SourceChangedMessage(
-    String eventIdentifier,
+    SortableIdentifier eventIdentifier,
+    String cloudEventIdentifier,
     UUID approvalIdentifier,
     UUID customerIdentifier,
     String clientIdentifier,
@@ -33,6 +35,7 @@ public record SourceChangedMessage(
         approvalIdentifier,
         new Agent(customerIdentifier, clientIdentifier),
         eventIdentifier,
+        cloudEventIdentifier,
         source,
         timestamp);
   }

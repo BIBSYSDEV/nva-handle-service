@@ -69,10 +69,11 @@ public final class UriConstants {
         .getUri();
   }
 
-  public static URI eventId(String apiHost, UUID approvalIdentifier, String eventIdentifier) {
+  public static URI eventId(
+      String apiHost, UUID approvalIdentifier, SortableIdentifier eventIdentifier) {
     return UriWrapper.fromUri(approvalId(apiHost, approvalIdentifier))
         .addChild(EVENT_PATH)
-        .addChild(eventIdentifier)
+        .addChild(eventIdentifier.toString())
         .getUri();
   }
 
