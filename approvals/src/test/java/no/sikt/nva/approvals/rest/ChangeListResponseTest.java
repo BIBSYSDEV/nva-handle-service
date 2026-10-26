@@ -5,6 +5,7 @@ import static no.sikt.nva.approvals.utils.TestUtils.randomHandle;
 import static no.sikt.nva.approvals.utils.TestUtils.randomSourceSnapshot;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.nullValue;
 
 import java.net.URI;
 import java.util.List;
@@ -43,6 +44,13 @@ class ChangeListResponseTest {
 
     var expectedContext = URI.create("https://" + API_HOST + "/approval/context/v1");
     assertThat(response.context(), equalTo(expectedContext));
+  }
+
+  @Test
+  void shouldNotReturnContextForChangeInChangeList() {
+    var response =
+        ChangeListResponse.fromChangeList(changeListOf(randomApproval(randomHandle())), API_HOST);
+    assertThat(response.changes().getFirst().context(), nullValue());
   }
 
   private static ChangeList changeListOf(Approval approval) {

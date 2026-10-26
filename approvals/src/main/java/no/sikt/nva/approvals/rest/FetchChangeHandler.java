@@ -12,6 +12,7 @@ import java.util.List;
 import no.sikt.nva.approvals.domain.ChangeService;
 import no.sikt.nva.approvals.domain.ChangeServiceImpl;
 import no.sikt.nva.approvals.utils.RequestUtils;
+import no.sikt.nva.approvals.utils.UriConstants;
 import nva.commons.apigateway.ApiGatewayHandler;
 import nva.commons.apigateway.MediaType;
 import nva.commons.apigateway.RequestInfo;
@@ -53,6 +54,7 @@ public class FetchChangeHandler extends ApiGatewayHandler<Void, ChangeResponse> 
     var changeIdentifier = getChangeIdentifier(requestInfo);
     return attempt(() -> changeService.fetchChange(approvalIdentifier, changeIdentifier))
         .map(change -> ChangeResponse.fromChange(change, apiHost))
+        .map(change -> change.withContext(UriConstants.context(apiHost)))
         .orElseThrow(failure -> toApiGatewayException(failure.getException()));
   }
 

@@ -11,6 +11,7 @@ import static no.sikt.nva.approvals.utils.TestUtils.randomApproval;
 import static no.sikt.nva.approvals.utils.TestUtils.randomHandle;
 import static no.sikt.nva.approvals.utils.TestUtils.randomRevision;
 import static no.sikt.nva.approvals.utils.TestUtils.randomSourceSnapshot;
+import static no.sikt.nva.approvals.utils.UriConstants.context;
 import static no.unit.nva.testutils.RandomDataGenerator.randomString;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
@@ -79,6 +80,17 @@ class FetchChangeHandlerTest {
     assertThat(response.getStatusCode(), equalTo(HTTP_OK));
     assertThat(
         response.getBodyObject(ChangeResponse.class), instanceOf(ApprovalRevisionResponse.class));
+  }
+
+  @Test
+  void shouldReturnChangeWithContext() throws IOException {
+    var revision = saveRevision();
+
+    var response =
+        send(request(revision.approval().identifier(), revision.identifier().toString(), Map.of()));
+
+    var expectedContext = context(ENVIRONMENT.readEnv("API_HOST"));
+    assertThat(response.getBodyObject(ChangeResponse.class).context(), equalTo(expectedContext));
   }
 
   @Test

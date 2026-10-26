@@ -897,6 +897,10 @@ components:
         - generatedAtTime
         - wasGeneratedBy
       properties:
+        "@context":
+          type: string
+          format: uri
+          description: Versioned JSON-LD context URI for this resource
         type:
           type: string
           enum:
@@ -937,6 +941,10 @@ components:
         - checksum
         - wasGeneratedBy
       properties:
+        "@context":
+          type: string
+          format: uri
+          description: Versioned JSON-LD context URI for this resource
         type:
           type: string
           enum:
