@@ -251,6 +251,32 @@ Resources:
           MessageGroupId: $.dynamodb.NewImage.handle.S
           MessageDeduplicationId: $.eventID
 
+  ApprovalRevisionPipe:
+    Type: AWS::Pipes::Pipe
+    DependsOn: NvaReceiveEventFunction
+    Properties:
+      DesiredState: STOPPED
+      RoleArn: !GetAtt SourceChangedPipeRole.Arn
+      Source: !GetAtt ApprovalsTable.StreamArn
+      SourceParameters:
+        DynamoDBStreamParameters:
+          StartingPosition: LATEST
+          ParallelizationFactor: 1
+          MaximumRecordAgeInSeconds: 86400
+          MaximumRetryAttempts: 10
+          OnPartialBatchItemFailure: AUTOMATIC_BISECT
+          DeadLetterConfig:
+            Arn: !GetAtt SourceChangedPipeDlq.Arn
+        FilterCriteria:
+          Filters:
+            - Pattern: '{"eventName": ["INSERT"], "dynamodb": {"NewImage": {"type": {"S": ["ApprovalRevision"]}}}}'
+      Target: !GetAtt CreateSnapshotQueue.Arn
+      TargetParameters:
+        InputTemplate: '{"type": "ApprovalRevision", "revisionIdentifier": "<$.dynamodb.NewImage.identifier.S>", "approvalIdentifier": "<$.dynamodb.NewImage.approvalIdentifier.S>", "customerIdentifier": "<$.dynamodb.NewImage.customerIdentifier.S>", "clientIdentifier": "<$.dynamodb.NewImage.clientIdentifier.S>", "approval": <$.dynamodb.NewImage.body.S>, "timestamp": "<$.dynamodb.NewImage.createdDate.S>"}'
+        SqsQueueParameters:
+          MessageGroupId: $.dynamodb.NewImage.approvalIdentifier.S
+          MessageDeduplicationId: $.eventID
+
   ReadHandleDatabaseSecretsManagedPolicy:
     Type: AWS::IAM::ManagedPolicy
     Properties:
