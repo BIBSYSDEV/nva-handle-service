@@ -9,10 +9,6 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo.Id;
 import no.unit.nva.commons.json.JsonSerializable;
 import no.unit.nva.commons.json.JsonUtils;
 
-/**
- * Messages on the snapshot queue are typed by the pipe that produced them. Messages without a type
- * are source changed events, which the event pipe has been sending untyped.
- */
 @JsonTypeInfo(use = Id.NAME, property = "type", defaultImpl = SourceChangedMessage.class)
 @JsonSubTypes({@Type(SourceChangedMessage.class), @Type(ApprovalRevisionMessage.class)})
 public sealed interface CreateSnapshotMessage extends JsonSerializable
