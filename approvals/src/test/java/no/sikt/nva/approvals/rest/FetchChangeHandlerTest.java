@@ -25,6 +25,7 @@ import java.util.Map;
 import java.util.UUID;
 import no.sikt.nva.approvals.domain.ApprovalRevision;
 import no.sikt.nva.approvals.domain.ChangeServiceImpl;
+import no.sikt.nva.approvals.domain.SourceSnapshot;
 import no.sikt.nva.approvals.persistence.DynamoDbApprovalRepository;
 import no.sikt.nva.approvals.persistence.DynamoDbChangeRepository;
 import no.sikt.nva.approvals.persistence.DynamoDbConstants;
@@ -94,6 +95,17 @@ class FetchChangeHandlerTest {
   }
 
   @Test
+  void shouldReturnSourceSnapshotWithContext() throws IOException {
+    var snapshot = saveSnapshot();
+
+    var response =
+        send(request(snapshot.approvalIdentifier(), snapshot.identifier().toString(), Map.of()));
+
+    var expectedContext = context(ENVIRONMENT.readEnv("API_HOST"));
+    assertThat(response.getBodyObject(ChangeResponse.class).context(), equalTo(expectedContext));
+  }
+
+  @Test
   void shouldReturnSourceSnapshotWhenChangeIsSnapshotOfApprovalSource() throws IOException {
     var snapshot = randomSourceSnapshot();
     approvalRepository.save(snapshot);
@@ -145,6 +157,12 @@ class FetchChangeHandlerTest {
                 randomUUID(), SortableIdentifier.next().toString(), Map.of(ACCEPT, "text/html")));
 
     assertThat(response.getStatusCode(), equalTo(HTTP_NOT_ACCEPTABLE));
+  }
+
+  private SourceSnapshot saveSnapshot() {
+    var snapshot = randomSourceSnapshot();
+    approvalRepository.save(snapshot);
+    return snapshot;
   }
 
   private ApprovalRevision saveRevision() {
