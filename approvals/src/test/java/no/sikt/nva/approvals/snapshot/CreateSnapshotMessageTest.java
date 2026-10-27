@@ -75,7 +75,7 @@ class CreateSnapshotMessageTest {
         revision.approval().identifier(),
         agent.customerIdentifier(),
         agent.clientIdentifier(),
-        ApprovalImage.fromApprovalRevision(revision),
+        ApprovalImage.fromApprovalRevision(revision).toJsonString(),
         revision.createdDate());
   }
 }
