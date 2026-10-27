@@ -23,6 +23,10 @@ public sealed interface ChangeResponse permits ApprovalRevisionResponse, SourceS
     };
   }
 
+  URI context();
+
+  ChangeResponse withContext(URI context);
+
   URI specializationOf();
 
   Instant generatedAtTime();
