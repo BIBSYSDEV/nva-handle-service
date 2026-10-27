@@ -181,7 +181,7 @@ Resources:
   SourceChangedPipeDlqAlarm:
     Type: AWS::CloudWatch::Alarm
     Properties:
-      AlarmDescription: Event stream records could not be forwarded to the source changed queue
+      AlarmDescription: Stream records could not be forwarded to the create snapshot queue
       Namespace: AWS/SQS
       MetricName: ApproximateNumberOfMessagesVisible
       Dimensions:
@@ -246,16 +246,15 @@ Resources:
             - Pattern: '{"eventName": ["INSERT"], "dynamodb": {"NewImage": {"PK0": {"S": [{"prefix": "Event:"}]}}}}'
       Target: !GetAtt CreateSnapshotQueue.Arn
       TargetParameters:
-        InputTemplate: '{"eventIdentifier": "<$.dynamodb.NewImage.identifier.S>", "cloudEventIdentifier": "<$.dynamodb.NewImage.cloudEventIdentifier.S>", "approvalIdentifier": "<$.dynamodb.NewImage.approvalIdentifier.S>", "customerIdentifier": "<$.dynamodb.NewImage.customerIdentifier.S>", "clientIdentifier": "<$.dynamodb.NewImage.clientIdentifier.S>", "handle": "<$.dynamodb.NewImage.handle.S>", "source": "<$.dynamodb.NewImage.source.S>", "timestamp": "<$.dynamodb.NewImage.timestamp.S>"}'
+        InputTemplate: '{"type": "SourceChangedEvent", "eventIdentifier": "<$.dynamodb.NewImage.identifier.S>", "cloudEventIdentifier": "<$.dynamodb.NewImage.cloudEventIdentifier.S>", "approvalIdentifier": "<$.dynamodb.NewImage.approvalIdentifier.S>", "customerIdentifier": "<$.dynamodb.NewImage.customerIdentifier.S>", "clientIdentifier": "<$.dynamodb.NewImage.clientIdentifier.S>", "handle": "<$.dynamodb.NewImage.handle.S>", "source": "<$.dynamodb.NewImage.source.S>", "timestamp": "<$.dynamodb.NewImage.timestamp.S>"}'
         SqsQueueParameters:
           MessageGroupId: $.dynamodb.NewImage.handle.S
           MessageDeduplicationId: $.eventID
 
   ApprovalRevisionPipe:
     Type: AWS::Pipes::Pipe
-    DependsOn: NvaReceiveEventFunction
+    DependsOn: NvaCreateSnapshotFunction
     Properties:
-      DesiredState: STOPPED
       RoleArn: !GetAtt SourceChangedPipeRole.Arn
       Source: !GetAtt ApprovalsTable.StreamArn
       SourceParameters:
