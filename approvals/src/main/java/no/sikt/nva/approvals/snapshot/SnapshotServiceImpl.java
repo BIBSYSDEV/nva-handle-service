@@ -37,29 +37,29 @@ public class SnapshotServiceImpl implements SnapshotService {
   }
 
   @Override
-  public void createSnapshot(SourceChange sourceChange) throws SourceClientException {
-    var content = fetchContent(sourceChange);
-    if (hasChangedSinceLatestSnapshot(sourceChange, content)) {
-      approvalRepository.save(SourceSnapshot.create(sourceChange, content, Instant.now()));
+  public void createSnapshot(CreateSnapshotRequest createSnapshotRequest) throws SourceClientException {
+    var content = fetchContent(createSnapshotRequest);
+    if (hasChangedSinceLatestSnapshot(createSnapshotRequest, content)) {
+      approvalRepository.save(SourceSnapshot.create(createSnapshotRequest, content, Instant.now()));
     }
   }
 
-  private boolean hasChangedSinceLatestSnapshot(SourceChange sourceChange, Content content) {
+  private boolean hasChangedSinceLatestSnapshot(CreateSnapshotRequest createSnapshotRequest, Content content) {
     return changeRepository
-        .findLatestSnapshot(sourceChange.approvalIdentifier())
+        .findLatestSnapshot(createSnapshotRequest.approvalIdentifier())
         .map(latestSnapshot -> !latestSnapshot.content().hash().equals(content.hash()))
         .orElse(true);
   }
 
-  private Content fetchContent(SourceChange sourceChange) throws SourceClientException {
+  private Content fetchContent(CreateSnapshotRequest createSnapshotRequest) throws SourceClientException {
     return sourceClient
-        .fetchSource(sourceChange.source(), sourceChange.agent().customerIdentifier())
+        .fetchSource(createSnapshotRequest.source(), createSnapshotRequest.agent().customerIdentifier())
         .map(SnapshotServiceImpl::toContent)
         .orElseThrow(
             () ->
                 new SourceClientException(
                     "Source %s of approval %s was not found"
-                        .formatted(sourceChange.source(), sourceChange.approvalIdentifier())));
+                        .formatted(createSnapshotRequest.source(), createSnapshotRequest.approvalIdentifier())));
   }
 
   private static Content toContent(SourceResponse sourceResponse) {

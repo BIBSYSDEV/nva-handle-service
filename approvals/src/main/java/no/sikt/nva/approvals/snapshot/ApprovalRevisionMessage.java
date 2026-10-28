@@ -28,8 +28,8 @@ public record ApprovalRevisionMessage(
   }
 
   @Override
-  public SourceChange toSourceChange() {
-    return new SourceChange(
+  public CreateSnapshotRequest toSourceChange() {
+    return new CreateSnapshotRequest(
         approvalIdentifier,
         new Agent(customerIdentifier, clientIdentifier),
         toApproval().source(),

@@ -24,5 +24,5 @@ public sealed interface CreateSnapshotMessage extends JsonSerializable
                     PARSE_ERROR_MESSAGE.formatted(value), failure.getException()));
   }
 
-  SourceChange toSourceChange();
+  CreateSnapshotRequest toSourceChange();
 }

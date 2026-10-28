@@ -10,13 +10,12 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo.Id;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import java.net.URI;
 import java.time.Instant;
-import java.util.Objects;
 import java.util.UUID;
 import no.sikt.nva.approvals.domain.Agent;
 import no.sikt.nva.approvals.domain.ApprovalActivity;
 import no.sikt.nva.approvals.domain.ApprovalRevisionTrigger;
 import no.sikt.nva.approvals.domain.Content;
-import no.sikt.nva.approvals.domain.SnapshotTrigger;
+import no.sikt.nva.approvals.domain.Trigger;
 import no.sikt.nva.approvals.domain.SourceChangedEventTrigger;
 import no.sikt.nva.approvals.domain.SourceSnapshot;
 import no.unit.nva.commons.json.JsonSerializable;
@@ -71,14 +70,14 @@ public record SourceSnapshotDao(
         createdDate);
   }
 
-  private static String triggerOf(SnapshotTrigger trigger) {
+  private static String triggerOf(Trigger trigger) {
     return switch (trigger) {
       case ApprovalRevisionTrigger approvalRevision -> approvalRevision.activity().getValue();
       case SourceChangedEventTrigger ignored -> SourceChangedEventTrigger.TYPE;
     };
   }
 
-  private static String cloudEventIdentifierOf(SnapshotTrigger trigger) {
+  private static String cloudEventIdentifierOf(Trigger trigger) {
     return switch (trigger) {
       case SourceChangedEventTrigger sourceChanged -> sourceChanged.cloudEventIdentifier();
       case ApprovalRevisionTrigger ignored -> null;
@@ -86,10 +85,10 @@ public record SourceSnapshotDao(
   }
 
   private boolean isSourceChangedEvent() {
-    return Objects.isNull(activity) || SourceChangedEventTrigger.TYPE.equals(activity);
+    return SourceChangedEventTrigger.TYPE.equals(activity);
   }
 
-  private SnapshotTrigger toTrigger() {
+  private Trigger toTrigger() {
     return isSourceChangedEvent()
         ? new SourceChangedEventTrigger(eventIdentifier, cloudEventIdentifier)
         : new ApprovalRevisionTrigger(eventIdentifier, ApprovalActivity.fromValue(activity));

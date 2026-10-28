@@ -23,8 +23,8 @@ public record SourceChangedMessage(
   public static final String TYPE = "SourceChangedEvent";
 
   @Override
-  public SourceChange toSourceChange() {
-    return new SourceChange(
+  public CreateSnapshotRequest toSourceChange() {
+    return new CreateSnapshotRequest(
         approvalIdentifier,
         new Agent(customerIdentifier, clientIdentifier),
         source,

@@ -24,7 +24,7 @@ import no.sikt.nva.approvals.persistence.DynamoDbApprovalRepository;
 import no.sikt.nva.approvals.persistence.DynamoDbChangeRepository;
 import no.sikt.nva.approvals.persistence.DynamoDbConstants;
 import no.sikt.nva.approvals.persistence.DynamoDbLocal;
-import no.sikt.nva.approvals.snapshot.SourceChange;
+import no.sikt.nva.approvals.snapshot.CreateSnapshotRequest;
 import no.unit.nva.identifiers.SortableIdentifier;
 import nva.commons.core.Environment;
 import org.junit.jupiter.api.AfterEach;
@@ -156,7 +156,7 @@ class ChangeServiceTest {
   private SourceSnapshot saveSnapshotOfSourceChangedAt(UUID approvalIdentifier, Instant timestamp) {
     var snapshot =
         SourceSnapshot.create(
-            new SourceChange(
+            new CreateSnapshotRequest(
                 approvalIdentifier,
                 randomAgent(),
                 randomUri(),

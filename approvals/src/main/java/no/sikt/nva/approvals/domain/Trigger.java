@@ -8,7 +8,7 @@ import no.unit.nva.identifiers.SortableIdentifier;
 
 @JsonTypeInfo(use = Id.NAME, property = "type")
 @JsonSubTypes({@Type(SourceChangedEventTrigger.class), @Type(ApprovalRevisionTrigger.class)})
-public sealed interface SnapshotTrigger permits ApprovalRevisionTrigger, SourceChangedEventTrigger {
+public sealed interface Trigger permits ApprovalRevisionTrigger, SourceChangedEventTrigger {
 
   SortableIdentifier identifier();
 }

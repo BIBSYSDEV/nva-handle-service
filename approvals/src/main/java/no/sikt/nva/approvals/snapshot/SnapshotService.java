@@ -5,5 +5,5 @@ import no.sikt.nva.approvals.source.SourceClientException;
 @FunctionalInterface
 public interface SnapshotService {
 
-  void createSnapshot(SourceChange sourceChange) throws SourceClientException;
+  void createSnapshot(CreateSnapshotRequest createSnapshotRequest) throws SourceClientException;
 }

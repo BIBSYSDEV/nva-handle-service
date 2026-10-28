@@ -40,7 +40,7 @@ import no.sikt.nva.approvals.persistence.DynamoDbApprovalRepository;
 import no.sikt.nva.approvals.persistence.DynamoDbChangeRepository;
 import no.sikt.nva.approvals.persistence.DynamoDbConstants;
 import no.sikt.nva.approvals.persistence.DynamoDbLocal;
-import no.sikt.nva.approvals.snapshot.SourceChange;
+import no.sikt.nva.approvals.snapshot.CreateSnapshotRequest;
 import no.unit.nva.commons.json.JsonUtils;
 import no.unit.nva.identifiers.SortableIdentifier;
 import no.unit.nva.stubs.FakeContext;
@@ -243,7 +243,7 @@ class FetchApprovalChangesHandlerTest {
   private SourceSnapshot saveSnapshotOfSourceChangedAt(UUID approvalIdentifier, Instant timestamp) {
     var snapshot =
         SourceSnapshot.create(
-            new SourceChange(
+            new CreateSnapshotRequest(
                 approvalIdentifier,
                 randomAgent(),
                 randomUri(),

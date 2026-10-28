@@ -5,7 +5,7 @@ import no.unit.nva.identifiers.SortableIdentifier;
 
 @JsonTypeName(ApprovalRevisionTrigger.TYPE)
 public record ApprovalRevisionTrigger(SortableIdentifier identifier, ApprovalActivity activity)
-    implements SnapshotTrigger {
+    implements Trigger {
 
   public static final String TYPE = "ApprovalRevision";
 }

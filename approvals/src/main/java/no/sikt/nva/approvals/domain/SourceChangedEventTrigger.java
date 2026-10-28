@@ -5,7 +5,7 @@ import no.unit.nva.identifiers.SortableIdentifier;
 
 @JsonTypeName(SourceChangedEventTrigger.TYPE)
 public record SourceChangedEventTrigger(SortableIdentifier identifier, String cloudEventIdentifier)
-    implements SnapshotTrigger {
+    implements Trigger {
 
   public static final String TYPE = "SourceChangedEvent";
 }

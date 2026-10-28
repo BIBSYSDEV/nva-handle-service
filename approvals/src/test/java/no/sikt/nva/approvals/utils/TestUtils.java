@@ -30,7 +30,7 @@ import no.sikt.nva.approvals.domain.SourceSnapshot;
 import no.sikt.nva.approvals.persistence.ApprovalDao;
 import no.sikt.nva.approvals.persistence.HandleDao;
 import no.sikt.nva.approvals.persistence.NamedIdentifierQueryObject;
-import no.sikt.nva.approvals.snapshot.SourceChange;
+import no.sikt.nva.approvals.snapshot.CreateSnapshotRequest;
 import no.unit.nva.identifiers.SortableIdentifier;
 import nva.commons.core.paths.UriWrapper;
 
@@ -130,18 +130,18 @@ public class TestUtils {
         HandleDao.toDatabaseIdentifier(randomHandle()));
   }
 
-  public static SourceChange randomSourceChange() {
+  public static CreateSnapshotRequest randomSourceChange() {
     return randomSourceChange(randomUUID(), randomString());
   }
 
-  public static SourceChange randomSourceChange(
+  public static CreateSnapshotRequest randomSourceChange(
       UUID approvalIdentifier, String cloudEventIdentifier) {
     return randomSourceChange(approvalIdentifier, cloudEventIdentifier, Instant.now());
   }
 
-  public static SourceChange randomSourceChange(
+  public static CreateSnapshotRequest randomSourceChange(
       UUID approvalIdentifier, String cloudEventIdentifier, Instant timestamp) {
-    return new SourceChange(
+    return new CreateSnapshotRequest(
         approvalIdentifier,
         randomAgent(),
         randomUri(),
@@ -150,13 +150,13 @@ public class TestUtils {
         timestamp);
   }
 
-  public static SourceChange randomRevisionChange(UUID approvalIdentifier, Instant timestamp) {
+  public static CreateSnapshotRequest randomRevisionChange(UUID approvalIdentifier, Instant timestamp) {
     return randomRevisionChange(approvalIdentifier, timestamp, CREATE_APPROVAL);
   }
 
-  public static SourceChange randomRevisionChange(
+  public static CreateSnapshotRequest randomRevisionChange(
       UUID approvalIdentifier, Instant timestamp, ApprovalActivity activity) {
-    return new SourceChange(
+    return new CreateSnapshotRequest(
         approvalIdentifier,
         randomAgent(),
         randomUri(),
