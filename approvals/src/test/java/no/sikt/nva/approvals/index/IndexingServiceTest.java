@@ -15,18 +15,22 @@ class IndexingServiceTest {
 
   private IndexingService indexingService;
   private ChangeRepository repository;
+  private IndexDocumentGenerator indexDocumentGenerator;
 
   @BeforeEach
   void setUp() {
     repository = mock(ChangeRepository.class);
-    indexingService = new IndexingService(repository);
+    indexDocumentGenerator = mock(IndexDocumentGenerator.class);
+    indexingService = new IndexingService(repository, indexDocumentGenerator);
   }
 
   @Test
-  void shouldThrowUnsupportedOperationExceptionWhenIndexingApproval() {
+  void shouldThrowUnsupportedOperationExceptionWhenIndexingApproval()
+      throws IndexDocumentGeneratorException {
     var approvalIdentifier = randomUUID();
-    when(repository.findLatestSnapshot(approvalIdentifier))
-        .thenReturn(Optional.of(randomSourceSnapshot()));
+    var snapshot = randomSourceSnapshot();
+    when(repository.findLatestSnapshot(approvalIdentifier)).thenReturn(Optional.of(snapshot));
+    when(indexDocumentGenerator.generate(snapshot)).thenReturn(new IndexDocument());
 
     assertThrows(
         UnsupportedOperationException.class, () -> indexingService.index(approvalIdentifier));
@@ -35,5 +39,17 @@ class IndexingServiceTest {
   @Test
   void shouldThrowIndexingServiceExceptionWhenRepositoryReturnsNoSnapshot() {
     assertThrows(IndexingServiceException.class, () -> indexingService.index(randomUUID()));
+  }
+
+  @Test
+  void shouldThrowIndexingServiceExceptionWhenIndexingDocumentGeneratorThrowsException()
+      throws IndexDocumentGeneratorException {
+    var approvalIdentifier = randomUUID();
+    var snapshot = randomSourceSnapshot();
+    when(repository.findLatestSnapshot(approvalIdentifier)).thenReturn(Optional.of(snapshot));
+    when(indexDocumentGenerator.generate(snapshot))
+        .thenThrow(IndexDocumentGeneratorException.class);
+
+    assertThrows(IndexingServiceException.class, () -> indexingService.index(approvalIdentifier));
   }
 }

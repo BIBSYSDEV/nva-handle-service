@@ -40,7 +40,7 @@ class IndexApprovalHandlerTest {
 
   @Test
   void shouldThrowRuntimeExceptionWhenIndexingServiceThrowsException()
-      throws JsonProcessingException, IndexingServiceException {
+      throws IndexingServiceException {
     var approvalIdentifier = randomUUID();
     doThrow(new IndexingServiceException(randomString()))
         .when(indexingService)
