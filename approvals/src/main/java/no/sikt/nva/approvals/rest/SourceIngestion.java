@@ -26,10 +26,10 @@ public record SourceIngestion(
 
   private static String getCloudEventIdentifier(SourceSnapshot snapshot) {
     return Optional.of(snapshot.activity())
-               .filter(SourceChangedEventTrigger.class::isInstance)
-               .map(SourceChangedEventTrigger.class::cast)
-               .map(SourceChangedEventTrigger::cloudEventIdentifier)
-               .orElse(null);
+        .filter(SourceChangedEventTrigger.class::isInstance)
+        .map(SourceChangedEventTrigger.class::cast)
+        .map(SourceChangedEventTrigger::cloudEventIdentifier)
+        .orElse(null);
   }
 
   @JsonTypeInfo(use = Id.NAME, property = "type")
