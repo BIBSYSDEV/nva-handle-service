@@ -28,7 +28,7 @@ public record ApprovalRevisionMessage(
   }
 
   @Override
-  public CreateSnapshotRequest toSourceChange() {
+  public CreateSnapshotRequest toCreateSnapshotRequest() {
     return new CreateSnapshotRequest(
         approvalIdentifier,
         new Agent(customerIdentifier, clientIdentifier),

@@ -8,4 +8,9 @@ public record ApprovalRevisionTrigger(SortableIdentifier identifier, ApprovalAct
     implements Trigger {
 
   public static final String TYPE = "ApprovalRevision";
+
+  @Override
+  public String activityType() {
+    return activity.getValue();
+  }
 }

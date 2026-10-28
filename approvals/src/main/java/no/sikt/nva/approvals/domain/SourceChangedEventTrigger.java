@@ -8,4 +8,10 @@ public record SourceChangedEventTrigger(SortableIdentifier identifier, String cl
     implements Trigger {
 
   public static final String TYPE = "SourceChangedEvent";
+  public static final String SOURCE_CHANGE_ACTIVITY_TYPE = "SourceChange";
+
+  @Override
+  public String activityType() {
+    return SOURCE_CHANGE_ACTIVITY_TYPE;
+  }
 }

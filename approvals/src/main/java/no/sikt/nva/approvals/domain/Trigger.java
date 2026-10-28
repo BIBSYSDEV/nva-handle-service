@@ -11,4 +11,6 @@ import no.unit.nva.identifiers.SortableIdentifier;
 public sealed interface Trigger permits ApprovalRevisionTrigger, SourceChangedEventTrigger {
 
   SortableIdentifier identifier();
+
+  String activityType();
 }

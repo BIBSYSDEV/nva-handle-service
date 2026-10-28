@@ -48,7 +48,7 @@ public record SourceSnapshotDao(
         snapshot.approvalIdentifier(),
         agent.customerIdentifier(),
         agent.clientIdentifier(),
-        triggerOf(snapshot.activity()),
+        snapshot.activity().activityType(),
         snapshot.activity().identifier(),
         cloudEventIdentifierOf(snapshot.activity()),
         snapshot.source(),
@@ -70,13 +70,6 @@ public record SourceSnapshotDao(
         createdDate);
   }
 
-  private static String triggerOf(Trigger trigger) {
-    return switch (trigger) {
-      case ApprovalRevisionTrigger approvalRevision -> approvalRevision.activity().getValue();
-      case SourceChangedEventTrigger ignored -> SourceChangedEventTrigger.TYPE;
-    };
-  }
-
   private static String cloudEventIdentifierOf(Trigger trigger) {
     return switch (trigger) {
       case SourceChangedEventTrigger sourceChanged -> sourceChanged.cloudEventIdentifier();
@@ -85,7 +78,7 @@ public record SourceSnapshotDao(
   }
 
   private boolean isSourceChangedEvent() {
-    return SourceChangedEventTrigger.TYPE.equals(activity);
+    return SourceChangedEventTrigger.SOURCE_CHANGE_ACTIVITY_TYPE.equals(activity);
   }
 
   private Trigger toTrigger() {

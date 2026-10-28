@@ -43,7 +43,7 @@ class CreateSnapshotMessageTest {
   void shouldCreateSourceChangeWithSourceOfApprovalInRevision() {
     var revision = randomRevision(randomApproval(randomHandle()), CREATE_APPROVAL);
 
-    var sourceChange = approvalRevisionMessage(revision).toSourceChange();
+    var sourceChange = approvalRevisionMessage(revision).toCreateSnapshotRequest();
 
     assertThat(sourceChange.source(), equalTo(revision.approval().source()));
   }
@@ -52,7 +52,7 @@ class CreateSnapshotMessageTest {
   void shouldCreateSourceChangeTriggeredByTheRevision() {
     var revision = randomRevision(randomApproval(randomHandle()), CREATE_APPROVAL);
 
-    var sourceChange = approvalRevisionMessage(revision).toSourceChange();
+    var sourceChange = approvalRevisionMessage(revision).toCreateSnapshotRequest();
 
     assertThat(
         sourceChange.trigger(),
@@ -63,7 +63,7 @@ class CreateSnapshotMessageTest {
   void shouldCreateSourceChangeWithAgentThatChangedTheApproval() {
     var revision = randomRevision(randomApproval(randomHandle()), CREATE_APPROVAL);
 
-    var sourceChange = approvalRevisionMessage(revision).toSourceChange();
+    var sourceChange = approvalRevisionMessage(revision).toCreateSnapshotRequest();
 
     assertThat(sourceChange.agent(), equalTo(revision.agent()));
   }
