@@ -2,6 +2,7 @@ package no.sikt.nva.approvals.index;
 
 import static java.util.UUID.randomUUID;
 import static no.sikt.nva.approvals.utils.TestUtils.randomSourceSnapshot;
+import static no.unit.nva.testutils.RandomDataGenerator.randomString;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -30,7 +31,8 @@ class IndexingServiceTest {
     var approvalIdentifier = randomUUID();
     var snapshot = randomSourceSnapshot();
     when(repository.findLatestSnapshot(approvalIdentifier)).thenReturn(Optional.of(snapshot));
-    when(indexDocumentGenerator.generate(snapshot)).thenReturn(new IndexDocument());
+    when(indexDocumentGenerator.generate(snapshot))
+        .thenReturn(new IndexDocument(approvalIdentifier, randomString()));
 
     assertThrows(
         UnsupportedOperationException.class, () -> indexingService.index(approvalIdentifier));
