@@ -5,11 +5,14 @@ import static no.sikt.nva.approvals.persistence.DynamoDbConstants.PK0;
 import static no.sikt.nva.approvals.persistence.DynamoDbConstants.SK0;
 import static no.sikt.nva.approvals.persistence.DynamoDbConstants.STRING;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.annotation.JsonTypeInfo.Id;
 import com.fasterxml.jackson.annotation.JsonTypeName;
+import com.fasterxml.jackson.annotation.JsonValue;
 import java.net.URI;
 import java.time.Instant;
+import java.util.Arrays;
 import java.util.UUID;
 import no.sikt.nva.approvals.domain.Agent;
 import no.sikt.nva.approvals.domain.ApprovalActivity;
@@ -29,7 +32,7 @@ public record SourceSnapshotDao(
     UUID approvalIdentifier,
     UUID customerIdentifier,
     String clientIdentifier,
-    String activity,
+    Activity activity,
     SortableIdentifier eventIdentifier,
     String cloudEventIdentifier,
     URI source,
@@ -48,7 +51,7 @@ public record SourceSnapshotDao(
         snapshot.approvalIdentifier(),
         agent.customerIdentifier(),
         agent.clientIdentifier(),
-        snapshot.activity().activityType(),
+        Activity.fromValue(snapshot.activity().activityType()),
         snapshot.activity().identifier(),
         cloudEventIdentifierOf(snapshot.activity()),
         snapshot.source(),
@@ -77,14 +80,11 @@ public record SourceSnapshotDao(
     };
   }
 
-  private boolean isSourceChangedEvent() {
-    return SourceChangedEventTrigger.SOURCE_CHANGE_ACTIVITY_TYPE.equals(activity);
-  }
-
   private Trigger toTrigger() {
-    return isSourceChangedEvent()
+    return Activity.SOURCE_CHANGE == activity
         ? new SourceChangedEventTrigger(eventIdentifier, cloudEventIdentifier)
-        : new ApprovalRevisionTrigger(eventIdentifier, ApprovalActivity.fromValue(activity));
+        : new ApprovalRevisionTrigger(
+            eventIdentifier, ApprovalActivity.fromValue(activity.getValue()));
   }
 
   public EnhancedDocument toEnhancedDocument() {
@@ -98,5 +98,30 @@ public record SourceSnapshotDao(
   @Override
   public String getDatabaseIdentifier() {
     return SNAPSHOT_KEY.formatted(identifier);
+  }
+
+  public enum Activity {
+    CREATE_APPROVAL("CreateApproval"),
+    UPDATE_APPROVAL("UpdateApproval"),
+    SOURCE_CHANGE("SourceChange");
+
+    private final String value;
+
+    Activity(String value) {
+      this.value = value;
+    }
+
+    @JsonCreator
+    public static Activity fromValue(String value) {
+      return Arrays.stream(values())
+          .filter(activity -> activity.value.equals(value))
+          .findFirst()
+          .orElseThrow();
+    }
+
+    @JsonValue
+    public String getValue() {
+      return value;
+    }
   }
 }
