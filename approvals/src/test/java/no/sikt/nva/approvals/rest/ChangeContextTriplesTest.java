@@ -25,6 +25,7 @@ import java.util.UUID;
 import no.sikt.nva.approvals.domain.Approval;
 import no.sikt.nva.approvals.domain.ApprovalRevision;
 import no.sikt.nva.approvals.domain.ChangeList;
+import no.sikt.nva.approvals.domain.SourceChangedEventTrigger;
 import no.sikt.nva.approvals.domain.SourceSnapshot;
 import no.sikt.nva.approvals.utils.JsonLdTestUtils.Triple;
 import org.junit.jupiter.api.Test;
@@ -171,6 +172,7 @@ class ChangeContextTriplesTest {
   @Test
   void shouldReturnTripleOfEventIdentifierAsSchemaIdentifier() throws IOException, JsonLdError {
     var snapshot = randomSourceSnapshot();
+    var trigger = (SourceChangedEventTrigger) snapshot.activity();
 
     var triples = toTriplesWithApprovalContext(snapshotResponse(snapshot));
 
@@ -180,7 +182,7 @@ class ChangeContextTriplesTest {
             Triple.literal(
                 eventIri(snapshot),
                 termIri(SCHEMA, "identifier"),
-                snapshot.cloudEventIdentifier())));
+                trigger.cloudEventIdentifier())));
   }
 
   @Test
@@ -298,7 +300,8 @@ class ChangeContextTriplesTest {
   }
 
   private static String eventIri(SourceSnapshot snapshot) {
-    return eventId(API_HOST, snapshot.approvalIdentifier(), snapshot.eventIdentifier()).toString();
+    return eventId(API_HOST, snapshot.approvalIdentifier(), snapshot.activity().identifier())
+        .toString();
   }
 
   private static String customerIri(UUID customerIdentifier) {

@@ -10,9 +10,14 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo.Id;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import java.net.URI;
 import java.time.Instant;
+import java.util.Objects;
 import java.util.UUID;
 import no.sikt.nva.approvals.domain.Agent;
+import no.sikt.nva.approvals.domain.ApprovalActivity;
+import no.sikt.nva.approvals.domain.ApprovalRevisionTrigger;
 import no.sikt.nva.approvals.domain.Content;
+import no.sikt.nva.approvals.domain.SnapshotTrigger;
+import no.sikt.nva.approvals.domain.SourceChangedEventTrigger;
 import no.sikt.nva.approvals.domain.SourceSnapshot;
 import no.unit.nva.commons.json.JsonSerializable;
 import no.unit.nva.identifiers.SortableIdentifier;
@@ -25,6 +30,7 @@ public record SourceSnapshotDao(
     UUID approvalIdentifier,
     UUID customerIdentifier,
     String clientIdentifier,
+    String activity,
     SortableIdentifier eventIdentifier,
     String cloudEventIdentifier,
     URI source,
@@ -43,8 +49,9 @@ public record SourceSnapshotDao(
         snapshot.approvalIdentifier(),
         agent.customerIdentifier(),
         agent.clientIdentifier(),
-        snapshot.eventIdentifier(),
-        snapshot.cloudEventIdentifier(),
+        triggerOf(snapshot.activity()),
+        snapshot.activity().identifier(),
+        cloudEventIdentifierOf(snapshot.activity()),
         snapshot.source(),
         snapshot.content().type(),
         snapshot.content().body(),
@@ -58,11 +65,34 @@ public record SourceSnapshotDao(
         identifier,
         approvalIdentifier,
         new Agent(customerIdentifier, clientIdentifier),
-        eventIdentifier,
-        cloudEventIdentifier,
+        toTrigger(),
         source,
         new Content(contentType, body, contentHash),
         createdDate);
+  }
+
+  private static String triggerOf(SnapshotTrigger trigger) {
+    return switch (trigger) {
+      case ApprovalRevisionTrigger approvalRevision -> approvalRevision.activity().getValue();
+      case SourceChangedEventTrigger ignored -> SourceChangedEventTrigger.TYPE;
+    };
+  }
+
+  private static String cloudEventIdentifierOf(SnapshotTrigger trigger) {
+    return switch (trigger) {
+      case SourceChangedEventTrigger sourceChanged -> sourceChanged.cloudEventIdentifier();
+      case ApprovalRevisionTrigger ignored -> null;
+    };
+  }
+
+  private boolean isSourceChangedEvent() {
+    return Objects.isNull(activity) || SourceChangedEventTrigger.TYPE.equals(activity);
+  }
+
+  private SnapshotTrigger toTrigger() {
+    return isSourceChangedEvent()
+        ? new SourceChangedEventTrigger(eventIdentifier, cloudEventIdentifier)
+        : new ApprovalRevisionTrigger(eventIdentifier, ApprovalActivity.fromValue(activity));
   }
 
   public EnhancedDocument toEnhancedDocument() {

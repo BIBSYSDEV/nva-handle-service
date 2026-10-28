@@ -2,6 +2,7 @@ package no.sikt.nva.approvals.utils;
 
 import static java.time.temporal.ChronoUnit.MILLIS;
 import static java.util.UUID.randomUUID;
+import static no.sikt.nva.approvals.domain.ApprovalActivity.CREATE_APPROVAL;
 import static no.unit.nva.testutils.RandomDataGenerator.randomString;
 import static no.unit.nva.testutils.RandomDataGenerator.randomUri;
 
@@ -17,11 +18,13 @@ import no.sikt.nva.approvals.domain.Agent;
 import no.sikt.nva.approvals.domain.Approval;
 import no.sikt.nva.approvals.domain.ApprovalActivity;
 import no.sikt.nva.approvals.domain.ApprovalRevision;
+import no.sikt.nva.approvals.domain.ApprovalRevisionTrigger;
 import no.sikt.nva.approvals.domain.Content;
 import no.sikt.nva.approvals.domain.Handle;
 import no.sikt.nva.approvals.domain.IdentifierPolicy;
 import no.sikt.nva.approvals.domain.NamedIdentifier;
 import no.sikt.nva.approvals.domain.OAuth2ClientCredentials;
+import no.sikt.nva.approvals.domain.SourceChangedEventTrigger;
 import no.sikt.nva.approvals.domain.SourceConfig;
 import no.sikt.nva.approvals.domain.SourceSnapshot;
 import no.sikt.nva.approvals.persistence.ApprovalDao;
@@ -141,9 +144,23 @@ public class TestUtils {
     return new SourceChange(
         approvalIdentifier,
         randomAgent(),
-        SortableIdentifier.create(timestamp, randomUUID()),
-        cloudEventIdentifier,
         randomUri(),
+        new SourceChangedEventTrigger(
+            SortableIdentifier.create(timestamp, randomUUID()), cloudEventIdentifier),
+        timestamp);
+  }
+
+  public static SourceChange randomRevisionChange(UUID approvalIdentifier, Instant timestamp) {
+    return randomRevisionChange(approvalIdentifier, timestamp, CREATE_APPROVAL);
+  }
+
+  public static SourceChange randomRevisionChange(
+      UUID approvalIdentifier, Instant timestamp, ApprovalActivity activity) {
+    return new SourceChange(
+        approvalIdentifier,
+        randomAgent(),
+        randomUri(),
+        new ApprovalRevisionTrigger(SortableIdentifier.create(timestamp, randomUUID()), activity),
         timestamp);
   }
 

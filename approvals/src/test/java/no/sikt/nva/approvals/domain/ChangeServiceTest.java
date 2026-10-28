@@ -159,9 +159,8 @@ class ChangeServiceTest {
             new SourceChange(
                 approvalIdentifier,
                 randomAgent(),
-                SortableIdentifier.next(),
-                randomString(),
                 randomUri(),
+                new SourceChangedEventTrigger(SortableIdentifier.next(), randomString()),
                 timestamp),
             randomContent(),
             timestamp);

@@ -6,6 +6,7 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.annotation.JsonTypeInfo.Id;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import java.net.URI;
+import no.sikt.nva.approvals.domain.SourceChangedEventTrigger;
 import no.sikt.nva.approvals.domain.SourceSnapshot;
 
 @JsonTypeName("SourceIngestion")
@@ -17,8 +18,10 @@ public record SourceIngestion(
     return new SourceIngestion(
         snapshot.source(),
         new SourceChangedEvent(
-            eventId(apiHost, snapshot.approvalIdentifier(), snapshot.eventIdentifier()),
-            snapshot.cloudEventIdentifier()),
+            eventId(apiHost, snapshot.approvalIdentifier(), snapshot.activity().identifier()),
+            snapshot.activity() instanceof SourceChangedEventTrigger trigger
+                ? trigger.cloudEventIdentifier()
+                : null),
         SoftwareAgent.actingFor(snapshot.agent(), apiHost));
   }
 

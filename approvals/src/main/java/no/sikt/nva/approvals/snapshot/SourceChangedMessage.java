@@ -5,6 +5,7 @@ import java.net.URI;
 import java.time.Instant;
 import java.util.UUID;
 import no.sikt.nva.approvals.domain.Agent;
+import no.sikt.nva.approvals.domain.SourceChangedEventTrigger;
 import no.unit.nva.identifiers.SortableIdentifier;
 
 @JsonTypeName(SourceChangedMessage.TYPE)
@@ -26,9 +27,8 @@ public record SourceChangedMessage(
     return new SourceChange(
         approvalIdentifier,
         new Agent(customerIdentifier, clientIdentifier),
-        eventIdentifier,
-        cloudEventIdentifier,
         source,
+        new SourceChangedEventTrigger(eventIdentifier, cloudEventIdentifier),
         timestamp);
   }
 }

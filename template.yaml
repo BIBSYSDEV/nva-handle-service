@@ -271,7 +271,7 @@ Resources:
             - Pattern: '{"eventName": ["INSERT"], "dynamodb": {"NewImage": {"type": {"S": ["ApprovalRevision"]}}}}'
       Target: !GetAtt CreateSnapshotQueue.Arn
       TargetParameters:
-        InputTemplate: '{"type": "ApprovalRevision", "revisionIdentifier": "<$.dynamodb.NewImage.identifier.S>", "approvalIdentifier": "<$.dynamodb.NewImage.approvalIdentifier.S>", "customerIdentifier": "<$.dynamodb.NewImage.customerIdentifier.S>", "clientIdentifier": "<$.dynamodb.NewImage.clientIdentifier.S>", "approval": <$.dynamodb.NewImage.body.S>, "timestamp": "<$.dynamodb.NewImage.createdDate.S>"}'
+        InputTemplate: '{"type": "ApprovalRevision", "revisionIdentifier": "<$.dynamodb.NewImage.identifier.S>", "approvalIdentifier": "<$.dynamodb.NewImage.approvalIdentifier.S>", "customerIdentifier": "<$.dynamodb.NewImage.customerIdentifier.S>", "clientIdentifier": "<$.dynamodb.NewImage.clientIdentifier.S>", "activity": "<$.dynamodb.NewImage.activity.S>", "approval": <$.dynamodb.NewImage.body.S>, "timestamp": "<$.dynamodb.NewImage.createdDate.S>"}'
         SqsQueueParameters:
           MessageGroupId: $.dynamodb.NewImage.approvalIdentifier.S
           MessageDeduplicationId: $.eventID

@@ -34,6 +34,7 @@ import java.util.stream.IntStream;
 import java.util.stream.Stream;
 import no.sikt.nva.approvals.domain.ApprovalRevision;
 import no.sikt.nva.approvals.domain.ChangeServiceImpl;
+import no.sikt.nva.approvals.domain.SourceChangedEventTrigger;
 import no.sikt.nva.approvals.domain.SourceSnapshot;
 import no.sikt.nva.approvals.persistence.DynamoDbApprovalRepository;
 import no.sikt.nva.approvals.persistence.DynamoDbChangeRepository;
@@ -245,9 +246,8 @@ class FetchApprovalChangesHandlerTest {
             new SourceChange(
                 approvalIdentifier,
                 randomAgent(),
-                SortableIdentifier.next(),
-                randomString(),
                 randomUri(),
+                new SourceChangedEventTrigger(SortableIdentifier.next(), randomString()),
                 timestamp),
             randomContent(),
             timestamp);

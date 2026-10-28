@@ -4,12 +4,7 @@ import java.net.URI;
 import java.time.Instant;
 import java.util.UUID;
 import no.sikt.nva.approvals.domain.Agent;
-import no.unit.nva.identifiers.SortableIdentifier;
+import no.sikt.nva.approvals.domain.SnapshotTrigger;
 
 public record SourceChange(
-    UUID approvalIdentifier,
-    Agent agent,
-    SortableIdentifier eventIdentifier,
-    String cloudEventIdentifier,
-    URI source,
-    Instant timestamp) {}
+    UUID approvalIdentifier, Agent agent, URI source, SnapshotTrigger trigger, Instant timestamp) {}

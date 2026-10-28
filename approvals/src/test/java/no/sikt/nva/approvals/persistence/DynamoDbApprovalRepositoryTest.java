@@ -20,6 +20,7 @@ import static no.sikt.nva.approvals.utils.TestUtils.randomIdentifier;
 import static no.sikt.nva.approvals.utils.TestUtils.randomIdentifierPolicy;
 import static no.sikt.nva.approvals.utils.TestUtils.randomIdentifiers;
 import static no.sikt.nva.approvals.utils.TestUtils.randomRevision;
+import static no.sikt.nva.approvals.utils.TestUtils.randomRevisionChange;
 import static no.sikt.nva.approvals.utils.TestUtils.randomSourceChange;
 import static no.sikt.nva.approvals.utils.TestUtils.randomSourceConfig;
 import static no.sikt.nva.approvals.utils.TestUtils.randomSourceSnapshot;
@@ -1091,6 +1092,17 @@ class DynamoDbApprovalRepositoryTest {
     var persisted = storedSnapshot(snapshot);
 
     assertThat(persisted, equalTo(SourceSnapshotDao.fromSourceSnapshot(snapshot)));
+  }
+
+  @Test
+  void shouldPersistTriggerOfSnapshotCreatedFromApprovalRevision() {
+    var revisionChange = randomRevisionChange(randomUUID(), randomTimestamp(), UPDATE_APPROVAL);
+    var snapshot = SourceSnapshot.create(revisionChange, randomContent(), randomTimestamp());
+    approvalRepository.save(snapshot);
+
+    var persisted = storedSnapshot(snapshot).toChange();
+
+    assertThat(persisted.activity(), equalTo(revisionChange.trigger()));
   }
 
   @Test
