@@ -150,7 +150,8 @@ public class TestUtils {
         timestamp);
   }
 
-  public static CreateSnapshotRequest randomRevisionChange(UUID approvalIdentifier, Instant timestamp) {
+  public static CreateSnapshotRequest randomRevisionChange(
+      UUID approvalIdentifier, Instant timestamp) {
     return randomRevisionChange(approvalIdentifier, timestamp, CREATE_APPROVAL);
   }
 

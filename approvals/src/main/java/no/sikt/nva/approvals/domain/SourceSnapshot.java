@@ -40,7 +40,8 @@ public record SourceSnapshot(
   private static SortableIdentifier createIdentifier(CreateSnapshotRequest createSnapshotRequest) {
     var seed =
         IDENTIFIER_SEED.formatted(
-            createSnapshotRequest.approvalIdentifier(), createSnapshotRequest.trigger().identifier());
+            createSnapshotRequest.approvalIdentifier(),
+            createSnapshotRequest.trigger().identifier());
     var uuid = UUID.nameUUIDFromBytes(seed.getBytes(UTF_8));
     return SortableIdentifier.create(createSnapshotRequest.timestamp(), uuid);
   }

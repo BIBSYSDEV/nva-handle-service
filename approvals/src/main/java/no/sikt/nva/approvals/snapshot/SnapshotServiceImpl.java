@@ -37,29 +37,35 @@ public class SnapshotServiceImpl implements SnapshotService {
   }
 
   @Override
-  public void createSnapshot(CreateSnapshotRequest createSnapshotRequest) throws SourceClientException {
+  public void createSnapshot(CreateSnapshotRequest createSnapshotRequest)
+      throws SourceClientException {
     var content = fetchContent(createSnapshotRequest);
     if (hasChangedSinceLatestSnapshot(createSnapshotRequest, content)) {
       approvalRepository.save(SourceSnapshot.create(createSnapshotRequest, content, Instant.now()));
     }
   }
 
-  private boolean hasChangedSinceLatestSnapshot(CreateSnapshotRequest createSnapshotRequest, Content content) {
+  private boolean hasChangedSinceLatestSnapshot(
+      CreateSnapshotRequest createSnapshotRequest, Content content) {
     return changeRepository
         .findLatestSnapshot(createSnapshotRequest.approvalIdentifier())
         .map(latestSnapshot -> !latestSnapshot.content().hash().equals(content.hash()))
         .orElse(true);
   }
 
-  private Content fetchContent(CreateSnapshotRequest createSnapshotRequest) throws SourceClientException {
+  private Content fetchContent(CreateSnapshotRequest createSnapshotRequest)
+      throws SourceClientException {
     return sourceClient
-        .fetchSource(createSnapshotRequest.source(), createSnapshotRequest.agent().customerIdentifier())
+        .fetchSource(
+            createSnapshotRequest.source(), createSnapshotRequest.agent().customerIdentifier())
         .map(SnapshotServiceImpl::toContent)
         .orElseThrow(
             () ->
                 new SourceClientException(
                     "Source %s of approval %s was not found"
-                        .formatted(createSnapshotRequest.source(), createSnapshotRequest.approvalIdentifier())));
+                        .formatted(
+                            createSnapshotRequest.source(),
+                            createSnapshotRequest.approvalIdentifier())));
   }
 
   private static Content toContent(SourceResponse sourceResponse) {
