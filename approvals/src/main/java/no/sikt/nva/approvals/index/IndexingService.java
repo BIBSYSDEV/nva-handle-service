@@ -5,9 +5,14 @@ import no.sikt.nva.approvals.domain.Approval;
 import no.sikt.nva.approvals.domain.SourceSnapshot;
 import no.sikt.nva.approvals.persistence.ApprovalRepository;
 import no.sikt.nva.approvals.persistence.ChangeRepository;
+import no.sikt.nva.approvals.persistence.DynamoDbApprovalRepository;
+import no.sikt.nva.approvals.persistence.DynamoDbChangeRepository;
+import nva.commons.core.Environment;
+import nva.commons.core.JacocoGenerated;
 
 public class IndexingService {
 
+  private static final String API_HOST = "API_HOST";
   private static final String MISSING_SNAPSHOT_MESSAGE = "Approval is missing snapshot";
   private static final String APPROVAL_NOT_FOUND_MESSAGE = "Approval not found";
   private final ChangeRepository changeRepository;
@@ -21,6 +26,14 @@ public class IndexingService {
     this.changeRepository = changeRepository;
     this.approvalRepository = approvalRepository;
     this.generator = generator;
+  }
+
+  @JacocoGenerated
+  public static IndexingService defaultInstance(Environment environment) {
+    return new IndexingService(
+        DynamoDbChangeRepository.defaultInstance(environment),
+        DynamoDbApprovalRepository.defaultInstance(environment),
+        new IndexDocumentGenerator(environment.readEnv(API_HOST)));
   }
 
   public void index(UUID approvalIdentifier) throws IndexingServiceException {

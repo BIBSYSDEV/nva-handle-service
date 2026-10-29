@@ -144,8 +144,6 @@ Resources:
   CreateSnapshotQueue:
     Type: AWS::SQS::Queue
     Properties:
-      FifoQueue: true
-      ContentBasedDeduplication: false
       VisibilityTimeout: 1800
       RedrivePolicy:
         deadLetterTargetArn: !GetAtt CreateSnapshotDlq.Arn
@@ -154,13 +152,47 @@ Resources:
   CreateSnapshotDlq:
     Type: AWS::SQS::Queue
     Properties:
-      FifoQueue: true
       MessageRetentionPeriod: 1209600
 
-  SourceChangedPipeDlq:
+  IndexApprovalQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      VisibilityTimeout: 1800
+      RedrivePolicy:
+        deadLetterTargetArn: !GetAtt IndexApprovalDlq.Arn
+        maxReceiveCount: 3
+
+  IndexApprovalDlq:
     Type: AWS::SQS::Queue
     Properties:
       MessageRetentionPeriod: 1209600
+
+  ApprovalsStreamDlq:
+    Type: AWS::SQS::Queue
+    Properties:
+      MessageRetentionPeriod: 1209600
+
+  ApprovalsEventBusQueuePolicy:
+    Type: AWS::SQS::QueuePolicy
+    Properties:
+      Queues:
+        - !Ref CreateSnapshotQueue
+        - !Ref IndexApprovalQueue
+        - !Ref ApprovalsStreamDlq
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: events.amazonaws.com
+            Action: sqs:SendMessage
+            Resource:
+              - !GetAtt CreateSnapshotQueue.Arn
+              - !GetAtt IndexApprovalQueue.Arn
+              - !GetAtt ApprovalsStreamDlq.Arn
+            Condition:
+              ArnLike:
+                aws:SourceArn: !Sub "arn:aws:events:${AWS::Region}:${AWS::AccountId}:rule/${ApprovalsEventBus.Name}/*"
 
   CreateSnapshotDlqAlarm:
     Type: AWS::CloudWatch::Alarm
@@ -178,15 +210,15 @@ Resources:
       ComparisonOperator: GreaterThanThreshold
       TreatMissingData: notBreaching
 
-  SourceChangedPipeDlqAlarm:
+  IndexApprovalDlqAlarm:
     Type: AWS::CloudWatch::Alarm
     Properties:
-      AlarmDescription: Stream records could not be forwarded to the create snapshot queue
+      AlarmDescription: Index approval messages failed processing
       Namespace: AWS/SQS
       MetricName: ApproximateNumberOfMessagesVisible
       Dimensions:
         - Name: QueueName
-          Value: !GetAtt SourceChangedPipeDlq.QueueName
+          Value: !GetAtt IndexApprovalDlq.QueueName
       Statistic: Maximum
       Period: 300
       EvaluationPeriods: 1
@@ -194,7 +226,23 @@ Resources:
       ComparisonOperator: GreaterThanThreshold
       TreatMissingData: notBreaching
 
-  SourceChangedPipeRole:
+  ApprovalsStreamDlqAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmDescription: Stream records could not be delivered to the event bus or its targets
+      Namespace: AWS/SQS
+      MetricName: ApproximateNumberOfMessagesVisible
+      Dimensions:
+        - Name: QueueName
+          Value: !GetAtt ApprovalsStreamDlq.QueueName
+      Statistic: Maximum
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 0
+      ComparisonOperator: GreaterThanThreshold
+      TreatMissingData: notBreaching
+
+  ApprovalsStreamPipeRole:
     Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
@@ -208,7 +256,7 @@ Resources:
               StringEquals:
                 aws:SourceAccount: !Ref AWS::AccountId
       Policies:
-        - PolicyName: SourceChangedPipePolicy
+        - PolicyName: ApprovalsStreamPipePolicy
           PolicyDocument:
             Version: "2012-10-17"
             Statement:
@@ -221,16 +269,27 @@ Resources:
                 Resource: !GetAtt ApprovalsTable.StreamArn
               - Effect: Allow
                 Action:
+                  - events:PutEvents
+                Resource: !GetAtt ApprovalsEventBus.Arn
+              - Effect: Allow
+                Action:
                   - sqs:SendMessage
-                Resource:
-                  - !GetAtt CreateSnapshotQueue.Arn
-                  - !GetAtt SourceChangedPipeDlq.Arn
+                Resource: !GetAtt ApprovalsStreamDlq.Arn
 
-  SourceChangedPipe:
-    Type: AWS::Pipes::Pipe
-    DependsOn: NvaReceiveEventFunction
+  ApprovalsEventBus:
+    Type: AWS::Events::EventBus
     Properties:
-      RoleArn: !GetAtt SourceChangedPipeRole.Arn
+      Name: !Sub nva-approvals-${AWS::StackName}
+
+  ApprovalsStreamPipe:
+    Type: AWS::Pipes::Pipe
+    DependsOn:
+      - ApprovalsEventBusQueuePolicy
+      - CreateSnapshotFromSourceChangedEventRule
+      - CreateSnapshotFromApprovalRevisionRule
+      - IndexApprovalRule
+    Properties:
+      RoleArn: !GetAtt ApprovalsStreamPipeRole.Arn
       Source: !GetAtt ApprovalsTable.StreamArn
       SourceParameters:
         DynamoDBStreamParameters:
@@ -240,41 +299,94 @@ Resources:
           MaximumRetryAttempts: 10
           OnPartialBatchItemFailure: AUTOMATIC_BISECT
           DeadLetterConfig:
-            Arn: !GetAtt SourceChangedPipeDlq.Arn
+            Arn: !GetAtt ApprovalsStreamDlq.Arn
         FilterCriteria:
           Filters:
-            - Pattern: '{"eventName": ["INSERT"], "dynamodb": {"NewImage": {"PK0": {"S": [{"prefix": "Event:"}]}}}}'
-      Target: !GetAtt CreateSnapshotQueue.Arn
+            - Pattern: '{"eventName": ["INSERT"], "dynamodb": {"NewImage": {"type": {"S": ["SourceChangedEvent", "ApprovalRevision", "SourceSnapshot"]}}}}'
+      Target: !GetAtt ApprovalsEventBus.Arn
       TargetParameters:
-        InputTemplate: '{"type": "SourceChangedEvent", "eventIdentifier": "<$.dynamodb.NewImage.identifier.S>", "cloudEventIdentifier": "<$.dynamodb.NewImage.cloudEventIdentifier.S>", "approvalIdentifier": "<$.dynamodb.NewImage.approvalIdentifier.S>", "customerIdentifier": "<$.dynamodb.NewImage.customerIdentifier.S>", "clientIdentifier": "<$.dynamodb.NewImage.clientIdentifier.S>", "handle": "<$.dynamodb.NewImage.handle.S>", "source": "<$.dynamodb.NewImage.source.S>", "timestamp": "<$.dynamodb.NewImage.timestamp.S>"}'
-        SqsQueueParameters:
-          MessageGroupId: $.dynamodb.NewImage.handle.S
-          MessageDeduplicationId: $.eventID
+        EventBridgeEventBusParameters:
+          DetailType: ApprovalsStreamRecord
+          Source: nva.approvals
 
-  ApprovalRevisionPipe:
-    Type: AWS::Pipes::Pipe
-    DependsOn: NvaCreateSnapshotFunction
+  CreateSnapshotFromSourceChangedEventRule:
+    Type: AWS::Events::Rule
     Properties:
-      RoleArn: !GetAtt SourceChangedPipeRole.Arn
-      Source: !GetAtt ApprovalsTable.StreamArn
-      SourceParameters:
-        DynamoDBStreamParameters:
-          StartingPosition: LATEST
-          ParallelizationFactor: 1
-          MaximumRecordAgeInSeconds: 86400
-          MaximumRetryAttempts: 10
-          OnPartialBatchItemFailure: AUTOMATIC_BISECT
+      Description: Creates a snapshot when a source changed event is stored
+      EventBusName: !Ref ApprovalsEventBus
+      EventPattern:
+        detail:
+          dynamodb:
+            NewImage:
+              type:
+                S:
+                  - SourceChangedEvent
+      Targets:
+        - Id: CreateSnapshotQueue
+          Arn: !GetAtt CreateSnapshotQueue.Arn
           DeadLetterConfig:
-            Arn: !GetAtt SourceChangedPipeDlq.Arn
-        FilterCriteria:
-          Filters:
-            - Pattern: '{"eventName": ["INSERT"], "dynamodb": {"NewImage": {"type": {"S": ["ApprovalRevision"]}}}}'
-      Target: !GetAtt CreateSnapshotQueue.Arn
-      TargetParameters:
-        InputTemplate: '{"type": "ApprovalRevision", "revisionIdentifier": "<$.dynamodb.NewImage.identifier.S>", "approvalIdentifier": "<$.dynamodb.NewImage.approvalIdentifier.S>", "customerIdentifier": "<$.dynamodb.NewImage.customerIdentifier.S>", "clientIdentifier": "<$.dynamodb.NewImage.clientIdentifier.S>", "approval": <$.dynamodb.NewImage.body.S>, "timestamp": "<$.dynamodb.NewImage.createdDate.S>"}'
-        SqsQueueParameters:
-          MessageGroupId: $.dynamodb.NewImage.approvalIdentifier.S
-          MessageDeduplicationId: $.eventID
+            Arn: !GetAtt ApprovalsStreamDlq.Arn
+          InputTransformer:
+            InputPathsMap:
+              eventIdentifier: $.detail.dynamodb.NewImage.identifier.S
+              cloudEventIdentifier: $.detail.dynamodb.NewImage.cloudEventIdentifier.S
+              approvalIdentifier: $.detail.dynamodb.NewImage.approvalIdentifier.S
+              customerIdentifier: $.detail.dynamodb.NewImage.customerIdentifier.S
+              clientIdentifier: $.detail.dynamodb.NewImage.clientIdentifier.S
+              handle: $.detail.dynamodb.NewImage.handle.S
+              source: $.detail.dynamodb.NewImage.source.S
+              timestamp: $.detail.dynamodb.NewImage.timestamp.S
+            InputTemplate: '{"type": "SourceChangedEvent", "eventIdentifier": "<eventIdentifier>", "cloudEventIdentifier": "<cloudEventIdentifier>", "approvalIdentifier": "<approvalIdentifier>", "customerIdentifier": "<customerIdentifier>", "clientIdentifier": "<clientIdentifier>", "handle": "<handle>", "source": "<source>", "timestamp": "<timestamp>"}'
+
+  CreateSnapshotFromApprovalRevisionRule:
+    Type: AWS::Events::Rule
+    Properties:
+      Description: Creates a snapshot when an approval revision is stored
+      EventBusName: !Ref ApprovalsEventBus
+      EventPattern:
+        detail:
+          dynamodb:
+            NewImage:
+              type:
+                S:
+                  - ApprovalRevision
+      Targets:
+        - Id: CreateSnapshotQueue
+          Arn: !GetAtt CreateSnapshotQueue.Arn
+          DeadLetterConfig:
+            Arn: !GetAtt ApprovalsStreamDlq.Arn
+          InputTransformer:
+            InputPathsMap:
+              revisionIdentifier: $.detail.dynamodb.NewImage.identifier.S
+              approvalIdentifier: $.detail.dynamodb.NewImage.approvalIdentifier.S
+              customerIdentifier: $.detail.dynamodb.NewImage.customerIdentifier.S
+              clientIdentifier: $.detail.dynamodb.NewImage.clientIdentifier.S
+              approval: $.detail.dynamodb.NewImage.body.S
+              timestamp: $.detail.dynamodb.NewImage.createdDate.S
+            InputTemplate: '{"type": "ApprovalRevision", "revisionIdentifier": "<revisionIdentifier>", "approvalIdentifier": "<approvalIdentifier>", "customerIdentifier": "<customerIdentifier>", "clientIdentifier": "<clientIdentifier>", "approval": <approval>, "timestamp": "<timestamp>"}'
+
+  IndexApprovalRule:
+    Type: AWS::Events::Rule
+    Properties:
+      Description: Indexes an approval when a source snapshot is stored
+      EventBusName: !Ref ApprovalsEventBus
+      State: DISABLED
+      EventPattern:
+        detail:
+          dynamodb:
+            NewImage:
+              type:
+                S:
+                  - SourceSnapshot
+      Targets:
+        - Id: IndexApprovalQueue
+          Arn: !GetAtt IndexApprovalQueue.Arn
+          DeadLetterConfig:
+            Arn: !GetAtt ApprovalsStreamDlq.Arn
+          InputTransformer:
+            InputPathsMap:
+              approvalIdentifier: $.detail.dynamodb.NewImage.approvalIdentifier.S
+            InputTemplate: '{"approvalIdentifier": "<approvalIdentifier>"}'
 
   ReadHandleDatabaseSecretsManagedPolicy:
     Type: AWS::IAM::ManagedPolicy
@@ -679,6 +791,30 @@ Resources:
           Type: SQS
           Properties:
             Queue: !GetAtt CreateSnapshotQueue.Arn
+            BatchSize: 1
+
+  NvaIndexApprovalFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub "/aws/lambda/${NvaIndexApprovalFunction}"
+      RetentionInDays: 90
+
+  NvaIndexApprovalFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: approvals
+      Handler: no.sikt.nva.approvals.index.IndexApprovalHandler::handleRequest
+      Timeout: 300
+      Policies:
+        - !Ref DynamoDbTableAccessPolicy
+      Environment:
+        Variables:
+          TABLE: !Ref ApprovalsTable
+      Events:
+        SnapshotCreated:
+          Type: SQS
+          Properties:
+            Queue: !GetAtt IndexApprovalQueue.Arn
             BatchSize: 1
 
   NvaCreateHandleBasePathMapping:
