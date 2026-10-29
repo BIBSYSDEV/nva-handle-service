@@ -1,15 +1,13 @@
 package no.sikt.nva.approvals.snapshot;
 
-import static nva.commons.core.attempt.Try.attempt;
-
+import com.fasterxml.jackson.annotation.JsonTypeName;
 import java.net.URI;
 import java.time.Instant;
 import java.util.UUID;
 import no.sikt.nva.approvals.domain.Agent;
-import no.unit.nva.commons.json.JsonSerializable;
-import no.unit.nva.commons.json.JsonUtils;
 import no.unit.nva.identifiers.SortableIdentifier;
 
+@JsonTypeName("SourceChangedEvent")
 public record SourceChangedMessage(
     SortableIdentifier eventIdentifier,
     String cloudEventIdentifier,
@@ -19,17 +17,9 @@ public record SourceChangedMessage(
     URI handle,
     URI source,
     Instant timestamp)
-    implements JsonSerializable {
+    implements CreateSnapshotMessage {
 
-  public static SourceChangedMessage fromString(String value) {
-    return attempt(() -> JsonUtils.dtoObjectMapper.readValue(value, SourceChangedMessage.class))
-        .orElseThrow(
-            failure ->
-                new IllegalArgumentException(
-                    "Could not parse source changed message: %s".formatted(value),
-                    failure.getException()));
-  }
-
+  @Override
   public SourceChange toSourceChange() {
     return new SourceChange(
         approvalIdentifier,

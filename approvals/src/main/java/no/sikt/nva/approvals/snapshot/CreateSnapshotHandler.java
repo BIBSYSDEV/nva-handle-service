@@ -23,9 +23,9 @@ public class CreateSnapshotHandler implements RequestHandler<SQSEvent, Void> {
   @Override
   public Void handleRequest(SQSEvent event, Context context) {
     var sqsMessage = event.getRecords().getFirst();
-    var sourceChangedMessage = SourceChangedMessage.fromString(sqsMessage.getBody());
+    var snapshotMessage = CreateSnapshotMessage.fromString(sqsMessage.getBody());
     try {
-      snapshotService.createSnapshot(sourceChangedMessage.toSourceChange());
+      snapshotService.createSnapshot(snapshotMessage.toSourceChange());
     } catch (SourceClientException exception) {
       throw new RuntimeException(exception);
     }
