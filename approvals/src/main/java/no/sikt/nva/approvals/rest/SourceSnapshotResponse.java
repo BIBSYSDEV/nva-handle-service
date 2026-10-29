@@ -11,6 +11,8 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo.Id;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import java.net.URI;
 import java.time.Instant;
+import no.sikt.nva.approvals.domain.ApprovalRevisionTrigger;
+import no.sikt.nva.approvals.domain.SourceChangedEventTrigger;
 import no.sikt.nva.approvals.domain.SourceSnapshot;
 
 @JsonInclude(NON_NULL)
@@ -22,7 +24,7 @@ public record SourceSnapshotResponse(
     Instant generatedAtTime,
     String mediaType,
     Checksum checksum,
-    SourceIngestion wasGeneratedBy)
+    Activity wasGeneratedBy)
     implements ChangeResponse {
 
   private static final String CHECKSUM_ALGORITHM = "sha256";
@@ -35,13 +37,22 @@ public record SourceSnapshotResponse(
         snapshot.createdDate(),
         snapshot.content().type(),
         new Checksum(CHECKSUM_ALGORITHM, snapshot.content().hash()),
-        SourceIngestion.create(snapshot, apiHost));
+        activity(snapshot, apiHost));
   }
 
   @Override
   public ChangeResponse withContext(URI context) {
     return new SourceSnapshotResponse(
         context, id, specializationOf, generatedAtTime, mediaType, checksum, wasGeneratedBy);
+  }
+
+  private static Activity activity(SourceSnapshot snapshot, String apiHost) {
+    var agent = SoftwareAgent.actingFor(snapshot.agent(), apiHost);
+    return switch (snapshot.activity()) {
+      case SourceChangedEventTrigger _ -> SourceIngestion.create(snapshot, apiHost);
+      case ApprovalRevisionTrigger trigger ->
+          Activity.fromApprovalActivity(trigger.activity(), agent);
+    };
   }
 
   @JsonTypeInfo(use = Id.NAME, property = "type")

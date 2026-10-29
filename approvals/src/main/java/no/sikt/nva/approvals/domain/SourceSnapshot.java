@@ -6,15 +6,14 @@ import static java.time.temporal.ChronoUnit.MICROS;
 import java.net.URI;
 import java.time.Instant;
 import java.util.UUID;
-import no.sikt.nva.approvals.snapshot.SourceChange;
+import no.sikt.nva.approvals.snapshot.CreateSnapshotRequest;
 import no.unit.nva.identifiers.SortableIdentifier;
 
 public record SourceSnapshot(
     SortableIdentifier identifier,
     UUID approvalIdentifier,
     Agent agent,
-    SortableIdentifier eventIdentifier,
-    String cloudEventIdentifier,
+    Trigger activity,
     URI source,
     Content content,
     Instant createdDate)
@@ -23,14 +22,13 @@ public record SourceSnapshot(
   private static final String IDENTIFIER_SEED = "%s:%s";
 
   public static SourceSnapshot create(
-      SourceChange sourceChange, Content content, Instant createdDate) {
+      CreateSnapshotRequest createSnapshotRequest, Content content, Instant createdDate) {
     return new SourceSnapshot(
-        createIdentifier(sourceChange),
-        sourceChange.approvalIdentifier(),
-        sourceChange.agent(),
-        sourceChange.eventIdentifier(),
-        sourceChange.cloudEventIdentifier(),
-        sourceChange.source(),
+        createIdentifier(createSnapshotRequest),
+        createSnapshotRequest.approvalIdentifier(),
+        createSnapshotRequest.agent(),
+        createSnapshotRequest.trigger(),
+        createSnapshotRequest.source(),
         content,
         createdDate.truncatedTo(MICROS));
   }
@@ -39,11 +37,12 @@ public record SourceSnapshot(
    * The identifier is derived from the approval and event, so a redelivered message resolves to the
    * same snapshot and the conditional write stores it only once.
    */
-  private static SortableIdentifier createIdentifier(SourceChange sourceChange) {
+  private static SortableIdentifier createIdentifier(CreateSnapshotRequest createSnapshotRequest) {
     var seed =
         IDENTIFIER_SEED.formatted(
-            sourceChange.approvalIdentifier(), sourceChange.cloudEventIdentifier());
+            createSnapshotRequest.approvalIdentifier(),
+            createSnapshotRequest.trigger().identifier());
     var uuid = UUID.nameUUIDFromBytes(seed.getBytes(UTF_8));
-    return SortableIdentifier.create(sourceChange.timestamp(), uuid);
+    return SortableIdentifier.create(createSnapshotRequest.timestamp(), uuid);
   }
 }

@@ -1,14 +1,24 @@
 package no.sikt.nva.approvals.rest;
 
+import static java.util.UUID.randomUUID;
+import static no.sikt.nva.approvals.domain.ApprovalActivity.CREATE_APPROVAL;
+import static no.sikt.nva.approvals.domain.ApprovalActivity.UPDATE_APPROVAL;
+import static no.sikt.nva.approvals.utils.TestUtils.randomContent;
+import static no.sikt.nva.approvals.utils.TestUtils.randomRevisionChange;
 import static no.sikt.nva.approvals.utils.TestUtils.randomSourceSnapshot;
+import static no.sikt.nva.approvals.utils.TestUtils.randomTimestamp;
 import static no.sikt.nva.approvals.utils.UriConstants.changeId;
 import static no.sikt.nva.approvals.utils.UriConstants.clientId;
 import static no.sikt.nva.approvals.utils.UriConstants.customerId;
 import static no.sikt.nva.approvals.utils.UriConstants.eventId;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.instanceOf;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import no.sikt.nva.approvals.domain.ApprovalActivity;
+import no.sikt.nva.approvals.domain.SourceChangedEventTrigger;
+import no.sikt.nva.approvals.domain.SourceSnapshot;
 import no.unit.nva.commons.json.JsonUtils;
 import org.junit.jupiter.api.Test;
 
@@ -16,6 +26,13 @@ class SourceSnapshotResponseTest {
 
   private static final String API_HOST = "api.unittest.nva.unit.no";
   private static final String SHA256 = "sha256";
+
+  private static SourceSnapshot snapshotTriggeredBy(ApprovalActivity activity) {
+    return SourceSnapshot.create(
+        randomRevisionChange(randomUUID(), randomTimestamp(), activity),
+        randomContent(),
+        randomTimestamp());
+  }
 
   @Test
   void shouldIdentifySnapshotUnderChangesOfApproval() {
@@ -70,7 +87,8 @@ class SourceSnapshotResponseTest {
 
     var response = SourceSnapshotResponse.create(snapshot, API_HOST);
 
-    assertThat(response.wasGeneratedBy().used(), equalTo(snapshot.source()));
+    var ingestion = (SourceIngestion) response.wasGeneratedBy();
+    assertThat(ingestion.used(), equalTo(snapshot.source()));
   }
 
   @Test
@@ -79,11 +97,12 @@ class SourceSnapshotResponseTest {
 
     var response = SourceSnapshotResponse.create(snapshot, API_HOST);
 
-    var event = response.wasGeneratedBy().wasStartedBy();
+    var trigger = (SourceChangedEventTrigger) snapshot.activity();
+    var event = ((SourceIngestion) response.wasGeneratedBy()).wasStartedBy();
     assertThat(
         event.id(),
-        equalTo(eventId(API_HOST, snapshot.approvalIdentifier(), snapshot.eventIdentifier())));
-    assertThat(event.cloudEventIdentifier(), equalTo(snapshot.cloudEventIdentifier()));
+        equalTo(eventId(API_HOST, snapshot.approvalIdentifier(), trigger.identifier())));
+    assertThat(event.cloudEventIdentifier(), equalTo(trigger.cloudEventIdentifier()));
   }
 
   @Test
@@ -104,6 +123,35 @@ class SourceSnapshotResponseTest {
 
     var agent = response.wasGeneratedBy().wasAssociatedWith();
     assertThat(agent.id(), equalTo(clientId(API_HOST, snapshot.agent().clientIdentifier())));
+  }
+
+  @Test
+  void shouldBeGeneratedByApprovalCreationWhenApprovalWasCreated() {
+    var snapshot = snapshotTriggeredBy(CREATE_APPROVAL);
+
+    var response = SourceSnapshotResponse.create(snapshot, API_HOST);
+
+    assertThat(response.wasGeneratedBy(), instanceOf(ApprovalCreation.class));
+  }
+
+  @Test
+  void shouldBeGeneratedByApprovalUpdateWhenApprovalWasUpdated() {
+    var snapshot = snapshotTriggeredBy(UPDATE_APPROVAL);
+
+    var response = SourceSnapshotResponse.create(snapshot, API_HOST);
+
+    assertThat(response.wasGeneratedBy(), instanceOf(ApprovalUpdate.class));
+  }
+
+  @Test
+  void shouldBeGeneratedByClientThatChangedTheApproval() {
+    var snapshot = snapshotTriggeredBy(CREATE_APPROVAL);
+
+    var response = SourceSnapshotResponse.create(snapshot, API_HOST);
+
+    assertThat(
+        response.wasGeneratedBy().wasAssociatedWith().id(),
+        equalTo(clientId(API_HOST, snapshot.agent().clientIdentifier())));
   }
 
   @Test
