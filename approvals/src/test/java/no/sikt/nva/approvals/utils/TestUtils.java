@@ -2,6 +2,7 @@ package no.sikt.nva.approvals.utils;
 
 import static java.time.temporal.ChronoUnit.MILLIS;
 import static java.util.UUID.randomUUID;
+import static no.sikt.nva.approvals.domain.ApprovalActivity.CREATE_APPROVAL;
 import static no.unit.nva.testutils.RandomDataGenerator.randomString;
 import static no.unit.nva.testutils.RandomDataGenerator.randomUri;
 
@@ -17,17 +18,19 @@ import no.sikt.nva.approvals.domain.Agent;
 import no.sikt.nva.approvals.domain.Approval;
 import no.sikt.nva.approvals.domain.ApprovalActivity;
 import no.sikt.nva.approvals.domain.ApprovalRevision;
+import no.sikt.nva.approvals.domain.ApprovalRevisionTrigger;
 import no.sikt.nva.approvals.domain.Content;
 import no.sikt.nva.approvals.domain.Handle;
 import no.sikt.nva.approvals.domain.IdentifierPolicy;
 import no.sikt.nva.approvals.domain.NamedIdentifier;
 import no.sikt.nva.approvals.domain.OAuth2ClientCredentials;
+import no.sikt.nva.approvals.domain.SourceChangedEventTrigger;
 import no.sikt.nva.approvals.domain.SourceConfig;
 import no.sikt.nva.approvals.domain.SourceSnapshot;
 import no.sikt.nva.approvals.persistence.ApprovalDao;
 import no.sikt.nva.approvals.persistence.HandleDao;
 import no.sikt.nva.approvals.persistence.NamedIdentifierQueryObject;
-import no.sikt.nva.approvals.snapshot.SourceChange;
+import no.sikt.nva.approvals.snapshot.CreateSnapshotRequest;
 import no.unit.nva.identifiers.SortableIdentifier;
 import nva.commons.core.paths.UriWrapper;
 
@@ -127,23 +130,38 @@ public class TestUtils {
         HandleDao.toDatabaseIdentifier(randomHandle()));
   }
 
-  public static SourceChange randomSourceChange() {
+  public static CreateSnapshotRequest randomSourceChange() {
     return randomSourceChange(randomUUID(), randomString());
   }
 
-  public static SourceChange randomSourceChange(
+  public static CreateSnapshotRequest randomSourceChange(
       UUID approvalIdentifier, String cloudEventIdentifier) {
     return randomSourceChange(approvalIdentifier, cloudEventIdentifier, Instant.now());
   }
 
-  public static SourceChange randomSourceChange(
+  public static CreateSnapshotRequest randomSourceChange(
       UUID approvalIdentifier, String cloudEventIdentifier, Instant timestamp) {
-    return new SourceChange(
+    return new CreateSnapshotRequest(
         approvalIdentifier,
         randomAgent(),
-        SortableIdentifier.create(timestamp, randomUUID()),
-        cloudEventIdentifier,
         randomUri(),
+        new SourceChangedEventTrigger(
+            SortableIdentifier.create(timestamp, randomUUID()), cloudEventIdentifier),
+        timestamp);
+  }
+
+  public static CreateSnapshotRequest randomRevisionChange(
+      UUID approvalIdentifier, Instant timestamp) {
+    return randomRevisionChange(approvalIdentifier, timestamp, CREATE_APPROVAL);
+  }
+
+  public static CreateSnapshotRequest randomRevisionChange(
+      UUID approvalIdentifier, Instant timestamp, ApprovalActivity activity) {
+    return new CreateSnapshotRequest(
+        approvalIdentifier,
+        randomAgent(),
+        randomUri(),
+        new ApprovalRevisionTrigger(SortableIdentifier.create(timestamp, randomUUID()), activity),
         timestamp);
   }
 

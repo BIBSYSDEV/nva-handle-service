@@ -5,6 +5,7 @@ import java.net.URI;
 import java.time.Instant;
 import java.util.UUID;
 import no.sikt.nva.approvals.domain.Agent;
+import no.sikt.nva.approvals.domain.SourceChangedEventTrigger;
 import no.unit.nva.identifiers.SortableIdentifier;
 
 @JsonTypeName("SourceChangedEvent")
@@ -20,13 +21,12 @@ public record SourceChangedMessage(
     implements CreateSnapshotMessage {
 
   @Override
-  public SourceChange toSourceChange() {
-    return new SourceChange(
+  public CreateSnapshotRequest toCreateSnapshotRequest() {
+    return new CreateSnapshotRequest(
         approvalIdentifier,
         new Agent(customerIdentifier, clientIdentifier),
-        eventIdentifier,
-        cloudEventIdentifier,
         source,
+        new SourceChangedEventTrigger(eventIdentifier, cloudEventIdentifier),
         timestamp);
   }
 }

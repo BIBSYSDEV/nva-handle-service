@@ -9,6 +9,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import no.sikt.nva.approvals.domain.SourceChangedEventTrigger;
 import no.unit.nva.commons.json.JsonUtils;
 import org.junit.jupiter.api.Test;
 
@@ -79,11 +80,12 @@ class SourceSnapshotResponseTest {
 
     var response = SourceSnapshotResponse.create(snapshot, API_HOST);
 
+    var trigger = (SourceChangedEventTrigger) snapshot.activity();
     var event = response.wasGeneratedBy().wasStartedBy();
     assertThat(
         event.id(),
-        equalTo(eventId(API_HOST, snapshot.approvalIdentifier(), snapshot.eventIdentifier())));
-    assertThat(event.cloudEventIdentifier(), equalTo(snapshot.cloudEventIdentifier()));
+        equalTo(eventId(API_HOST, snapshot.approvalIdentifier(), trigger.identifier())));
+    assertThat(event.cloudEventIdentifier(), equalTo(trigger.cloudEventIdentifier()));
   }
 
   @Test

@@ -38,7 +38,7 @@ class CreateSnapshotHandlerTest {
 
     handler.handleRequest(sqsEvent(sourceChangedMessage.toJsonString()), new FakeContext());
 
-    verify(snapshotService).createSnapshot(sourceChangedMessage.toSourceChange());
+    verify(snapshotService).createSnapshot(sourceChangedMessage.toCreateSnapshotRequest());
   }
 
   @Test
@@ -46,7 +46,7 @@ class CreateSnapshotHandlerTest {
     var sourceChangedMessage = randomSourceChangedMessage();
     doThrow(new SourceClientException(randomString()))
         .when(snapshotService)
-        .createSnapshot(sourceChangedMessage.toSourceChange());
+        .createSnapshot(sourceChangedMessage.toCreateSnapshotRequest());
 
     var exception =
         assertThrows(

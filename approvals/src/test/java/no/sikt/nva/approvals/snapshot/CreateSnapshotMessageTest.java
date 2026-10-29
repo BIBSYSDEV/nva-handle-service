@@ -13,6 +13,8 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.time.Instant;
+import no.sikt.nva.approvals.domain.ApprovalRevision;
+import no.sikt.nva.approvals.domain.ApprovalRevisionTrigger;
 import no.sikt.nva.approvals.persistence.ApprovalImage;
 import no.unit.nva.identifiers.SortableIdentifier;
 import org.junit.jupiter.api.Test;
@@ -38,11 +40,32 @@ class CreateSnapshotMessageTest {
   }
 
   @Test
-  void
-      shouldThrowUnsupportedOperationExceptionWhenConvertingApprovalRevisionMessageToSourceChange() {
-    var approvalRevisionMessage = approvalRevisionMessage();
+  void shouldCreateSourceChangeWithSourceOfApprovalInRevision() {
+    var revision = randomRevision(randomApproval(randomHandle()), CREATE_APPROVAL);
 
-    assertThrows(UnsupportedOperationException.class, approvalRevisionMessage::toSourceChange);
+    var sourceChange = approvalRevisionMessage(revision).toCreateSnapshotRequest();
+
+    assertThat(sourceChange.source(), equalTo(revision.approval().source()));
+  }
+
+  @Test
+  void shouldCreateSourceChangeTriggeredByTheRevision() {
+    var revision = randomRevision(randomApproval(randomHandle()), CREATE_APPROVAL);
+
+    var sourceChange = approvalRevisionMessage(revision).toCreateSnapshotRequest();
+
+    assertThat(
+        sourceChange.trigger(),
+        equalTo(new ApprovalRevisionTrigger(revision.identifier(), revision.activity())));
+  }
+
+  @Test
+  void shouldCreateSourceChangeWithAgentThatChangedTheApproval() {
+    var revision = randomRevision(randomApproval(randomHandle()), CREATE_APPROVAL);
+
+    var sourceChange = approvalRevisionMessage(revision).toCreateSnapshotRequest();
+
+    assertThat(sourceChange.agent(), equalTo(revision.agent()));
   }
 
   @Test
@@ -68,13 +91,17 @@ class CreateSnapshotMessageTest {
   }
 
   private static ApprovalRevisionMessage approvalRevisionMessage() {
-    var revision = randomRevision(randomApproval(randomHandle()), CREATE_APPROVAL);
+    return approvalRevisionMessage(randomRevision(randomApproval(randomHandle()), CREATE_APPROVAL));
+  }
+
+  private static ApprovalRevisionMessage approvalRevisionMessage(ApprovalRevision revision) {
     var agent = revision.agent();
     return new ApprovalRevisionMessage(
         revision.identifier(),
         revision.approval().identifier(),
         agent.customerIdentifier(),
         agent.clientIdentifier(),
+        revision.activity(),
         ApprovalImage.fromApprovalRevision(revision).toJsonString(),
         revision.createdDate());
   }

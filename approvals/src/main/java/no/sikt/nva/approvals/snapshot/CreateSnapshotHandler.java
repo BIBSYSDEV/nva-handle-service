@@ -25,7 +25,7 @@ public class CreateSnapshotHandler implements RequestHandler<SQSEvent, Void> {
     var sqsMessage = event.getRecords().getFirst();
     var snapshotMessage = CreateSnapshotMessage.fromString(sqsMessage.getBody());
     try {
-      snapshotService.createSnapshot(snapshotMessage.toSourceChange());
+      snapshotService.createSnapshot(snapshotMessage.toCreateSnapshotRequest());
     } catch (SourceClientException exception) {
       throw new RuntimeException(exception);
     }

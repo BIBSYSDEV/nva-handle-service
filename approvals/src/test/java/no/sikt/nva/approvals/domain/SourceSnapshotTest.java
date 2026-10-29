@@ -2,6 +2,7 @@ package no.sikt.nva.approvals.domain;
 
 import static java.util.UUID.randomUUID;
 import static no.sikt.nva.approvals.utils.TestUtils.randomContent;
+import static no.sikt.nva.approvals.utils.TestUtils.randomRevisionChange;
 import static no.sikt.nva.approvals.utils.TestUtils.randomSourceChange;
 import static no.sikt.nva.approvals.utils.TestUtils.randomTimestamp;
 import static no.unit.nva.testutils.RandomDataGenerator.randomString;
@@ -22,6 +23,21 @@ class SourceSnapshotTest {
     var redelivered = SourceSnapshot.create(sourceChange, randomContent(), randomTimestamp());
 
     assertThat(redelivered.identifier(), equalTo(first.identifier()));
+  }
+
+  @Test
+  void shouldCreateDifferentIdentifiersForRevisionsOfSameApprovalAtSameTime() {
+    var approvalIdentifier = randomUUID();
+    var timestamp = randomTimestamp();
+
+    var first =
+        SourceSnapshot.create(
+            randomRevisionChange(approvalIdentifier, timestamp), randomContent(), timestamp);
+    var second =
+        SourceSnapshot.create(
+            randomRevisionChange(approvalIdentifier, timestamp), randomContent(), timestamp);
+
+    assertThat(second.identifier(), not(equalTo(first.identifier())));
   }
 
   @Test
