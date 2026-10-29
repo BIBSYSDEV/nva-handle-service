@@ -12,15 +12,21 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import java.util.Set;
 import no.sikt.nva.approvals.index.FramedClinicalTrial.Investigator;
 import no.sikt.nva.approvals.index.FramedClinicalTrial.TrialSite;
+import no.sikt.nva.approvals.index.IndexDocument.Display;
+import no.sikt.nva.approvals.index.IndexDocument.Identifier;
+import nva.commons.core.paths.UriWrapper;
 import org.junit.jupiter.api.Test;
 
 class IndexDocumentTest {
+
+  private static final String API_HOST = randomUri().getHost();
+  private static final String APPROVAL = "approval";
 
   @Test
   void shouldCreateIndexDocumentWithIdentifierOfApproval() {
     var approval = randomApproval(randomHandle());
 
-    var indexDocument = IndexDocument.create(framedClinicalTrial(), approval);
+    var indexDocument = IndexDocument.create(framedClinicalTrial(), approval, API_HOST);
 
     assertEquals(approval.identifier(), indexDocument.identifier());
   }
@@ -29,7 +35,8 @@ class IndexDocumentTest {
   void shouldCreateIndexDocumentWithHandleOfApproval() {
     var handle = randomHandle();
 
-    var indexDocument = IndexDocument.create(framedClinicalTrial(), randomApproval(handle));
+    var indexDocument =
+        IndexDocument.create(framedClinicalTrial(), randomApproval(handle), API_HOST);
 
     assertEquals(handle.value(), indexDocument.handle());
   }
@@ -39,7 +46,7 @@ class IndexDocumentTest {
     var namedIdentifier = randomIdentifier();
     var approval = randomApproval(randomHandle(), namedIdentifier);
 
-    var indexDocument = IndexDocument.create(framedClinicalTrial(), approval);
+    var indexDocument = IndexDocument.create(framedClinicalTrial(), approval, API_HOST);
 
     assertThat(
         indexDocument.identifiers(),
@@ -50,7 +57,7 @@ class IndexDocumentTest {
   void shouldCreateIndexDocumentWithTitleOfFramedClinicalTrial() {
     var trial = framedClinicalTrial();
 
-    var indexDocument = IndexDocument.create(trial, randomApproval(randomHandle()));
+    var indexDocument = IndexDocument.create(trial, randomApproval(randomHandle()), API_HOST);
 
     assertEquals(trial.title(), indexDocument.title());
   }
@@ -60,7 +67,7 @@ class IndexDocumentTest {
     var investigator = randomInvestigator();
     var trial = new FramedClinicalTrial(randomString(), Set.of(investigator), Set.of());
 
-    var indexDocument = IndexDocument.create(trial, randomApproval(randomHandle()));
+    var indexDocument = IndexDocument.create(trial, randomApproval(randomHandle()), API_HOST);
 
     assertThat(
         indexDocument.persons(),
@@ -72,11 +79,33 @@ class IndexDocumentTest {
     var trialSite = randomTrialSite();
     var trial = new FramedClinicalTrial(randomString(), Set.of(), Set.of(trialSite));
 
-    var indexDocument = IndexDocument.create(trial, randomApproval(randomHandle()));
+    var indexDocument = IndexDocument.create(trial, randomApproval(randomHandle()), API_HOST);
 
     assertThat(
         indexDocument.organizations(),
         contains(new IndexDocument.Organization(trialSite.id(), trialSite.name())));
+  }
+
+  @Test
+  void shouldCreateIndexDocumentWithDisplayOfApproval() {
+    var handle = randomHandle();
+    var namedIdentifier = randomIdentifier();
+    var approval = randomApproval(handle, namedIdentifier);
+    var trial = framedClinicalTrial();
+
+    var indexDocument = IndexDocument.create(trial, approval, API_HOST);
+
+    var expectedDisplay =
+        new Display(
+            UriWrapper.fromHost(API_HOST)
+                .addChild(APPROVAL)
+                .addChild(approval.identifier().toString())
+                .getUri(),
+            handle.value(),
+            trial.title(),
+            Set.of(new Identifier(namedIdentifier.name(), namedIdentifier.value())));
+
+    assertEquals(expectedDisplay, indexDocument.display());
   }
 
   private static FramedClinicalTrial framedClinicalTrial() {

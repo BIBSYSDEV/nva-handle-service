@@ -15,6 +15,7 @@ import java.util.Set;
 import java.util.UUID;
 import no.sikt.nva.approvals.domain.Approval;
 import no.sikt.nva.approvals.domain.SourceSnapshot;
+import no.sikt.nva.approvals.index.IndexDocument.Display;
 import no.sikt.nva.approvals.persistence.ApprovalRepository;
 import no.sikt.nva.approvals.persistence.ChangeRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -89,6 +90,12 @@ class IndexingServiceTest {
 
   private static IndexDocument indexDocument(UUID approvalIdentifier) {
     return new IndexDocument(
-        approvalIdentifier, randomUri(), randomString(), Set.of(), Set.of(), Set.of());
+        approvalIdentifier,
+        randomUri(),
+        randomString(),
+        Set.of(),
+        Set.of(),
+        Set.of(),
+        new Display(randomUri(), randomUri(), randomString(), Set.of()));
   }
 }

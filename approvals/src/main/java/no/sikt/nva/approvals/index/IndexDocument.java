@@ -1,5 +1,8 @@
 package no.sikt.nva.approvals.index;
 
+import static no.sikt.nva.approvals.utils.UriConstants.approvalId;
+
+import com.fasterxml.jackson.annotation.JsonTypeName;
 import java.net.URI;
 import java.util.Set;
 import java.util.UUID;
@@ -12,16 +15,24 @@ public record IndexDocument(
     String title,
     Set<Person> persons,
     Set<Organization> organizations,
-    Set<Identifier> identifiers) {
+    Set<Identifier> identifiers,
+    Display display) {
 
-  public static IndexDocument create(FramedClinicalTrial trial, Approval approval) {
+  private static final String APPROVAL = "Approval";
+
+  public static IndexDocument create(FramedClinicalTrial trial, Approval approval, String apiHost) {
+    var identifier = approval.identifier();
+    var handle = approval.handle().value();
+    var identifiers = getIdentifiers(approval);
+    var display = new Display(approvalId(apiHost, identifier), handle, trial.title(), identifiers);
     return new IndexDocument(
-        approval.identifier(),
-        approval.handle().value(),
+        identifier,
+        handle,
         trial.title(),
         getPersons(trial),
         getOrganizations(trial),
-        getIdentifiers(approval));
+        identifiers,
+        display);
   }
 
   private static Set<Identifier> getIdentifiers(Approval approval) {
@@ -47,4 +58,7 @@ public record IndexDocument(
   record Organization(URI id, String name) {}
 
   record Identifier(String name, String value) {}
+
+  @JsonTypeName(APPROVAL)
+  record Display(URI id, URI handle, String title, Set<Identifier> identifiers) {}
 }
