@@ -1,0 +1,120 @@
+{
+    "@context": {
+        "@vocab": "https://api.legemiddelverket.no/ontology#",
+        "xsd": "http://www.w3.org/2001/XMLSchema#",
+        "id": "@id",
+        "type": "@type",
+        "identifier": {
+            "@type": "xsd:string"
+        },
+        "handle": {
+            "@type": "xsd:string"
+        },
+        "events": {
+            "@id": "event",
+            "@container": "@set"
+        },
+        "region": {
+            "@type": "xsd:string"
+        },
+        "date": {
+            "@type": "xsd:date"
+        },
+        "statuses": {
+            "@id": "clinicalTrialStatuses"
+        },
+        "eea": {
+            "@type": "xsd:string"
+        },
+        "norway": {
+            "@type": "xsd:string"
+        },
+        "modified": {
+            "@type": "xsd:dateTime"
+        },
+        "publicTitle": {
+            "@type": "xsd:string"
+        },
+        "protocolCode": {
+            "@type": "xsd:string"
+        },
+        "sponsors": {
+            "@id": "sponsor",
+            "@container": "@set"
+        },
+        "name": {
+            "@type": "xsd:string"
+        },
+        "organizationTypeCode": {
+            "@type": "xsd:string"
+        },
+        "organizationTypeDisplayName": {
+            "@type": "xsd:string"
+        },
+        "publicContactPoint": {},
+        "organizationName": {
+            "@type": "xsd:string"
+        },
+        "functionalName": {
+            "@type": "xsd:string"
+        },
+        "functionalEmailAddress": {
+            "@type": "xsd:string"
+        },
+        "functionalPhoneNumber": {
+            "@type": "xsd:string"
+        },
+        "trialSites": {
+            "@id": "trialSite",
+            "@container": "@set"
+        },
+        "organizationId": {
+            "@type": "xsd:string"
+        },
+        "departmentName": {
+            "@type": "xsd:string"
+        },
+        "siteLocation": {
+            "@type": "xsd:string"
+        },
+        "nvaOrganizationId": {
+            "@type": "@id"
+        },
+        "investigator": {},
+        "title": {
+            "@type": "xsd:string"
+        },
+        "firstName": {
+            "@type": "xsd:string"
+        },
+        "lastName": {
+            "@type": "xsd:string"
+        },
+        "department": {
+            "@type": "xsd:string"
+        },
+        "nvaPersonId": {
+            "@type": "@id"
+        },
+        "address": {},
+        "street": {
+            "@type": "xsd:string"
+        },
+        "city": {
+            "@type": "xsd:string"
+        },
+        "postcode": {
+            "@type": "xsd:string"
+        },
+        "country": {
+            "@type": "xsd:string"
+        },
+        "contactInformation": {},
+        "telephone": {
+            "@type": "xsd:string"
+        },
+        "email": {
+            "@type": "xsd:string"
+        }
+    }
+}

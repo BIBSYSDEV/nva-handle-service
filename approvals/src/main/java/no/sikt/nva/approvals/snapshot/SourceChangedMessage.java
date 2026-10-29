@@ -8,7 +8,7 @@ import no.sikt.nva.approvals.domain.Agent;
 import no.sikt.nva.approvals.domain.SourceChangedEventTrigger;
 import no.unit.nva.identifiers.SortableIdentifier;
 
-@JsonTypeName(SourceChangedMessage.TYPE)
+@JsonTypeName("SourceChangedEvent")
 public record SourceChangedMessage(
     SortableIdentifier eventIdentifier,
     String cloudEventIdentifier,
@@ -19,8 +19,6 @@ public record SourceChangedMessage(
     URI source,
     Instant timestamp)
     implements CreateSnapshotMessage {
-
-  public static final String TYPE = "SourceChangedEvent";
 
   @Override
   public CreateSnapshotRequest toCreateSnapshotRequest() {
