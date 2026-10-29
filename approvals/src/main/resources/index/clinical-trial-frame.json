@@ -1,0 +1,13 @@
+{
+  "@context": {
+    "@vocab": "https://api.legemiddelverket.no/ontology#",
+    "xsd": "http://www.w3.org/2001/XMLSchema#",
+    "title": {
+      "@id": "publicTitle",
+      "@type": "xsd:string"
+    }
+  },
+  "@type": "ClinicalTrial",
+  "@explicit": true,
+  "title": {}
+}
