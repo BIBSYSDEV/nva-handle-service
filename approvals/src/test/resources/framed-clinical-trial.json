@@ -1,0 +1,30 @@
+{
+  "@context": {
+    "@vocab": "https://api.legemiddelverket.no/ontology#"
+  },
+  "id": "https://st-api.legemiddelverket.no/ctis/clinical-trial/2022-500027-76-00",
+  "type": "ClinicalTrial",
+  "handle": "https://hdl.handle.net/11250.1/39083745",
+  "title": "METIMMOX-2: Test Clinical Trial",
+  "persons": [
+    {
+      "type": "Investigator",
+      "firstName": "Ola",
+      "lastName": "Nordmann",
+      "nvaPersonId": "https://api.nva.unit.no/cristin/person/23297"
+    },
+    {
+      "type": "Investigator",
+      "firstName": "Kari",
+      "lastName": "Nordmann",
+      "nvaPersonId": "https://api.nva.unit.no/cristin/person/23298"
+    }
+  ],
+  "organizations": [
+    {
+      "type": "TrialSite",
+      "departmentName": "Akershus University Hospital",
+      "nvaOrganizationId": "https://api.nva.unit.no/cristin/organization/1972.0.0.0"
+    }
+  ]
+}

@@ -2,12 +2,22 @@
   "@context": {
     "@vocab": "https://api.legemiddelverket.no/ontology#",
     "xsd": "http://www.w3.org/2001/XMLSchema#",
-    "title": {
-      "@id": "publicTitle",
-      "@type": "xsd:string"
-    }
+    "id": "@id",
+    "type": "@type",
+    "handle":       { "@type": "xsd:string" },
+    "title": { "@id": "publicTitle", "@type": "xsd:string" },
+    "persons":       { "@id": "@included", "@container": "@set" },
+    "organizations": { "@id": "trialSite", "@container": "@set" },
+    "departmentName":    { "@type": "xsd:string" },
+    "firstName":         { "@type": "xsd:string" },
+    "lastName":          { "@type": "xsd:string" },
+    "nvaPersonId":       { "@type": "@id" },
+    "nvaOrganizationId": { "@type": "@id" }
   },
   "@type": "ClinicalTrial",
   "@explicit": true,
-  "title": {}
+  "title": {},
+  "handle": {},
+  "persons":       { "@explicit": true, "firstName": {}, "lastName": {}, "nvaPersonId": {} },
+  "organizations": { "@explicit": true, "departmentName": {}, "nvaOrganizationId": {} }
 }

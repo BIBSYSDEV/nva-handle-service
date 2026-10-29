@@ -8,6 +8,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import java.util.Optional;
+import java.util.Set;
 import no.sikt.nva.approvals.persistence.ChangeRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -32,7 +33,7 @@ class IndexingServiceTest {
     var snapshot = randomSourceSnapshot();
     when(repository.findLatestSnapshot(approvalIdentifier)).thenReturn(Optional.of(snapshot));
     when(indexDocumentGenerator.generate(snapshot))
-        .thenReturn(new IndexDocument(approvalIdentifier, randomString()));
+        .thenReturn(new IndexDocument(approvalIdentifier, randomString(), Set.of(), Set.of()));
 
     assertThrows(
         UnsupportedOperationException.class, () -> indexingService.index(approvalIdentifier));
