@@ -29,6 +29,12 @@ public class IndexDocumentGenerator {
   private static final Document CTIS_CLINICAL_TRIAL_CONTEXT =
       readDocument(CTIS_CLINICAL_TRIAL_CONTEXT_FILE);
 
+  private final String apiHost;
+
+  public IndexDocumentGenerator(String apiHost) {
+    this.apiHost = apiHost;
+  }
+
   public IndexDocument generate(SourceSnapshot snapshot, Approval approval)
       throws IndexDocumentGeneratorException {
     if (isMissingContent(snapshot)) {
@@ -36,7 +42,7 @@ public class IndexDocumentGenerator {
     }
     return attempt(() -> frameSnapshotToClinicalTrial(snapshot))
         .map(jsonObject -> fromJson(jsonObject.toString()))
-        .map(framedClinicalTrial -> IndexDocument.create(framedClinicalTrial, approval))
+        .map(framedClinicalTrial -> IndexDocument.create(framedClinicalTrial, approval, apiHost))
         .orElseThrow(failure -> framingException(snapshot, failure));
   }
 
