@@ -15,7 +15,11 @@ public class IndexApprovalHandler implements RequestHandler<SQSEvent, Void> {
   @Override
   public Void handleRequest(SQSEvent event, Context context) {
     var approvalIdentifier = getMessage(event).approvalIdentifier();
-    indexingService.index(approvalIdentifier);
+    try {
+      indexingService.index(approvalIdentifier);
+    } catch (IndexingServiceException e) {
+      throw new RuntimeException(e);
+    }
     return null;
   }
 
