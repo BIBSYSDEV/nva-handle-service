@@ -1,5 +1,6 @@
 package no.sikt.nva.approvals.index;
 
+import static no.sikt.nva.approvals.index.FramedClinicalTrial.fromJson;
 import static nva.commons.core.attempt.Try.attempt;
 
 import com.apicatalog.jsonld.JsonLd;
@@ -10,6 +11,7 @@ import jakarta.json.JsonObject;
 import java.io.StringReader;
 import java.nio.file.Path;
 import java.util.Optional;
+import no.sikt.nva.approvals.domain.Approval;
 import no.sikt.nva.approvals.domain.Content;
 import no.sikt.nva.approvals.domain.SourceSnapshot;
 import nva.commons.core.attempt.Failure;
@@ -27,15 +29,14 @@ public class IndexDocumentGenerator {
   private static final Document CTIS_CLINICAL_TRIAL_CONTEXT =
       readDocument(CTIS_CLINICAL_TRIAL_CONTEXT_FILE);
 
-  public IndexDocument generate(SourceSnapshot snapshot) throws IndexDocumentGeneratorException {
+  public IndexDocument generate(SourceSnapshot snapshot, Approval approval)
+      throws IndexDocumentGeneratorException {
     if (isMissingContent(snapshot)) {
       throw new IndexDocumentGeneratorException(EMPTY_SNAPSHOT_MESSAGE);
     }
     return attempt(() -> frameSnapshotToClinicalTrial(snapshot))
-        .map(jsonObject -> FramedClinicalTrial.fromJson(jsonObject.toString()))
-        .map(
-            framedClinicalTrial ->
-                IndexDocument.create(framedClinicalTrial, snapshot.approvalIdentifier()))
+        .map(jsonObject -> fromJson(jsonObject.toString()))
+        .map(framedClinicalTrial -> IndexDocument.create(framedClinicalTrial, approval))
         .orElseThrow(failure -> framingException(snapshot, failure));
   }
 

@@ -1,6 +1,8 @@
 package no.sikt.nva.approvals.index;
 
-import static java.util.UUID.randomUUID;
+import static no.sikt.nva.approvals.utils.TestUtils.randomApproval;
+import static no.sikt.nva.approvals.utils.TestUtils.randomHandle;
+import static no.sikt.nva.approvals.utils.TestUtils.randomIdentifier;
 import static no.unit.nva.testutils.RandomDataGenerator.randomString;
 import static no.unit.nva.testutils.RandomDataGenerator.randomUri;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -15,19 +17,40 @@ import org.junit.jupiter.api.Test;
 class IndexDocumentTest {
 
   @Test
-  void shouldCreateIndexDocumentWithProvidedIdentifier() {
-    var identifier = randomUUID();
+  void shouldCreateIndexDocumentWithIdentifierOfApproval() {
+    var approval = randomApproval(randomHandle());
 
-    var indexDocument = IndexDocument.create(framedClinicalTrial(), identifier);
+    var indexDocument = IndexDocument.create(framedClinicalTrial(), approval);
 
-    assertEquals(identifier, indexDocument.identifier());
+    assertEquals(approval.identifier(), indexDocument.identifier());
+  }
+
+  @Test
+  void shouldCreateIndexDocumentWithHandleOfApproval() {
+    var handle = randomHandle();
+
+    var indexDocument = IndexDocument.create(framedClinicalTrial(), randomApproval(handle));
+
+    assertEquals(handle.value(), indexDocument.handle());
+  }
+
+  @Test
+  void shouldCreateIndexDocumentWithNamedIdentifiersOfApproval() {
+    var namedIdentifier = randomIdentifier();
+    var approval = randomApproval(randomHandle(), namedIdentifier);
+
+    var indexDocument = IndexDocument.create(framedClinicalTrial(), approval);
+
+    assertThat(
+        indexDocument.identifiers(),
+        contains(new IndexDocument.Identifier(namedIdentifier.name(), namedIdentifier.value())));
   }
 
   @Test
   void shouldCreateIndexDocumentWithTitleOfFramedClinicalTrial() {
     var trial = framedClinicalTrial();
 
-    var indexDocument = IndexDocument.create(trial, randomUUID());
+    var indexDocument = IndexDocument.create(trial, randomApproval(randomHandle()));
 
     assertEquals(trial.title(), indexDocument.title());
   }
@@ -37,7 +60,7 @@ class IndexDocumentTest {
     var investigator = randomInvestigator();
     var trial = new FramedClinicalTrial(randomString(), Set.of(investigator), Set.of());
 
-    var indexDocument = IndexDocument.create(trial, randomUUID());
+    var indexDocument = IndexDocument.create(trial, randomApproval(randomHandle()));
 
     assertThat(
         indexDocument.persons(),
@@ -49,7 +72,7 @@ class IndexDocumentTest {
     var trialSite = randomTrialSite();
     var trial = new FramedClinicalTrial(randomString(), Set.of(), Set.of(trialSite));
 
-    var indexDocument = IndexDocument.create(trial, randomUUID());
+    var indexDocument = IndexDocument.create(trial, randomApproval(randomHandle()));
 
     assertThat(
         indexDocument.organizations(),
