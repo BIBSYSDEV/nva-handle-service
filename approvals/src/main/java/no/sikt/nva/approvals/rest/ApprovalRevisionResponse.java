@@ -36,10 +36,7 @@ public record ApprovalRevisionResponse(
   }
 
   private static Activity activity(ApprovalRevision revision, String apiHost) {
-    var agent = SoftwareAgent.actingFor(revision.agent(), apiHost);
-    return switch (revision.activity()) {
-      case CREATE_APPROVAL -> new ApprovalCreation(agent);
-      case UPDATE_APPROVAL -> new ApprovalUpdate(agent);
-    };
+    return Activity.fromApprovalActivity(
+        revision.activity(), SoftwareAgent.actingFor(revision.agent(), apiHost));
   }
 }
