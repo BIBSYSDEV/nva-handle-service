@@ -361,16 +361,16 @@ Resources:
               approvalIdentifier: $.detail.dynamodb.NewImage.approvalIdentifier.S
               customerIdentifier: $.detail.dynamodb.NewImage.customerIdentifier.S
               clientIdentifier: $.detail.dynamodb.NewImage.clientIdentifier.S
+              activity: $.detail.dynamodb.NewImage.activity.S
               approval: $.detail.dynamodb.NewImage.body.S
               timestamp: $.detail.dynamodb.NewImage.createdDate.S
-            InputTemplate: '{"type": "ApprovalRevision", "revisionIdentifier": "<revisionIdentifier>", "approvalIdentifier": "<approvalIdentifier>", "customerIdentifier": "<customerIdentifier>", "clientIdentifier": "<clientIdentifier>", "approval": <approval>, "timestamp": "<timestamp>"}'
+            InputTemplate: '{"type": "ApprovalRevision", "revisionIdentifier": "<revisionIdentifier>", "approvalIdentifier": "<approvalIdentifier>", "customerIdentifier": "<customerIdentifier>", "clientIdentifier": "<clientIdentifier>", "activity": "<activity>", "approval": <approval>, "timestamp": "<timestamp>"}'
 
   IndexApprovalRule:
     Type: AWS::Events::Rule
     Properties:
       Description: Indexes an approval when a source snapshot is stored
       EventBusName: !Ref ApprovalsEventBus
-      State: DISABLED
       EventPattern:
         detail:
           dynamodb:
