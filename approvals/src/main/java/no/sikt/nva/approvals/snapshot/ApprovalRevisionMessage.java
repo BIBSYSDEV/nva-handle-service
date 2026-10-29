@@ -7,7 +7,7 @@ import no.sikt.nva.approvals.domain.Approval;
 import no.sikt.nva.approvals.persistence.ApprovalImage;
 import no.unit.nva.identifiers.SortableIdentifier;
 
-@JsonTypeName(ApprovalRevisionMessage.TYPE)
+@JsonTypeName("ApprovalRevision")
 public record ApprovalRevisionMessage(
     SortableIdentifier revisionIdentifier,
     UUID approvalIdentifier,
@@ -16,8 +16,6 @@ public record ApprovalRevisionMessage(
     String approval,
     Instant timestamp)
     implements CreateSnapshotMessage {
-
-  public static final String TYPE = "ApprovalRevision";
 
   public Approval toApproval() {
     return ApprovalImage.fromJson(approval).toApproval(approvalIdentifier, customerIdentifier);
