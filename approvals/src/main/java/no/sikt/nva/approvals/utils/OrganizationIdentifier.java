@@ -1,6 +1,6 @@
 package no.sikt.nva.approvals.utils;
 
-import static no.sikt.nva.approvals.utils.AuthorityIdentifier.cristinIdentifier;
+import static no.sikt.nva.approvals.utils.AuthorityIdentifier.getIdentifier;
 
 import java.net.URI;
 import nva.commons.core.StringUtils;
@@ -9,7 +9,7 @@ public record OrganizationIdentifier(String value) implements AuthorityIdentifie
 
   private static final String ORGANIZATION_PATH = "organization";
   private static final String INVALID_ORGANIZATION_IDENTIFIER_EXCEPTION =
-      "Provided uri is not a Cristin organization identifier: ";
+      "Provided uri is not a organization identifier: ";
   private static final String MISSING_ORGANIZATION_IDENTIFIER_EXCEPTION =
       "Organization identifier cannot be blank!";
 
@@ -20,7 +20,7 @@ public record OrganizationIdentifier(String value) implements AuthorityIdentifie
   }
 
   public static OrganizationIdentifier fromUri(URI uri) {
-    return cristinIdentifier(uri, ORGANIZATION_PATH)
+    return getIdentifier(uri, ORGANIZATION_PATH)
         .map(OrganizationIdentifier::new)
         .orElseThrow(
             () -> new IllegalArgumentException(INVALID_ORGANIZATION_IDENTIFIER_EXCEPTION + uri));

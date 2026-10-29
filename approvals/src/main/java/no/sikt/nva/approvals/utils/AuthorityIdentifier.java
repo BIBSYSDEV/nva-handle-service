@@ -10,17 +10,18 @@ public sealed interface AuthorityIdentifier permits PersonIdentifier, Organizati
 
   String CRISTIN_PATH = "cristin";
   int CRISTIN_IDENTIFIER_PATH_ELEMENTS = 3;
+  String PATH_DELIMITER = "/";
 
   String value();
 
-  static Optional<String> cristinIdentifier(URI uri, String resourcePath) {
+  static Optional<String> getIdentifier(URI uri, String resourcePath) {
     var pathElements = pathElements(uri);
-    return isCristinResource(pathElements, resourcePath)
+    return hasExpectedPath(pathElements, resourcePath)
         ? Optional.of(pathElements.getLast())
         : Optional.empty();
   }
 
-  private static boolean isCristinResource(List<String> pathElements, String resourcePath) {
+  private static boolean hasExpectedPath(List<String> pathElements, String resourcePath) {
     return pathElements.size() == CRISTIN_IDENTIFIER_PATH_ELEMENTS
         && CRISTIN_PATH.equals(pathElements.getFirst())
         && resourcePath.equals(pathElements.get(1));
@@ -29,7 +30,9 @@ public sealed interface AuthorityIdentifier permits PersonIdentifier, Organizati
   private static List<String> pathElements(URI uri) {
     return Optional.ofNullable(uri)
         .map(URI::getPath)
-        .map(path -> Arrays.stream(path.split("/")).filter(StringUtils::isNotBlank).toList())
+        .map(
+            path ->
+                Arrays.stream(path.split(PATH_DELIMITER)).filter(StringUtils::isNotBlank).toList())
         .orElseGet(List::of);
   }
 }
