@@ -13,6 +13,7 @@ import com.fasterxml.jackson.annotation.JsonValue;
 import java.net.URI;
 import java.time.Instant;
 import java.util.Arrays;
+import java.util.Optional;
 import java.util.UUID;
 import no.sikt.nva.approvals.domain.Agent;
 import no.sikt.nva.approvals.domain.ApprovalActivity;
@@ -74,10 +75,11 @@ public record SourceSnapshotDao(
   }
 
   private static String cloudEventIdentifierOf(Trigger trigger) {
-    return switch (trigger) {
-      case SourceChangedEventTrigger sourceChanged -> sourceChanged.cloudEventIdentifier();
-      case ApprovalRevisionTrigger ignored -> null;
-    };
+    return Optional.ofNullable(trigger)
+        .filter(SourceChangedEventTrigger.class::isInstance)
+        .map(SourceChangedEventTrigger.class::cast)
+        .map(SourceChangedEventTrigger::cloudEventIdentifier)
+        .orElse(null);
   }
 
   private Trigger toTrigger() {
