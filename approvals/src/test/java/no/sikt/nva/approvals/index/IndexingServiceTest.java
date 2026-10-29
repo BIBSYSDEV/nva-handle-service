@@ -1,29 +1,40 @@
 package no.sikt.nva.approvals.index;
 
 import static java.util.UUID.randomUUID;
+import static no.sikt.nva.approvals.utils.TestUtils.randomApproval;
 import static no.sikt.nva.approvals.utils.TestUtils.randomSourceSnapshot;
 import static no.unit.nva.testutils.RandomDataGenerator.randomString;
+import static no.unit.nva.testutils.RandomDataGenerator.randomUri;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import java.util.Optional;
 import java.util.Set;
+import java.util.UUID;
+import no.sikt.nva.approvals.domain.Approval;
+import no.sikt.nva.approvals.domain.SourceSnapshot;
+import no.sikt.nva.approvals.persistence.ApprovalRepository;
 import no.sikt.nva.approvals.persistence.ChangeRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 class IndexingServiceTest {
 
+  private static final String APPROVAL_NOT_FOUND_MESSAGE = "Approval not found";
+
   private IndexingService indexingService;
   private ChangeRepository repository;
+  private ApprovalRepository approvalRepository;
   private IndexDocumentGenerator indexDocumentGenerator;
 
   @BeforeEach
   void setUp() {
     repository = mock(ChangeRepository.class);
+    approvalRepository = mock(ApprovalRepository.class);
     indexDocumentGenerator = mock(IndexDocumentGenerator.class);
-    indexingService = new IndexingService(repository, indexDocumentGenerator);
+    indexingService = new IndexingService(repository, approvalRepository, indexDocumentGenerator);
   }
 
   @Test
@@ -31,9 +42,9 @@ class IndexingServiceTest {
       throws IndexDocumentGeneratorException {
     var approvalIdentifier = randomUUID();
     var snapshot = randomSourceSnapshot();
-    when(repository.findLatestSnapshot(approvalIdentifier)).thenReturn(Optional.of(snapshot));
-    when(indexDocumentGenerator.generate(snapshot))
-        .thenReturn(new IndexDocument(approvalIdentifier, randomString(), Set.of(), Set.of()));
+    var approval = givenApprovalWithSnapshot(approvalIdentifier, snapshot);
+    when(indexDocumentGenerator.generate(snapshot, approval))
+        .thenReturn(indexDocument(approvalIdentifier));
 
     assertThrows(
         UnsupportedOperationException.class, () -> indexingService.index(approvalIdentifier));
@@ -45,14 +56,39 @@ class IndexingServiceTest {
   }
 
   @Test
+  void shouldThrowIndexingServiceExceptionWhenRepositoryReturnsNoApproval() {
+    var approvalIdentifier = randomUUID();
+    when(repository.findLatestSnapshot(approvalIdentifier))
+        .thenReturn(Optional.of(randomSourceSnapshot()));
+
+    var exception =
+        assertThrows(
+            IndexingServiceException.class, () -> indexingService.index(approvalIdentifier));
+    assertEquals(APPROVAL_NOT_FOUND_MESSAGE, exception.getMessage());
+  }
+
+  @Test
   void shouldThrowIndexingServiceExceptionWhenIndexingDocumentGeneratorThrowsException()
       throws IndexDocumentGeneratorException {
     var approvalIdentifier = randomUUID();
     var snapshot = randomSourceSnapshot();
-    when(repository.findLatestSnapshot(approvalIdentifier)).thenReturn(Optional.of(snapshot));
-    when(indexDocumentGenerator.generate(snapshot))
+    var approval = givenApprovalWithSnapshot(approvalIdentifier, snapshot);
+    when(indexDocumentGenerator.generate(snapshot, approval))
         .thenThrow(IndexDocumentGeneratorException.class);
 
     assertThrows(IndexingServiceException.class, () -> indexingService.index(approvalIdentifier));
+  }
+
+  private Approval givenApprovalWithSnapshot(UUID approvalIdentifier, SourceSnapshot snapshot) {
+    var approval = randomApproval(approvalIdentifier, randomUri());
+    when(repository.findLatestSnapshot(approvalIdentifier)).thenReturn(Optional.of(snapshot));
+    when(approvalRepository.findByApprovalIdentifier(approvalIdentifier))
+        .thenReturn(Optional.of(approval));
+    return approval;
+  }
+
+  private static IndexDocument indexDocument(UUID approvalIdentifier) {
+    return new IndexDocument(
+        approvalIdentifier, randomUri(), randomString(), Set.of(), Set.of(), Set.of());
   }
 }

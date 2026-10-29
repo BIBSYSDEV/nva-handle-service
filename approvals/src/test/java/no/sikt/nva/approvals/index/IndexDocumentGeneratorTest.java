@@ -1,5 +1,7 @@
 package no.sikt.nva.approvals.index;
 
+import static no.sikt.nva.approvals.utils.TestUtils.randomApproval;
+import static no.sikt.nva.approvals.utils.TestUtils.randomHandle;
 import static no.sikt.nva.approvals.utils.TestUtils.randomSourceSnapshotWithContent;
 import static no.unit.nva.testutils.RandomDataGenerator.randomString;
 import static nva.commons.core.ioutils.IoUtils.stringFromResources;
@@ -10,6 +12,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.net.URI;
 import java.nio.file.Path;
+import no.sikt.nva.approvals.domain.Approval;
 import no.sikt.nva.approvals.domain.Content;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -25,26 +28,28 @@ class IndexDocumentGeneratorTest {
       URI.create("https://api.nva.unit.no/cristin/person/23298");
 
   private IndexDocumentGenerator generator;
+  private Approval approval;
 
   @BeforeEach
   void setUp() {
     generator = new IndexDocumentGenerator();
+    approval = randomApproval(randomHandle());
   }
 
   @Test
   void shouldGenerateIndexDocumentWithApprovalIdentifier() throws IndexDocumentGeneratorException {
     var snapshot = randomSourceSnapshotWithContent(clinicalTrialContent());
 
-    var indexDocument = generator.generate(snapshot);
+    var indexDocument = generator.generate(snapshot, approval);
 
-    assertEquals(snapshot.approvalIdentifier(), indexDocument.identifier());
+    assertEquals(approval.identifier(), indexDocument.identifier());
   }
 
   @Test
   void shouldGenerateIndexDocumentWithClinicalTrialTitle() throws IndexDocumentGeneratorException {
     var snapshot = randomSourceSnapshotWithContent(clinicalTrialContent());
 
-    var indexDocument = generator.generate(snapshot);
+    var indexDocument = generator.generate(snapshot, approval);
 
     assertEquals(CLINICAL_TRIAL_TITLE, indexDocument.title());
   }
@@ -54,7 +59,7 @@ class IndexDocumentGeneratorTest {
       throws IndexDocumentGeneratorException {
     var snapshot = randomSourceSnapshotWithContent(clinicalTrialContent());
 
-    var indexDocument = generator.generate(snapshot);
+    var indexDocument = generator.generate(snapshot, approval);
 
     assertThat(
         indexDocument.persons().stream().map(IndexDocument.Person::id).toList(),
@@ -66,7 +71,8 @@ class IndexDocumentGeneratorTest {
     var emptyContent = new Content(null, null, null);
     var snapshot = randomSourceSnapshotWithContent(emptyContent);
 
-    assertThrows(IndexDocumentGeneratorException.class, () -> generator.generate(snapshot));
+    assertThrows(
+        IndexDocumentGeneratorException.class, () -> generator.generate(snapshot, approval));
   }
 
   @Test
@@ -74,7 +80,8 @@ class IndexDocumentGeneratorTest {
     var snapshot =
         randomSourceSnapshotWithContent(Content.create(JSON_LD_MEDIA_TYPE, randomString()));
 
-    assertThrows(IndexDocumentGeneratorException.class, () -> generator.generate(snapshot));
+    assertThrows(
+        IndexDocumentGeneratorException.class, () -> generator.generate(snapshot, approval));
   }
 
   @Test
@@ -82,7 +89,8 @@ class IndexDocumentGeneratorTest {
     var snapshot =
         randomSourceSnapshotWithContent(Content.create(JSON_LD_MEDIA_TYPE, randomString()));
 
-    assertThrows(IndexDocumentGeneratorException.class, () -> generator.generate(snapshot));
+    assertThrows(
+        IndexDocumentGeneratorException.class, () -> generator.generate(snapshot, approval));
   }
 
   private static Content clinicalTrialContent() {
