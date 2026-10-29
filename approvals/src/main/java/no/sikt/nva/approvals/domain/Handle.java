@@ -6,6 +6,7 @@ import static no.sikt.nva.approvals.validation.RequestConstraints.MAX_URI_LENGTH
 import java.net.URI;
 import java.util.Arrays;
 import nva.commons.core.StringUtils;
+import nva.commons.core.paths.UriWrapper;
 
 public record Handle(URI value) {
 
@@ -40,5 +41,9 @@ public record Handle(URI value) {
   @Override
   public String toString() {
     return value().toString();
+  }
+
+  public String identifier() {
+    return UriWrapper.fromUri(value).getPath().removeRoot().toString();
   }
 }

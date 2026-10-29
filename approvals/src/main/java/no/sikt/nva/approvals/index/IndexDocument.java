@@ -1,17 +1,19 @@
 package no.sikt.nva.approvals.index;
 
-import static no.sikt.nva.approvals.utils.UriConstants.approvalId;
-
 import com.fasterxml.jackson.annotation.JsonTypeName;
-import java.net.URI;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import no.sikt.nva.approvals.domain.Approval;
+import no.sikt.nva.approvals.index.FramedClinicalTrial.Investigator;
+import no.sikt.nva.approvals.index.FramedClinicalTrial.TrialSite;
+import no.sikt.nva.approvals.utils.OrganizationIdentifier;
+import no.sikt.nva.approvals.utils.PersonIdentifier;
 
 public record IndexDocument(
     UUID identifier,
-    URI handle,
+    String handle,
     String title,
     Set<Person> persons,
     Set<Organization> organizations,
@@ -20,11 +22,11 @@ public record IndexDocument(
 
   private static final String APPROVAL = "Approval";
 
-  public static IndexDocument create(FramedClinicalTrial trial, Approval approval, String apiHost) {
+  public static IndexDocument create(FramedClinicalTrial trial, Approval approval) {
     var identifier = approval.identifier();
-    var handle = approval.handle().value();
     var identifiers = getIdentifiers(approval);
-    var display = new Display(approvalId(apiHost, identifier), handle, trial.title(), identifiers);
+    var handle = approval.handle().identifier();
+    var display = new Display(approval.identifier(), handle, trial.title(), identifiers);
     return new IndexDocument(
         identifier,
         handle,
@@ -43,22 +45,36 @@ public record IndexDocument(
 
   private static Set<Organization> getOrganizations(FramedClinicalTrial trial) {
     return trial.organizations().stream()
-        .map(trialSite -> new Organization(trialSite.id(), trialSite.name()))
+        .map(IndexDocument::toOrganization)
         .collect(Collectors.toSet());
+  }
+
+  private static Organization toOrganization(TrialSite trialSite) {
+    return Optional.ofNullable(trialSite.id())
+        .map(OrganizationIdentifier::fromUri)
+        .map(OrganizationIdentifier::value)
+        .map(id -> new Organization(id, trialSite.name()))
+        .orElse(new Organization(null, trialSite.name()));
   }
 
   private static Set<Person> getPersons(FramedClinicalTrial trial) {
-    return trial.persons().stream()
-        .map(investigator -> new Person(investigator.id(), investigator.name()))
-        .collect(Collectors.toSet());
+    return trial.persons().stream().map(IndexDocument::toPerson).collect(Collectors.toSet());
   }
 
-  record Person(URI id, String name) {}
+  private static Person toPerson(Investigator investigator) {
+    return Optional.ofNullable(investigator.id())
+        .map(PersonIdentifier::fromUri)
+        .map(PersonIdentifier::value)
+        .map(id -> new Person(id, investigator.name()))
+        .orElse(new Person(null, investigator.name()));
+  }
 
-  record Organization(URI id, String name) {}
+  record Person(String id, String name) {}
+
+  record Organization(String id, String name) {}
 
   record Identifier(String name, String value) {}
 
   @JsonTypeName(APPROVAL)
-  record Display(URI id, URI handle, String title, Set<Identifier> identifiers) {}
+  record Display(UUID id, String handle, String title, Set<Identifier> identifiers) {}
 }
