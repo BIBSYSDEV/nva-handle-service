@@ -31,8 +31,11 @@ public class IndexDocumentGenerator {
     if (isMissingContent(snapshot)) {
       throw new IndexDocumentGeneratorException(EMPTY_SNAPSHOT_MESSAGE);
     }
-    return attempt(() -> frameSnapshotToIndexDocument(snapshot))
-        .map(json -> IndexDocument.create(json.toString(), snapshot.approvalIdentifier()))
+    return attempt(() -> frameSnapshotToClinicalTrial(snapshot))
+        .map(jsonObject -> FramedClinicalTrial.fromJson(jsonObject.toString()))
+        .map(
+            framedClinicalTrial ->
+                IndexDocument.create(framedClinicalTrial, snapshot.approvalIdentifier()))
         .orElseThrow(failure -> framingException(snapshot, failure));
   }
 
@@ -42,7 +45,7 @@ public class IndexDocumentGenerator {
         FRAMING_FAILED_MESSAGE.formatted(snapshot.approvalIdentifier()), failure.getException());
   }
 
-  private static JsonObject frameSnapshotToIndexDocument(SourceSnapshot snapshot)
+  private static JsonObject frameSnapshotToClinicalTrial(SourceSnapshot snapshot)
       throws JsonLdError {
     var body = snapshot.content().body();
     return JsonLd.frame(JsonDocument.of(IoUtils.stringToStream(body)), CLINICAL_TRIAL_FRAME)

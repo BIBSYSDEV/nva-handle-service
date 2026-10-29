@@ -48,7 +48,7 @@ class ClinicalTrialTest {
     var clinicalTrial =
         JsonUtils.dtoObjectMapper.readValue(CLINICAL_TRIAL_JSON, ClinicalTrial.class);
 
-    assertThat(clinicalTrial.trialSites().size(), is(1));
+    assertThat(clinicalTrial.trialSites().size(), is(2));
     var trialSite = clinicalTrial.trialSites().iterator().next();
     assertThat(trialSite.departmentName(), is("Akershus University Hospital"));
     assertThat(trialSite.investigator(), notNullValue());

@@ -58,6 +58,20 @@
         },
         "nvaPersonId": "https://api.nva.unit.no/cristin/person/23297"
       }
+    },
+    {
+      "type": "TrialSite",
+      "organizationId": "7283",
+      "departmentName": "Oslo University Hospital",
+      "siteLocation": "Kirkeveien 166",
+      "nvaOrganizationId": "https://api.nva.unit.no/cristin/organization/1104.0.0.0",
+      "investigator": {
+        "type": "Investigator",
+        "organizationId": "7283",
+        "firstName": "Kari",
+        "lastName": "Nordmann",
+        "nvaPersonId": "https://api.nva.unit.no/cristin/person/23298"
+      }
     }
   ]
 }
