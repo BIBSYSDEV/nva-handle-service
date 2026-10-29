@@ -8,14 +8,26 @@ public class IndexingService {
 
   private static final String MISSING_SNAPSHOT_MESSAGE = "Approval is missing snapshot";
   private final ChangeRepository changeRepository;
+  private final IndexDocumentGenerator generator;
 
-  public IndexingService(ChangeRepository changeRepository) {
+  public IndexingService(ChangeRepository changeRepository, IndexDocumentGenerator generator) {
     this.changeRepository = changeRepository;
+    this.generator = generator;
   }
 
   public void index(UUID approvalIdentifier) throws IndexingServiceException {
     var snapshot = fetchLatestSnapshot(approvalIdentifier);
-    throw new UnsupportedOperationException(snapshot.toString());
+    var indexDocument = generateIndexDocument(snapshot);
+    throw new UnsupportedOperationException(indexDocument.toString());
+  }
+
+  private IndexDocument generateIndexDocument(SourceSnapshot snapshot)
+      throws IndexingServiceException {
+    try {
+      return generator.generate(snapshot);
+    } catch (IndexDocumentGeneratorException exception) {
+      throw new IndexingServiceException(exception.getMessage());
+    }
   }
 
   private SourceSnapshot fetchLatestSnapshot(UUID approvalIdentifier)

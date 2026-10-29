@@ -156,6 +156,11 @@ public class TestUtils {
         randomSourceChange(approvalIdentifier, randomString()), randomContent(), randomTimestamp());
   }
 
+  public static SourceSnapshot randomSourceSnapshotWithContent(Content content) {
+    return SourceSnapshot.create(
+        randomSourceChange(randomUUID(), randomString()), content, randomTimestamp());
+  }
+
   public static SourceSnapshot randomSourceSnapshot(UUID approvalIdentifier, Instant timestamp) {
     return SourceSnapshot.create(
         randomSourceChange(approvalIdentifier, randomString(), timestamp),
