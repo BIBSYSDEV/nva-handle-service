@@ -5,6 +5,8 @@ glassfish-jakarta-json = { strictly = '2.0.1' }
 jakarta-validation-api = { strictly = '3.1.1' }
 apache-bval = { strictly = '3.1.0' }
 titanium-rdf-api = { strictly = '1.0.0' }
+opensearch-java = { strictly = '3.10.0' }
+jakarta-json-api = { strictly = '2.1.3' }
 
 [libraries]
 jakarta-validation-api = { group = 'jakarta.validation', name = 'jakarta.validation-api', version.ref = 'jakarta-validation-api' }
@@ -14,6 +16,8 @@ jte = { group = 'gg.jte', name = 'jte', version.ref = 'jte' }
 jte-runtime = { group = 'gg.jte', name = 'jte-runtime', version.ref = 'jte' }
 glassfish-jakarta-json = { group = 'org.glassfish', name = 'jakarta.json', version.ref = 'glassfish-jakarta-json' }
 titanium-rdf-api = { group = 'com.apicatalog', name = 'titanium-rdf-api', version.ref = 'titanium-rdf-api' }
+opensearch-java = { group = 'org.opensearch.client', name = 'opensearch-java', version.ref = 'opensearch-java' }
+jakarta-json-api = { group = 'jakarta.json', name = 'jakarta.json-api', version.ref = 'jakarta-json-api' }
 
 [plugins]
 jte = { id = 'gg.jte.gradle', version.ref = 'jte' }
