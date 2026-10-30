@@ -101,6 +101,7 @@ class IndexingServiceTest {
         Set.of(),
         Set.of(),
         Set.of(),
-        new Display(approvalIdentifier, randomString(), randomString(), Set.of()));
+        new Display(approvalIdentifier, randomString(), randomString(), Set.of()),
+        Set.of());
   }
 }

@@ -10,10 +10,14 @@ import nva.commons.core.attempt.Failure;
 import nva.commons.core.ioutils.IoUtils;
 import org.opensearch.client.json.jackson.JacksonJsonpMapper;
 import org.opensearch.client.opensearch.OpenSearchClient;
+import org.opensearch.client.opensearch._types.FieldValue;
 import org.opensearch.client.opensearch._types.OpenSearchException;
 import org.opensearch.client.opensearch._types.mapping.TypeMapping;
+import org.opensearch.client.opensearch._types.query_dsl.Operator;
 import org.opensearch.client.opensearch.core.IndexRequest;
 import org.opensearch.client.opensearch.core.IndexResponse;
+import org.opensearch.client.opensearch.core.SearchRequest;
+import org.opensearch.client.opensearch.core.SearchResponse;
 import org.opensearch.client.opensearch.indices.CreateIndexRequest;
 import org.opensearch.client.opensearch.indices.CreateIndexResponse;
 import org.opensearch.client.opensearch.indices.DeleteIndexRequest;
@@ -25,6 +29,8 @@ public class SearchClient {
   private static final String INDEX_CREATION_FAILED_MESSAGE = "Failed to create index: ";
   private static final String INDEX_DELETION_FAILED_MESSAGE = "Failed to delete index: ";
   private static final String INDEX_ALREADY_EXISTS = "resource_already_exists_exception";
+  private static final String SEARCH_FAILED_MESSAGE = "Failed to search index: ";
+  private static final String FREE_TEXT = "freeText";
   public static final String SEARCH_INDEX = "SEARCH_INDEX";
   private static final String MAPPINGS_FILE = "index/approval-mappings.json";
   private static final TypeMapping MAPPINGS = readMappings();
@@ -64,6 +70,11 @@ public class SearchClient {
         .orElseThrow(this::deletionException);
   }
 
+  public SearchResponse<IndexDocument> search(Query query) {
+    return attempt(() -> client.search(toSearchRequest(query), IndexDocument.class))
+        .orElseThrow(this::searchException);
+  }
+
   public void index(IndexDocument document) {
     attempt(() -> client.index(toIndexRequest(document)))
         .orElseThrow(failure -> indexingException(document, failure));
@@ -99,6 +110,26 @@ public class SearchClient {
   private static boolean isIndexAlreadyExists(Exception exception) {
     return exception instanceof OpenSearchException openSearchException
         && INDEX_ALREADY_EXISTS.equals(openSearchException.error().type());
+  }
+
+  private SearchRequest toSearchRequest(Query query) {
+    return new SearchRequest.Builder()
+        .index(indexName)
+        .from(query.offset())
+        .size(query.size())
+        .query(
+            builder ->
+                builder.match(
+                    match ->
+                        match
+                            .field(FREE_TEXT)
+                            .query(FieldValue.of(query.searchTerm()))
+                            .operator(Operator.And)))
+        .build();
+  }
+
+  private SearchClientException searchException(Failure<SearchResponse<IndexDocument>> failure) {
+    return new SearchClientException(SEARCH_FAILED_MESSAGE + indexName, failure.getException());
   }
 
   private IndexRequest<IndexDocument> toIndexRequest(IndexDocument document) {

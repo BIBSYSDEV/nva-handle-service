@@ -9,6 +9,7 @@ dependencies {
     api(nvaCatalog.aws.lambda.events)
     api(nvaCatalog.aws.sdk2.dynamo)
     api(nvaCatalog.aws.sdk2.dynamodbenhanced)
+    api(libs.opensearch.java)
     api(nvaCatalog.jackson.annotations)
     api(nvaLibs.apigateway)
     api(nvaLibs.core)
@@ -23,9 +24,6 @@ dependencies {
     implementation(nvaCatalog.aws.sdk2.sdk.core)
     implementation(nvaCatalog.aws.sdk2.urlconnection)
     implementation(libs.jakarta.json.api)
-    implementation(libs.opensearch.java) {
-        exclude group: 'org.glassfish', module: 'jakarta.json'
-    }
     implementation(nvaCatalog.com.auth0.jwt)
     implementation(nvaCatalog.httpclient5)
     implementation(nvaCatalog.httpcore5)

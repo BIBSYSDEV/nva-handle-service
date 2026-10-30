@@ -61,6 +61,9 @@
     "display": {
       "type": "object",
       "enabled": false
+    },
+    "freeText": {
+      "type": "text"
     }
   }
 }
