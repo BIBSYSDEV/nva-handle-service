@@ -41,7 +41,6 @@ class SearchClientTest {
       DockerImageName.parse("opensearchproject/opensearch:3.5.0");
   private static final String INDEX_NAME = "approvals";
   private static final String UNREACHABLE_HOST = "http://localhost:1";
-  private static final String UNMAPPED_FIELD = "unmappedField";
   private static final IndexDocument SEARCHABLE_DOCUMENT = randomIndexDocument();
   private static final OpenSearchContainer<?> CONTAINER =
       new OpenSearchContainer<>(OPEN_SEARCH_IMAGE);
@@ -141,7 +140,7 @@ class SearchClientTest {
 
     assertThrows(
         OpenSearchException.class,
-        () -> indexRawDocument(indexName, Map.of(UNMAPPED_FIELD, randomString())));
+        () -> indexRawDocument(indexName, Map.of(randomString(), randomString())));
   }
 
   @Test
