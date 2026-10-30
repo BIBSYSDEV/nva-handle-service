@@ -850,6 +850,50 @@ Resources:
             Queue: !GetAtt IndexApprovalQueue.Arn
             BatchSize: 1
 
+  NvaInitApprovalsIndexFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub "/aws/lambda/${NvaInitApprovalsIndexFunction}"
+      RetentionInDays: 90
+
+  NvaInitApprovalsIndexFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Description: Creates the approvals search index. Invoked manually
+      CodeUri: approvals
+      Handler: no.sikt.nva.approvals.index.InitHandler::handleRequest
+      Timeout: 20
+      Policies:
+        - !Ref ReadSearchInfrastructureCredentialsManagedPolicy
+      Environment:
+        Variables:
+          SEARCH_INDEX: !Ref ApprovalsSearchIndex
+          SEARCH_INFRASTRUCTURE_CREDENTIALS: !Ref SearchInfrastructureCredentialsName
+          SEARCH_INFRASTRUCTURE_API_HOST: !Ref SearchInfrastructureApiHost
+          SEARCH_INFRASTRUCTURE_AUTH_URI: !Ref SearchInfrastructureAuthUri
+
+  NvaDeleteApprovalsIndexFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub "/aws/lambda/${NvaDeleteApprovalsIndexFunction}"
+      RetentionInDays: 90
+
+  NvaDeleteApprovalsIndexFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Description: Deletes the approvals search index. Invoked manually with indexName in input
+      CodeUri: approvals
+      Handler: no.sikt.nva.approvals.index.DeleteIndexHandler::handleRequest
+      Timeout: 20
+      Policies:
+        - !Ref ReadSearchInfrastructureCredentialsManagedPolicy
+      Environment:
+        Variables:
+          SEARCH_INDEX: !Ref ApprovalsSearchIndex
+          SEARCH_INFRASTRUCTURE_CREDENTIALS: !Ref SearchInfrastructureCredentialsName
+          SEARCH_INFRASTRUCTURE_API_HOST: !Ref SearchInfrastructureApiHost
+          SEARCH_INFRASTRUCTURE_AUTH_URI: !Ref SearchInfrastructureAuthUri
+
   NvaCreateHandleBasePathMapping:
     Type: AWS::ApiGateway::BasePathMapping
     Properties:
