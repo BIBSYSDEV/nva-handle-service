@@ -4,7 +4,9 @@ import static java.util.UUID.randomUUID;
 import static no.sikt.nva.approvals.utils.TestUtils.randomHandle;
 import static no.unit.nva.testutils.RandomDataGenerator.randomString;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.net.URI;
@@ -66,6 +68,56 @@ class SearchClientTest {
 
       assertThrows(SearchClientException.class, () -> client.index(randomIndexDocument()));
     }
+  }
+
+  @Test
+  void shouldCreateIndex() throws IOException {
+    var indexName = randomIndexName();
+
+    searchClient(indexName).createIndex();
+
+    assertTrue(indexExists(indexName));
+  }
+
+  @Test
+  void shouldNotFailWhenCreatingIndexThatAlreadyExists() throws IOException {
+    var indexName = randomIndexName();
+    var client = searchClient(indexName);
+    client.createIndex();
+
+    client.createIndex();
+
+    assertTrue(indexExists(indexName));
+  }
+
+  @Test
+  void shouldDeleteIndex() throws IOException {
+    var indexName = randomIndexName();
+    var client = searchClient(indexName);
+    client.createIndex();
+
+    client.deleteIndex();
+
+    assertFalse(indexExists(indexName));
+  }
+
+  @Test
+  void shouldThrowSearchClientExceptionWhenDeletingIndexThatDoesNotExist() {
+    var client = searchClient(randomIndexName());
+
+    assertThrows(SearchClientException.class, client::deleteIndex);
+  }
+
+  private static boolean indexExists(String indexName) throws IOException {
+    return openSearchClient.indices().exists(request -> request.index(indexName)).value();
+  }
+
+  private static SearchClient searchClient(String indexName) {
+    return new SearchClient(openSearchClient, indexName);
+  }
+
+  private static String randomIndexName() {
+    return "index-" + randomUUID();
   }
 
   private static IndexDocument getIndexedDocument(UUID identifier) throws IOException {
