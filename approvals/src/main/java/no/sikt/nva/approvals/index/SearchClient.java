@@ -20,7 +20,7 @@ public class SearchClient {
   private static final String INDEX_CREATION_FAILED_MESSAGE = "Failed to create index: ";
   private static final String INDEX_DELETION_FAILED_MESSAGE = "Failed to delete index: ";
   private static final String INDEX_ALREADY_EXISTS = "resource_already_exists_exception";
-  private static final String SEARCH_INDEX = "SEARCH_INDEX";
+  public static final String SEARCH_INDEX = "SEARCH_INDEX";
 
   private final OpenSearchClient client;
   private final String indexName;
