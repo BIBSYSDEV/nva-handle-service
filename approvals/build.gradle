@@ -22,6 +22,8 @@ dependencies {
     implementation(nvaCatalog.aws.sdk2.regions)
     implementation(nvaCatalog.aws.sdk2.sdk.core)
     implementation(nvaCatalog.aws.sdk2.urlconnection)
+    implementation(libs.jakarta.json.api)
+    implementation(libs.opensearch.java)
     implementation(nvaCatalog.httpcore5)
     implementation(nvaCatalog.jackson.databind)
     implementation(libs.glassfish.jakarta.json)
@@ -37,6 +39,8 @@ dependencies {
     testImplementation(nvaCatalog.junit.jupiter.api)
     testImplementation(nvaCatalog.junit.jupiter.params)
     testImplementation(nvaCatalog.mockito.core)
+    testImplementation(nvaCatalog.testcontainers)
+    testImplementation(nvaCatalog.testcontainers.opensearch)
     testImplementation(nvaCatalog.zalando)
     testImplementation(nvaLibs.testutils)
 }
