@@ -153,6 +153,13 @@ class SearchClientTest {
   }
 
   @Test
+  void shouldReturnAllDocumentsWhenQueryIsBlank() {
+    var hits = searchFreeText(StringUtils.EMPTY_STRING);
+
+    assertEquals(2, hits.size());
+  }
+
+  @Test
   void shouldFindDocumentByApprovalIdentifier() {
     var approvalIdentifier = SEARCHABLE_DOCUMENT.identifier().toString();
 
