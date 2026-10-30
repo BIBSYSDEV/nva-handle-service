@@ -98,8 +98,8 @@ public record IndexDocument(
 
   record Organization(String id, String name) {}
 
-  record Identifier(String name, String value) {}
+  public record Identifier(String name, String value) {}
 
   @JsonTypeName(APPROVAL)
-  record Display(UUID id, String handle, String title, Set<Identifier> identifiers) {}
+  public record Display(UUID id, String handle, String title, Set<Identifier> identifiers) {}
 }

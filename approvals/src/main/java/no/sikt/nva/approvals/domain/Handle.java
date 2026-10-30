@@ -17,6 +17,10 @@ public record Handle(URI value) {
     validate(value);
   }
 
+  public static Handle fromIdentifier(String identifier) {
+    return new Handle(UriWrapper.fromHost(HANDLE_HOST).addChild(identifier).getUri());
+  }
+
   private static void validate(URI uri) {
     if (isNull(uri) || StringUtils.isBlank(uri.toString()) || isTooLong(uri)) {
       throw new IllegalArgumentException(INVALID_HANDLE_EXCEPTION);
