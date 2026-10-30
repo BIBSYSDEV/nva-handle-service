@@ -2,12 +2,10 @@
   "dynamic": "strict",
   "properties": {
     "identifier": {
-      "type": "keyword",
-      "copy_to": "freeText"
+      "type": "keyword"
     },
     "handle": {
-      "type": "keyword",
-      "copy_to": "freeText"
+      "type": "keyword"
     },
     "title": {
       "type": "text",
@@ -15,15 +13,13 @@
         "keyword": {
           "type": "keyword"
         }
-      },
-      "copy_to": "freeText"
+      }
     },
     "persons": {
       "type": "nested",
       "properties": {
         "id": {
-          "type": "keyword",
-          "copy_to": "freeText"
+          "type": "keyword"
         },
         "name": {
           "type": "text",
@@ -31,8 +27,7 @@
             "keyword": {
               "type": "keyword"
             }
-          },
-          "copy_to": "freeText"
+          }
         }
       }
     },
@@ -40,8 +35,7 @@
       "type": "nested",
       "properties": {
         "id": {
-          "type": "keyword",
-          "copy_to": "freeText"
+          "type": "keyword"
         },
         "name": {
           "type": "text",
@@ -49,8 +43,7 @@
             "keyword": {
               "type": "keyword"
             }
-          },
-          "copy_to": "freeText"
+          }
         }
       }
     },
@@ -61,8 +54,7 @@
           "type": "keyword"
         },
         "value": {
-          "type": "keyword",
-          "copy_to": "freeText"
+          "type": "keyword"
         }
       }
     },

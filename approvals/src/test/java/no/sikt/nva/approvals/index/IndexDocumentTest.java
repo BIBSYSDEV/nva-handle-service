@@ -7,6 +7,9 @@ import static no.unit.nva.testutils.RandomDataGenerator.randomString;
 import static no.unit.nva.testutils.RandomDataGenerator.randomUri;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.contains;
+import static org.hamcrest.Matchers.hasItem;
+import static org.hamcrest.Matchers.not;
+import static org.hamcrest.Matchers.nullValue;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.net.URI;
@@ -109,6 +112,116 @@ class IndexDocumentTest {
     assertEquals(expectedDisplay, indexDocument.display());
   }
 
+  @Test
+  void shouldAddApprovalIdentifierToFreeText() {
+    var approval = randomApproval(randomHandle());
+
+    var indexDocument = IndexDocument.create(framedClinicalTrial(), approval);
+
+    assertThat(indexDocument.freeText(), hasItem(approval.identifier().toString()));
+  }
+
+  @Test
+  void shouldAddHandleToFreeText() {
+    var handle = randomHandle();
+
+    var indexDocument = IndexDocument.create(framedClinicalTrial(), randomApproval(handle));
+
+    assertThat(indexDocument.freeText(), hasItem(handle.identifier()));
+  }
+
+  @Test
+  void shouldAddTitleToFreeText() {
+    var trial = framedClinicalTrial();
+
+    var indexDocument = IndexDocument.create(trial, randomApproval(randomHandle()));
+
+    assertThat(indexDocument.freeText(), hasItem(trial.title()));
+  }
+
+  @Test
+  void shouldAddPersonNameToFreeText() {
+    var trial = framedClinicalTrial();
+
+    var indexDocument = IndexDocument.create(trial, randomApproval(randomHandle()));
+
+    assertThat(indexDocument.freeText(), hasItem(trial.persons().iterator().next().name()));
+  }
+
+  @Test
+  void shouldAddPersonIdentifierToFreeText() {
+    var personIdentifier = randomString();
+    var trial =
+        new FramedClinicalTrial(
+            randomString(),
+            Set.of(investigator(personIdentifier)),
+            Set.of(trialSite(randomString())));
+
+    var indexDocument = IndexDocument.create(trial, randomApproval(randomHandle()));
+
+    assertThat(indexDocument.freeText(), hasItem(personIdentifier));
+  }
+
+  @Test
+  void shouldAddOrganizationNameToFreeText() {
+    var trial = framedClinicalTrial();
+
+    var indexDocument = IndexDocument.create(trial, randomApproval(randomHandle()));
+
+    assertThat(indexDocument.freeText(), hasItem(trial.organizations().iterator().next().name()));
+  }
+
+  @Test
+  void shouldAddOrganizationIdentifierToFreeText() {
+    var organizationIdentifier = randomString();
+    var trial =
+        new FramedClinicalTrial(
+            randomString(),
+            Set.of(investigator(randomString())),
+            Set.of(trialSite(organizationIdentifier)));
+
+    var indexDocument = IndexDocument.create(trial, randomApproval(randomHandle()));
+
+    assertThat(indexDocument.freeText(), hasItem(organizationIdentifier));
+  }
+
+  @Test
+  void shouldAddNamedIdentifierValueToFreeText() {
+    var namedIdentifier = randomIdentifier();
+    var approval = randomApproval(randomHandle(), namedIdentifier);
+
+    var indexDocument = IndexDocument.create(framedClinicalTrial(), approval);
+
+    assertThat(indexDocument.freeText(), hasItem(namedIdentifier.value()));
+  }
+
+  @Test
+  void shouldNotRepeatSameValuesInFreeText() {
+    var sharedName = randomString();
+    var trial =
+        new FramedClinicalTrial(
+            randomString(),
+            Set.of(investigator(randomString())),
+            Set.of(trialSite(randomString(), sharedName), trialSite(randomString(), sharedName)));
+
+    var indexDocument = IndexDocument.create(trial, randomApproval(randomHandle()));
+
+    assertEquals(1, indexDocument.freeText().stream().filter(sharedName::equals).count());
+  }
+
+  @Test
+  void shouldNotAddMissingOrganizationIdentifierToFreeText() {
+    var trial =
+        new FramedClinicalTrial(
+            randomString(),
+            Set.of(investigator(randomString())),
+            Set.of(new TrialSite(null, randomString())));
+
+    var indexDocument = IndexDocument.create(trial, randomApproval(randomHandle()));
+
+    assertThat(indexDocument.freeText(), not(hasItem(nullValue())));
+  }
+
   private static FramedClinicalTrial framedClinicalTrial() {
     return new FramedClinicalTrial(
         randomString(), Set.of(investigator(randomString())), Set.of(trialSite(randomString())));
@@ -119,7 +232,11 @@ class IndexDocumentTest {
   }
 
   private static TrialSite trialSite(String organizationIdentifier) {
-    return new TrialSite(cristinUri(ORGANIZATION, organizationIdentifier), randomString());
+    return trialSite(organizationIdentifier, randomString());
+  }
+
+  private static TrialSite trialSite(String organizationIdentifier, String name) {
+    return new TrialSite(cristinUri(ORGANIZATION, organizationIdentifier), name);
   }
 
   private static URI cristinUri(String resource, String identifier) {
