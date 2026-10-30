@@ -12,7 +12,6 @@ import nva.commons.core.JacocoGenerated;
 
 public class IndexingService {
 
-  private static final String API_HOST = "API_HOST";
   private static final String MISSING_SNAPSHOT_MESSAGE = "Approval is missing snapshot";
   private static final String APPROVAL_NOT_FOUND_MESSAGE = "Approval not found";
   private final ChangeRepository changeRepository;
@@ -36,7 +35,7 @@ public class IndexingService {
     return new IndexingService(
         DynamoDbChangeRepository.defaultInstance(environment),
         DynamoDbApprovalRepository.defaultInstance(environment),
-        new IndexDocumentGenerator(environment.readEnv(API_HOST)),
+        new IndexDocumentGenerator(),
         SearchClient.defaultInstance(environment));
   }
 

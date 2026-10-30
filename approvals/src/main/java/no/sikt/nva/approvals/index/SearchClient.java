@@ -124,7 +124,7 @@ public class SearchClient {
                     match ->
                         match
                             .field(FREE_TEXT)
-                            .query(FieldValue.of(query.query()))
+                            .query(FieldValue.of(query.searchTerm()))
                             .operator(Operator.And)))
         .build();
   }

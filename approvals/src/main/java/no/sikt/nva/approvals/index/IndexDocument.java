@@ -1,10 +1,13 @@
 package no.sikt.nva.approvals.index;
 
 import com.fasterxml.jackson.annotation.JsonTypeName;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import java.util.function.Function;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import no.sikt.nva.approvals.domain.Approval;
 import no.sikt.nva.approvals.index.FramedClinicalTrial.Investigator;
 import no.sikt.nva.approvals.index.FramedClinicalTrial.TrialSite;
@@ -18,7 +21,8 @@ public record IndexDocument(
     Set<Person> persons,
     Set<Organization> organizations,
     Set<Identifier> identifiers,
-    Display display) {
+    Display display,
+    Set<String> freeText) {
 
   private static final String APPROVAL = "Approval";
 
@@ -27,14 +31,35 @@ public record IndexDocument(
     var identifiers = getIdentifiers(approval);
     var handle = approval.handle().identifier();
     var display = new Display(approval.identifier(), handle, trial.title(), identifiers);
+    var persons = getPersons(trial);
+    var organizations = getOrganizations(trial);
     return new IndexDocument(
         identifier,
         handle,
         trial.title(),
-        getPersons(trial),
-        getOrganizations(trial),
+        persons,
+        organizations,
         identifiers,
-        display);
+        display,
+        getFreeText(identifier, handle, trial.title(), persons, organizations, identifiers));
+  }
+
+  private static Set<String> getFreeText(
+      UUID identifier,
+      String handle,
+      String title,
+      Set<Person> persons,
+      Set<Organization> organizations,
+      Set<Identifier> identifiers) {
+    return Stream.of(
+            Stream.of(identifier.toString(), handle, title),
+            persons.stream().flatMap(person -> Stream.of(person.id(), person.name())),
+            organizations.stream()
+                .flatMap(organization -> Stream.of(organization.id(), organization.name())),
+            identifiers.stream().map(Identifier::value))
+        .flatMap(Function.identity())
+        .filter(Objects::nonNull)
+        .collect(Collectors.toSet());
   }
 
   private static Set<Identifier> getIdentifiers(Approval approval) {

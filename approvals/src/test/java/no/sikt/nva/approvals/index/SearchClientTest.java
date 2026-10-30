@@ -1,8 +1,9 @@
 package no.sikt.nva.approvals.index;
 
 import static java.util.UUID.randomUUID;
+import static no.sikt.nva.approvals.utils.TestUtils.randomApproval;
+import static no.sikt.nva.approvals.utils.TestUtils.randomHandle;
 import static no.unit.nva.testutils.RandomDataGenerator.randomString;
-import static no.unit.nva.testutils.RandomDataGenerator.randomUri;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -14,7 +15,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
-import no.sikt.nva.approvals.index.IndexDocument.Display;
+import no.sikt.nva.approvals.index.FramedClinicalTrial.Investigator;
+import no.sikt.nva.approvals.index.FramedClinicalTrial.TrialSite;
 import no.sikt.nva.approvals.index.IndexDocument.Identifier;
 import no.sikt.nva.approvals.index.IndexDocument.Organization;
 import no.sikt.nva.approvals.index.IndexDocument.Person;
@@ -26,7 +28,6 @@ import org.junit.jupiter.api.Test;
 import org.opensearch.client.json.jackson.JacksonJsonpMapper;
 import org.opensearch.client.opensearch.OpenSearchClient;
 import org.opensearch.client.opensearch._types.OpenSearchException;
-import org.opensearch.client.opensearch._types.mapping.Property;
 import org.opensearch.client.opensearch.core.GetRequest;
 import org.opensearch.client.transport.httpclient5.ApacheHttpClient5Transport;
 import org.opensearch.client.transport.httpclient5.ApacheHttpClient5TransportBuilder;
@@ -39,10 +40,8 @@ class SearchClientTest {
       DockerImageName.parse("opensearchproject/opensearch:3.5.0");
   private static final String INDEX_NAME = "approvals";
   private static final String UNREACHABLE_HOST = "http://localhost:1";
-  private static final String HANDLE = "handle";
-  private static final String DISPLAY = "display";
-  private static final IndexDocument SEARCHABLE_DOCUMENT = randomIndexDocument();
   private static final String UNMAPPED_FIELD = "unmappedField";
+  private static final IndexDocument SEARCHABLE_DOCUMENT = randomIndexDocument();
   private static final OpenSearchContainer<?> CONTAINER =
       new OpenSearchContainer<>(OPEN_SEARCH_IMAGE);
 
@@ -77,7 +76,7 @@ class SearchClientTest {
 
     searchClient.index(document);
 
-    assertEquals(document, getIndexedDocument(INDEX_NAME, document.identifier()));
+    assertEquals(document, getIndexedDocument(document.identifier()));
   }
 
   @Test
@@ -135,18 +134,6 @@ class SearchClientTest {
   }
 
   @Test
-  void shouldIndexDocumentIntoIndexWithMappings() throws IOException {
-    var indexName = randomIndexName();
-    var client = searchClient(indexName);
-    client.createIndex();
-    var document = randomIndexDocument();
-
-    client.index(document);
-
-    assertEquals(document, getIndexedDocument(indexName, document.identifier()));
-  }
-
-  @Test
   void shouldRejectDocumentWithFieldOutsideMappings() {
     var indexName = randomIndexName();
     searchClient(indexName).createIndex();
@@ -157,63 +144,80 @@ class SearchClientTest {
   }
 
   @Test
-  void shouldFindDocumentByHandleUri() throws IOException {
-    assertEquals(
-        List.of(SEARCHABLE_DOCUMENT), searchFreeText(SEARCHABLE_DOCUMENT.handle().toString()));
+  void shouldFindDocumentByApprovalIdentifier() {
+    var approvalIdentifier = SEARCHABLE_DOCUMENT.identifier().toString();
+
+    assertEquals(List.of(SEARCHABLE_DOCUMENT), searchFreeText(approvalIdentifier));
   }
 
   @Test
-  void shouldFindDocumentByHandleIdentifier() throws IOException {
-    assertEquals(
-        List.of(SEARCHABLE_DOCUMENT),
-        searchFreeText(lastPathSegment(SEARCHABLE_DOCUMENT.handle())));
+  void shouldFindDocumentByHandleIdentifier() {
+    var handleIdentifier = SEARCHABLE_DOCUMENT.handle();
+
+    assertEquals(List.of(SEARCHABLE_DOCUMENT), searchFreeText(handleIdentifier));
   }
 
   @Test
-  void shouldFindDocumentByApprovalIdentifier() throws IOException {
-    assertEquals(
-        List.of(SEARCHABLE_DOCUMENT), searchFreeText(SEARCHABLE_DOCUMENT.identifier().toString()));
+  void shouldFindDocumentByHandleUri() {
+    var handleUri = "https://hdl.handle.net/" + SEARCHABLE_DOCUMENT.handle();
+
+    assertEquals(List.of(SEARCHABLE_DOCUMENT), searchFreeText(handleUri));
   }
 
   @Test
-  void shouldFindDocumentByNamedIdentifierValue() throws IOException {
-    assertEquals(List.of(SEARCHABLE_DOCUMENT), searchFreeText(namedIdentifier().value()));
+  void shouldFindDocumentByTitle() {
+    var title = SEARCHABLE_DOCUMENT.title();
+
+    assertEquals(List.of(SEARCHABLE_DOCUMENT), searchFreeText(title));
   }
 
   @Test
-  void shouldFindDocumentByPersonName() throws IOException {
-    assertEquals(List.of(SEARCHABLE_DOCUMENT), searchFreeText(person().name()));
+  void shouldFindDocumentByPersonIdentifier() {
+    var personIdentifier = person().id();
+
+    assertEquals(List.of(SEARCHABLE_DOCUMENT), searchFreeText(personIdentifier));
   }
 
   @Test
-  void shouldFindDocumentByPersonIdentifierUri() throws IOException {
-    assertEquals(List.of(SEARCHABLE_DOCUMENT), searchFreeText(person().id().toString()));
+  void shouldFindDocumentByPersonUri() {
+    var personUri = "https://api.example.org/cristin/person/" + person().id();
+
+    assertEquals(List.of(SEARCHABLE_DOCUMENT), searchFreeText(personUri));
   }
 
   @Test
-  void shouldFindDocumentByPersonIdentifier() throws IOException {
-    assertEquals(List.of(SEARCHABLE_DOCUMENT), searchFreeText(lastPathSegment(person().id())));
+  void shouldFindDocumentByPersonName() {
+    var personName = person().name();
+
+    assertEquals(List.of(SEARCHABLE_DOCUMENT), searchFreeText(personName));
   }
 
   @Test
-  void shouldFindDocumentByOrganizationName() throws IOException {
-    assertEquals(List.of(SEARCHABLE_DOCUMENT), searchFreeText(organization().name()));
+  void shouldFindDocumentByOrganizationIdentifier() {
+    var organizationIdentifier = organization().id();
+
+    assertEquals(List.of(SEARCHABLE_DOCUMENT), searchFreeText(organizationIdentifier));
   }
 
   @Test
-  void shouldFindDocumentByOrganizationIdentifierUri() throws IOException {
-    assertEquals(List.of(SEARCHABLE_DOCUMENT), searchFreeText(organization().id().toString()));
+  void shouldFindDocumentByOrganizationUri() {
+    var organizationUri = "https://api.example.org/cristin/organization/" + organization().id();
+
+    assertEquals(List.of(SEARCHABLE_DOCUMENT), searchFreeText(organizationUri));
   }
 
   @Test
-  void shouldFindDocumentByOrganizationIdentifier() throws IOException {
-    assertEquals(
-        List.of(SEARCHABLE_DOCUMENT), searchFreeText(lastPathSegment(organization().id())));
+  void shouldFindDocumentByOrganizationName() {
+    var organizationName = organization().name();
+
+    assertEquals(List.of(SEARCHABLE_DOCUMENT), searchFreeText(organizationName));
   }
 
   @Test
-  void shouldFindDocumentByTitle() throws IOException {
-    assertEquals(List.of(SEARCHABLE_DOCUMENT), searchFreeText(SEARCHABLE_DOCUMENT.title()));
+  void shouldFindDocumentByNamedIdentifierValue() {
+    var namedIdentifierValue = namedIdentifier().value();
+
+    assertEquals(List.of(SEARCHABLE_DOCUMENT), searchFreeText(namedIdentifierValue));
   }
 
   private static Person person() {
@@ -228,10 +232,6 @@ class SearchClientTest {
     return SEARCHABLE_DOCUMENT.identifiers().iterator().next();
   }
 
-  private static String lastPathSegment(URI uri) {
-    return UriWrapper.fromUri(uri).getLastPathElement();
-  }
-
   private static List<IndexDocument> searchFreeText(String value) {
     return searchClient(searchableIndexName).search(new Query(value));
   }
@@ -240,33 +240,10 @@ class SearchClientTest {
     openSearchClient.indices().refresh(request -> request.index(indexName));
   }
 
-  @Test
-  void shouldNotIndexDisplayField() throws IOException {
-    var indexName = randomIndexName();
-
-    searchClient(indexName).createIndex();
-
-    assertFalse(Boolean.TRUE.equals(mappedProperty(indexName, DISPLAY).object().enabled()));
-  }
-
-  @Test
-  void shouldMapHandleAsKeyword() throws IOException {
-    var indexName = randomIndexName();
-
-    searchClient(indexName).createIndex();
-
-    assertTrue(mappedProperty(indexName, HANDLE).isKeyword());
-  }
-
   private static void indexRawDocument(String indexName, Map<String, String> document)
       throws IOException {
     openSearchClient.index(
         request -> request.index(indexName).id(randomUUID().toString()).document(document));
-  }
-
-  private static Property mappedProperty(String indexName, String property) throws IOException {
-    var response = openSearchClient.indices().getMapping(request -> request.index(indexName));
-    return response.result().get(indexName).mappings().properties().get(property);
   }
 
   private static boolean indexExists(String indexName) throws IOException {
@@ -281,9 +258,12 @@ class SearchClientTest {
     return "index-" + randomUUID();
   }
 
-  private static IndexDocument getIndexedDocument(String indexName, UUID identifier)
-      throws IOException {
-    var request = new GetRequest.Builder().index(indexName).id(identifier.toString()).build();
+  private static IndexDocument getIndexedDocument(UUID identifier) throws IOException {
+    var request =
+        new GetRequest.Builder()
+            .index(SearchClientTest.INDEX_NAME)
+            .id(identifier.toString())
+            .build();
     return openSearchClient.get(request, IndexDocument.class).source();
   }
 
@@ -294,14 +274,21 @@ class SearchClientTest {
   }
 
   private static IndexDocument randomIndexDocument() {
-    var identifiers = Set.of(new Identifier(randomString(), randomString()));
-    return new IndexDocument(
-        randomUUID(),
-        randomUri(),
+    return IndexDocument.create(randomTrial(), randomApproval(randomHandle()));
+  }
+
+  private static FramedClinicalTrial randomTrial() {
+    return new FramedClinicalTrial(
         randomString(),
-        Set.of(new Person(randomUri(), randomString())),
-        Set.of(new Organization(randomUri(), randomString())),
-        identifiers,
-        new Display(randomUri(), randomUri(), randomString(), identifiers));
+        Set.of(new Investigator(cristinUri("person"), randomString(), randomString())),
+        Set.of(new TrialSite(cristinUri("organization"), randomString())));
+  }
+
+  private static URI cristinUri(String resource) {
+    return UriWrapper.fromHost(randomString())
+        .addChild("cristin")
+        .addChild(resource)
+        .addChild(randomString())
+        .getUri();
   }
 }
