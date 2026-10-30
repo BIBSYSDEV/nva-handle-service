@@ -6,6 +6,7 @@ import java.io.StringReader;
 import java.nio.file.Path;
 import nva.commons.core.Environment;
 import nva.commons.core.JacocoGenerated;
+import nva.commons.core.StringUtils;
 import nva.commons.core.attempt.Failure;
 import nva.commons.core.ioutils.IoUtils;
 import org.opensearch.client.json.jackson.JacksonJsonpMapper;
@@ -119,12 +120,14 @@ public class SearchClient {
         .size(query.size())
         .query(
             builder ->
-                builder.match(
-                    match ->
-                        match
-                            .field(FREE_TEXT)
-                            .query(FieldValue.of(query.searchTerm()))
-                            .operator(Operator.And)))
+                StringUtils.isBlank(query.query())
+                    ? builder.matchAll(matchAll -> matchAll)
+                    : builder.match(
+                        match ->
+                            match
+                                .field(FREE_TEXT)
+                                .query(FieldValue.of(query.searchTerm()))
+                                .operator(Operator.And)))
         .build();
   }
 
