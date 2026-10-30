@@ -29,6 +29,7 @@ import org.opensearch.client.json.jackson.JacksonJsonpMapper;
 import org.opensearch.client.opensearch.OpenSearchClient;
 import org.opensearch.client.opensearch._types.OpenSearchException;
 import org.opensearch.client.opensearch.core.GetRequest;
+import org.opensearch.client.opensearch.core.search.Hit;
 import org.opensearch.client.transport.httpclient5.ApacheHttpClient5Transport;
 import org.opensearch.client.transport.httpclient5.ApacheHttpClient5TransportBuilder;
 import org.opensearch.testcontainers.OpenSearchContainer;
@@ -233,7 +234,9 @@ class SearchClientTest {
   }
 
   private static List<IndexDocument> searchFreeText(String value) {
-    return searchClient(searchableIndexName).search(new Query(value));
+    return searchClient(searchableIndexName).search(new Query(value)).hits().hits().stream()
+        .map(Hit::source)
+        .toList();
   }
 
   private static void refresh(String indexName) throws IOException {

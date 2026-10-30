@@ -4,7 +4,6 @@ import static nva.commons.core.attempt.Try.attempt;
 
 import java.io.StringReader;
 import java.nio.file.Path;
-import java.util.List;
 import nva.commons.core.Environment;
 import nva.commons.core.JacocoGenerated;
 import nva.commons.core.attempt.Failure;
@@ -19,7 +18,6 @@ import org.opensearch.client.opensearch.core.IndexRequest;
 import org.opensearch.client.opensearch.core.IndexResponse;
 import org.opensearch.client.opensearch.core.SearchRequest;
 import org.opensearch.client.opensearch.core.SearchResponse;
-import org.opensearch.client.opensearch.core.search.Hit;
 import org.opensearch.client.opensearch.indices.CreateIndexRequest;
 import org.opensearch.client.opensearch.indices.CreateIndexResponse;
 import org.opensearch.client.opensearch.indices.DeleteIndexRequest;
@@ -72,9 +70,8 @@ public class SearchClient {
         .orElseThrow(this::deletionException);
   }
 
-  public List<IndexDocument> search(Query query) {
+  public SearchResponse<IndexDocument> search(Query query) {
     return attempt(() -> client.search(toSearchRequest(query), IndexDocument.class))
-        .map(SearchClient::toDocuments)
         .orElseThrow(this::searchException);
   }
 
@@ -118,6 +115,8 @@ public class SearchClient {
   private SearchRequest toSearchRequest(Query query) {
     return new SearchRequest.Builder()
         .index(indexName)
+        .from(query.offset())
+        .size(query.size())
         .query(
             builder ->
                 builder.match(
@@ -129,11 +128,7 @@ public class SearchClient {
         .build();
   }
 
-  private static List<IndexDocument> toDocuments(SearchResponse<IndexDocument> response) {
-    return response.hits().hits().stream().map(Hit::source).toList();
-  }
-
-  private SearchClientException searchException(Failure<List<IndexDocument>> failure) {
+  private SearchClientException searchException(Failure<SearchResponse<IndexDocument>> failure) {
     return new SearchClientException(SEARCH_FAILED_MESSAGE + indexName, failure.getException());
   }
 
