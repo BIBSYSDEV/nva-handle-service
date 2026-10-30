@@ -65,6 +65,22 @@ Parameters:
     Type: String
     Description: Name of the secret containing all approval credentials
     Default: ApprovalCredentials
+  SearchInfrastructureCredentialsName:
+    Type: String
+    Description: Name of the secret containing credentials for the search infrastructure
+    Default: SearchInfrastructureCredentials
+  SearchInfrastructureApiHost:
+    Type: String
+    Description: Host of external search infrastructure API (SWS)
+    Default: "https://api.sws.aws.sikt.no"
+  SearchInfrastructureAuthUri:
+    Type: String
+    Description: URI to auth for external search infrastructure API (SWS)
+    Default: "https://sws-auth.auth.eu-west-1.amazoncognito.com"
+  ApprovalsSearchIndex:
+    Type: String
+    Description: Name of the search index holding approvals
+    Default: approvals
 
 Conditions:
   IsProd: !Equals [!Ref ApiDomain, "api.nva.unit.no"]
@@ -431,6 +447,18 @@ Resources:
               - secretsmanager:GetSecretValue
             Resource:
               - !Sub "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:${ApprovalCredentialsName}-*"
+
+  ReadSearchInfrastructureCredentialsManagedPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Action:
+              - secretsmanager:GetSecretValue
+            Resource:
+              - !Sub "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:${SearchInfrastructureCredentialsName}-*"
 
   ApiAccessLogGroup:
     Type: AWS::Logs::LogGroup
@@ -807,9 +835,14 @@ Resources:
       Timeout: 300
       Policies:
         - !Ref DynamoDbTableAccessPolicy
+        - !Ref ReadSearchInfrastructureCredentialsManagedPolicy
       Environment:
         Variables:
           TABLE: !Ref ApprovalsTable
+          SEARCH_INDEX: !Ref ApprovalsSearchIndex
+          SEARCH_INFRASTRUCTURE_CREDENTIALS: !Ref SearchInfrastructureCredentialsName
+          SEARCH_INFRASTRUCTURE_API_HOST: !Ref SearchInfrastructureApiHost
+          SEARCH_INFRASTRUCTURE_AUTH_URI: !Ref SearchInfrastructureAuthUri
       Events:
         SnapshotCreated:
           Type: SQS
