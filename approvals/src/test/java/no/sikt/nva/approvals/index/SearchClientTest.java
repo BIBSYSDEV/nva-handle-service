@@ -10,6 +10,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.net.URI;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -36,20 +37,28 @@ class SearchClientTest {
   private static final String UNREACHABLE_HOST = "http://localhost:1";
   private static final String HANDLE = "handle";
   private static final String DISPLAY = "display";
+  private static final IndexDocument SEARCHABLE_DOCUMENT = randomIndexDocument();
   private static final String UNMAPPED_FIELD = "unmappedField";
   private static final OpenSearchContainer<?> CONTAINER =
       new OpenSearchContainer<>(OPEN_SEARCH_IMAGE);
 
+  private static String searchableIndexName;
   private static ApacheHttpClient5Transport transport;
   private static OpenSearchClient openSearchClient;
   private static SearchClient searchClient;
 
   @BeforeAll
-  static void startContainer() {
+  static void startContainer() throws IOException {
     CONTAINER.start();
     transport = transport(CONTAINER.getHttpHostAddress());
     openSearchClient = new OpenSearchClient(transport);
     searchClient = new SearchClient(openSearchClient, INDEX_NAME);
+    searchableIndexName = randomIndexName();
+    var client = searchClient(searchableIndexName);
+    client.createIndex();
+    client.index(SEARCHABLE_DOCUMENT);
+    client.index(randomIndexDocument());
+    refresh(searchableIndexName);
   }
 
   @AfterAll
@@ -108,6 +117,13 @@ class SearchClientTest {
   }
 
   @Test
+  void shouldThrowSearchClientExceptionWhenSearchingIndexThatDoesNotExist() {
+    var client = searchClient(randomIndexName());
+
+    assertThrows(SearchClientException.class, () -> client.search(new Query(randomString())));
+  }
+
+  @Test
   void shouldThrowSearchClientExceptionWhenDeletingIndexThatDoesNotExist() {
     var client = searchClient(randomIndexName());
 
@@ -137,12 +153,96 @@ class SearchClientTest {
   }
 
   @Test
+  void shouldFindDocumentByHandleUri() throws IOException {
+    assertEquals(
+        List.of(SEARCHABLE_DOCUMENT), searchFreeText(SEARCHABLE_DOCUMENT.handle().toString()));
+  }
+
+  @Test
+  void shouldFindDocumentByHandleIdentifier() throws IOException {
+    assertEquals(
+        List.of(SEARCHABLE_DOCUMENT),
+        searchFreeText(lastPathSegment(SEARCHABLE_DOCUMENT.handle())));
+  }
+
+  @Test
+  void shouldFindDocumentByApprovalIdentifier() throws IOException {
+    assertEquals(
+        List.of(SEARCHABLE_DOCUMENT), searchFreeText(SEARCHABLE_DOCUMENT.identifier().toString()));
+  }
+
+  @Test
+  void shouldFindDocumentByNamedIdentifierValue() throws IOException {
+    assertEquals(List.of(SEARCHABLE_DOCUMENT), searchFreeText(namedIdentifier().value()));
+  }
+
+  @Test
+  void shouldFindDocumentByPersonName() throws IOException {
+    assertEquals(List.of(SEARCHABLE_DOCUMENT), searchFreeText(person().name()));
+  }
+
+  @Test
+  void shouldFindDocumentByPersonIdentifierUri() throws IOException {
+    assertEquals(List.of(SEARCHABLE_DOCUMENT), searchFreeText(person().id().toString()));
+  }
+
+  @Test
+  void shouldFindDocumentByPersonIdentifier() throws IOException {
+    assertEquals(List.of(SEARCHABLE_DOCUMENT), searchFreeText(lastPathSegment(person().id())));
+  }
+
+  @Test
+  void shouldFindDocumentByOrganizationName() throws IOException {
+    assertEquals(List.of(SEARCHABLE_DOCUMENT), searchFreeText(organization().name()));
+  }
+
+  @Test
+  void shouldFindDocumentByOrganizationIdentifierUri() throws IOException {
+    assertEquals(List.of(SEARCHABLE_DOCUMENT), searchFreeText(organization().id().toString()));
+  }
+
+  @Test
+  void shouldFindDocumentByOrganizationIdentifier() throws IOException {
+    assertEquals(
+        List.of(SEARCHABLE_DOCUMENT), searchFreeText(lastPathSegment(organization().id())));
+  }
+
+  @Test
+  void shouldFindDocumentByTitle() throws IOException {
+    assertEquals(List.of(SEARCHABLE_DOCUMENT), searchFreeText(SEARCHABLE_DOCUMENT.title()));
+  }
+
+  private static Person person() {
+    return SEARCHABLE_DOCUMENT.persons().iterator().next();
+  }
+
+  private static Organization organization() {
+    return SEARCHABLE_DOCUMENT.organizations().iterator().next();
+  }
+
+  private static Identifier namedIdentifier() {
+    return SEARCHABLE_DOCUMENT.identifiers().iterator().next();
+  }
+
+  private static String lastPathSegment(URI uri) {
+    return UriWrapper.fromUri(uri).getLastPathElement();
+  }
+
+  private static List<IndexDocument> searchFreeText(String value) {
+    return searchClient(searchableIndexName).search(new Query(value));
+  }
+
+  private static void refresh(String indexName) throws IOException {
+    openSearchClient.indices().refresh(request -> request.index(indexName));
+  }
+
+  @Test
   void shouldNotIndexDisplayField() throws IOException {
     var indexName = randomIndexName();
 
     searchClient(indexName).createIndex();
 
-    assertFalse(mappedProperty(indexName, DISPLAY).object().enabled());
+    assertFalse(Boolean.TRUE.equals(mappedProperty(indexName, DISPLAY).object().enabled()));
   }
 
   @Test
