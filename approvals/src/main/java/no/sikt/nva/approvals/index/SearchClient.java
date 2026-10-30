@@ -2,6 +2,8 @@ package no.sikt.nva.approvals.index;
 
 import static nva.commons.core.attempt.Try.attempt;
 
+import nva.commons.core.Environment;
+import nva.commons.core.JacocoGenerated;
 import nva.commons.core.attempt.Failure;
 import org.opensearch.client.opensearch.OpenSearchClient;
 import org.opensearch.client.opensearch.core.IndexRequest;
@@ -10,6 +12,7 @@ import org.opensearch.client.opensearch.core.IndexResponse;
 public class SearchClient {
 
   private static final String INDEXING_FAILED_MESSAGE = "Failed to index document: ";
+  private static final String SEARCH_INDEX = "SEARCH_INDEX";
 
   private final OpenSearchClient client;
   private final String indexName;
@@ -17,6 +20,13 @@ public class SearchClient {
   SearchClient(OpenSearchClient client, String indexName) {
     this.client = client;
     this.indexName = indexName;
+  }
+
+  @JacocoGenerated
+  public static SearchClient defaultInstance(Environment environment) {
+    return new SearchClient(
+        OpenSearchClientFactory.createAuthenticatedClient(environment),
+        environment.readEnv(SEARCH_INDEX));
   }
 
   public void index(IndexDocument document) {
