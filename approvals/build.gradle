@@ -23,16 +23,18 @@ dependencies {
     implementation(nvaCatalog.aws.sdk2.sdk.core)
     implementation(nvaCatalog.aws.sdk2.urlconnection)
     implementation(libs.jakarta.json.api)
-    implementation(libs.opensearch.java)
+    implementation(libs.opensearch.java) {
+        exclude group: 'org.glassfish', module: 'jakarta.json'
+    }
     implementation(nvaCatalog.com.auth0.jwt)
     implementation(nvaCatalog.httpclient5)
     implementation(nvaCatalog.httpcore5)
     implementation(nvaCatalog.jackson.databind)
-    implementation(libs.glassfish.jakarta.json)
     implementation(nvaCatalog.titanium.json.ld)
     implementation(nvaLibs.auth)
     implementation(nvaLibs.secrets)
     runtimeOnly(libs.apache.bval)
+    runtimeOnly(libs.parsson)
     runtimeOnly(nvaCatalog.aws.sdk2.secrets)
     testImplementation(libs.jte)
     testImplementation(libs.titanium.rdf.api)
