@@ -8,6 +8,7 @@ import static no.unit.nva.testutils.RandomDataGenerator.randomUri;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.util.Optional;
@@ -29,26 +30,30 @@ class IndexingServiceTest {
   private ChangeRepository repository;
   private ApprovalRepository approvalRepository;
   private IndexDocumentGenerator indexDocumentGenerator;
+  private SearchClient searchClient;
 
   @BeforeEach
   void setUp() {
     repository = mock(ChangeRepository.class);
     approvalRepository = mock(ApprovalRepository.class);
     indexDocumentGenerator = mock(IndexDocumentGenerator.class);
-    indexingService = new IndexingService(repository, approvalRepository, indexDocumentGenerator);
+    searchClient = mock(SearchClient.class);
+    indexingService =
+        new IndexingService(repository, approvalRepository, indexDocumentGenerator, searchClient);
   }
 
   @Test
-  void shouldThrowUnsupportedOperationExceptionWhenIndexingApproval()
-      throws IndexDocumentGeneratorException {
+  void shouldIndexGeneratedDocument()
+      throws IndexDocumentGeneratorException, IndexingServiceException {
     var approvalIdentifier = randomUUID();
     var snapshot = randomSourceSnapshot();
     var approval = givenApprovalWithSnapshot(approvalIdentifier, snapshot);
-    when(indexDocumentGenerator.generate(snapshot, approval))
-        .thenReturn(indexDocument(approvalIdentifier));
+    var indexDocument = indexDocument(approvalIdentifier);
+    when(indexDocumentGenerator.generate(snapshot, approval)).thenReturn(indexDocument);
 
-    assertThrows(
-        UnsupportedOperationException.class, () -> indexingService.index(approvalIdentifier));
+    indexingService.index(approvalIdentifier);
+
+    verify(searchClient).index(indexDocument);
   }
 
   @Test
