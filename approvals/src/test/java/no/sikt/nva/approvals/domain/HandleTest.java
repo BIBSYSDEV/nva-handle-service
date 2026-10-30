@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.net.URI;
+import nva.commons.core.paths.UriWrapper;
 import org.junit.jupiter.api.Test;
 
 class HandleTest {
@@ -53,5 +54,14 @@ class HandleTest {
     var handle = new Handle(uri);
 
     assertEquals(uri, handle.value());
+  }
+
+  @Test
+  void shouldReturnIdentifier() {
+    var identifier = "prefix/suffix";
+    var uri = UriWrapper.fromUri("https://hdl.handle.net/").addChild(identifier).getUri();
+    var handle = new Handle(uri);
+
+    assertEquals(identifier, handle.identifier());
   }
 }

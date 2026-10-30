@@ -9,6 +9,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.contains;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+import java.net.URI;
 import java.util.Set;
 import no.sikt.nva.approvals.index.FramedClinicalTrial.Investigator;
 import no.sikt.nva.approvals.index.FramedClinicalTrial.TrialSite;
@@ -19,14 +20,16 @@ import org.junit.jupiter.api.Test;
 
 class IndexDocumentTest {
 
-  private static final String API_HOST = randomUri().getHost();
-  private static final String APPROVAL = "approval";
+  private static final String HOST = randomUri().getHost();
+  private static final String CRISTIN = "cristin";
+  private static final String PERSON = "person";
+  private static final String ORGANIZATION = "organization";
 
   @Test
   void shouldCreateIndexDocumentWithIdentifierOfApproval() {
     var approval = randomApproval(randomHandle());
 
-    var indexDocument = IndexDocument.create(framedClinicalTrial(), approval, API_HOST);
+    var indexDocument = IndexDocument.create(framedClinicalTrial(), approval);
 
     assertEquals(approval.identifier(), indexDocument.identifier());
   }
@@ -35,10 +38,9 @@ class IndexDocumentTest {
   void shouldCreateIndexDocumentWithHandleOfApproval() {
     var handle = randomHandle();
 
-    var indexDocument =
-        IndexDocument.create(framedClinicalTrial(), randomApproval(handle), API_HOST);
+    var indexDocument = IndexDocument.create(framedClinicalTrial(), randomApproval(handle));
 
-    assertEquals(handle.value(), indexDocument.handle());
+    assertEquals(handle.identifier(), indexDocument.handle());
   }
 
   @Test
@@ -46,7 +48,7 @@ class IndexDocumentTest {
     var namedIdentifier = randomIdentifier();
     var approval = randomApproval(randomHandle(), namedIdentifier);
 
-    var indexDocument = IndexDocument.create(framedClinicalTrial(), approval, API_HOST);
+    var indexDocument = IndexDocument.create(framedClinicalTrial(), approval);
 
     assertThat(
         indexDocument.identifiers(),
@@ -57,33 +59,35 @@ class IndexDocumentTest {
   void shouldCreateIndexDocumentWithTitleOfFramedClinicalTrial() {
     var trial = framedClinicalTrial();
 
-    var indexDocument = IndexDocument.create(trial, randomApproval(randomHandle()), API_HOST);
+    var indexDocument = IndexDocument.create(trial, randomApproval(randomHandle()));
 
     assertEquals(trial.title(), indexDocument.title());
   }
 
   @Test
   void shouldCreateIndexDocumentWithInvestigatorsAsPersons() {
-    var investigator = randomInvestigator();
+    var personIdentifier = randomString();
+    var investigator = investigator(personIdentifier);
     var trial = new FramedClinicalTrial(randomString(), Set.of(investigator), Set.of());
 
-    var indexDocument = IndexDocument.create(trial, randomApproval(randomHandle()), API_HOST);
+    var indexDocument = IndexDocument.create(trial, randomApproval(randomHandle()));
 
     assertThat(
         indexDocument.persons(),
-        contains(new IndexDocument.Person(investigator.id(), investigator.name())));
+        contains(new IndexDocument.Person(personIdentifier, investigator.name())));
   }
 
   @Test
   void shouldCreateIndexDocumentWithTrialSitesAsOrganizations() {
-    var trialSite = randomTrialSite();
+    var organizationIdentifier = randomString();
+    var trialSite = trialSite(organizationIdentifier);
     var trial = new FramedClinicalTrial(randomString(), Set.of(), Set.of(trialSite));
 
-    var indexDocument = IndexDocument.create(trial, randomApproval(randomHandle()), API_HOST);
+    var indexDocument = IndexDocument.create(trial, randomApproval(randomHandle()));
 
     assertThat(
         indexDocument.organizations(),
-        contains(new IndexDocument.Organization(trialSite.id(), trialSite.name())));
+        contains(new IndexDocument.Organization(organizationIdentifier, trialSite.name())));
   }
 
   @Test
@@ -93,15 +97,12 @@ class IndexDocumentTest {
     var approval = randomApproval(handle, namedIdentifier);
     var trial = framedClinicalTrial();
 
-    var indexDocument = IndexDocument.create(trial, approval, API_HOST);
+    var indexDocument = IndexDocument.create(trial, approval);
 
     var expectedDisplay =
         new Display(
-            UriWrapper.fromHost(API_HOST)
-                .addChild(APPROVAL)
-                .addChild(approval.identifier().toString())
-                .getUri(),
-            handle.value(),
+            approval.identifier(),
+            handle.identifier(),
             trial.title(),
             Set.of(new Identifier(namedIdentifier.name(), namedIdentifier.value())));
 
@@ -110,14 +111,22 @@ class IndexDocumentTest {
 
   private static FramedClinicalTrial framedClinicalTrial() {
     return new FramedClinicalTrial(
-        randomString(), Set.of(randomInvestigator()), Set.of(randomTrialSite()));
+        randomString(), Set.of(investigator(randomString())), Set.of(trialSite(randomString())));
   }
 
-  private static Investigator randomInvestigator() {
-    return new Investigator(randomUri(), randomString(), randomString());
+  private static Investigator investigator(String personIdentifier) {
+    return new Investigator(cristinUri(PERSON, personIdentifier), randomString(), randomString());
   }
 
-  private static TrialSite randomTrialSite() {
-    return new TrialSite(randomUri(), randomString());
+  private static TrialSite trialSite(String organizationIdentifier) {
+    return new TrialSite(cristinUri(ORGANIZATION, organizationIdentifier), randomString());
+  }
+
+  private static URI cristinUri(String resource, String identifier) {
+    return UriWrapper.fromHost(HOST)
+        .addChild(CRISTIN)
+        .addChild(resource)
+        .addChild(identifier)
+        .getUri();
   }
 }

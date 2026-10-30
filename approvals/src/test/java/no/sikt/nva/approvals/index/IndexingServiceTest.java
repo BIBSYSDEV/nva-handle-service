@@ -96,11 +96,11 @@ class IndexingServiceTest {
   private static IndexDocument indexDocument(UUID approvalIdentifier) {
     return new IndexDocument(
         approvalIdentifier,
-        randomUri(),
+        randomString(),
         randomString(),
         Set.of(),
         Set.of(),
         Set.of(),
-        new Display(randomUri(), randomUri(), randomString(), Set.of()));
+        new Display(approvalIdentifier, randomString(), randomString(), Set.of()));
   }
 }
