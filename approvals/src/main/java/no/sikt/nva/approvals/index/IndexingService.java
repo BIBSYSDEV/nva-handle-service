@@ -18,14 +18,17 @@ public class IndexingService {
   private final ChangeRepository changeRepository;
   private final ApprovalRepository approvalRepository;
   private final IndexDocumentGenerator generator;
+  private final SearchClient searchClient;
 
   public IndexingService(
       ChangeRepository changeRepository,
       ApprovalRepository approvalRepository,
-      IndexDocumentGenerator generator) {
+      IndexDocumentGenerator generator,
+      SearchClient searchClient) {
     this.changeRepository = changeRepository;
     this.approvalRepository = approvalRepository;
     this.generator = generator;
+    this.searchClient = searchClient;
   }
 
   @JacocoGenerated
@@ -33,14 +36,14 @@ public class IndexingService {
     return new IndexingService(
         DynamoDbChangeRepository.defaultInstance(environment),
         DynamoDbApprovalRepository.defaultInstance(environment),
-        new IndexDocumentGenerator(environment.readEnv(API_HOST)));
+        new IndexDocumentGenerator(environment.readEnv(API_HOST)),
+        SearchClient.defaultInstance(environment));
   }
 
   public void index(UUID approvalIdentifier) throws IndexingServiceException {
     var snapshot = fetchLatestSnapshot(approvalIdentifier);
     var approval = fetchApproval(approvalIdentifier);
-    var indexDocument = generateIndexDocument(snapshot, approval);
-    throw new UnsupportedOperationException(indexDocument.toString());
+    searchClient.index(generateIndexDocument(snapshot, approval));
   }
 
   private IndexDocument generateIndexDocument(SourceSnapshot snapshot, Approval approval)

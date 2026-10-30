@@ -18,6 +18,7 @@ import org.junit.jupiter.api.Test;
 import org.opensearch.client.json.jackson.JacksonJsonpMapper;
 import org.opensearch.client.opensearch.OpenSearchClient;
 import org.opensearch.client.opensearch.core.GetRequest;
+import org.opensearch.client.transport.httpclient5.ApacheHttpClient5Transport;
 import org.opensearch.client.transport.httpclient5.ApacheHttpClient5TransportBuilder;
 import org.opensearch.testcontainers.OpenSearchContainer;
 import org.testcontainers.utility.DockerImageName;
@@ -31,18 +32,21 @@ class SearchClientTest {
   private static final OpenSearchContainer<?> CONTAINER =
       new OpenSearchContainer<>(OPEN_SEARCH_IMAGE);
 
+  private static ApacheHttpClient5Transport transport;
   private static OpenSearchClient openSearchClient;
   private static SearchClient searchClient;
 
   @BeforeAll
   static void startContainer() {
     CONTAINER.start();
-    openSearchClient = openSearchClient(CONTAINER.getHttpHostAddress());
+    transport = transport(CONTAINER.getHttpHostAddress());
+    openSearchClient = new OpenSearchClient(transport);
     searchClient = new SearchClient(openSearchClient, INDEX_NAME);
   }
 
   @AfterAll
-  static void stopContainer() {
+  static void stopContainer() throws IOException {
+    transport.close();
     CONTAINER.stop();
   }
 
@@ -56,10 +60,12 @@ class SearchClientTest {
   }
 
   @Test
-  void shouldThrowSearchClientExceptionWhenIndexingFails() {
-    var client = new SearchClient(openSearchClient(UNREACHABLE_HOST), INDEX_NAME);
+  void shouldThrowSearchClientExceptionWhenIndexingFails() throws IOException {
+    try (var unreachableTransport = transport(UNREACHABLE_HOST)) {
+      var client = new SearchClient(new OpenSearchClient(unreachableTransport), INDEX_NAME);
 
-    assertThrows(SearchClientException.class, () -> client.index(randomIndexDocument()));
+      assertThrows(SearchClientException.class, () -> client.index(randomIndexDocument()));
+    }
   }
 
   private static IndexDocument getIndexedDocument(UUID identifier) throws IOException {
@@ -67,12 +73,10 @@ class SearchClientTest {
     return openSearchClient.get(request, IndexDocument.class).source();
   }
 
-  private static OpenSearchClient openSearchClient(String hostAddress) {
-    var transport =
-        ApacheHttpClient5TransportBuilder.builder(HttpHost.create(URI.create(hostAddress)))
-            .setMapper(new JacksonJsonpMapper())
-            .build();
-    return new OpenSearchClient(transport);
+  private static ApacheHttpClient5Transport transport(String hostAddress) {
+    return ApacheHttpClient5TransportBuilder.builder(HttpHost.create(URI.create(hostAddress)))
+        .setMapper(new JacksonJsonpMapper())
+        .build();
   }
 
   private static IndexDocument randomIndexDocument() {
