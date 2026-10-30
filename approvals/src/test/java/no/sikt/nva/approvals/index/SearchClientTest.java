@@ -20,6 +20,7 @@ import no.sikt.nva.approvals.index.FramedClinicalTrial.TrialSite;
 import no.sikt.nva.approvals.index.IndexDocument.Identifier;
 import no.sikt.nva.approvals.index.IndexDocument.Organization;
 import no.sikt.nva.approvals.index.IndexDocument.Person;
+import nva.commons.core.StringUtils;
 import nva.commons.core.paths.UriWrapper;
 import org.apache.hc.core5.http.HttpHost;
 import org.junit.jupiter.api.AfterAll;
@@ -142,6 +143,13 @@ class SearchClientTest {
     assertThrows(
         OpenSearchException.class,
         () -> indexRawDocument(indexName, Map.of(UNMAPPED_FIELD, randomString())));
+  }
+
+  @Test
+  void shouldReturnAllDocumentsWhenQueryIsBlank() {
+    var hits = searchFreeText(StringUtils.EMPTY_STRING);
+
+    assertEquals(2, hits.size());
   }
 
   @Test
