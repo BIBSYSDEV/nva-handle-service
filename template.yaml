@@ -881,7 +881,7 @@ Resources:
   NvaDeleteApprovalsIndexFunction:
     Type: AWS::Serverless::Function
     Properties:
-      Description: Deletes the approvals search index. Invoked manually
+      Description: Deletes the approvals search index. Invoked manually with indexName in input
       CodeUri: approvals
       Handler: no.sikt.nva.approvals.index.DeleteIndexHandler::handleRequest
       Timeout: 20
