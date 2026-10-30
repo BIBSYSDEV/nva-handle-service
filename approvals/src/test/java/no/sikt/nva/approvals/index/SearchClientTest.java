@@ -10,15 +10,21 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.net.URI;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import no.sikt.nva.approvals.index.IndexDocument.Display;
+import no.sikt.nva.approvals.index.IndexDocument.Identifier;
+import no.sikt.nva.approvals.index.IndexDocument.Organization;
+import no.sikt.nva.approvals.index.IndexDocument.Person;
 import org.apache.hc.core5.http.HttpHost;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.opensearch.client.json.jackson.JacksonJsonpMapper;
 import org.opensearch.client.opensearch.OpenSearchClient;
+import org.opensearch.client.opensearch._types.OpenSearchException;
+import org.opensearch.client.opensearch._types.mapping.Property;
 import org.opensearch.client.opensearch.core.GetRequest;
 import org.opensearch.client.transport.httpclient5.ApacheHttpClient5Transport;
 import org.opensearch.client.transport.httpclient5.ApacheHttpClient5TransportBuilder;
@@ -31,6 +37,9 @@ class SearchClientTest {
       DockerImageName.parse("opensearchproject/opensearch:3.5.0");
   private static final String INDEX_NAME = "approvals";
   private static final String UNREACHABLE_HOST = "http://localhost:1";
+  private static final String HANDLE = "handle";
+  private static final String DISPLAY = "display";
+  private static final String UNMAPPED_FIELD = "unmappedField";
   private static final OpenSearchContainer<?> CONTAINER =
       new OpenSearchContainer<>(OPEN_SEARCH_IMAGE);
 
@@ -58,7 +67,7 @@ class SearchClientTest {
 
     searchClient.index(document);
 
-    assertEquals(document, getIndexedDocument(document.identifier()));
+    assertEquals(document, getIndexedDocument(INDEX_NAME, document.identifier()));
   }
 
   @Test
@@ -108,6 +117,57 @@ class SearchClientTest {
     assertThrows(SearchClientException.class, client::deleteIndex);
   }
 
+  @Test
+  void shouldIndexDocumentIntoIndexWithMappings() throws IOException {
+    var indexName = randomIndexName();
+    var client = searchClient(indexName);
+    client.createIndex();
+    var document = randomIndexDocument();
+
+    client.index(document);
+
+    assertEquals(document, getIndexedDocument(indexName, document.identifier()));
+  }
+
+  @Test
+  void shouldRejectDocumentWithFieldOutsideMappings() {
+    var indexName = randomIndexName();
+    searchClient(indexName).createIndex();
+
+    assertThrows(
+        OpenSearchException.class,
+        () -> indexRawDocument(indexName, Map.of(UNMAPPED_FIELD, randomString())));
+  }
+
+  @Test
+  void shouldNotIndexDisplayField() throws IOException {
+    var indexName = randomIndexName();
+
+    searchClient(indexName).createIndex();
+
+    assertFalse(mappedProperty(indexName, DISPLAY).object().enabled());
+  }
+
+  @Test
+  void shouldMapHandleAsKeyword() throws IOException {
+    var indexName = randomIndexName();
+
+    searchClient(indexName).createIndex();
+
+    assertTrue(mappedProperty(indexName, HANDLE).isKeyword());
+  }
+
+  private static void indexRawDocument(String indexName, Map<String, String> document)
+      throws IOException {
+    openSearchClient.index(
+        request -> request.index(indexName).id(randomUUID().toString()).document(document));
+  }
+
+  private static Property mappedProperty(String indexName, String property) throws IOException {
+    var response = openSearchClient.indices().getMapping(request -> request.index(indexName));
+    return response.result().get(indexName).mappings().properties().get(property);
+  }
+
   private static boolean indexExists(String indexName) throws IOException {
     return openSearchClient.indices().exists(request -> request.index(indexName)).value();
   }
@@ -120,8 +180,9 @@ class SearchClientTest {
     return "index-" + randomUUID();
   }
 
-  private static IndexDocument getIndexedDocument(UUID identifier) throws IOException {
-    var request = new GetRequest.Builder().index(INDEX_NAME).id(identifier.toString()).build();
+  private static IndexDocument getIndexedDocument(String indexName, UUID identifier)
+      throws IOException {
+    var request = new GetRequest.Builder().index(indexName).id(identifier.toString()).build();
     return openSearchClient.get(request, IndexDocument.class).source();
   }
 
@@ -132,13 +193,14 @@ class SearchClientTest {
   }
 
   private static IndexDocument randomIndexDocument() {
+    var identifiers = Set.of(new Identifier(randomString(), randomString()));
     return new IndexDocument(
         randomUUID(),
         randomUri(),
         randomString(),
-        Set.of(),
-        Set.of(),
-        Set.of(),
-        new Display(randomUri(), randomUri(), randomString(), Set.of()));
+        Set.of(new Person(randomUri(), randomString())),
+        Set.of(new Organization(randomUri(), randomString())),
+        identifiers,
+        new Display(randomUri(), randomUri(), randomString(), identifiers));
   }
 }
