@@ -15,6 +15,8 @@ class AuthorityIdentifierTest {
   private static final String CRISTIN = "cristin";
   private static final String PERSON = "person";
   private static final String ORGANIZATION = "organization";
+  private static final String CRISTIN_URI_FORMAT = "https://%s/cristin/%s/%s";
+  private static final String ENCODED_ORGANIZATION_ID = "1972.0%2F0.0";
 
   @Test
   void shouldCreatePersonIdentifierFromCristinPersonUri() {
@@ -33,6 +35,43 @@ class AuthorityIdentifierTest {
         OrganizationIdentifier.fromUri(cristinUri(ORGANIZATION, identifier));
 
     assertEquals(identifier, organizationIdentifier.value());
+  }
+
+  @Test
+  void shouldThrowExceptionWhenPersonUriHasQueryParameters() {
+    var uri = cristinUriWithRawPath(PERSON, randomString() + "?depth=top");
+
+    assertThrows(IllegalArgumentException.class, () -> PersonIdentifier.fromUri(uri));
+  }
+
+  @Test
+  void shouldThrowExceptionWhenOrganizationUriHasQueryParameters() {
+    var uri = cristinUriWithRawPath(ORGANIZATION, randomString() + "?depth=top");
+
+    assertThrows(IllegalArgumentException.class, () -> OrganizationIdentifier.fromUri(uri));
+  }
+
+  @Test
+  void shouldThrowExceptionWhenPersonUriHasFragment() {
+    var uri = cristinUriWithRawPath(PERSON, randomString() + "#affiliations");
+
+    assertThrows(IllegalArgumentException.class, () -> PersonIdentifier.fromUri(uri));
+  }
+
+  @Test
+  void shouldThrowExceptionWhenOrganizationUriHasFragment() {
+    var uri = cristinUriWithRawPath(ORGANIZATION, randomString() + "#affiliations");
+
+    assertThrows(IllegalArgumentException.class, () -> OrganizationIdentifier.fromUri(uri));
+  }
+
+  @Test
+  void shouldKeepIdentifierEncodedWhenPathContainsEncodedCharacters() {
+    var organizationIdentifier =
+        OrganizationIdentifier.fromUri(
+            cristinUriWithRawPath(ORGANIZATION, ENCODED_ORGANIZATION_ID));
+
+    assertEquals(ENCODED_ORGANIZATION_ID, organizationIdentifier.value());
   }
 
   @Test
@@ -92,6 +131,10 @@ class AuthorityIdentifierTest {
   void shouldThrowExceptionWhenOrganizationIdentifierValueIsMissing() {
     assertThrows(IllegalArgumentException.class, () -> new OrganizationIdentifier(null));
     assertThrows(IllegalArgumentException.class, () -> new OrganizationIdentifier(" "));
+  }
+
+  private URI cristinUriWithRawPath(String resource, String identifier) {
+    return URI.create(CRISTIN_URI_FORMAT.formatted(HOST, resource, identifier));
   }
 
   private URI cristinUri(String resource, String identifier) {

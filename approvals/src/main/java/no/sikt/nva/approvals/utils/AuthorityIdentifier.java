@@ -3,6 +3,7 @@ package no.sikt.nva.approvals.utils;
 import java.net.URI;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import nva.commons.core.StringUtils;
 
@@ -15,10 +16,15 @@ public sealed interface AuthorityIdentifier permits PersonIdentifier, Organizati
   String value();
 
   static Optional<String> getIdentifier(URI uri, String resourcePath) {
-    var pathElements = pathElements(uri);
-    return hasExpectedPath(pathElements, resourcePath)
-        ? Optional.of(pathElements.getLast())
-        : Optional.empty();
+    return Optional.ofNullable(uri)
+        .filter(AuthorityIdentifier::hasPathOnly)
+        .map(AuthorityIdentifier::pathElements)
+        .filter(pathElements -> hasExpectedPath(pathElements, resourcePath))
+        .map(List::getLast);
+  }
+
+  private static boolean hasPathOnly(URI uri) {
+    return Objects.isNull(uri.getRawQuery()) && Objects.isNull(uri.getRawFragment());
   }
 
   private static boolean hasExpectedPath(List<String> pathElements, String resourcePath) {
@@ -28,8 +34,7 @@ public sealed interface AuthorityIdentifier permits PersonIdentifier, Organizati
   }
 
   private static List<String> pathElements(URI uri) {
-    return Optional.ofNullable(uri)
-        .map(URI::getPath)
+    return Optional.ofNullable(uri.getRawPath())
         .map(
             path ->
                 Arrays.stream(path.split(PATH_DELIMITER)).filter(StringUtils::isNotBlank).toList())
