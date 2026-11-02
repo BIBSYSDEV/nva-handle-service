@@ -229,6 +229,13 @@ class SearchClientTest {
     assertEquals(List.of(SEARCHABLE_DOCUMENT), searchFreeText(namedIdentifierValue));
   }
 
+  @Test
+  void shouldFindDocumentByNamedIdentifierName() {
+    var namedIdentifierName = namedIdentifier().name();
+
+    assertEquals(List.of(SEARCHABLE_DOCUMENT), searchFreeText(namedIdentifierName));
+  }
+
   private static Person person() {
     return SEARCHABLE_DOCUMENT.persons().iterator().next();
   }
