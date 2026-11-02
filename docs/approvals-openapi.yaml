@@ -363,6 +363,55 @@ paths:
             "application/json":
               schema:
                 $ref: "#/components/schemas/Problem"
+  /search:
+    get:
+      tags:
+        - Approval
+        - external
+      operationId: searchApprovals
+      summary: Search approvals
+      description: Search search over approvals
+      parameters:
+        - name: query
+          in: query
+          description: Free-text search term
+          schema:
+            type: string
+        - name: offset
+          in: query
+          description: The number of hits to skip, for paging
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+        - name: size
+          in: query
+          description: The maximum number of hits on a page
+          schema:
+            type: integer
+            minimum: 0
+            default: 10
+      x-amazon-apigateway-integration:
+        uri:
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${NvaSearchApprovalsFunction.Arn}/invocations
+        responses: {}
+        httpMethod: POST
+        type: AWS_PROXY
+      responses:
+        "200":
+          description: A page of matching approvals. An empty `hits` array when nothing matches.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApprovalSearchResults"
+        "500":
+          description: >-
+            Internal server error. The search index could not be reached, or `offset` or `size`
+            is not a number.
+          content:
+            "application/json":
+              schema:
+                $ref: "#/components/schemas/Problem"
   /{approvalId}/change:
     get:
       tags:
@@ -1133,6 +1182,83 @@ components:
             value: "123456"
         source: https://example.com/source/12345
         handle: https://hdl.handle.net/11250.1/98765
+    ApprovalSearchResults:
+      type: object
+      description: A page of approvals matching a search
+      required:
+        - "@context"
+        - id
+        - totalHits
+        - hits
+      properties:
+        "@context":
+          type: string
+          format: uri
+          description: JSON-LD context URI for the paginated search result
+        id:
+          type: string
+          format: uri
+          description: This page, carrying the query parameters it was produced from
+        totalHits:
+          type: integer
+          description: The number of approvals matching the query, across all pages
+        nextResults:
+          type: string
+          format: uri
+          nullable: true
+          description: The next page, or null on the last page
+        previousResults:
+          type: string
+          format: uri
+          nullable: true
+          description: The previous page, or null on the first page
+        hits:
+          type: array
+          description: The approvals on this page
+          items:
+            $ref: "#/components/schemas/ApprovalHit"
+        aggregations:
+          type: object
+          description: Always empty. No aggregations are computed for this endpoint.
+      example:
+        "@context": https://bibsysdev.github.io/src/search/paginated-search-result.json
+        id: https://api.nva.unit.no/approval/search?query=cancer&offset=10&size=10
+        totalHits: 42
+        nextResults: https://api.nva.unit.no/approval/search?query=cancer&offset=20&size=10
+        previousResults: https://api.nva.unit.no/approval/search?query=cancer&offset=0&size=10
+        hits:
+          - id: https://api.nva.unit.no/approval/6ff5f1b5-97c1-40f0-86ad-2cbd9006eee2
+            handle: https://hdl.handle.net/11250.1/98765
+            title: A clinical trial of a new treatment
+            identifiers:
+              - type: Identifier
+                name: REK
+                value: "123456"
+        aggregations: {}
+    ApprovalHit:
+      type: object
+      description: An approval matching a search, carrying only the values needed to display it
+      required:
+        - id
+        - handle
+        - identifiers
+      properties:
+        id:
+          type: string
+          format: uri
+          description: The full URI of the approval resource
+        handle:
+          type: string
+          format: uri
+          description: The full handle URI (e.g., https://hdl.handle.net/11250.1/12345)
+        title:
+          type: string
+          description: The title of the approval. Absent when the source has no title.
+        identifiers:
+          type: array
+          description: The identifiers associated with the approval
+          items:
+            $ref: "#/components/schemas/Identifier"
     Identifier:
       type: object
       description: >-

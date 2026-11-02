@@ -795,6 +795,33 @@ Resources:
             Method: get
             RestApiId: !Ref NvaApprovalsApi
 
+  NvaSearchApprovalsFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub "/aws/lambda/${NvaSearchApprovalsFunction}"
+      RetentionInDays: 90
+
+  NvaSearchApprovalsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: approvals
+      Handler: no.sikt.nva.approvals.rest.SearchApprovalsHandler::handleRequest
+      Policies:
+        - !Ref ReadSearchInfrastructureCredentialsManagedPolicy
+      Environment:
+        Variables:
+          SEARCH_INDEX: !Ref ApprovalsSearchIndex
+          SEARCH_INFRASTRUCTURE_CREDENTIALS: !Ref SearchInfrastructureCredentialsName
+          SEARCH_INFRASTRUCTURE_API_HOST: !Ref SearchInfrastructureApiHost
+          SEARCH_INFRASTRUCTURE_AUTH_URI: !Ref SearchInfrastructureAuthUri
+      Events:
+        SearchApprovals:
+          Type: Api
+          Properties:
+            Path: /search
+            Method: get
+            RestApiId: !Ref NvaApprovalsApi
+
   NvaCreateSnapshotFunctionLogGroup:
     Type: AWS::Logs::LogGroup
     Properties:
