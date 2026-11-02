@@ -399,15 +399,13 @@ paths:
         type: AWS_PROXY
       responses:
         "200":
-          description: A page of matching approvals. An empty `hits` array when nothing matches.
+          description: A page of matching approvals
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/ApprovalSearchResults"
         "500":
-          description: >-
-            Internal server error. The search index could not be reached, or `offset` or `size`
-            is not a number.
+          description: Internal server error
           content:
             "application/json":
               schema:
@@ -1219,7 +1217,7 @@ components:
             $ref: "#/components/schemas/ApprovalHit"
         aggregations:
           type: object
-          description: Always empty. No aggregations are computed for this endpoint.
+          description: Aggregations are computed for this endpoint.
       example:
         "@context": https://bibsysdev.github.io/src/search/paginated-search-result.json
         id: https://api.nva.unit.no/approval/search?query=cancer&offset=10&size=10
@@ -1228,12 +1226,12 @@ components:
         previousResults: https://api.nva.unit.no/approval/search?query=cancer&offset=0&size=10
         hits:
           - id: https://api.nva.unit.no/approval/6ff5f1b5-97c1-40f0-86ad-2cbd9006eee2
-            handle: https://hdl.handle.net/11250.1/98765
+            handle: https://hdl.handle.net/11250.1/123456
             title: A clinical trial of a new treatment
             identifiers:
               - type: Identifier
                 name: REK
-                value: "123456"
+                value: "1234567"
         aggregations: {}
     ApprovalHit:
       type: object
