@@ -7,6 +7,8 @@ public final class RequestConstraints {
   public static final int MAX_IDENTIFIER_NAME_LENGTH = 100;
   public static final int MAX_IDENTIFIER_VALUE_BYTES = 900;
   public static final int MAX_URI_LENGTH = 1024;
+  public static final int MAX_SEARCH_SIZE = 100;
+  public static final int MAX_SEARCH_OFFSET = 9900;
   public static final String IDENTIFIER_NAME_PATTERN = "\\s*[A-Za-z0-9_-]+\\s*";
   public static final String EVENT_ID_PATTERN = "[A-Za-z0-9_-]{1,128}";
   public static final String SUPPORTED_SPEC_VERSION = "1.0";
@@ -41,6 +43,11 @@ public final class RequestConstraints {
   public static final String INVALID_CHANGE_IDENTIFIER_MESSAGE =
       "Provided change identifier is not valid!";
   public static final String INVALID_CURSOR_MESSAGE = "Must be the cursor given in next";
+  public static final String NOT_A_NUMBER_MESSAGE = "Must be a whole number";
+  public static final String TOO_SMALL_MESSAGE = "Must be at least {value}";
+  public static final String TOO_LARGE_MESSAGE = "Must be at most {value}";
+  public static final String UNKNOWN_QUERY_PARAMETER_MESSAGE =
+      "Unknown query parameter. Use 'query', 'offset' or 'size'";
 
   private RequestConstraints() {}
 }

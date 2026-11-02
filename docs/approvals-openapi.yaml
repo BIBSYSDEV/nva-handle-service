@@ -404,10 +404,14 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ApprovalSearchResults"
+        "400":
+          description: Bad Request
+          content:
+            "application/json":
+              schema:
+                $ref: "#/components/schemas/Problem"
         "500":
-          description: >-
-            Internal server error. The search index could not be reached, or `offset` or `size`
-            is not a number.
+          description: Internal server error
           content:
             "application/json":
               schema:

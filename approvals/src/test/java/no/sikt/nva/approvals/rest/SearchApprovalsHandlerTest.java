@@ -1,5 +1,6 @@
 package no.sikt.nva.approvals.rest;
 
+import static java.net.HttpURLConnection.HTTP_BAD_REQUEST;
 import static java.net.HttpURLConnection.HTTP_OK;
 import static no.unit.nva.testutils.RandomDataGenerator.randomString;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -27,6 +28,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.opensearch.client.opensearch.core.SearchResponse;
 import org.opensearch.client.opensearch.core.search.TotalHitsRelation;
+import org.zalando.problem.Problem;
 
 class SearchApprovalsHandlerTest {
 
@@ -35,6 +37,8 @@ class SearchApprovalsHandlerTest {
   private static final String QUERY_PARAMETER = "query";
   private static final String OFFSET_PARAMETER = "offset";
   private static final String SIZE_PARAMETER = "size";
+  private static final String UNKNOWN_QUERY_PARAMETER_MESSAGE =
+      "Unknown query parameter. Use 'query', 'offset' or 'size'";
 
   private SearchClient searchClient;
   private SearchApprovalsHandler handler;
@@ -78,6 +82,18 @@ class SearchApprovalsHandlerTest {
     var response = send(request(Map.of(QUERY_PARAMETER, randomString())));
 
     assertThat(response.getStatusCode(), equalTo(HTTP_OK));
+  }
+
+  @Test
+  void shouldReturnBadRequestWhenQueryParameterIsUnknown() throws IOException {
+    handler.handleRequest(
+        request(Map.of(randomString(), randomString(), randomString(), randomString())), output, CONTEXT);
+
+    var response = GatewayResponse.fromOutputStream(output, Problem.class);
+    assertThat(response.getStatusCode(), equalTo(HTTP_BAD_REQUEST));
+    assertThat(
+        response.getBodyObject(Problem.class).getDetail(),
+        equalTo(UNKNOWN_QUERY_PARAMETER_MESSAGE));
   }
 
   private static SearchResponse<IndexDocument> emptyResponse() {
