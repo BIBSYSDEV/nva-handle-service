@@ -12,7 +12,7 @@ servers:
   - url: https://api.sandbox.nva.aws.unit.no/approval
   - url: https://api.dev.nva.aws.unit.no/approval
 tags:
-  - name: Approval
+  - name: approval
     description: Operations for managing approvals
   - name: external
     description: Endpoints exposed in external API documentation
@@ -28,7 +28,7 @@ paths:
   /:
     post:
       tags:
-        - Approval
+        - approval
         - external
       operationId: createApproval
       summary: Create Approval
@@ -114,7 +114,7 @@ paths:
                 $ref: "#/components/schemas/Problem"
     get:
       tags:
-        - Approval
+        - approval
         - external
       operationId: getApprovalByQuery
       summary: Get Approval by handle or named identifier
@@ -203,7 +203,7 @@ paths:
   /context:
     get:
       tags:
-        - Approval
+        - approval
         - external
       operationId: getContext
       summary: Get current JSON-LD Context
@@ -223,7 +223,7 @@ paths:
   /context/{version}:
     get:
       tags:
-        - Approval
+        - approval
         - external
       operationId: getContextVersion
       summary: Get a specific version of the JSON-LD Context
@@ -247,7 +247,7 @@ paths:
   /ontology:
     get:
       tags:
-        - Approval
+        - approval
         - external
       operationId: getOntology
       summary: Get latest RDF Ontology
@@ -266,7 +266,7 @@ paths:
   /ontology/{version}:
     get:
       tags:
-        - Approval
+        - approval
         - external
       operationId: getOntologyVersion
       summary: Get a specific version of the RDF Ontology
@@ -290,7 +290,7 @@ paths:
   /events:
     post:
       tags:
-        - Approval
+        - approval
         - external
       operationId: receiveApprovalEvent
       summary: Notify that the source of an approval has changed
@@ -366,7 +366,7 @@ paths:
   /search:
     get:
       tags:
-        - Approval
+        - approval
         - external
       operationId: searchApprovals
       summary: Search approvals
@@ -401,13 +401,13 @@ paths:
         "200":
           description: A page of matching approvals
           content:
-            application/json:
+            application/ld+json:
               schema:
                 $ref: "#/components/schemas/ApprovalSearchResults"
         "400":
           description: Bad Request
           content:
-            "application/json":
+            "application/problem+json":
               schema:
                 $ref: "#/components/schemas/Problem"
         "500":
@@ -419,7 +419,7 @@ paths:
   /{approvalId}/change:
     get:
       tags:
-        - Approval
+        - approval
         - external
       operationId: getApprovalChanges
       summary: Get changes of an approval
@@ -491,7 +491,7 @@ paths:
   /{approvalId}:
     get:
       tags:
-        - Approval
+        - approval
         - external
       operationId: getApprovalById
       summary: Get Approval
@@ -550,7 +550,7 @@ paths:
                 $ref: "#/components/schemas/Problem"
     put:
       tags:
-        - Approval
+        - approval
         - external
       operationId: updateApproval
       summary: Update Approval
@@ -680,7 +680,7 @@ paths:
   /{approvalId}/change/{changeId}:
     get:
       tags:
-        - Approval
+        - approval
         - external
       operationId: getChange
       summary: Get change
