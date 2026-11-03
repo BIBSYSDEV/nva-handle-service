@@ -23,6 +23,7 @@ dependencies {
     implementation(nvaCatalog.aws.sdk2.http.client)
     implementation(nvaCatalog.aws.sdk2.regions)
     implementation(nvaCatalog.aws.sdk2.sdk.core)
+    implementation(nvaCatalog.aws.sdk2.sqs)
     implementation(nvaCatalog.aws.sdk2.urlconnection)
     implementation(libs.jakarta.json.api)
     implementation(nvaCatalog.com.auth0.jwt)
@@ -74,4 +75,6 @@ test {
     environment("ALLOWED_ORIGIN", "*")
     environment("HANDLE_PREFIX", "prefix")
     environment("TABLE", "table")
+    environment("REINDEX_QUEUE_URL", "reindex-queue")
+    environment("REINDEX_APPROVAL_QUEUE_URL", "reindex-approval-queue")
 }

@@ -183,6 +183,32 @@ Resources:
     Properties:
       MessageRetentionPeriod: 1209600
 
+  ReindexQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      VisibilityTimeout: 900
+      RedrivePolicy:
+        deadLetterTargetArn: !GetAtt ReindexDlq.Arn
+        maxReceiveCount: 2
+
+  ReindexDlq:
+    Type: AWS::SQS::Queue
+    Properties:
+      MessageRetentionPeriod: 1209600
+
+  ReindexApprovalQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      VisibilityTimeout: 1800
+      RedrivePolicy:
+        deadLetterTargetArn: !GetAtt ReindexApprovalDlq.Arn
+        maxReceiveCount: 3
+
+  ReindexApprovalDlq:
+    Type: AWS::SQS::Queue
+    Properties:
+      MessageRetentionPeriod: 1209600
+
   ApprovalsStreamDlq:
     Type: AWS::SQS::Queue
     Properties:
@@ -848,6 +874,48 @@ Resources:
           Type: SQS
           Properties:
             Queue: !GetAtt IndexApprovalQueue.Arn
+            BatchSize: 1
+        ReindexRequested:
+          Type: SQS
+          Properties:
+            Queue: !GetAtt ReindexApprovalQueue.Arn
+            BatchSize: 1
+            ScalingConfig:
+              MaximumConcurrency: 10
+
+  NvaReindexApprovalsFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub "/aws/lambda/${NvaReindexApprovalsFunction}"
+      RetentionInDays: 90
+
+  NvaReindexApprovalsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Description: >-
+        Enqueues every approval for reindexing. Invoked manually from the Lambda console with
+        {"Records":[{"body":"{}"}]} to rebuild sequentially, or one invocation per segment with
+        {"Records":[{"body":"{\"cursor\":{\"segment\":0,\"totalSegments\":4}}"}]}
+      CodeUri: approvals
+      Handler: no.sikt.nva.approvals.index.ReindexHandler::handleRequest
+      Policies:
+        - !Ref DynamoDbTableAccessPolicy
+        - Statement:
+            - Effect: Allow
+              Action: sqs:SendMessage
+              Resource:
+                - !GetAtt ReindexQueue.Arn
+                - !GetAtt ReindexApprovalQueue.Arn
+      Environment:
+        Variables:
+          TABLE: !Ref ApprovalsTable
+          REINDEX_QUEUE_URL: !Ref ReindexQueue
+          REINDEX_APPROVAL_QUEUE_URL: !Ref ReindexApprovalQueue
+      Events:
+        Reindex:
+          Type: SQS
+          Properties:
+            Queue: !GetAtt ReindexQueue.Arn
             BatchSize: 1
 
   NvaInitApprovalsIndexFunctionLogGroup:
