@@ -44,11 +44,6 @@ public final class RequestValidator {
     return new BadRequestException(message, new ValidationError(message, pointer));
   }
 
-  public static BadRequestException badRequest(String message, Collection<String> pointers) {
-    return new BadRequestException(
-        message, pointers.stream().map(pointer -> new ValidationError(message, pointer)).toList());
-  }
-
   private static void validate(Object request, Function<Path, String> pointerResolver)
       throws BadRequestException {
     var validationErrors =

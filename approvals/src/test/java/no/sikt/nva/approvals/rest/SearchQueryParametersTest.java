@@ -22,14 +22,16 @@ class SearchQueryParametersTest {
   private static final String TOO_SMALL_MESSAGE = "Must be at least 0";
 
   @Test
-  void shouldReportEveryUnknownQueryParameter() {
+  void shouldRejectUnknownQueryParameterWithoutRepeatingItsName() {
     var queryParameters = Map.of("alpha", randomString(), "beta", randomString());
 
-    assertEquals(
-        List.of(
-            new ValidationError(UNKNOWN_QUERY_PARAMETER_MESSAGE, "alpha"),
-            new ValidationError(UNKNOWN_QUERY_PARAMETER_MESSAGE, "beta")),
-        errorsFromQueryParameters(queryParameters));
+    var exception =
+        assertThrows(
+            BadRequestException.class,
+            () -> SearchQueryParameters.fromQueryParameters(queryParameters));
+
+    assertEquals(UNKNOWN_QUERY_PARAMETER_MESSAGE, exception.getMessage());
+    assertEquals(List.of(), exception.getErrors());
   }
 
   @Test

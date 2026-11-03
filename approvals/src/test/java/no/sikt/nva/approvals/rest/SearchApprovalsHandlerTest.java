@@ -87,7 +87,9 @@ class SearchApprovalsHandlerTest {
   @Test
   void shouldReturnBadRequestWhenQueryParameterIsUnknown() throws IOException {
     handler.handleRequest(
-        request(Map.of(randomString(), randomString(), randomString(), randomString())), output, CONTEXT);
+        request(Map.of(randomString(), randomString(), randomString(), randomString())),
+        output,
+        CONTEXT);
 
     var response = GatewayResponse.fromOutputStream(output, Problem.class);
     assertThat(response.getStatusCode(), equalTo(HTTP_BAD_REQUEST));

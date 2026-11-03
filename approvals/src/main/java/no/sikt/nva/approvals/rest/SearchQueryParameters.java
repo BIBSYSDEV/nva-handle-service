@@ -1,6 +1,7 @@
 package no.sikt.nva.approvals.rest;
 
 import static java.util.Objects.isNull;
+import static java.util.function.Predicate.not;
 import static no.sikt.nva.approvals.validation.RequestConstraints.MAX_SEARCH_OFFSET;
 import static no.sikt.nva.approvals.validation.RequestConstraints.MAX_SEARCH_SIZE;
 import static no.sikt.nva.approvals.validation.RequestConstraints.NOT_A_NUMBER_MESSAGE;
@@ -16,7 +17,6 @@ import jakarta.validation.constraints.Min;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
-import java.util.function.Predicate;
 import no.sikt.nva.approvals.index.Query;
 import nva.commons.apigateway.exceptions.BadRequestException;
 
@@ -54,13 +54,8 @@ public record SearchQueryParameters(
 
   private static void ensureSupportedParameters(Map<String, String> queryParameters)
       throws BadRequestException {
-    var unsupported =
-        queryParameters.keySet().stream()
-            .filter(Predicate.not(SUPPORTED_PARAMETERS::contains))
-            .sorted()
-            .toList();
-    if (!unsupported.isEmpty()) {
-      throw badRequest(UNKNOWN_QUERY_PARAMETER_MESSAGE, unsupported);
+    if (queryParameters.keySet().stream().anyMatch(not(SUPPORTED_PARAMETERS::contains))) {
+      throw new BadRequestException(UNKNOWN_QUERY_PARAMETER_MESSAGE);
     }
   }
 
