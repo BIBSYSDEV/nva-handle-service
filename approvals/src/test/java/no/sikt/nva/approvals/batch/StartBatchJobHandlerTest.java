@@ -25,6 +25,7 @@ class StartBatchJobHandlerTest {
   private static final String WORK_QUEUE_URL = "work-queue";
   private static final int PAGE_SIZE = 700;
   private static final ScanCursor START_CURSOR = ScanCursor.start(0, 1);
+  private static final boolean PROCESSING_ENABLED = true;
 
   @Test
   void shouldReturnResultOfScannedSegment() throws IOException {
@@ -34,7 +35,11 @@ class StartBatchJobHandlerTest {
     var handler =
         new StartBatchJobHandler(
             new BatchJobService(
-                scanRepository, mock(QueueClient.class), BATCH_JOB_QUEUE_URL, WORK_QUEUE_URL));
+                scanRepository,
+                mock(QueueClient.class),
+                BATCH_JOB_QUEUE_URL,
+                WORK_QUEUE_URL,
+                PROCESSING_ENABLED));
 
     var output = new ByteArrayOutputStream();
 
