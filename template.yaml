@@ -475,12 +475,14 @@ Resources:
           - - "{ "
             - '"apiId": "$context.apiId", '
             - '"requestId": "$context.requestId", '
+            - '"integrationId": "$context.integration.requestId", '
             - '"requestTime": "$context.requestTime", '
             - '"requestTimeEpoch": "$context.requestTimeEpoch", '
             - '"httpMethod": "$context.httpMethod", '
             - '"path": "$context.path", '
             - '"queryString": "$context.requestQueryString", '
             - '"status": "$context.status", '
+            - '"latency": "$context.integration.latency", '
             - '"error.message": "$context.error.message", '
             - '"userAgent": "$context.identity.userAgent", '
             - '"ip": "$context.identity.sourceIp" '
@@ -499,7 +501,7 @@ Resources:
     Properties:
       AccessLogSetting:
         DestinationArn: !GetAtt ApiAccessLogGroup.Arn
-        Format: '{ "apiId": "$context.apiId", "requestId": "$context.requestId", "requestTime": "$context.requestTime", "requestTimeEpoch": "$context.requestTimeEpoch", "httpMethod": "$context.httpMethod", "path": "$context.path", "status": "$context.status",  "error.message": "$context.error.message" }'
+        Format: '{ "apiId": "$context.apiId", "requestId": "$context.requestId", "integrationId": "$context.integration.requestId", "requestTime": "$context.requestTime", "requestTimeEpoch": "$context.requestTimeEpoch", "ip": "$context.identity.sourceIp", "httpMethod": "$context.httpMethod", "path": "$context.path", "status": "$context.status", "latency": "$context.integration.latency", "userAgent": "$context.identity.userAgent", "error.message": "$context.error.message" }'
       StageName: Prod
       EndpointConfiguration:
         Type: REGIONAL
