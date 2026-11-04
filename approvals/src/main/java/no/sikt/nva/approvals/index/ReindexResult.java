@@ -1,3 +1,6 @@
 package no.sikt.nva.approvals.index;
 
-public record ReindexResult(int enqueuedApprovals, boolean completed) {}
+import no.unit.nva.commons.json.JsonSerializable;
+
+public record ReindexResult(int enqueuedApprovals, boolean completed, int startedSegments)
+    implements JsonSerializable {}

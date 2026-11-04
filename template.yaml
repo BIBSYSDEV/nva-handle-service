@@ -894,8 +894,8 @@ Resources:
     Properties:
       Description: >-
         Enqueues every approval for reindexing. Invoked manually from the Lambda console with
-        {"Records":[{"body":"{}"}]} to rebuild sequentially, or one invocation per segment with
-        {"Records":[{"body":"{\"cursor\":{\"segment\":0,\"totalSegments\":4}}"}]}
+        {"Records":[{"body":"{\"type\":\"SegmentedScan\",\"totalSegments\":4}"}]} to fan out
+        into four segment scans that run in parallel, or totalSegments 1 to rebuild sequentially
       CodeUri: approvals
       Handler: no.sikt.nva.approvals.index.ReindexHandler::handleRequest
       Policies:

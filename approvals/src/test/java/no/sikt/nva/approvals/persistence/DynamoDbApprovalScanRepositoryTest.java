@@ -49,7 +49,7 @@ class DynamoDbApprovalScanRepositoryTest {
     var approval = randomApproval(randomHandle());
     saveApproval(approval);
 
-    var page = scanRepository.scanApprovals(ScanCursor.start());
+    var page = scanRepository.scanApprovals(ScanCursor.start(0, 1));
 
     assertEquals(List.of(approval.identifier()), page.identifiers());
   }
