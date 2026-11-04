@@ -77,6 +77,13 @@ Parameters:
     Type: String
     Description: URI to auth for external search infrastructure API (SWS)
     Default: "https://sws-auth.auth.eu-west-1.amazoncognito.com"
+  BatchJobProcessingEnabled:
+    Type: String
+    Description: Set to false to stop batch jobs loading new work items
+    AllowedValues:
+      - "true"
+      - "false"
+    Default: "true"
   ApprovalsSearchIndex:
     Type: String
     Description: Name of the search index holding approvals
@@ -170,6 +177,34 @@ Resources:
     Properties:
       MessageRetentionPeriod: 1209600
 
+  BatchJobQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      VisibilityTimeout: 360
+      MessageRetentionPeriod: 1209600
+      RedrivePolicy:
+        deadLetterTargetArn: !GetAtt BatchJobDlq.Arn
+        maxReceiveCount: 3
+
+  BatchJobDlq:
+    Type: AWS::SQS::Queue
+    Properties:
+      MessageRetentionPeriod: 1209600
+
+  BatchJobWorkQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      VisibilityTimeout: 360
+      MessageRetentionPeriod: 1209600
+      RedrivePolicy:
+        deadLetterTargetArn: !GetAtt BatchJobWorkDlq.Arn
+        maxReceiveCount: 3
+
+  BatchJobWorkDlq:
+    Type: AWS::SQS::Queue
+    Properties:
+      MessageRetentionPeriod: 1209600
+
   IndexApprovalQueue:
     Type: AWS::SQS::Queue
     Properties:
@@ -219,6 +254,38 @@ Resources:
       Dimensions:
         - Name: QueueName
           Value: !GetAtt CreateSnapshotDlq.QueueName
+      Statistic: Maximum
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 0
+      ComparisonOperator: GreaterThanThreshold
+      TreatMissingData: notBreaching
+
+  BatchJobDlqAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmDescription: A batch job segment stopped before the table was fully scanned
+      Namespace: AWS/SQS
+      MetricName: ApproximateNumberOfMessagesVisible
+      Dimensions:
+        - Name: QueueName
+          Value: !GetAtt BatchJobDlq.QueueName
+      Statistic: Maximum
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 0
+      ComparisonOperator: GreaterThanThreshold
+      TreatMissingData: notBreaching
+
+  BatchJobWorkDlqAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmDescription: Batch job work items failed processing
+      Namespace: AWS/SQS
+      MetricName: ApproximateNumberOfMessagesVisible
+      Dimensions:
+        - Name: QueueName
+          Value: !GetAtt BatchJobWorkDlq.QueueName
       Statistic: Maximum
       Period: 300
       EvaluationPeriods: 1
@@ -838,6 +905,73 @@ Resources:
           Properties:
             Queue: !GetAtt CreateSnapshotQueue.Arn
             BatchSize: 1
+
+  NvaStartBatchJobFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub "/aws/lambda/${NvaStartBatchJobFunction}"
+      RetentionInDays: 90
+
+  NvaStartBatchJobFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Description: Scans the approvals table for a batch job and loads its work items onto the work queue, see docs/batch-jobs.md
+      CodeUri: approvals
+      Handler: no.sikt.nva.approvals.batch.StartBatchJobHandler::handleRequest
+      Timeout: 60
+      Policies:
+        - !Ref DynamoDbTableAccessPolicy
+        - Statement:
+            - Effect: Allow
+              Action: sqs:SendMessage
+              Resource:
+                - !GetAtt BatchJobQueue.Arn
+                - !GetAtt BatchJobWorkQueue.Arn
+      Environment:
+        Variables:
+          TABLE: !Ref ApprovalsTable
+          BATCH_JOB_QUEUE_URL: !Ref BatchJobQueue
+          BATCH_JOB_WORK_QUEUE_URL: !Ref BatchJobWorkQueue
+          PROCESSING_ENABLED: !Ref BatchJobProcessingEnabled
+      Events:
+        BatchJobRequested:
+          Type: SQS
+          Properties:
+            Queue: !GetAtt BatchJobQueue.Arn
+            BatchSize: 1
+            ScalingConfig:
+              MaximumConcurrency: 20
+
+  NvaProcessBatchJobFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub "/aws/lambda/${NvaProcessBatchJobFunction}"
+      RetentionInDays: 90
+
+  NvaProcessBatchJobFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Description: Hands batch job work items to the queue that owns the work
+      CodeUri: approvals
+      Handler: no.sikt.nva.approvals.batch.ProcessBatchJobHandler::handleRequest
+      Timeout: 60
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action: sqs:SendMessage
+              Resource: !GetAtt IndexApprovalQueue.Arn
+      Environment:
+        Variables:
+          INDEX_APPROVAL_QUEUE_URL: !Ref IndexApprovalQueue
+      Events:
+        BatchJobWorkItem:
+          Type: SQS
+          Properties:
+            Queue: !GetAtt BatchJobWorkQueue.Arn
+            MaximumBatchingWindowInSeconds: 5
+            BatchSize: 100
+            ScalingConfig:
+              MaximumConcurrency: 10
 
   NvaIndexApprovalFunctionLogGroup:
     Type: AWS::Logs::LogGroup
