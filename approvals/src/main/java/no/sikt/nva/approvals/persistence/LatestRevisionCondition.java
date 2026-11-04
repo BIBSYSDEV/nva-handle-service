@@ -15,7 +15,6 @@ import software.amazon.awssdk.services.dynamodb.model.TransactionCanceledExcepti
 
 final class LatestRevisionCondition {
 
-  private static final int CONDITIONAL_ITEM_INDEX = 0;
   private static final String CONDITIONAL_CHECK_FAILED = "ConditionalCheckFailed";
   private static final String TRANSACTION_CONFLICT = "TransactionConflict";
   private static final String LATEST_REVISION_ATTRIBUTE = "#latestRevision";
@@ -67,8 +66,11 @@ final class LatestRevisionCondition {
 
   private static boolean isConditionalCheckFailureOnApprovalItem(
       TransactionCanceledException exception) {
-    return CONDITIONAL_CHECK_FAILED.equals(
-        exception.cancellationReasons().get(CONDITIONAL_ITEM_INDEX).code());
+    return exception.cancellationReasons().stream()
+        .findFirst()
+        .map(CancellationReason::code)
+        .filter(CONDITIONAL_CHECK_FAILED::equals)
+        .isPresent();
   }
 
   private static boolean hasTransactionConflict(TransactionCanceledException exception) {

@@ -4,6 +4,7 @@ import static java.util.UUID.randomUUID;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertSame;
 
+import java.util.List;
 import no.sikt.nva.approvals.domain.ApprovalModifiedException;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -53,6 +54,19 @@ class LatestRevisionConditionTest {
         LatestRevisionCondition.toModifiedExceptionIfConditionFailed(exception, randomUUID());
 
     assertInstanceOf(ApprovalModifiedException.class, result);
+  }
+
+  @Test
+  void shouldKeepOriginalExceptionWhenCancellationReasonsAreEmpty() {
+    var exception =
+        TransactionCanceledException.builder()
+            .cancellationReasons(List.<CancellationReason>of())
+            .build();
+
+    var result =
+        LatestRevisionCondition.toModifiedExceptionIfConditionFailed(exception, randomUUID());
+
+    assertSame(exception, result);
   }
 
   private static TransactionCanceledException canceledWithFirstReason(String reasonCode) {
