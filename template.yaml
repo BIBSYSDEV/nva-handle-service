@@ -511,6 +511,7 @@ Resources:
             - '"requestTimeEpoch": "$context.requestTimeEpoch", '
             - '"httpMethod": "$context.httpMethod", '
             - '"path": "$context.path", '
+            - '"queryString": "$context.requestQueryString", '
             - '"status": "$context.status", '
             - '"latency": "$context.integration.latency", '
             - '"error.message": "$context.error.message", '
