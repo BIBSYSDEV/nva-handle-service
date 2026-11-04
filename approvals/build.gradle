@@ -30,6 +30,7 @@ dependencies {
     implementation(nvaCatalog.httpclient5)
     implementation(nvaCatalog.httpcore5)
     implementation(nvaCatalog.jackson.databind)
+    implementation(nvaCatalog.slf4j.api)
     implementation(nvaCatalog.titanium.json.ld)
     implementation(nvaLibs.auth)
     implementation(nvaLibs.secrets)
