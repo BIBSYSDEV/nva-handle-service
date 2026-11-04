@@ -51,6 +51,7 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import no.sikt.nva.approvals.domain.Approval;
+import no.sikt.nva.approvals.domain.ApprovalModifiedException;
 import no.sikt.nva.approvals.domain.ApprovalRevision;
 import no.sikt.nva.approvals.domain.Handle;
 import no.sikt.nva.approvals.domain.IdentifierPolicy;
@@ -58,8 +59,10 @@ import no.sikt.nva.approvals.domain.NamedIdentifier;
 import no.sikt.nva.approvals.domain.NoAuthentication;
 import no.sikt.nva.approvals.domain.SourceConfig;
 import no.sikt.nva.approvals.domain.SourceSnapshot;
+import no.sikt.nva.approvals.domain.VersionedApproval;
 import no.sikt.nva.approvals.events.SourceChangedEvent;
 import no.unit.nva.commons.json.JsonUtils;
+import no.unit.nva.identifiers.SortableIdentifier;
 import nva.commons.core.Environment;
 import nva.commons.core.ioutils.IoUtils;
 import org.junit.jupiter.api.AfterEach;
@@ -445,6 +448,52 @@ class DynamoDbApprovalRepositoryTest {
   }
 
   @Test
+  void shouldRejectUpdateReadAtOutdatedRevision() {
+    var approval = randomApproval(randomIdentifiers(1), randomUUID());
+    saveApproval(approval);
+    var revisionReadByBoth = latestRevision(approval.identifier());
+    var firstIdentifiers = randomIdentifiers(1);
+    var secondIdentifiers = randomIdentifiers(1);
+
+    approvalRepository.updateApproval(
+        randomRevision(withIdentifiers(approval, firstIdentifiers), UPDATE_APPROVAL),
+        revisionReadByBoth);
+
+    assertThrows(
+        ApprovalModifiedException.class,
+        () ->
+            approvalRepository.updateApproval(
+                randomRevision(withIdentifiers(approval, secondIdentifiers), UPDATE_APPROVAL),
+                revisionReadByBoth));
+    var persistedApproval = approvalRepository.findByApprovalIdentifier(approval.identifier());
+    assertEquals(firstIdentifiers, persistedApproval.orElseThrow().namedIdentifiers());
+    assertTrue(approvalRepository.findIdentifiers(secondIdentifiers).isEmpty());
+  }
+
+  @Test
+  void shouldSetLatestRevisionToIdentifierOfRevisionWritten() {
+    var approval = randomApproval(randomHandle());
+    saveApproval(approval);
+    var revision = randomRevision(withIdentifiers(approval, randomIdentifiers(2)), UPDATE_APPROVAL);
+
+    approvalRepository.updateApproval(revision, latestRevision(approval.identifier()));
+
+    assertEquals(revision.identifier(), latestRevision(approval.identifier()));
+  }
+
+  @Test
+  void shouldUpdateApprovalStoredWithoutLatestRevision() {
+    var approval = randomApproval(randomHandle());
+    saveApproval(approval);
+    removeLatestRevisionFromApprovalEntity(approval.identifier());
+    var revision = randomRevision(withIdentifiers(approval, randomIdentifiers(2)), UPDATE_APPROVAL);
+
+    approvalRepository.updateApproval(revision, null);
+
+    assertEquals(revision.identifier(), latestRevision(approval.identifier()));
+  }
+
+  @Test
   void shouldPersistAndFindIdentifierPolicy() {
     var customerIdentifier = randomUUID();
     var identifierPolicy = randomIdentifierPolicy();
@@ -641,7 +690,7 @@ class DynamoDbApprovalRepositoryTest {
     var updateRevision =
         randomRevision(withIdentifiers(approval, randomIdentifiers(3)), UPDATE_APPROVAL);
 
-    approvalRepository.updateApproval(updateRevision);
+    approvalRepository.updateApproval(updateRevision, createRevision.identifier());
 
     assertEquals(List.of(updateRevision, createRevision), revisions(approval.identifier()));
   }
@@ -698,7 +747,8 @@ class DynamoDbApprovalRepositoryTest {
     insertConflictingChangeItem(revision);
 
     assertThrows(
-        TransactionCanceledException.class, () -> approvalRepository.updateApproval(revision));
+        TransactionCanceledException.class,
+        () -> approvalRepository.updateApproval(revision, latestRevision(approval.identifier())));
     var persistedApproval =
         approvalRepository.findByApprovalIdentifier(approval.identifier()).orElseThrow();
     assertEquals(
@@ -834,7 +884,32 @@ class DynamoDbApprovalRepositoryTest {
   }
 
   private void updateApproval(Approval approval) {
-    approvalRepository.updateApproval(randomRevision(approval, UPDATE_APPROVAL));
+    approvalRepository.updateApproval(
+        randomRevision(approval, UPDATE_APPROVAL), latestRevision(approval.identifier()));
+  }
+
+  private SortableIdentifier latestRevision(UUID approvalIdentifier) {
+    return approvalRepository
+        .findVersionedByApprovalIdentifier(approvalIdentifier)
+        .map(VersionedApproval::latestRevision)
+        .orElse(null);
+  }
+
+  private void removeLatestRevisionFromApprovalEntity(UUID approvalIdentifier) {
+    var databaseIdentifier = ApprovalDao.toDatabaseIdentifier(approvalIdentifier);
+    var key =
+        Map.of(
+            PK0, AttributeValue.builder().s(databaseIdentifier).build(),
+            SK0, AttributeValue.builder().s(databaseIdentifier).build());
+
+    dynamoDbLocal
+        .client()
+        .updateItem(
+            UpdateItemRequest.builder()
+                .tableName(TABLE)
+                .key(key)
+                .updateExpression("REMOVE %s".formatted(ApprovalDao.LATEST_REVISION))
+                .build());
   }
 
   private static NamedIdentifier largestMultibyteIdentifier() {

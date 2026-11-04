@@ -90,9 +90,11 @@ public class ApprovalServiceImpl implements ApprovalService {
       UUID approvalId, Collection<NamedIdentifier> namedIdentifiers, URI source, Agent agent)
       throws ApprovalServiceException, ApprovalConflictException {
     var identifiers = approvalRepository.findIdentifiers(namedIdentifiers);
-    var approval =
-        getApprovalByIdentifier(approvalId)
+    var versionedApproval =
+        approvalRepository
+            .findVersionedByApprovalIdentifier(approvalId)
             .orElseThrow(() -> new ApprovalNotFoundException(approvalId));
+    var approval = versionedApproval.approval();
     approval.ensureOwnedBy(agent.customerIdentifier());
     ensureIdentifiersAreNotUsedByOtherApproval(identifiers, approval);
     if (isUnchanged(approval, namedIdentifiers, source)) {
@@ -102,7 +104,9 @@ public class ApprovalServiceImpl implements ApprovalService {
     var updatedApproval =
         new Approval(
             approvalId, namedIdentifiers, source, approval.handle(), approval.customerIdentifier());
-    approvalRepository.updateApproval(createRevision(updatedApproval, agent, UPDATE_APPROVAL));
+    approvalRepository.updateApproval(
+        createRevision(updatedApproval, agent, UPDATE_APPROVAL),
+        versionedApproval.latestRevision());
 
     return updatedApproval;
   }

@@ -11,6 +11,7 @@ import static nva.commons.core.attempt.Try.attempt;
 import java.util.Map;
 import java.util.UUID;
 import no.sikt.nva.approvals.domain.ApprovalConflictException;
+import no.sikt.nva.approvals.domain.ApprovalModifiedException;
 import no.sikt.nva.approvals.domain.ApprovalNotFoundException;
 import no.sikt.nva.approvals.domain.ChangeNotFoundException;
 import no.sikt.nva.approvals.domain.CustomerMismatchException;
@@ -112,6 +113,8 @@ public final class RequestUtils {
       case ApprovalConflictException conflictException ->
           new ConflictException(
               conflictException.getMessage(), conflictException.getConflictingKeys());
+      case ApprovalModifiedException modifiedException ->
+          new ConflictException(modifiedException.getMessage());
       case IllegalArgumentException illegalArgumentException ->
           new BadRequestException(illegalArgumentException.getMessage());
       case BadRequestException badRequestException -> badRequestException;

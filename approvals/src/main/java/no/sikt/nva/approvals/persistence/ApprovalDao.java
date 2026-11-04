@@ -14,24 +14,33 @@ import com.fasterxml.jackson.annotation.JsonTypeName;
 import java.net.URI;
 import java.time.Instant;
 import java.util.UUID;
-import no.sikt.nva.approvals.domain.Approval;
+import no.sikt.nva.approvals.domain.ApprovalRevision;
+import no.unit.nva.identifiers.SortableIdentifier;
 import nva.commons.core.StringUtils;
 import software.amazon.awssdk.enhanced.dynamodb.document.EnhancedDocument;
 
 @JsonTypeInfo(use = Id.NAME, property = "type")
 @JsonTypeName("Approval")
 public record ApprovalDao(
-    UUID identifier, URI source, UUID customerIdentifier, Instant createdDate, Instant modifiedDate)
+    UUID identifier,
+    URI source,
+    UUID customerIdentifier,
+    Instant createdDate,
+    Instant modifiedDate,
+    SortableIdentifier latestRevision)
     implements DatabaseEntry {
 
-  public static ApprovalDao fromApproval(
-      Approval approval, Instant createdDate, Instant modifiedDate) {
+  public static final String LATEST_REVISION = "latestRevision";
+
+  public static ApprovalDao fromApprovalRevision(ApprovalRevision revision, Instant createdDate) {
+    var approval = revision.approval();
     return new ApprovalDao(
         approval.identifier(),
         approval.source(),
         approval.customerIdentifier(),
         createdDate,
-        modifiedDate);
+        revision.createdDate(),
+        revision.identifier());
   }
 
   @Override
