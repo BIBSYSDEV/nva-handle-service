@@ -501,7 +501,22 @@ Resources:
     Properties:
       AccessLogSetting:
         DestinationArn: !GetAtt ApiAccessLogGroup.Arn
-        Format: '{ "apiId": "$context.apiId", "requestId": "$context.requestId", "integrationId": "$context.integration.requestId", "requestTime": "$context.requestTime", "requestTimeEpoch": "$context.requestTimeEpoch", "ip": "$context.identity.sourceIp", "httpMethod": "$context.httpMethod", "path": "$context.path", "status": "$context.status", "latency": "$context.integration.latency", "userAgent": "$context.identity.userAgent", "error.message": "$context.error.message" }'
+        Format: !Join
+          - ""
+          - - "{ "
+            - '"apiId": "$context.apiId", '
+            - '"requestId": "$context.requestId", '
+            - '"integrationId": "$context.integration.requestId", '
+            - '"requestTime": "$context.requestTime", '
+            - '"requestTimeEpoch": "$context.requestTimeEpoch", '
+            - '"httpMethod": "$context.httpMethod", '
+            - '"path": "$context.path", '
+            - '"status": "$context.status", '
+            - '"latency": "$context.integration.latency", '
+            - '"error.message": "$context.error.message", '
+            - '"userAgent": "$context.identity.userAgent", '
+            - '"ip": "$context.identity.sourceIp" '
+            - "}"
       StageName: Prod
       EndpointConfiguration:
         Type: REGIONAL
