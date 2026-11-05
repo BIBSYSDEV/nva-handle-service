@@ -36,10 +36,6 @@ public final class RequestValidator {
     validate(body, RequestValidator::toJsonPointer);
   }
 
-  public static void validateQueryParameters(Object queryParameters) throws BadRequestException {
-    validate(queryParameters, RequestValidator::toParameterName);
-  }
-
   public static BadRequestException badRequest(String message, String pointer) {
     return new BadRequestException(message, new ValidationError(message, pointer));
   }
@@ -79,13 +75,6 @@ public final class RequestValidator {
       segments.append(POINTER_SEPARATOR).append(node.getName());
     }
     return segments.toString();
-  }
-
-  private static String toParameterName(Path path) {
-    return nodes(path).stream()
-        .filter(RequestValidator::hasName)
-        .map(Path.Node::getName)
-        .collect(Collectors.joining(POINTER_SEPARATOR));
   }
 
   private static boolean hasName(Path.Node node) {

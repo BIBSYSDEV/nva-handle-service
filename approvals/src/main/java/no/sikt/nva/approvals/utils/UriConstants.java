@@ -9,7 +9,6 @@ public final class UriConstants {
 
   private static final String APPROVAL_PATH = "approval";
   private static final String CHANGE_PATH = "change";
-  private static final String SEARCH_PATH = "search";
   private static final String EVENT_PATH = "event";
   private static final String CUSTOMER_PATH = "customer";
   private static final String USERS_ROLES_PATH = "users-roles";
@@ -45,7 +44,7 @@ public final class UriConstants {
   }
 
   public static URI searchId(String apiHost) {
-    return UriWrapper.fromHost(apiHost).addChild(APPROVAL_PATH).addChild(SEARCH_PATH).getUri();
+    return UriWrapper.fromHost(apiHost).addChild(APPROVAL_PATH).getUri();
   }
 
   public static URI approvalId(String apiHost, UUID approvalIdentifier) {

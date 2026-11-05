@@ -76,16 +76,6 @@ public class ApprovalServiceImpl implements ApprovalService {
   }
 
   @Override
-  public Optional<Approval> getApprovalByHandle(Handle handle) {
-    return approvalRepository.findByHandle(handle);
-  }
-
-  @Override
-  public Optional<Approval> getApprovalByNamedIdentifier(NamedIdentifier namedIdentifier) {
-    return approvalRepository.findByIdentifier(namedIdentifier);
-  }
-
-  @Override
   public Approval updateApproval(
       UUID approvalId, Collection<NamedIdentifier> namedIdentifiers, URI source, Agent agent)
       throws ApprovalServiceException, ApprovalConflictException {

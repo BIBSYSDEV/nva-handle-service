@@ -50,18 +50,6 @@ public class FakeApprovalService implements ApprovalService {
   }
 
   @Override
-  public Optional<Approval> getApprovalByHandle(Handle handle) {
-    return approvals.stream().filter(approval -> approval.handle().equals(handle)).findFirst();
-  }
-
-  @Override
-  public Optional<Approval> getApprovalByNamedIdentifier(NamedIdentifier namedIdentifier) {
-    return approvals.stream()
-        .filter(approval -> approval.namedIdentifiers().contains(namedIdentifier))
-        .findFirst();
-  }
-
-  @Override
   public Approval updateApproval(
       UUID approvalId, Collection<NamedIdentifier> identifiers, URI source, Agent agent)
       throws ApprovalServiceException, ApprovalConflictException {
