@@ -20,7 +20,7 @@ import nva.commons.core.StringUtils;
 import software.amazon.awssdk.enhanced.dynamodb.document.EnhancedDocument;
 
 @JsonTypeInfo(use = Id.NAME, property = "type")
-@JsonTypeName("Approval")
+@JsonTypeName(ApprovalDao.TYPE)
 public record ApprovalDao(
     UUID identifier,
     URI source,
@@ -30,6 +30,7 @@ public record ApprovalDao(
     SortableIdentifier latestRevision)
     implements DatabaseEntry {
 
+  public static final String TYPE = "Approval";
   public static final String LATEST_REVISION = "latestRevision";
 
   public static ApprovalDao fromApprovalRevision(ApprovalRevision revision, Instant createdDate) {
