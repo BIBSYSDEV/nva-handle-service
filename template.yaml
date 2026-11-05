@@ -972,11 +972,12 @@ Resources:
   NvaProcessBatchJobFunction:
     Type: AWS::Serverless::Function
     Properties:
-      Description: Hands batch job work items to the queue that owns the work
+      Description: Carries out batch job work items
       CodeUri: approvals
       Handler: no.sikt.nva.approvals.batch.ProcessBatchJobHandler::handleRequest
-      Timeout: 60
+      Timeout: 300
       Policies:
+        - !Ref DynamoDbTableAccessPolicy
         - Statement:
             - Effect: Allow
               Action: sqs:SendMessage
@@ -984,6 +985,7 @@ Resources:
       Environment:
         Variables:
           INDEX_APPROVAL_QUEUE_URL: !Ref IndexApprovalQueue
+          TABLE: !Ref ApprovalsTable
       Events:
         BatchJobWorkItem:
           Type: SQS
