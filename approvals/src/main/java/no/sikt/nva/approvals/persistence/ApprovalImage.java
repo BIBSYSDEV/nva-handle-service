@@ -11,6 +11,7 @@ import no.sikt.nva.approvals.domain.Handle;
 import no.sikt.nva.approvals.domain.NamedIdentifier;
 import no.unit.nva.commons.json.JsonSerializable;
 import no.unit.nva.commons.json.JsonUtils;
+import no.unit.nva.identifiers.SortableIdentifier;
 
 public record ApprovalImage(
     Collection<IdentifierImage> identifiers, URI source, URI handle, URI context, URI ontology)
@@ -33,13 +34,15 @@ public record ApprovalImage(
         .orElseThrow();
   }
 
-  public Approval toApproval(UUID approvalIdentifier, UUID customerIdentifier) {
+  public Approval toApproval(
+      UUID approvalIdentifier, UUID customerIdentifier, SortableIdentifier version) {
     return new Approval(
         approvalIdentifier,
         identifiers.stream().map(IdentifierImage::toNamedIdentifier).toList(),
         source,
         new Handle(handle),
-        customerIdentifier);
+        customerIdentifier,
+        version);
   }
 
   public record IdentifierImage(String name, String value) {

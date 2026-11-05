@@ -3,6 +3,7 @@ package no.sikt.nva.approvals.rest;
 import static java.net.HttpURLConnection.HTTP_ACCEPTED;
 import static java.net.HttpURLConnection.HTTP_BAD_GATEWAY;
 import static java.net.HttpURLConnection.HTTP_BAD_REQUEST;
+import static java.net.HttpURLConnection.HTTP_CONFLICT;
 import static java.net.HttpURLConnection.HTTP_FORBIDDEN;
 import static java.net.HttpURLConnection.HTTP_NOT_FOUND;
 import static java.net.HttpURLConnection.HTTP_UNAUTHORIZED;
@@ -35,6 +36,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import no.sikt.nva.approvals.domain.Agent;
+import no.sikt.nva.approvals.domain.ApprovalModifiedException;
 import no.sikt.nva.approvals.domain.ApprovalNotFoundException;
 import no.sikt.nva.approvals.domain.ApprovalService;
 import no.sikt.nva.approvals.domain.ApprovalServiceException;
@@ -310,6 +312,22 @@ class UpdateApprovalHandlerTest {
     var response = GatewayResponse.fromOutputStream(output, Void.class);
 
     assertEquals(HTTP_NOT_FOUND, response.getStatusCode());
+  }
+
+  @Test
+  void shouldReturnConflictWhenApprovalWasModifiedByAnotherRequest() throws IOException {
+    handler =
+        new UpdateApprovalHandler(
+            new FakeApprovalService(new ApprovalModifiedException(approvalId)),
+            identifierAuthorizer,
+            new Environment());
+    var request = createRequest(randomUpdateApprovalRequest(), approvalId);
+
+    handler.handleRequest(request, output, context);
+
+    var response = GatewayResponse.fromOutputStream(output, Void.class);
+
+    assertEquals(HTTP_CONFLICT, response.getStatusCode());
   }
 
   @Test

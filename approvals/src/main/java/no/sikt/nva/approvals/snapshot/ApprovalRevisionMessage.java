@@ -22,7 +22,8 @@ public record ApprovalRevisionMessage(
     implements CreateSnapshotMessage {
 
   public Approval toApproval() {
-    return ApprovalImage.fromJson(approval).toApproval(approvalIdentifier, customerIdentifier);
+    return ApprovalImage.fromJson(approval)
+        .toApproval(approvalIdentifier, customerIdentifier, revisionIdentifier);
   }
 
   @Override

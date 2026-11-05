@@ -55,7 +55,7 @@ public record ApprovalRevisionDao(
     var image = readImage();
     return new ApprovalRevision(
         identifier,
-        image.toApproval(approvalIdentifier, customerIdentifier),
+        image.toApproval(approvalIdentifier, customerIdentifier, identifier),
         new Agent(customerIdentifier, clientIdentifier),
         createdDate,
         activity,

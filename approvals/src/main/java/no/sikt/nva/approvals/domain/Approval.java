@@ -6,13 +6,24 @@ import java.net.URI;
 import java.util.Collection;
 import java.util.Objects;
 import java.util.UUID;
+import no.unit.nva.identifiers.SortableIdentifier;
 
 public record Approval(
     UUID identifier,
     Collection<NamedIdentifier> namedIdentifiers,
     URI source,
     Handle handle,
-    UUID customerIdentifier) {
+    UUID customerIdentifier,
+    SortableIdentifier version) {
+
+  public Approval(
+      UUID identifier,
+      Collection<NamedIdentifier> namedIdentifiers,
+      URI source,
+      Handle handle,
+      UUID customerIdentifier) {
+    this(identifier, namedIdentifiers, source, handle, customerIdentifier, null);
+  }
 
   public Approval {
     Objects.requireNonNull(source, "Source is mandatory for approval creation");
@@ -20,6 +31,11 @@ public record Approval(
     Objects.requireNonNull(handle, "Handle is mandatory for approval creation");
     Objects.requireNonNull(namedIdentifiers, "List is mandatory for approval creation");
     shouldNotBeEmpty(namedIdentifiers, "Identifiers are mandatory for approval creation");
+  }
+
+  Approval withVersion(SortableIdentifier newVersion) {
+    return new Approval(
+        identifier, namedIdentifiers, source, handle, customerIdentifier, newVersion);
   }
 
   public void ensureOwnedBy(UUID customerIdentifier) throws CustomerMismatchException {
