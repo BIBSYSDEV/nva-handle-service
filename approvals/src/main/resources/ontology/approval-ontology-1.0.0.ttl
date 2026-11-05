@@ -1,5 +1,6 @@
 @prefix : <__ONTOLOGY_IRI__#> .
 @prefix owl: <http://www.w3.org/2002/07/owl#> .
+@prefix hydra: <http://www.w3.org/ns/hydra/core#> .
 @prefix prov: <http://www.w3.org/ns/prov#> .
 @prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
@@ -35,6 +36,11 @@
     rdfs:subClassOf prov:Collection ;
     rdfs:label "ChangeList" ;
     rdfs:comment "A page of the recorded changes to an approval" .
+
+:ApprovalSearchResults a rdfs:Class ;
+    rdfs:subClassOf hydra:Collection ;
+    rdfs:label "ApprovalSearchResults" ;
+    rdfs:comment "A page of the approvals matching a search" .
 
 :ApprovalRevision a rdfs:Class ;
     rdfs:subClassOf prov:Entity ;
@@ -106,8 +112,8 @@
     rdfs:domain :Approval ;
     rdfs:range xsd:string .
 
-:next a rdf:Property ;
-    rdfs:label "next" ;
-    rdfs:comment "The next page of the change history" ;
-    rdfs:domain :ChangeList ;
-    rdfs:range :ChangeList .
+:title a rdf:Property ;
+    rdfs:label "title" ;
+    rdfs:comment "The title of the approval, taken from its source" ;
+    rdfs:domain :Approval ;
+    rdfs:range xsd:string .

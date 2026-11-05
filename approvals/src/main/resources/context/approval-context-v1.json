@@ -6,6 +6,7 @@
     "schema": "https://schema.org/",
     "prov": "http://www.w3.org/ns/prov#",
     "spdx": "http://spdx.org/rdf/terms#",
+    "hydra": "http://www.w3.org/ns/hydra/core#",
     "sameAs": {
       "@id": "schema:sameAs",
       "@type": "@id",
@@ -39,7 +40,27 @@
       "@container": "@set"
     },
     "next": {
+      "@id": "hydra:next",
       "@type": "@id"
+    },
+    "member": {
+      "@id": "hydra:member",
+      "@type": "@id"
+    },
+    "totalItems": "hydra:totalItems",
+    "search": "hydra:search",
+    "template": "hydra:template",
+    "mapping": "hydra:mapping",
+    "variable": "hydra:variable",
+    "property": {
+      "@id": "hydra:property",
+      "@type": "@vocab"
+    },
+    "description": "hydra:description",
+    "IriTemplate": "hydra:IriTemplate",
+    "IriTemplateMapping": "hydra:IriTemplateMapping",
+    "title": {
+      "@type": "xsd:string"
     },
     "about": {
       "@id": "schema:about",

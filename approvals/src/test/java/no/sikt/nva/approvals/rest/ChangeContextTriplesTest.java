@@ -2,6 +2,7 @@ package no.sikt.nva.approvals.rest;
 
 import static no.sikt.nva.approvals.domain.ApprovalActivity.CREATE_APPROVAL;
 import static no.sikt.nva.approvals.utils.JsonLdTestUtils.APPROVAL_ONTOLOGY_NAMESPACE;
+import static no.sikt.nva.approvals.utils.JsonLdTestUtils.HYDRA_NAMESPACE;
 import static no.sikt.nva.approvals.utils.JsonLdTestUtils.RDF_TYPE;
 import static no.sikt.nva.approvals.utils.JsonLdTestUtils.objectOf;
 import static no.sikt.nva.approvals.utils.JsonLdTestUtils.toTriplesWithApprovalContext;
@@ -38,6 +39,17 @@ class ChangeContextTriplesTest {
   private static final String SCHEMA = "https://schema.org/";
   private static final String XSD_DATE_TIME = "http://www.w3.org/2001/XMLSchema#dateTime";
   private static final String XSD_HEX_BINARY = "http://www.w3.org/2001/XMLSchema#hexBinary";
+
+  @Test
+  void shouldReturnTripleOfNextPageOfChangeList() throws IOException, JsonLdError {
+    var approval = randomApproval(randomHandle());
+    var snapshot = randomSourceSnapshot(approval.identifier());
+    var changeList = new ChangeList(approval, List.of(snapshot), true);
+
+    var triples = toTriplesWithApprovalContext(changeListResponse(changeList));
+
+    assertThat(triples.stream().map(Triple::predicate).toList(), hasItem(HYDRA_NAMESPACE + "next"));
+  }
 
   @Test
   void shouldReturnTriplesOfChangeListAboutApprovalWithChangesAsMembers()

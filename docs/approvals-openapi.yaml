@@ -147,7 +147,7 @@ paths:
         type: AWS_PROXY
       responses:
         "200":
-          description: Search results. An empty `hits` array means nothing matched
+          description: Search results. An empty `member` array means nothing matched
           content:
             application/ld+json:
               schema:
@@ -1122,10 +1122,10 @@ components:
           type: string
           format: uri
           description: The URI of this page, carrying the parameters that produced it
-        totalHits:
+        totalItems:
           type: integer
           description: Number of approvals matching the search
-        hits:
+        member:
           type: array
           description: The approvals on this page, ordered by approval identifier
           items:
@@ -1134,13 +1134,16 @@ components:
           type: string
           format: uri
           description: URI of the following page, repeating the current search
+        search:
+          $ref: "#/components/schemas/IriTemplate"
       example:
         "@context": https://api.nva.unit.no/approval/context/v1
         type: ApprovalSearchResults
         id: https://api.nva.unit.no/approval?query=diabetes&size=10
-        totalHits: 42
-        hits:
-          - id: https://api.nva.unit.no/approval/6ff5f1b5-97c1-40f0-86ad-2cbd9006eee2
+        totalItems: 42
+        member:
+          - type: Approval
+            id: https://api.nva.unit.no/approval/6ff5f1b5-97c1-40f0-86ad-2cbd9006eee2
             handle: https://hdl.handle.net/11250.1/12345
             title: A study of diabetes
             identifiers:
@@ -1148,10 +1151,52 @@ components:
                 name: REK
                 value: "123456"
         next: https://api.nva.unit.no/approval?query=diabetes&size=10&cursor=6ff5f1b5-97c1-40f0-86ad-2cbd9006eee2
+        search:
+          type: IriTemplate
+          template: https://api.nva.unit.no/approval{?query,size,cursor}
+          mapping:
+            - type: IriTemplateMapping
+              variable: query
+              property: "hydra:freetextQuery"
+              description: Free text matched against the approvals
+    IriTemplate:
+      type: object
+      description: The Hydra template describing how to query this collection
+      properties:
+        type:
+          type: string
+          default: IriTemplate
+        template:
+          type: string
+          description: RFC 6570 URI template for a search request
+        mapping:
+          type: array
+          items:
+            $ref: "#/components/schemas/IriTemplateMapping"
+    IriTemplateMapping:
+      type: object
+      description: Maps one template variable to the Hydra property it stands for
+      properties:
+        type:
+          type: string
+          default: IriTemplateMapping
+        variable:
+          type: string
+          description: Name of the variable in the template
+        property:
+          type: string
+          description: The Hydra property the variable supplies
+        description:
+          type: string
+          description: What the variable does
     ApprovalHit:
       type: object
       description: One approval in a page of search results
       properties:
+        type:
+          type: string
+          default: Approval
+          description: The type discriminator for this object
         id:
           type: string
           format: uri
