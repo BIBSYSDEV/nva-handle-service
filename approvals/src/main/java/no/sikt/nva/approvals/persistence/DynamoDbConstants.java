@@ -1,5 +1,6 @@
 package no.sikt.nva.approvals.persistence;
 
+import static no.sikt.nva.approvals.utils.AwsRegion.defaultRegionName;
 import static software.amazon.awssdk.enhanced.dynamodb.AttributeValueType.S;
 import static software.amazon.awssdk.enhanced.dynamodb.TableMetadata.primaryIndexName;
 
@@ -26,7 +27,6 @@ public final class DynamoDbConstants {
   public static final String SK0 = "SK0";
   public static final String SK1 = "SK1";
   public static final String SK2 = "SK2";
-  public static final String AWS_REGION = "AWS_REGION";
 
   private DynamoDbConstants() {}
 
@@ -47,7 +47,7 @@ public final class DynamoDbConstants {
     return DynamoDbClient.builder()
         .httpClient(UrlConnectionHttpClient.create())
         .credentialsProvider(DefaultCredentialsProvider.builder().build())
-        .region(environment.readEnvOpt(AWS_REGION).map(Region::of).orElse(Region.EU_WEST_1))
+        .region(Region.of(defaultRegionName(environment)))
         .build();
   }
 }

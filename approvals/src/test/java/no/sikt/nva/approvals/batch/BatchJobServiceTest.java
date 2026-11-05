@@ -111,6 +111,16 @@ class BatchJobServiceTest {
   }
 
   @Test
+  void shouldReduceRemainingItemsOfContinuationByEnqueuedKeys() {
+    when(scanRepository.scan(new ScanQuery(ApprovalDao.TYPE, PAGE_SIZE, START_CURSOR)))
+        .thenReturn(new ItemKeyPage(List.of(key(), key()), START_CURSOR));
+
+    service.execute(scanRequest(START_CURSOR, 5));
+
+    verify(queueClient).send(List.of(scanRequest(START_CURSOR, 3)), BATCH_JOB_QUEUE_URL);
+  }
+
+  @Test
   void shouldStopEnqueueingWhenRemainingItemsAreExhausted() {
     var first = key();
     when(scanRepository.scan(new ScanQuery(ApprovalDao.TYPE, PAGE_SIZE, START_CURSOR)))
