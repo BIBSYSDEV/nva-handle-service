@@ -48,7 +48,7 @@ and `maxItems` is unlimited when left out.
 2. Route the constant to the queue that owns its work in `ProcessBatchJobService`.
 3. Document it here.
 
-## How to trigger
+### How to trigger
 
 1. AWS Console → Lambda → `NvaStartBatchJobFunction`
 2. Test tab
@@ -64,14 +64,14 @@ and `maxItems` is unlimited when left out.
 Start with `maxItems` set to a handful of rows before running the whole table. Fewer items
 than segments means only that many segments are started.
 
-## How it runs
+### How it runs
 
 One start message fans out into one scan message per segment. Each scan message reads a
 single page and, if the segment has more rows, puts its cursor back on `BatchJobQueue`.
 Progress therefore lives on the queue, not in memory: a failed invocation replays at most
 one page.
 
-## Adjusting throughput
+### Adjusting throughput
 
 - Scanning: `MaximumConcurrency` on the `BatchJobRequested` event source, and `totalSegments`
 - Processing: `MaximumConcurrency`, `BatchSize` and `MaximumBatchingWindowInSeconds` on the
@@ -79,7 +79,7 @@ one page.
   retries the whole batch, so an item can be sent for indexing twice; indexing the same approval
   twice produces the same document.
 
-## Emergency stop
+### Emergency stop
 
 - **Stop scanning**: set `PROCESSING_ENABLED` to `false` on `NvaStartBatchJobFunction` in the console. Scan
   messages already on `BatchJobQueue` are consumed and discarded, so the job does not pause,
@@ -88,7 +88,7 @@ one page.
 - **Stop processing**: disable the SQS trigger on `NvaProcessBatchJobFunction`, and purge
   `BatchJobWorkQueue` if the items should be discarded.
 
-## Error recovery
+### Error recovery
 
 A scan or work message that fails three times lands on `BatchJobDlq` or `BatchJobWorkDlq`,
 and the alarm on that queue fires. A dead lettered scan message means the rest of that
