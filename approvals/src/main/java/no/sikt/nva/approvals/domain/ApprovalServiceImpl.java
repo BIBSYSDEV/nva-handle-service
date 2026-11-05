@@ -66,8 +66,9 @@ public class ApprovalServiceImpl implements ApprovalService {
     var handle = createHandle(approvalUri);
     var approval =
         new Approval(approvalId, namedIdentifiers, source, handle, agent.customerIdentifier());
-    approvalRepository.save(createRevision(approval, agent, CREATE_APPROVAL));
-    return approval;
+    var revision = createRevision(approval, agent, CREATE_APPROVAL);
+    approvalRepository.save(revision);
+    return revision.approval();
   }
 
   @Override
@@ -92,9 +93,10 @@ public class ApprovalServiceImpl implements ApprovalService {
     var updatedApproval =
         new Approval(
             approvalId, namedIdentifiers, source, approval.handle(), approval.customerIdentifier());
-    approvalRepository.updateApproval(createRevision(updatedApproval, agent, UPDATE_APPROVAL));
+    var revision = createRevision(updatedApproval, agent, UPDATE_APPROVAL);
+    approvalRepository.updateApproval(revision, approval.version());
 
-    return updatedApproval;
+    return revision.approval();
   }
 
   private static boolean hasSameIdentifiers(

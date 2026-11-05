@@ -210,8 +210,8 @@ class DynamoDbChangeRepositoryTest {
             approval.identifier(), Instant.now().minusSeconds(OLDER_SNAPSHOT_AGE_IN_SECONDS));
     approvalRepository.save(snapshot);
     saveApproval(approval);
-    approvalRepository.updateApproval(randomRevision(approval, UPDATE_APPROVAL));
-    approvalRepository.updateApproval(randomRevision(approval, UPDATE_APPROVAL));
+    updateApproval(approval);
+    updateApproval(approval);
 
     var latestSnapshot = changeRepository.findLatestSnapshot(approval.identifier());
 
@@ -230,6 +230,12 @@ class DynamoDbChangeRepositoryTest {
 
   private void saveApproval(Approval approval) {
     approvalRepository.save(randomRevision(approval, CREATE_APPROVAL));
+  }
+
+  private void updateApproval(Approval approval) {
+    var latestRevision =
+        approvalRepository.findByApprovalIdentifier(approval.identifier()).orElseThrow().version();
+    approvalRepository.updateApproval(randomRevision(approval, UPDATE_APPROVAL), latestRevision);
   }
 
   private void insertChangeItemOfUnknownType(UUID approvalIdentifier) {

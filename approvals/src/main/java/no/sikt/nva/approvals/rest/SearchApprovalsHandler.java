@@ -95,7 +95,7 @@ public class SearchApprovalsHandler extends ApiGatewayHandler<Void, ApprovalSear
 
   private static String approvalIdentifier(String value) throws BadRequestException {
     return attempt(() -> UUID.fromString(value).toString())
-        .orElseThrow(failure -> badRequest(INVALID_CURSOR_MESSAGE, CURSOR_QUERY_PARAMETER));
+        .orElseThrow(_ -> badRequest(INVALID_CURSOR_MESSAGE, CURSOR_QUERY_PARAMETER));
   }
 
   private static int size(RequestInfo requestInfo) throws BadRequestException {

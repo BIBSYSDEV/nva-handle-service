@@ -25,9 +25,10 @@ public record ApprovalRevision(
       URI ontology,
       Instant createdDate) {
     var timestamp = createdDate.truncatedTo(MICROS);
+    var identifier = SortableIdentifier.create(timestamp, UUID.randomUUID());
     return new ApprovalRevision(
-        SortableIdentifier.create(timestamp, UUID.randomUUID()),
-        approval,
+        identifier,
+        approval.withVersion(identifier),
         agent,
         timestamp,
         activity,
