@@ -1,6 +1,6 @@
 package no.sikt.nva.approvals.queue;
 
-import static no.sikt.nva.approvals.persistence.DynamoDbConstants.AWS_REGION;
+import static no.sikt.nva.approvals.utils.AwsRegion.defaultRegionName;
 
 import java.util.Collection;
 import java.util.List;
@@ -45,7 +45,7 @@ public final class SqsQueueClient implements QueueClient {
     return SqsClient.builder()
         .httpClient(UrlConnectionHttpClient.create())
         .credentialsProvider(DefaultCredentialsProvider.builder().build())
-        .region(environment.readEnvOpt(AWS_REGION).map(Region::of).orElse(Region.EU_WEST_1))
+        .region(Region.of(defaultRegionName(environment)))
         .build();
   }
 

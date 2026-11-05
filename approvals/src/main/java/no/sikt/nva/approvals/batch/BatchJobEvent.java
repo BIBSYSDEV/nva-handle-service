@@ -10,6 +10,9 @@ import no.unit.nva.commons.json.JsonUtils;
 record BatchJobEvent(@JsonProperty("Records") List<BatchJobEventRecord> records) {
 
   private static final String PARSE_FAILURE_MESSAGE = "Could not parse BatchJobEvent";
+  private static final String TOO_MANY_RECORDS_MESSAGE =
+      "BatchJobEvent carries more than one record, batch size must be one";
+  private static final int SINGLE_RECORD = 1;
 
   static BatchJobMessage toMessage(String event) {
     return BatchJobMessage.fromString(requestBody(event));
@@ -17,7 +20,7 @@ record BatchJobEvent(@JsonProperty("Records") List<BatchJobEventRecord> records)
 
   private static String requestBody(String event) {
     var batchJobEvent = parse(event);
-    return batchJobEvent.isQueueEvent() ? batchJobEvent.firstBody() : event;
+    return batchJobEvent.isQueueEvent() ? batchJobEvent.onlyBody() : event;
   }
 
   private static BatchJobEvent parse(String event) {
@@ -30,7 +33,10 @@ record BatchJobEvent(@JsonProperty("Records") List<BatchJobEventRecord> records)
     return nonNull(records()) && !records().isEmpty();
   }
 
-  private String firstBody() {
+  private String onlyBody() {
+    if (records().size() > SINGLE_RECORD) {
+      throw new IllegalArgumentException(TOO_MANY_RECORDS_MESSAGE);
+    }
     return records().getFirst().body();
   }
 

@@ -27,7 +27,7 @@ import software.amazon.awssdk.services.sqs.model.BatchResultErrorEntry;
 import software.amazon.awssdk.services.sqs.model.SendMessageBatchRequest;
 import software.amazon.awssdk.services.sqs.model.SendMessageBatchResponse;
 
-class QueueClientTest {
+class SqsQueueClientTest {
 
   private static final String QUEUE_URL = "any-queue";
   private static final String FIRST_FAILED_ENTRY = "0";
@@ -78,14 +78,6 @@ class QueueClientTest {
   }
 
   @Test
-  void shouldThrowIllegalStateExceptionWhenSomeMessagesAreNotQueued() {
-    var messages = workMessages(1);
-    failWith(FAILURE_CODE);
-
-    assertThrows(IllegalStateException.class, () -> queueClient.send(messages, QUEUE_URL));
-  }
-
-  @Test
   void shouldReportFailureCodeWhenSomeMessagesAreNotQueued() {
     var messages = workMessages(1);
     failWith(FAILURE_CODE);
@@ -105,7 +97,7 @@ class QueueClientTest {
   }
 
   private static List<BatchJobWorkMessage> workMessages(int count) {
-    return Stream.generate(QueueClientTest::key)
+    return Stream.generate(SqsQueueClientTest::key)
         .limit(count)
         .map(key -> new BatchJobWorkMessage(REINDEX_APPROVALS, key))
         .toList();

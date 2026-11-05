@@ -81,7 +81,7 @@ one page.
 
 ## Emergency stop
 
-- **Stop scanning**: set `PROCESSING_ENABLED=false` on `NvaStartBatchJobFunction`. Scan
+- **Stop scanning**: set `PROCESSING_ENABLED` to `false` on `NvaStartBatchJobFunction` in the console. Scan
   messages already on `BatchJobQueue` are consumed and discarded, so the job does not pause,
   it ends. Work items already on `BatchJobWorkQueue` are still processed. Re-enabling does
   not resume anything: start the job again, from the beginning.

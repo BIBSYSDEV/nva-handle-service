@@ -77,13 +77,6 @@ Parameters:
     Type: String
     Description: URI to auth for external search infrastructure API (SWS)
     Default: "https://sws-auth.auth.eu-west-1.amazoncognito.com"
-  BatchJobProcessingEnabled:
-    Type: String
-    Description: Set to false to stop batch jobs loading new work items
-    AllowedValues:
-      - "true"
-      - "false"
-    Default: "true"
   ApprovalsSearchIndex:
     Type: String
     Description: Name of the search index holding approvals
@@ -932,7 +925,7 @@ Resources:
           TABLE: !Ref ApprovalsTable
           BATCH_JOB_QUEUE_URL: !Ref BatchJobQueue
           BATCH_JOB_WORK_QUEUE_URL: !Ref BatchJobWorkQueue
-          PROCESSING_ENABLED: !Ref BatchJobProcessingEnabled
+          PROCESSING_ENABLED: "true"
       Events:
         BatchJobRequested:
           Type: SQS
