@@ -4,6 +4,7 @@ import static java.util.UUID.randomUUID;
 import static no.sikt.nva.approvals.utils.JsonLdTestUtils.APPROVAL_ONTOLOGY_NAMESPACE;
 import static no.sikt.nva.approvals.utils.JsonLdTestUtils.HYDRA_NAMESPACE;
 import static no.sikt.nva.approvals.utils.JsonLdTestUtils.RDF_TYPE;
+import static no.sikt.nva.approvals.utils.JsonLdTestUtils.objectOf;
 import static no.sikt.nva.approvals.utils.JsonLdTestUtils.toTriplesWithApprovalContext;
 import static no.sikt.nva.approvals.utils.UriConstants.approvalId;
 import static no.sikt.nva.approvals.utils.UriConstants.context;
@@ -28,6 +29,7 @@ class SearchContextTriplesTest {
   private static final String API_HOST = "localhost";
   private static final String XSD_INTEGER = "http://www.w3.org/2001/XMLSchema#integer";
   private static final int TOTAL_ITEMS = 42;
+  private static final String SEARCH_TEMPLATE = "https://localhost/approval{?query,size,cursor}";
 
   @Test
   void shouldReturnTriplesOfSearchResultsTypeAndItsHits() throws IOException, JsonLdError {
@@ -66,10 +68,17 @@ class SearchContextTriplesTest {
   }
 
   @Test
-  void shouldReturnTripleOfSearchTemplateVariableProperty() throws IOException, JsonLdError {
+  void shouldReturnTriplesOfSearchTemplateAndItsFreeTextMapping() throws IOException, JsonLdError {
     var triples = toTriplesWithApprovalContext(searchResults(List.of(), null));
 
-    assertThat(triples.stream().map(Triple::object).toList(), hasItem(hydra("freetextQuery")));
+    var template = objectOf(triples, searchIri(), hydra("search"));
+    var mapping = objectOf(triples, template, hydra("mapping"));
+
+    assertThat(
+        triples,
+        hasItems(
+            Triple.literal(template, hydra("template"), SEARCH_TEMPLATE),
+            Triple.of(mapping, hydra("property"), hydra("freetextQuery"))));
   }
 
   @Test
@@ -97,7 +106,7 @@ class SearchContextTriplesTest {
 
   private static IriTemplate searchTemplate() {
     return new IriTemplate(
-        searchId(API_HOST) + "{?query,size,cursor}",
+        SEARCH_TEMPLATE,
         List.of(new IriTemplateMapping("query", "hydra:freetextQuery", "Free text")));
   }
 

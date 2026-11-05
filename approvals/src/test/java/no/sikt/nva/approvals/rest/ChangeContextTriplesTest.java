@@ -2,7 +2,6 @@ package no.sikt.nva.approvals.rest;
 
 import static no.sikt.nva.approvals.domain.ApprovalActivity.CREATE_APPROVAL;
 import static no.sikt.nva.approvals.utils.JsonLdTestUtils.APPROVAL_ONTOLOGY_NAMESPACE;
-import static no.sikt.nva.approvals.utils.JsonLdTestUtils.HYDRA_NAMESPACE;
 import static no.sikt.nva.approvals.utils.JsonLdTestUtils.RDF_TYPE;
 import static no.sikt.nva.approvals.utils.JsonLdTestUtils.objectOf;
 import static no.sikt.nva.approvals.utils.JsonLdTestUtils.toTriplesWithApprovalContext;
@@ -10,6 +9,7 @@ import static no.sikt.nva.approvals.utils.TestUtils.randomApproval;
 import static no.sikt.nva.approvals.utils.TestUtils.randomHandle;
 import static no.sikt.nva.approvals.utils.TestUtils.randomRevision;
 import static no.sikt.nva.approvals.utils.TestUtils.randomSourceSnapshot;
+import static no.sikt.nva.approvals.utils.UriConstants.CURSOR_QUERY_PARAMETER;
 import static no.sikt.nva.approvals.utils.UriConstants.approvalId;
 import static no.sikt.nva.approvals.utils.UriConstants.changeId;
 import static no.sikt.nva.approvals.utils.UriConstants.changeListId;
@@ -29,6 +29,7 @@ import no.sikt.nva.approvals.domain.ChangeList;
 import no.sikt.nva.approvals.domain.SourceChangedEventTrigger;
 import no.sikt.nva.approvals.domain.SourceSnapshot;
 import no.sikt.nva.approvals.utils.JsonLdTestUtils.Triple;
+import nva.commons.core.paths.UriWrapper;
 import org.junit.jupiter.api.Test;
 
 class ChangeContextTriplesTest {
@@ -37,6 +38,7 @@ class ChangeContextTriplesTest {
   private static final String PROV = "http://www.w3.org/ns/prov#";
   private static final String SPDX = "http://spdx.org/rdf/terms#";
   private static final String SCHEMA = "https://schema.org/";
+  private static final String HYDRA = "http://www.w3.org/ns/hydra/core#";
   private static final String XSD_DATE_TIME = "http://www.w3.org/2001/XMLSchema#dateTime";
   private static final String XSD_HEX_BINARY = "http://www.w3.org/2001/XMLSchema#hexBinary";
 
@@ -48,7 +50,11 @@ class ChangeContextTriplesTest {
 
     var triples = toTriplesWithApprovalContext(changeListResponse(changeList));
 
-    assertThat(triples.stream().map(Triple::predicate).toList(), hasItem(HYDRA_NAMESPACE + "next"));
+    assertThat(
+        triples,
+        hasItem(
+            Triple.of(
+                changeListIri(approval), termIri(HYDRA, "next"), nextPageIri(approval, snapshot))));
   }
 
   @Test
@@ -293,6 +299,13 @@ class ChangeContextTriplesTest {
 
   private static ApprovalRevisionResponse revisionResponse(ApprovalRevision revision) {
     return ApprovalRevisionResponse.create(revision, API_HOST);
+  }
+
+  private static String nextPageIri(Approval approval, SourceSnapshot snapshot) {
+    return UriWrapper.fromUri(changeListId(API_HOST, approval.identifier()))
+        .addQueryParameter(CURSOR_QUERY_PARAMETER, snapshot.identifier().toString())
+        .getUri()
+        .toString();
   }
 
   private static String changeListIri(Approval approval) {
