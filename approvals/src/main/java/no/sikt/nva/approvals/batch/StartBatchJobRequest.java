@@ -1,6 +1,7 @@
 package no.sikt.nva.approvals.batch;
 
 import static java.util.Objects.isNull;
+import static java.util.Objects.nonNull;
 import static java.util.Objects.requireNonNullElse;
 
 import com.fasterxml.jackson.annotation.JsonTypeName;
@@ -13,6 +14,7 @@ public record StartBatchJobRequest(
   static final int DEFAULT_TOTAL_SEGMENTS = 10;
   static final int DEFAULT_PAGE_SIZE = 700;
   private static final int MIN_SEGMENTS = 1;
+  private static final int MINIMUM_POSITIVE = 1;
   private static final int MAX_SEGMENTS = 100;
   private static final String MISSING_JOB_TYPE_MESSAGE = "jobType is required";
   private static final String INVALID_TOTAL_SEGMENTS_MESSAGE =
@@ -30,7 +32,7 @@ public record StartBatchJobRequest(
       throw new IllegalArgumentException(
           INVALID_TOTAL_SEGMENTS_MESSAGE.formatted(MIN_SEGMENTS, MAX_SEGMENTS, totalSegments));
     }
-    if (pageSize < MIN_SEGMENTS) {
+    if (pageSize < MINIMUM_POSITIVE) {
       throw new IllegalArgumentException(INVALID_PAGE_SIZE_MESSAGE.formatted(pageSize));
     }
     if (nonPositive(maxItems)) {
@@ -39,6 +41,6 @@ public record StartBatchJobRequest(
   }
 
   private static boolean nonPositive(Integer maxItems) {
-    return !isNull(maxItems) && maxItems < MIN_SEGMENTS;
+    return nonNull(maxItems) && maxItems < MINIMUM_POSITIVE;
   }
 }

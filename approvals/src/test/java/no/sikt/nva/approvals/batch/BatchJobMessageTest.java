@@ -18,6 +18,13 @@ class BatchJobMessageTest {
   private static final int PAGE_SIZE = 700;
 
   @Test
+  void shouldRejectStartRequestWithNonPositivePageSize() {
+    assertThrows(
+        IllegalArgumentException.class,
+        () -> new StartBatchJobRequest(REINDEX_APPROVALS, null, 0, null));
+  }
+
+  @Test
   void shouldSurviveSerialisationOfStartRequest() {
     var message = new StartBatchJobRequest(REINDEX_APPROVALS, 4, PAGE_SIZE, 100);
 

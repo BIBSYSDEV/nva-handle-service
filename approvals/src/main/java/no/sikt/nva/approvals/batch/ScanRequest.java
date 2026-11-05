@@ -12,12 +12,16 @@ public record ScanRequest(
     implements BatchJobMessage {
 
   private static final int MINIMUM_POSITIVE = 1;
+  private static final String MISSING_JOB_TYPE_MESSAGE = "jobType is required";
   private static final String MISSING_CURSOR_MESSAGE = "cursor is required";
   private static final String INVALID_PAGE_SIZE_MESSAGE = "pageSize must be positive";
   private static final String INVALID_REMAINING_ITEMS_MESSAGE =
       "remainingItems must be positive when given";
 
   public ScanRequest {
+    if (isNull(jobType)) {
+      throw new IllegalArgumentException(MISSING_JOB_TYPE_MESSAGE);
+    }
     if (isNull(cursor)) {
       throw new IllegalArgumentException(MISSING_CURSOR_MESSAGE);
     }
