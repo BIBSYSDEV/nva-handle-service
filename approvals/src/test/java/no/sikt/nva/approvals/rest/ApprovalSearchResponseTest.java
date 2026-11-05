@@ -18,67 +18,79 @@ import no.sikt.nva.approvals.index.IndexDocument;
 import no.sikt.nva.approvals.index.IndexDocument.Display;
 import no.sikt.nva.approvals.index.IndexDocument.Identifier;
 import no.sikt.nva.approvals.index.Query;
-import nva.commons.apigateway.exceptions.UnprocessableContentException;
 import org.junit.jupiter.api.Test;
 import org.opensearch.client.opensearch.core.SearchResponse;
 import org.opensearch.client.opensearch.core.search.Hit;
 import org.opensearch.client.opensearch.core.search.TotalHitsRelation;
 
-class ApprovalSearchResultsTest {
+class ApprovalSearchResponseTest {
 
   private static final String API_HOST = randomUri().getHost();
   private static final String QUERY_PARAMETER = "query";
-  private static final String OFFSET_PARAMETER = "offset";
   private static final String SIZE_PARAMETER = "size";
+  private static final String CURSOR_PARAMETER = "cursor";
+  private static final int SINGLE_HIT = 1;
 
   @Test
-  void shouldConvertDocumentsToApprovalHits() throws UnprocessableContentException {
+  void shouldConvertDocumentsToApprovalHits() {
     var document = indexDocument();
 
-    var results = ApprovalSearchResults.from(response(List.of(document), 1), query(), API_HOST);
+    var results = ApprovalSearchResponse.from(response(List.of(document), 1), query(), API_HOST);
 
-    assertThat(results.getHits(), contains(ApprovalHit.fromDisplay(document.display(), API_HOST)));
+    assertThat(results.hits(), contains(ApprovalHit.fromDisplay(document.display(), API_HOST)));
   }
 
   @Test
-  void shouldReportTotalNumberOfHits() throws UnprocessableContentException {
-    var results = ApprovalSearchResults.from(response(List.of(), 42), query(), API_HOST);
+  void shouldReportTotalNumberOfHits() {
+    var results = ApprovalSearchResponse.from(response(List.of(), 42), query(), API_HOST);
 
-    assertEquals(42, results.getTotalHits());
+    assertEquals(42, results.totalHits());
   }
 
   @Test
-  void shouldBuildIdFromQueryOffsetAndSize() throws UnprocessableContentException {
-    var query = new Query(randomString(), 20, 5);
+  void shouldBuildIdFromQueryAndSize() {
+    var query = new Query(randomString(), null, 5);
 
-    var results = ApprovalSearchResults.from(response(List.of(), 0), query, API_HOST);
+    var results = ApprovalSearchResponse.from(response(List.of(), 0), query, API_HOST);
 
     assertEquals(
-        Map.of(QUERY_PARAMETER, query.query(), OFFSET_PARAMETER, "20", SIZE_PARAMETER, "5"),
-        queryParametersOf(results.getId()));
+        Map.of(QUERY_PARAMETER, query.query(), SIZE_PARAMETER, "5"),
+        queryParametersOf(results.id()));
   }
 
   @Test
-  void shouldOmitQueryFromIdWhenQueryIsBlank() throws UnprocessableContentException {
-    var results = ApprovalSearchResults.from(response(List.of(), 0), new Query(null), API_HOST);
+  void shouldOmitQueryFromIdWhenQueryIsBlank() {
+    var results = ApprovalSearchResponse.from(response(List.of(), 0), new Query(null), API_HOST);
+
+    assertEquals(Map.of(SIZE_PARAMETER, "10"), queryParametersOf(results.id()));
+  }
+
+  @Test
+  void shouldReturnNextPageUriWithCursorOfLastHitWhenPageIsFull() {
+    var document = indexDocument();
+    var query = new Query(randomString(), null, SINGLE_HIT);
+
+    var results = ApprovalSearchResponse.from(response(List.of(document), 50), query, API_HOST);
 
     assertEquals(
-        Map.of(OFFSET_PARAMETER, "0", SIZE_PARAMETER, "10"), queryParametersOf(results.getId()));
+        document.identifier().toString(), queryParametersOf(results.next()).get(CURSOR_PARAMETER));
   }
 
   @Test
-  void shouldLinkToNextResultsWhenMoreHitsExist() throws UnprocessableContentException {
+  void shouldNotReturnNextWhenRequestedSizeIsZero() {
+    var query = new Query(randomString(), null, 0);
+
+    var results = ApprovalSearchResponse.from(response(List.of(), 0), query, API_HOST);
+
+    assertNull(results.next());
+  }
+
+  @Test
+  void shouldNotReturnNextWhenPageIsNotFull() {
     var results =
-        ApprovalSearchResults.from(response(List.of(indexDocument()), 50), query(), API_HOST);
+        ApprovalSearchResponse.from(response(List.of(indexDocument()), 1), query(), API_HOST);
 
-    assertEquals("10", queryParametersOf(results.getNextResults()).get(OFFSET_PARAMETER));
-  }
-
-  @Test
-  void shouldNotLinkToPreviousResultsOnFirstPage() throws UnprocessableContentException {
-    var results = ApprovalSearchResults.from(response(List.of(), 50), query(), API_HOST);
-
-    assertNull(results.getPreviousResults());
+    assertNull(results.next());
   }
 
   private static Query query() {
@@ -100,7 +112,7 @@ class ApprovalSearchResultsTest {
         .hits(
             hits ->
                 hits.total(total -> total.value(totalHits).relation(TotalHitsRelation.Eq))
-                    .hits(documents.stream().map(ApprovalSearchResultsTest::hit).toList()))
+                    .hits(documents.stream().map(ApprovalSearchResponseTest::hit).toList()))
         .build();
   }
 

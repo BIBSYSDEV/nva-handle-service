@@ -1,6 +1,7 @@
 package no.sikt.nva.approvals.rest;
 
 import static java.net.HttpURLConnection.HTTP_OK;
+import static java.util.UUID.randomUUID;
 import static no.unit.nva.testutils.RandomDataGenerator.randomString;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
@@ -18,7 +19,6 @@ import no.sikt.nva.approvals.index.IndexDocument;
 import no.sikt.nva.approvals.index.Query;
 import no.sikt.nva.approvals.index.SearchClient;
 import no.unit.nva.commons.json.JsonUtils;
-import no.unit.nva.commons.pagination.PaginatedSearchResult;
 import no.unit.nva.stubs.FakeContext;
 import no.unit.nva.testutils.HandlerRequestBuilder;
 import nva.commons.apigateway.GatewayResponse;
@@ -33,7 +33,7 @@ class SearchApprovalsHandlerTest {
   private static final Environment ENVIRONMENT = new Environment();
   private static final FakeContext CONTEXT = new FakeContext();
   private static final String QUERY_PARAMETER = "query";
-  private static final String OFFSET_PARAMETER = "offset";
+  private static final String CURSOR_PARAMETER = "cursor";
   private static final String SIZE_PARAMETER = "size";
 
   private SearchClient searchClient;
@@ -58,12 +58,13 @@ class SearchApprovalsHandlerTest {
   }
 
   @Test
-  void shouldSearchWithRequestedOffsetAndSize() throws IOException {
+  void shouldSearchWithRequestedCursorAndSize() throws IOException {
     var query = randomString();
+    var cursor = randomUUID().toString();
 
-    send(request(Map.of(QUERY_PARAMETER, query, OFFSET_PARAMETER, "20", SIZE_PARAMETER, "5")));
+    send(request(Map.of(QUERY_PARAMETER, query, CURSOR_PARAMETER, cursor, SIZE_PARAMETER, "5")));
 
-    verify(searchClient).search(new Query(query, 20, 5));
+    verify(searchClient).search(new Query(query, cursor, 5));
   }
 
   @Test
@@ -91,8 +92,7 @@ class SearchApprovalsHandlerTest {
         .build();
   }
 
-  private GatewayResponse<PaginatedSearchResult<ApprovalHit>> send(InputStream request)
-      throws IOException {
+  private GatewayResponse<ApprovalSearchResponse> send(InputStream request) throws IOException {
     handler.handleRequest(request, output, CONTEXT);
     return GatewayResponse.of(output);
   }
