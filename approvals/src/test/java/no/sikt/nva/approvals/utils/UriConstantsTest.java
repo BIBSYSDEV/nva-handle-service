@@ -9,6 +9,7 @@ import static no.sikt.nva.approvals.utils.UriConstants.context;
 import static no.sikt.nva.approvals.utils.UriConstants.customerId;
 import static no.sikt.nva.approvals.utils.UriConstants.eventId;
 import static no.sikt.nva.approvals.utils.UriConstants.ontology;
+import static no.sikt.nva.approvals.utils.UriConstants.searchId;
 import static no.unit.nva.testutils.RandomDataGenerator.randomString;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
@@ -29,6 +30,12 @@ class UriConstantsTest {
       URI.create("https://api.unittest.nva.unit.no/approval/context/v1");
   private static final URI ONTOLOGY =
       URI.create("https://api.unittest.nva.unit.no/approval/ontology");
+  private static final URI SEARCH = URI.create("https://api.unittest.nva.unit.no/approval");
+
+  @Test
+  void shouldBuildSearchIdOnApprovalRoot() {
+    assertThat(searchId(API_HOST), equalTo(SEARCH));
+  }
 
   @Test
   void shouldBuildApprovalIdUnderApprovalPathOnApiHost() {

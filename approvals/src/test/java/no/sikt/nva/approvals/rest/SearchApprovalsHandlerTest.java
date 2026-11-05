@@ -1,8 +1,12 @@
 package no.sikt.nva.approvals.rest;
 
+import static java.net.HttpURLConnection.HTTP_BAD_GATEWAY;
+import static java.net.HttpURLConnection.HTTP_BAD_REQUEST;
+import static java.net.HttpURLConnection.HTTP_NOT_ACCEPTABLE;
 import static java.net.HttpURLConnection.HTTP_OK;
 import static java.util.UUID.randomUUID;
 import static no.unit.nva.testutils.RandomDataGenerator.randomString;
+import static nva.commons.apigateway.MediaTypes.APPLICATION_JSON_LD;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.mockito.ArgumentMatchers.any;
@@ -18,6 +22,7 @@ import java.util.Map;
 import no.sikt.nva.approvals.index.IndexDocument;
 import no.sikt.nva.approvals.index.Query;
 import no.sikt.nva.approvals.index.SearchClient;
+import no.sikt.nva.approvals.index.SearchClientException;
 import no.unit.nva.commons.json.JsonUtils;
 import no.unit.nva.stubs.FakeContext;
 import no.unit.nva.testutils.HandlerRequestBuilder;
@@ -75,6 +80,72 @@ class SearchApprovalsHandlerTest {
   }
 
   @Test
+  void shouldReturnBadRequestWhenSizeIsNotANumber() throws IOException {
+    var response = send(request(Map.of(SIZE_PARAMETER, "abc")));
+
+    assertThat(response.getStatusCode(), equalTo(HTTP_BAD_REQUEST));
+  }
+
+  @Test
+  void shouldReturnOkWhenSizeIsZero() throws IOException {
+    var response = send(request(Map.of(SIZE_PARAMETER, "0")));
+
+    assertThat(response.getStatusCode(), equalTo(HTTP_OK));
+  }
+
+  @Test
+  void shouldReturnBadRequestWhenSizeIsNegative() throws IOException {
+    var response = send(request(Map.of(SIZE_PARAMETER, "-1")));
+
+    assertThat(response.getStatusCode(), equalTo(HTTP_BAD_REQUEST));
+  }
+
+  @Test
+  void shouldReturnBadRequestWhenSizeExceedsMaximum() throws IOException {
+    var response = send(request(Map.of(SIZE_PARAMETER, "101")));
+
+    assertThat(response.getStatusCode(), equalTo(HTTP_BAD_REQUEST));
+  }
+
+  @Test
+  void shouldReturnOkWhenAcceptHeaderIsJsonLd() throws IOException {
+    var response = send(requestWithAccept(APPLICATION_JSON_LD.toString()));
+
+    assertThat(response.getStatusCode(), equalTo(HTTP_OK));
+  }
+
+  @Test
+  void shouldReturnNotAcceptableWhenAcceptHeaderIsUnsupported() throws IOException {
+    var response = send(requestWithAccept("application/xml"));
+
+    assertThat(response.getStatusCode(), equalTo(HTTP_NOT_ACCEPTABLE));
+  }
+
+  @Test
+  void shouldReturnBadRequestWhenQueryParameterIsNotSupported() throws IOException {
+    var response = send(request(Map.of("handle", randomString())));
+
+    assertThat(response.getStatusCode(), equalTo(HTTP_BAD_REQUEST));
+  }
+
+  @Test
+  void shouldReturnBadRequestWhenCursorIsNotAnApprovalIdentifier() throws IOException {
+    var response = send(request(Map.of(CURSOR_PARAMETER, randomString())));
+
+    assertThat(response.getStatusCode(), equalTo(HTTP_BAD_REQUEST));
+  }
+
+  @Test
+  void shouldReturnBadGatewayWhenSearchFails() throws IOException {
+    when(searchClient.search(any(Query.class)))
+        .thenThrow(new SearchClientException(randomString(), new IllegalStateException()));
+
+    var response = send(request(Map.of(QUERY_PARAMETER, randomString())));
+
+    assertThat(response.getStatusCode(), equalTo(HTTP_BAD_GATEWAY));
+  }
+
+  @Test
   void shouldReturnOk() throws IOException {
     var response = send(request(Map.of(QUERY_PARAMETER, randomString())));
 
@@ -95,6 +166,13 @@ class SearchApprovalsHandlerTest {
   private GatewayResponse<ApprovalSearchResponse> send(InputStream request) throws IOException {
     handler.handleRequest(request, output, CONTEXT);
     return GatewayResponse.of(output);
+  }
+
+  private static InputStream requestWithAccept(String acceptHeader) throws IOException {
+    return new HandlerRequestBuilder<Void>(JsonUtils.dtoObjectMapper)
+        .withQueryParameters(Map.of(QUERY_PARAMETER, randomString()))
+        .withHeaders(Map.of("Accept", acceptHeader))
+        .build();
   }
 
   private static InputStream request(Map<String, String> queryParameters) throws IOException {

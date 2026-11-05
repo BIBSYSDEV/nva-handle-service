@@ -80,7 +80,7 @@ class ApprovalSearchResponseTest {
   void shouldNotReturnNextWhenRequestedSizeIsZero() {
     var query = new Query(randomString(), null, 0);
 
-    var results = ApprovalSearchResponse.from(response(List.of(), 0), query, API_HOST);
+    var results = ApprovalSearchResponse.from(response(List.of(), 42), query, API_HOST);
 
     assertNull(results.next());
   }

@@ -3,11 +3,7 @@ package no.sikt.nva.approvals.rest;
 import static java.net.HttpURLConnection.HTTP_OK;
 import static no.sikt.nva.approvals.utils.RequestUtils.getApiHost;
 import static no.sikt.nva.approvals.utils.RequestUtils.getApprovalIdentifier;
-import static no.sikt.nva.approvals.validation.RequestConstraints.CONFLICTING_PARAMETERS_MESSAGE;
-import static no.sikt.nva.approvals.validation.RequestValidator.badRequest;
-import static no.sikt.nva.approvals.validation.RequestValidator.validateQueryParameters;
 import static nva.commons.apigateway.MediaTypes.APPLICATION_JSON_LD;
-import static nva.commons.core.StringUtils.isNotBlank;
 import static nva.commons.core.attempt.Try.attempt;
 
 import com.amazonaws.services.lambda.runtime.Context;
@@ -29,7 +25,6 @@ import nva.commons.apigateway.ApiGatewayHandler;
 import nva.commons.apigateway.MediaType;
 import nva.commons.apigateway.RequestInfo;
 import nva.commons.apigateway.exceptions.ApiGatewayException;
-import nva.commons.apigateway.exceptions.BadRequestException;
 import nva.commons.apigateway.exceptions.NotFoundException;
 import nva.commons.apigateway.exceptions.UnsupportedAcceptHeaderException;
 import nva.commons.core.Environment;
@@ -39,7 +34,6 @@ import org.apache.hc.core5.http.HttpHeaders;
 
 public class FetchApprovalHandler extends ApiGatewayHandler<Void, Object> {
 
-  private static final String APPROVAL_ID_PATH_PARAMETER = "approvalId";
   private static final String APPROVAL_NOT_FOUND_MESSAGE = "Approval not found";
   private static final String TEMPLATE_NAME = "approval.jte";
   private static final String APPLICATION_DOMAIN_ENV = "APPLICATION_DOMAIN";
@@ -83,20 +77,15 @@ public class FetchApprovalHandler extends ApiGatewayHandler<Void, Object> {
   }
 
   @Override
-  protected void validateRequest(Void input, RequestInfo requestInfo, Context context)
-      throws ApiGatewayException {
-    ensurePathAndQueryAreNotCombined(requestInfo);
-  }
+  protected void validateRequest(Void input, RequestInfo requestInfo, Context context) {}
 
   @Override
   protected Object processInput(Void input, RequestInfo requestInfo, Context context)
       throws ApiGatewayException {
-    var approval =
-        hasPathParameter(requestInfo)
-            ? fetchByApprovalId(requestInfo)
-            : fetchByQueryParameters(requestInfo);
     var foundApproval =
-        approval.orElseThrow(() -> new NotFoundException(APPROVAL_NOT_FOUND_MESSAGE));
+        approvalService
+            .getApprovalByIdentifier(getApprovalIdentifier(requestInfo))
+            .orElseThrow(() -> new NotFoundException(APPROVAL_NOT_FOUND_MESSAGE));
 
     if (isJsonRequest(requestInfo)) {
       return ApprovalResponse.fromApproval(foundApproval, apiHost);
@@ -117,40 +106,6 @@ public class FetchApprovalHandler extends ApiGatewayHandler<Void, Object> {
       headers.put(HttpHeaders.CONTENT_TYPE, MediaType.JSON_UTF_8.toString());
     }
     return headers;
-  }
-
-  private void ensurePathAndQueryAreNotCombined(RequestInfo requestInfo)
-      throws BadRequestException {
-    if (hasPathParameter(requestInfo) && hasQueryParameters(requestInfo)) {
-      throw badRequest(CONFLICTING_PARAMETERS_MESSAGE, APPROVAL_ID_PATH_PARAMETER);
-    }
-  }
-
-  private boolean hasPathParameter(RequestInfo requestInfo) {
-    var approvalId = requestInfo.getPathParameters().get(APPROVAL_ID_PATH_PARAMETER);
-    return isNotBlank(approvalId);
-  }
-
-  private static boolean hasQueryParameters(RequestInfo requestInfo) {
-    return !ApprovalQuery.fromQueryParameters(requestInfo.getQueryParameters()).isEmpty();
-  }
-
-  private Optional<Approval> fetchByApprovalId(RequestInfo requestInfo) throws ApiGatewayException {
-    var approvalId = getApprovalIdentifier(requestInfo);
-    return fetchApprovalByIdentifier(approvalId);
-  }
-
-  private Optional<Approval> fetchByQueryParameters(RequestInfo requestInfo)
-      throws ApiGatewayException {
-    var query = ApprovalQuery.fromQueryParameters(requestInfo.getQueryParameters());
-    validateQueryParameters(query);
-    return query.isHandleLookup()
-        ? approvalService.getApprovalByHandle(query.toHandle())
-        : approvalService.getApprovalByNamedIdentifier(query.toNamedIdentifier());
-  }
-
-  private Optional<Approval> fetchApprovalByIdentifier(UUID approvalId) {
-    return approvalService.getApprovalByIdentifier(approvalId);
   }
 
   private boolean isJsonRequest(RequestInfo requestInfo) {

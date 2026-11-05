@@ -116,80 +116,53 @@ paths:
       tags:
         - Approval
         - external
-      operationId: getApprovalByQuery
-      summary: Get Approval by handle or named identifier
-      description: |
-        Get approval by handle or named identifier (name+value).
-
-        **Query Parameters:**
-        - Use `handle` parameter to fetch by Handle URI (must be URL-encoded)
-        - Use `name` AND `value` parameters together to fetch by named identifier
-
-        **Important:** Special characters in query parameters must be URL-encoded.
-
-        **Example queries:**
-        - By handle: `/approval?handle=https%3A%2F%2Fhdl.handle.net%2F11250.1%2F12345`
-        - By identifier: `/approval?name=REK&value=123456`
-
-        **Note:** You must provide either `handle` OR both `name` and `value`. Providing both or incomplete identifier parameters will return 400 Bad Request.
+      operationId: searchApprovals
+      summary: Search approvals
+      description: Search approvals
       parameters:
-        - name: handle
+        - name: query
           in: query
-          description: Handle URI to look up (e.g., https://hdl.handle.net/11250.1/12345)
+          description: Free text to search
           schema:
             type: string
-            format: uri
-            maxLength: 1024
-        - name: name
+        - name: size
           in: query
-          description: Identifier name (required when using value parameter)
+          description: Maximum number of hits on one page
+          schema:
+            type: integer
+            minimum: 0
+            maximum: 100
+            default: 10
+        - name: cursor
+          in: query
+          description: Cursor identifier of the last hit on the previous page
           schema:
             type: string
-            maxLength: 100
-            pattern: "^\\s*[A-Za-z0-9_-]+\\s*$"
-        - name: value
-          in: query
-          description: >-
-            Identifier value (required when using name parameter). At most 900 bytes when encoded
-            as UTF-8
-          schema:
-            type: string
-            maxLength: 900
+            format: uuid
       x-amazon-apigateway-integration:
         uri:
-          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${NvaFetchApprovalFunction.Arn}/invocations
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${NvaSearchApprovalsFunction.Arn}/invocations
         responses: {}
         httpMethod: POST
         type: AWS_PROXY
       responses:
         "200":
-          description: Approval found
+          description: Search results. An empty `hits` array means nothing matched
           content:
             application/ld+json:
               schema:
-                $ref: "#/components/schemas/Approval"
+                $ref: "#/components/schemas/ApprovalSearchResults"
             application/json:
               schema:
-                $ref: "#/components/schemas/Approval"
-            text/html:
-              schema:
-                type: string
+                $ref: "#/components/schemas/ApprovalSearchResults"
         "400":
-          description: |-
-            Bad Request. The request is rejected when:
-            * no query parameters are given, or `handle` is combined with `name` / `value`
-              (pointer `handle`)
-            * only one of `name` and `value` is given (pointer to the missing one)
-            * `handle` is not a handle URI of at most 1024 characters
-            * `name` or `value` breaks the rules of an identifier
-
-            Every invalid parameter is listed in `errors`, with the parameter name as pointer.
+          description: Bad Request
           content:
             "application/json":
               schema:
                 $ref: "#/components/schemas/Problem"
-        "404":
-          description: Approval not found
+        "406":
+          description: Not Acceptable
           content:
             "application/json":
               schema:
@@ -1133,6 +1106,68 @@ components:
             value: "123456"
         source: https://example.com/source/12345
         handle: https://hdl.handle.net/11250.1/98765
+    ApprovalSearchResults:
+      type: object
+      description: One page of approvals matching a search
+      properties:
+        "@context":
+          type: string
+          format: uri
+          description: Versioned JSON-LD context URI for this resource
+        type:
+          type: string
+          default: ApprovalSearchResults
+          description: The type discriminator for this object
+        id:
+          type: string
+          format: uri
+          description: The URI of this page, carrying the parameters that produced it
+        totalHits:
+          type: integer
+          description: Number of approvals matching the search
+        hits:
+          type: array
+          description: The approvals on this page, ordered by approval identifier
+          items:
+            $ref: "#/components/schemas/ApprovalHit"
+        next:
+          type: string
+          format: uri
+          description: URI of the following page, repeating the current search
+      example:
+        "@context": https://api.nva.unit.no/approval/context/v1
+        type: ApprovalSearchResults
+        id: https://api.nva.unit.no/approval?query=diabetes&size=10
+        totalHits: 42
+        hits:
+          - id: https://api.nva.unit.no/approval/6ff5f1b5-97c1-40f0-86ad-2cbd9006eee2
+            handle: https://hdl.handle.net/11250.1/12345
+            title: A study of diabetes
+            identifiers:
+              - type: Identifier
+                name: REK
+                value: "123456"
+        next: https://api.nva.unit.no/approval?query=diabetes&size=10&cursor=6ff5f1b5-97c1-40f0-86ad-2cbd9006eee2
+    ApprovalHit:
+      type: object
+      description: One approval in a page of search results
+      properties:
+        id:
+          type: string
+          format: uri
+          description: The full URI of this approval resource
+        handle:
+          type: string
+          format: uri
+          description: The full handle URI
+        title:
+          type: string
+          description: Title of the approval, taken from its source
+        identifiers:
+          type: array
+          description: Identifiers associated with this approval
+          items:
+            $ref: "#/components/schemas/Identifier"
     Identifier:
       type: object
       description: >-

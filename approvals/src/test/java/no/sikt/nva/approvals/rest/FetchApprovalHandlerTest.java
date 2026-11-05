@@ -8,9 +8,6 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Objects.nonNull;
 import static no.sikt.nva.approvals.utils.TestUtils.randomApproval;
 import static no.sikt.nva.approvals.utils.TestUtils.randomHandle;
-import static no.sikt.nva.approvals.validation.RequestConstraints.MAX_IDENTIFIER_NAME_LENGTH;
-import static no.sikt.nva.approvals.validation.RequestConstraints.MAX_IDENTIFIER_VALUE_BYTES;
-import static no.sikt.nva.approvals.validation.RequestConstraints.MAX_URI_LENGTH;
 import static no.unit.nva.testutils.RandomDataGenerator.randomString;
 import static no.unit.nva.testutils.RandomDataGenerator.randomUri;
 import static nva.commons.apigateway.ApiGatewayHandler.ALLOWED_ORIGIN_ENV;
@@ -46,10 +43,8 @@ import no.sikt.nva.approvals.dmp.model.TrialEvent;
 import no.sikt.nva.approvals.dmp.model.TrialSite;
 import no.sikt.nva.approvals.domain.Approval;
 import no.sikt.nva.approvals.domain.FakeApprovalService;
-import no.sikt.nva.approvals.domain.Handle;
 import no.sikt.nva.approvals.domain.IdentifierPolicy;
 import no.sikt.nva.approvals.domain.IdentifierPolicyService;
-import no.sikt.nva.approvals.domain.NamedIdentifier;
 import no.sikt.nva.approvals.domain.NoAuthentication;
 import no.sikt.nva.approvals.domain.SourceConfig;
 import no.sikt.nva.approvals.source.SourceClient;
@@ -70,24 +65,11 @@ class FetchApprovalHandlerTest {
 
   private static final Context CONTEXT = new FakeContext();
   private static final String APPROVAL_ID_PATH_PARAMETER = "approvalId";
-  private static final String HANDLE_QUERY_PARAMETER = "handle";
-  private static final String NAME_QUERY_PARAMETER = "name";
-  private static final String VALUE_QUERY_PARAMETER = "value";
-  private static final String VALID_HANDLE = "https://hdl.handle.net/11250.1/12345";
-  private static final String CHARACTER = "a";
-  private static final String NAME_TOO_LONG_MESSAGE = "Must be at most 100 characters long";
-  private static final String VALUE_TOO_LONG_MESSAGE = "Must be at most 900 bytes long in UTF-8";
   private static final String ERRORS_PARAMETER = "errors";
   private static final String DETAIL_FIELD = "detail";
   private static final String POINTER_FIELD = "pointer";
-  private static final String MANDATORY_MESSAGE = "Is mandatory";
   private static final String INVALID_APPROVAL_ID_MESSAGE =
       "Provided approval identifier is not valid!";
-  private static final String CONFLICTING_QUERY_MESSAGE =
-      "Use either 'handle' or 'name' and 'value', not both";
-  private static final String CONFLICTING_PATH_MESSAGE =
-      "Cannot use both path parameter and query parameters. Use either approvalId path or query"
-          + " parameters";
   private static final String API_HOST = "api.unittest.nva.unit.no";
   private static final String COGNITO_AUTHORIZER_URLS_ENV = "COGNITO_AUTHORIZER_URLS";
   private static final String API_HOST_ENV = "API_HOST";
@@ -169,218 +151,6 @@ class FetchApprovalHandlerTest {
   }
 
   @Test
-  void shouldReturnBadRequestWhenHandleIsCombinedWithNamedIdentifier() {
-    handler =
-        new FetchApprovalHandler(
-            new FakeApprovalService(), environment, templateEngine, sourceClient);
-    var request =
-        createRequestWithQueryParameters(
-            Map.of(
-                HANDLE_QUERY_PARAMETER, VALID_HANDLE,
-                NAME_QUERY_PARAMETER, "doi",
-                VALUE_QUERY_PARAMETER, "10.1234/5678"));
-
-    var response = handleRequestAsProblem(request);
-
-    assertEquals(HTTP_BAD_REQUEST, response.getStatusCode());
-    assertEquals(
-        List.of(
-            Map.of(DETAIL_FIELD, CONFLICTING_QUERY_MESSAGE, POINTER_FIELD, HANDLE_QUERY_PARAMETER)),
-        problemErrors(response));
-  }
-
-  @Test
-  void shouldReturnBadRequestPointingToMissingValueWhenOnlyNameIsProvided() {
-    handler =
-        new FetchApprovalHandler(
-            new FakeApprovalService(), environment, templateEngine, sourceClient);
-    var request = createRequestWithQueryParameters(Map.of(NAME_QUERY_PARAMETER, "doi"));
-
-    var response = handleRequestAsProblem(request);
-
-    assertEquals(
-        List.of(Map.of(DETAIL_FIELD, MANDATORY_MESSAGE, POINTER_FIELD, VALUE_QUERY_PARAMETER)),
-        problemErrors(response));
-  }
-
-  @Test
-  void shouldReturnBadRequestPointingToApprovalIdWhenPathAndQueryAreCombined() {
-    handler =
-        new FetchApprovalHandler(
-            new FakeApprovalService(), environment, templateEngine, sourceClient);
-    var request = createRequestWithPathAndQueryParameters(UUID.randomUUID(), VALID_HANDLE);
-
-    var response = handleRequestAsProblem(request);
-
-    assertEquals(HTTP_BAD_REQUEST, response.getStatusCode());
-    assertEquals(
-        List.of(
-            Map.of(
-                DETAIL_FIELD, CONFLICTING_PATH_MESSAGE, POINTER_FIELD, APPROVAL_ID_PATH_PARAMETER)),
-        problemErrors(response));
-  }
-
-  @Test
-  void shouldReturnOkWhenLookingUpByHandle() {
-    var handle = new Handle(java.net.URI.create(VALID_HANDLE));
-    var approval = randomApproval(handle);
-    handler =
-        new FetchApprovalHandler(
-            new FakeApprovalService(List.of(approval)), environment, templateEngine, sourceClient);
-    var request = createRequestWithHandleQuery(VALID_HANDLE);
-
-    var response = handleRequest(request);
-
-    assertEquals(HTTP_OK, response.getStatusCode());
-  }
-
-  @Test
-  void shouldReturnNotFoundWhenHandleLookupFindsNothing() {
-    handler =
-        new FetchApprovalHandler(
-            new FakeApprovalService(), environment, templateEngine, sourceClient);
-    var request = createRequestWithHandleQuery(VALID_HANDLE);
-
-    var response = handleRequest(request);
-
-    assertEquals(HTTP_NOT_FOUND, response.getStatusCode());
-  }
-
-  @Test
-  void shouldReturnBadRequestWhenHandleIsInvalid() {
-    handler =
-        new FetchApprovalHandler(
-            new FakeApprovalService(), environment, templateEngine, sourceClient);
-    var request = createRequestWithHandleQuery("not-a-valid-handle");
-
-    var response = handleRequest(request);
-
-    assertEquals(HTTP_BAD_REQUEST, response.getStatusCode());
-  }
-
-  @Test
-  void shouldReturnOkWhenLookingUpByNamedIdentifier() {
-    var namedIdentifier = new NamedIdentifier("doi", "10.1234/5678");
-    var approval = randomApproval(namedIdentifier);
-    handler =
-        new FetchApprovalHandler(
-            new FakeApprovalService(List.of(approval)), environment, templateEngine, sourceClient);
-    var request = createRequestWithNamedIdentifierQuery("doi", "10.1234/5678");
-
-    var response = handleRequest(request);
-
-    assertEquals(HTTP_OK, response.getStatusCode());
-  }
-
-  @Test
-  void shouldReturnNotFoundWhenNamedIdentifierLookupFindsNothing() {
-    handler =
-        new FetchApprovalHandler(
-            new FakeApprovalService(), environment, templateEngine, sourceClient);
-    var request = createRequestWithNamedIdentifierQuery("doi", "10.1234/5678");
-
-    var response = handleRequest(request);
-
-    assertEquals(HTTP_NOT_FOUND, response.getStatusCode());
-  }
-
-  @Test
-  void shouldReturnNotFoundWhenNamedIdentifierOfMaximumLengthFindsNothing() {
-    handler =
-        new FetchApprovalHandler(
-            new FakeApprovalService(), environment, templateEngine, sourceClient);
-    var request =
-        createRequestWithNamedIdentifierQuery(
-            CHARACTER.repeat(MAX_IDENTIFIER_NAME_LENGTH),
-            CHARACTER.repeat(MAX_IDENTIFIER_VALUE_BYTES));
-
-    var response = handleRequest(request);
-
-    assertEquals(HTTP_NOT_FOUND, response.getStatusCode());
-  }
-
-  @Test
-  void shouldReturnBadRequestPointingToQueryParametersThatAreTooLong() throws Exception {
-    handler =
-        new FetchApprovalHandler(
-            new FakeApprovalService(), environment, templateEngine, sourceClient);
-    var request =
-        createRequestWithNamedIdentifierQuery(
-            CHARACTER.repeat(MAX_IDENTIFIER_NAME_LENGTH + 1),
-            CHARACTER.repeat(MAX_IDENTIFIER_VALUE_BYTES + 1));
-
-    var response = handleRequestAsProblem(request);
-
-    assertEquals(HTTP_BAD_REQUEST, response.getStatusCode());
-    assertEquals(
-        List.of(
-            Map.of(DETAIL_FIELD, NAME_TOO_LONG_MESSAGE, POINTER_FIELD, NAME_QUERY_PARAMETER),
-            Map.of(DETAIL_FIELD, VALUE_TOO_LONG_MESSAGE, POINTER_FIELD, VALUE_QUERY_PARAMETER)),
-        response.getBodyObject(Problem.class).getParameters().get(ERRORS_PARAMETER));
-  }
-
-  @Test
-  void shouldReturnBadRequestWhenHandleIsTooLong() {
-    handler =
-        new FetchApprovalHandler(
-            new FakeApprovalService(), environment, templateEngine, sourceClient);
-    var tooLongHandle = VALID_HANDLE + CHARACTER.repeat(MAX_URI_LENGTH);
-    var request = createRequestWithHandleQuery(tooLongHandle);
-
-    var response = handleRequest(request);
-
-    assertEquals(HTTP_BAD_REQUEST, response.getStatusCode());
-  }
-
-  @Test
-  void shouldReturnBadRequestWhenOnlyNameIsProvided() {
-    handler =
-        new FetchApprovalHandler(
-            new FakeApprovalService(), environment, templateEngine, sourceClient);
-    var request = createRequestWithQueryParameters(Map.of(NAME_QUERY_PARAMETER, "doi"));
-
-    var response = handleRequest(request);
-
-    assertEquals(HTTP_BAD_REQUEST, response.getStatusCode());
-  }
-
-  @Test
-  void shouldReturnBadRequestWhenOnlyValueIsProvided() {
-    handler =
-        new FetchApprovalHandler(
-            new FakeApprovalService(), environment, templateEngine, sourceClient);
-    var request = createRequestWithQueryParameters(Map.of(VALUE_QUERY_PARAMETER, "10.1234/5678"));
-
-    var response = handleRequest(request);
-
-    assertEquals(HTTP_BAD_REQUEST, response.getStatusCode());
-  }
-
-  @Test
-  void shouldReturnBadRequestWhenNoQueryParametersProvided() {
-    handler =
-        new FetchApprovalHandler(
-            new FakeApprovalService(), environment, templateEngine, sourceClient);
-    var request = createRequestWithQueryParameters(Map.of());
-
-    var response = handleRequest(request);
-
-    assertEquals(HTTP_BAD_REQUEST, response.getStatusCode());
-  }
-
-  @Test
-  void shouldReturnBadRequestWhenBothPathParameterAndQueryParametersProvided() {
-    handler =
-        new FetchApprovalHandler(
-            new FakeApprovalService(), environment, templateEngine, sourceClient);
-    var request = createRequestWithPathAndQueryParameters(UUID.randomUUID(), VALID_HANDLE);
-
-    var response = handleRequest(request);
-
-    assertEquals(HTTP_BAD_REQUEST, response.getStatusCode());
-  }
-
-  @Test
   void shouldReturnHtmlWhenAcceptHeaderIsTextHtml() {
     var approvalId = UUID.randomUUID();
     var approval = randomApproval(approvalId, randomUri());
@@ -444,20 +214,6 @@ class FetchApprovalHandlerTest {
     assertEquals(HTTP_OK, response.getStatusCode());
     assertThat(response.getHeaders().get(HttpHeaders.CONTENT_TYPE), containsString("text/html"));
     assertThat(response.getBody(), containsString("<!DOCTYPE html>"));
-  }
-
-  @Test
-  void shouldReturnOkWhenQueryParametersAreNull() {
-    var approvalId = UUID.randomUUID();
-    var approval = randomApproval(approvalId, randomUri());
-    handler =
-        new FetchApprovalHandler(
-            new FakeApprovalService(List.of(approval)), environment, templateEngine, sourceClient);
-    var request = createRequestWithPathParameterAndNullQueryParams(approvalId);
-
-    var response = handleRequest(request);
-
-    assertEquals(HTTP_OK, response.getStatusCode());
   }
 
   @Test
@@ -668,52 +424,11 @@ class FetchApprovalHandlerTest {
     }
   }
 
-  private InputStream createRequestWithHandleQuery(String handle) {
-    return createRequestWithQueryParameters(Map.of(HANDLE_QUERY_PARAMETER, handle));
-  }
-
-  private InputStream createRequestWithNamedIdentifierQuery(String name, String value) {
-    return createRequestWithQueryParameters(
-        Map.of(NAME_QUERY_PARAMETER, name, VALUE_QUERY_PARAMETER, value));
-  }
-
-  private InputStream createRequestWithQueryParameters(Map<String, String> queryParameters) {
-    try {
-      return new HandlerRequestBuilder<Void>(JsonUtils.dtoObjectMapper)
-          .withQueryParameters(queryParameters)
-          .build();
-    } catch (JsonProcessingException e) {
-      throw new RuntimeException(e);
-    }
-  }
-
-  private InputStream createRequestWithPathAndQueryParameters(UUID approvalId, String handle) {
-    try {
-      return new HandlerRequestBuilder<Void>(JsonUtils.dtoObjectMapper)
-          .withPathParameters(Map.of(APPROVAL_ID_PATH_PARAMETER, approvalId.toString()))
-          .withQueryParameters(Map.of(HANDLE_QUERY_PARAMETER, handle))
-          .build();
-    } catch (JsonProcessingException e) {
-      throw new RuntimeException(e);
-    }
-  }
-
   private InputStream createRequestWithAcceptHeader(UUID approvalId, String acceptHeader) {
     try {
       return new HandlerRequestBuilder<Void>(JsonUtils.dtoObjectMapper)
           .withPathParameters(Map.of(APPROVAL_ID_PATH_PARAMETER, approvalId.toString()))
           .withHeaders(Map.of(HttpHeaders.ACCEPT, acceptHeader))
-          .build();
-    } catch (JsonProcessingException e) {
-      throw new RuntimeException(e);
-    }
-  }
-
-  private InputStream createRequestWithPathParameterAndNullQueryParams(UUID approvalId) {
-    try {
-      return new HandlerRequestBuilder<Void>(JsonUtils.dtoObjectMapper)
-          .withPathParameters(Map.of(APPROVAL_ID_PATH_PARAMETER, approvalId.toString()))
-          .withQueryParameters(null)
           .build();
     } catch (JsonProcessingException e) {
       throw new RuntimeException(e);

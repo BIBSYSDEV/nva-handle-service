@@ -27,8 +27,6 @@ public interface ApprovalRepository {
 
   Optional<Approval> findByHandle(Handle handle);
 
-  Optional<Approval> findByIdentifier(NamedIdentifier namedIdentifier);
-
   List<NamedIdentifierQueryObject> findIdentifiers(Collection<NamedIdentifier> namedIdentifiers);
 
   Optional<IdentifierPolicy> findIdentifierPolicy(UUID customerIdentifier);

@@ -46,7 +46,6 @@ import org.mockito.ArgumentCaptor;
 
 class ApprovalServiceTest {
 
-  private static final URI VALID_HANDLE_URI = URI.create("https://hdl.handle.net/11250.1/12345");
   private static final String HANDLE_PREFIX = new Environment().readEnv("HANDLE_PREFIX");
   private static final String API_HOST = new Environment().readEnv("API_HOST");
   private static final String APPROVAL_PATH = "approval";
@@ -169,51 +168,6 @@ class ApprovalServiceTest {
     when(approvalRepository.findByApprovalIdentifier(approvalId)).thenReturn(Optional.empty());
 
     var result = approvalService.getApprovalByIdentifier(approvalId);
-
-    assertTrue(result.isEmpty());
-  }
-
-  @Test
-  void shouldReturnApprovalWhenFoundByHandle() {
-    var handle = new Handle(VALID_HANDLE_URI);
-    var expectedApproval = randomApproval(handle);
-    when(approvalRepository.findByHandle(handle)).thenReturn(Optional.of(expectedApproval));
-
-    var result = approvalService.getApprovalByHandle(handle);
-
-    assertTrue(result.isPresent());
-    assertEquals(expectedApproval, result.get());
-  }
-
-  @Test
-  void shouldReturnEmptyWhenApprovalNotFoundByHandle() {
-    var handle = new Handle(VALID_HANDLE_URI);
-    when(approvalRepository.findByHandle(handle)).thenReturn(Optional.empty());
-
-    var result = approvalService.getApprovalByHandle(handle);
-
-    assertTrue(result.isEmpty());
-  }
-
-  @Test
-  void shouldReturnApprovalWhenFoundByNamedIdentifier() {
-    var namedIdentifier = new NamedIdentifier(randomString(), randomString());
-    var expectedApproval = randomApproval(namedIdentifier);
-    when(approvalRepository.findByIdentifier(namedIdentifier))
-        .thenReturn(Optional.of(expectedApproval));
-
-    var result = approvalService.getApprovalByNamedIdentifier(namedIdentifier);
-
-    assertTrue(result.isPresent());
-    assertEquals(expectedApproval, result.get());
-  }
-
-  @Test
-  void shouldReturnEmptyWhenApprovalNotFoundByNamedIdentifier() {
-    var namedIdentifier = new NamedIdentifier(randomString(), randomString());
-    when(approvalRepository.findByIdentifier(namedIdentifier)).thenReturn(Optional.empty());
-
-    var result = approvalService.getApprovalByNamedIdentifier(namedIdentifier);
 
     assertTrue(result.isEmpty());
   }

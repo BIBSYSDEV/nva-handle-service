@@ -29,18 +29,16 @@ public final class RequestConstraints {
       "Unsupported event type, only " + SUPPORTED_EVENT_TYPE + " is supported";
   public static final String INVALID_EVENT_ID_MESSAGE = "Must match " + EVENT_ID_PATTERN;
   public static final String NOT_A_HANDLE_MESSAGE = "Must be the handle of an approval";
-  public static final String MISSING_QUERY_PARAMETERS_MESSAGE =
-      "Missing query parameters. Use 'handle' or 'name' and 'value'";
-  public static final String CONFLICTING_QUERY_PARAMETERS_MESSAGE =
-      "Use either 'handle' or 'name' and 'value', not both";
-  public static final String CONFLICTING_PARAMETERS_MESSAGE =
-      "Cannot use both path parameter and query parameters. Use either approvalId path or query"
-          + " parameters";
   public static final String INVALID_APPROVAL_IDENTIFIER_MESSAGE =
       "Provided approval identifier is not valid!";
   public static final String INVALID_CHANGE_IDENTIFIER_MESSAGE =
       "Provided change identifier is not valid!";
   public static final String INVALID_CURSOR_MESSAGE = "Must be the cursor given in next";
+  public static final int MAX_SEARCH_SIZE = 100;
+  public static final String UNSUPPORTED_PARAMETER_MESSAGE =
+      "Supported query parameters are query, size and cursor";
+  public static final String INVALID_SIZE_MESSAGE =
+      "Must be an integer from 0 to " + MAX_SEARCH_SIZE;
 
   private RequestConstraints() {}
 }

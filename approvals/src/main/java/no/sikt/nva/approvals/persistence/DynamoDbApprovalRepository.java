@@ -4,7 +4,6 @@ import static no.sikt.nva.approvals.persistence.ApprovalDao.toDatabaseIdentifier
 import static no.sikt.nva.approvals.persistence.DynamoDbConstants.GSI1;
 import static no.sikt.nva.approvals.persistence.DynamoDbConstants.GSI2;
 import static no.sikt.nva.approvals.persistence.DynamoDbConstants.PK0;
-import static no.sikt.nva.approvals.persistence.DynamoDbConstants.PK1;
 import static no.sikt.nva.approvals.persistence.DynamoDbConstants.SK0;
 import static no.sikt.nva.approvals.persistence.DynamoDbConstants.TABLE;
 import static no.sikt.nva.approvals.persistence.DynamoDbConstants.defaultDynamoClient;
@@ -148,16 +147,6 @@ public class DynamoDbApprovalRepository implements ApprovalRepository {
             .map(this::toDatabaseEntity)
             .toList();
     return entities.isEmpty() ? Optional.empty() : Optional.of(constructApproval(entities));
-  }
-
-  @Override
-  public Optional<Approval> findByIdentifier(NamedIdentifier namedIdentifier) {
-    var primaryKey = IdentifierDao.primaryKey(namedIdentifier);
-    return Optional.ofNullable(table.getItem(primaryKey))
-        .map(item -> item.getString(PK1))
-        .map(this::fetchEntitiesByApprovalIdentifier)
-        .filter(entities -> !entities.isEmpty())
-        .map(DynamoDbApprovalRepository::constructApproval);
   }
 
   @Override
