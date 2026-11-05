@@ -56,7 +56,9 @@ public record IndexDocument(
             persons.stream().flatMap(person -> Stream.of(person.id(), person.name())),
             organizations.stream()
                 .flatMap(organization -> Stream.of(organization.id(), organization.name())),
-            identifiers.stream().map(Identifier::value))
+            identifiers.stream()
+                .flatMap(
+                    namedIdentifier -> Stream.of(namedIdentifier.name(), namedIdentifier.value())))
         .flatMap(Function.identity())
         .filter(Objects::nonNull)
         .collect(Collectors.toSet());
