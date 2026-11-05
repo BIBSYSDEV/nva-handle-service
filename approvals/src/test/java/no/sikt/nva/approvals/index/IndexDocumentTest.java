@@ -196,6 +196,16 @@ class IndexDocumentTest {
   }
 
   @Test
+  void shouldAddNamedIdentifierNameToFreeText() {
+    var namedIdentifier = randomIdentifier();
+    var approval = randomApproval(randomHandle(), namedIdentifier);
+
+    var indexDocument = IndexDocument.create(framedClinicalTrial(), approval);
+
+    assertThat(indexDocument.freeText(), hasItem(namedIdentifier.name()));
+  }
+
+  @Test
   void shouldNotRepeatSameValuesInFreeText() {
     var sharedName = randomString();
     var trial =
