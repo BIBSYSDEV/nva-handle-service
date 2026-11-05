@@ -12,10 +12,6 @@ public interface ApprovalService {
 
   Optional<Approval> getApprovalByIdentifier(UUID approvalId);
 
-  Optional<Approval> getApprovalByHandle(Handle handle);
-
-  Optional<Approval> getApprovalByNamedIdentifier(NamedIdentifier namedIdentifier);
-
   Approval updateApproval(
       UUID approvalId, Collection<NamedIdentifier> namedIdentifiers, URI source, Agent agent)
       throws ApprovalServiceException, ApprovalConflictException;

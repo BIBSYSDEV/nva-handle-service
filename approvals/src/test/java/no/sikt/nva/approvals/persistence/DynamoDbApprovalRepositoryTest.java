@@ -143,7 +143,9 @@ class DynamoDbApprovalRepositoryTest {
     var approval = randomApproval(identifier);
     saveApproval(approval);
 
-    assertEquals(approval, approvalRepository.findByIdentifier(identifier).orElseThrow());
+    assertEquals(
+        approval.identifier(),
+        approvalRepository.findIdentifiers(List.of(identifier)).getFirst().approvalIdentifier());
   }
 
   @Test
@@ -210,21 +212,6 @@ class DynamoDbApprovalRepositoryTest {
     var persistedApproval = approvalRepository.findByHandle(handle);
 
     assertEquals(approval, persistedApproval.orElseThrow());
-  }
-
-  @Test
-  void shouldFindByApprovalIdentifier() {
-    var identifier = randomIdentifier();
-    var approval = randomApproval(identifier);
-    saveApproval(approval);
-    var persistedApproval = approvalRepository.findByIdentifier(identifier);
-
-    assertEquals(approval, persistedApproval.orElseThrow());
-  }
-
-  @Test
-  void shouldReturnEmptyOptionalWhenIdentifierNotFound() {
-    assertTrue(approvalRepository.findByIdentifier(randomIdentifier()).isEmpty());
   }
 
   @Test
@@ -719,7 +706,11 @@ class DynamoDbApprovalRepositoryTest {
     var firstRevision = revisions(approval.identifier()).getLast();
     assertTrue(firstRevision.approval().namedIdentifiers().contains(removedIdentifier));
     assertEquals(
-        otherApproval, approvalRepository.findByIdentifier(removedIdentifier).orElseThrow());
+        otherApproval.identifier(),
+        approvalRepository
+            .findIdentifiers(List.of(removedIdentifier))
+            .getFirst()
+            .approvalIdentifier());
   }
 
   @Test
