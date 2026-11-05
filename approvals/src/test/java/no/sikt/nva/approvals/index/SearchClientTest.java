@@ -15,6 +15,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import no.sikt.nva.approvals.index.FramedClinicalTrial.Investigator;
 import no.sikt.nva.approvals.index.FramedClinicalTrial.TrialSite;
 import no.sikt.nva.approvals.index.IndexDocument.Identifier;
@@ -44,6 +46,7 @@ class SearchClientTest {
   private static final String UNREACHABLE_HOST = "http://localhost:1";
   private static final String UNMAPPED_FIELD = "unmappedField";
   private static final IndexDocument SEARCHABLE_DOCUMENT = randomIndexDocument();
+  private static final IndexDocument SECOND_DOCUMENT = randomIndexDocument();
   private static final OpenSearchContainer<?> CONTAINER =
       new OpenSearchContainer<>(OPEN_SEARCH_IMAGE);
 
@@ -62,7 +65,7 @@ class SearchClientTest {
     var client = searchClient(searchableIndexName);
     client.createIndex();
     client.index(SEARCHABLE_DOCUMENT);
-    client.index(randomIndexDocument());
+    client.index(SECOND_DOCUMENT);
     refresh(searchableIndexName);
   }
 
@@ -223,6 +226,19 @@ class SearchClientTest {
   }
 
   @Test
+  void shouldReturnEachDocumentOnceWhenPagingWithCursor() {
+    var firstPage = searchPage(null);
+
+    var secondPage = searchPage(firstPage.getFirst().source().identifier().toString());
+
+    var documents =
+        Stream.of(firstPage.getFirst().source(), secondPage.getFirst().source())
+            .collect(Collectors.toSet());
+
+    assertEquals(Set.of(SEARCHABLE_DOCUMENT, SECOND_DOCUMENT), documents);
+  }
+
+  @Test
   void shouldFindDocumentByNamedIdentifierValue() {
     var namedIdentifierValue = namedIdentifier().value();
 
@@ -239,6 +255,13 @@ class SearchClientTest {
 
   private static Identifier namedIdentifier() {
     return SEARCHABLE_DOCUMENT.identifiers().iterator().next();
+  }
+
+  private static List<Hit<IndexDocument>> searchPage(String cursor) {
+    return searchClient(searchableIndexName)
+        .search(new Query(StringUtils.EMPTY_STRING, cursor, 1))
+        .hits()
+        .hits();
   }
 
   private static List<IndexDocument> searchFreeText(String value) {
