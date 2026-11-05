@@ -234,10 +234,7 @@ class DynamoDbChangeRepositoryTest {
 
   private void updateApproval(Approval approval) {
     var latestRevision =
-        approvalRepository
-            .findVersionedByApprovalIdentifier(approval.identifier())
-            .orElseThrow()
-            .latestRevision();
+        approvalRepository.findByApprovalIdentifier(approval.identifier()).orElseThrow().version();
     approvalRepository.updateApproval(randomRevision(approval, UPDATE_APPROVAL), latestRevision);
   }
 

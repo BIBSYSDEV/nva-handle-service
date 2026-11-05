@@ -10,7 +10,6 @@ import no.sikt.nva.approvals.domain.Handle;
 import no.sikt.nva.approvals.domain.IdentifierPolicy;
 import no.sikt.nva.approvals.domain.NamedIdentifier;
 import no.sikt.nva.approvals.domain.SourceSnapshot;
-import no.sikt.nva.approvals.domain.VersionedApproval;
 import no.sikt.nva.approvals.events.SourceChangedEvent;
 import no.unit.nva.identifiers.SortableIdentifier;
 
@@ -25,8 +24,6 @@ public interface ApprovalRepository {
   void updateApproval(ApprovalRevision revision, SortableIdentifier expectedRevision);
 
   Optional<Approval> findByApprovalIdentifier(UUID approvalIdentifier);
-
-  Optional<VersionedApproval> findVersionedByApprovalIdentifier(UUID approvalIdentifier);
 
   Optional<Approval> findByHandle(Handle handle);
 

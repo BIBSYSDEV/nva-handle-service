@@ -66,8 +66,9 @@ public class ApprovalServiceImpl implements ApprovalService {
     var handle = createHandle(approvalUri);
     var approval =
         new Approval(approvalId, namedIdentifiers, source, handle, agent.customerIdentifier());
-    approvalRepository.save(createRevision(approval, agent, CREATE_APPROVAL));
-    return approval;
+    var revision = createRevision(approval, agent, CREATE_APPROVAL);
+    approvalRepository.save(revision);
+    return revision.approval();
   }
 
   @Override
@@ -90,11 +91,10 @@ public class ApprovalServiceImpl implements ApprovalService {
       UUID approvalId, Collection<NamedIdentifier> namedIdentifiers, URI source, Agent agent)
       throws ApprovalServiceException, ApprovalConflictException {
     var identifiers = approvalRepository.findIdentifiers(namedIdentifiers);
-    var versionedApproval =
+    var approval =
         approvalRepository
-            .findVersionedByApprovalIdentifier(approvalId)
+            .findByApprovalIdentifier(approvalId)
             .orElseThrow(() -> new ApprovalNotFoundException(approvalId));
-    var approval = versionedApproval.approval();
     approval.ensureOwnedBy(agent.customerIdentifier());
     ensureIdentifiersAreNotUsedByOtherApproval(identifiers, approval);
     if (isUnchanged(approval, namedIdentifiers, source)) {
@@ -104,11 +104,10 @@ public class ApprovalServiceImpl implements ApprovalService {
     var updatedApproval =
         new Approval(
             approvalId, namedIdentifiers, source, approval.handle(), approval.customerIdentifier());
-    approvalRepository.updateApproval(
-        createRevision(updatedApproval, agent, UPDATE_APPROVAL),
-        versionedApproval.latestRevision());
+    var revision = createRevision(updatedApproval, agent, UPDATE_APPROVAL);
+    approvalRepository.updateApproval(revision, approval.version());
 
-    return updatedApproval;
+    return revision.approval();
   }
 
   private static boolean hasSameIdentifiers(

@@ -28,7 +28,6 @@ import no.sikt.nva.approvals.domain.Handle;
 import no.sikt.nva.approvals.domain.IdentifierPolicy;
 import no.sikt.nva.approvals.domain.NamedIdentifier;
 import no.sikt.nva.approvals.domain.SourceSnapshot;
-import no.sikt.nva.approvals.domain.VersionedApproval;
 import no.sikt.nva.approvals.events.SourceChangedEvent;
 import no.unit.nva.commons.json.JsonUtils;
 import no.unit.nva.identifiers.SortableIdentifier;
@@ -131,15 +130,8 @@ public class DynamoDbApprovalRepository implements ApprovalRepository {
 
   @Override
   public Optional<Approval> findByApprovalIdentifier(UUID approvalIdentifier) {
-    return findVersionedByApprovalIdentifier(approvalIdentifier).map(VersionedApproval::approval);
-  }
-
-  @Override
-  public Optional<VersionedApproval> findVersionedByApprovalIdentifier(UUID approvalIdentifier) {
     var entities = fetchEntitiesByApprovalIdentifier(toDatabaseIdentifier(approvalIdentifier));
-    return entities.isEmpty()
-        ? Optional.empty()
-        : Optional.of(constructVersionedApproval(entities));
+    return entities.isEmpty() ? Optional.empty() : Optional.of(constructApproval(entities));
   }
 
   @Override
@@ -155,9 +147,7 @@ public class DynamoDbApprovalRepository implements ApprovalRepository {
             .map(EnhancedDocument::toJson)
             .map(this::toDatabaseEntity)
             .toList();
-    return entities.isEmpty()
-        ? Optional.empty()
-        : Optional.of(constructVersionedApproval(entities).approval());
+    return entities.isEmpty() ? Optional.empty() : Optional.of(constructApproval(entities));
   }
 
   @Override
@@ -167,8 +157,7 @@ public class DynamoDbApprovalRepository implements ApprovalRepository {
         .map(item -> item.getString(PK1))
         .map(this::fetchEntitiesByApprovalIdentifier)
         .filter(entities -> !entities.isEmpty())
-        .map(DynamoDbApprovalRepository::constructVersionedApproval)
-        .map(VersionedApproval::approval);
+        .map(DynamoDbApprovalRepository::constructApproval);
   }
 
   @Override
@@ -210,18 +199,17 @@ public class DynamoDbApprovalRepository implements ApprovalRepository {
         .toList();
   }
 
-  private static VersionedApproval constructVersionedApproval(List<DatabaseEntry> entities) {
+  private static Approval constructApproval(List<DatabaseEntry> entities) {
     var handle = getHandle(entities);
     var identifiers = getIdentifiers(entities);
     var approvalDao = getApproval(entities);
-    var approval =
-        new Approval(
-            approvalDao.identifier(),
-            identifiers,
-            approvalDao.source(),
-            handle,
-            approvalDao.customerIdentifier());
-    return new VersionedApproval(approval, approvalDao.latestRevision());
+    return new Approval(
+        approvalDao.identifier(),
+        identifiers,
+        approvalDao.source(),
+        handle,
+        approvalDao.customerIdentifier(),
+        approvalDao.latestRevision());
   }
 
   private static Handle getHandle(List<DatabaseEntry> entities) {
