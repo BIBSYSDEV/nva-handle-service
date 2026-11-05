@@ -3,9 +3,10 @@ package no.sikt.nva.approvals.index;
 import static nva.commons.core.attempt.Try.attempt;
 
 import java.util.UUID;
+import no.unit.nva.commons.json.JsonSerializable;
 import no.unit.nva.commons.json.JsonUtils;
 
-public record IndexApprovalMessage(UUID approvalIdentifier) {
+public record IndexApprovalMessage(UUID approvalIdentifier) implements JsonSerializable {
 
   public static IndexApprovalMessage fromString(String value) {
     return attempt(() -> JsonUtils.dtoObjectMapper.readValue(value, IndexApprovalMessage.class))
