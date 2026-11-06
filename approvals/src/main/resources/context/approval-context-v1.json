@@ -43,11 +43,11 @@
       "@id": "hydra:next",
       "@type": "@id"
     },
-    "member": {
+    "hits": {
       "@id": "hydra:member",
       "@type": "@id"
     },
-    "totalItems": "hydra:totalItems",
+    "totalHits": "hydra:totalItems",
     "search": "hydra:search",
     "template": "hydra:template",
     "mapping": "hydra:mapping",

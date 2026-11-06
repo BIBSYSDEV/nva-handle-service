@@ -31,8 +31,8 @@ import org.opensearch.client.opensearch.core.search.Hit;
 public record ApprovalSearchResponse(
     @JsonProperty(CONTEXT_PROPERTY) URI context,
     URI id,
-    int totalItems,
-    List<ApprovalHit> member,
+    int totalHits,
+    List<ApprovalHit> hits,
     URI next,
     IriTemplate search) {
 
@@ -49,7 +49,7 @@ public record ApprovalSearchResponse(
     return new ApprovalSearchResponse(
         UriConstants.context(apiHost),
         pageId(query, apiHost),
-        totalItems(response),
+        totalHits(response),
         toHits(response, apiHost),
         nextPage(response, query, apiHost),
         searchTemplate(apiHost));
@@ -87,7 +87,7 @@ public record ApprovalSearchResponse(
         .map(present -> Map.entry(name, present));
   }
 
-  private static int totalItems(SearchResponse<IndexDocument> response) {
+  private static int totalHits(SearchResponse<IndexDocument> response) {
     return (int) response.hits().total().value();
   }
 

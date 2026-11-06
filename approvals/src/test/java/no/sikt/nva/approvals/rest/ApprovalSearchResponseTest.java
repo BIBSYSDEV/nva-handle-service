@@ -38,7 +38,7 @@ class ApprovalSearchResponseTest {
 
     var results = ApprovalSearchResponse.from(response(List.of(document), 1), query(), API_HOST);
 
-    assertThat(results.member(), contains(ApprovalHit.fromDisplay(document.display(), API_HOST)));
+    assertThat(results.hits(), contains(ApprovalHit.fromDisplay(document.display(), API_HOST)));
   }
 
   @Test
@@ -52,7 +52,7 @@ class ApprovalSearchResponseTest {
   void shouldReportTotalNumberOfHits() {
     var results = ApprovalSearchResponse.from(response(List.of(), 42), query(), API_HOST);
 
-    assertEquals(42, results.totalItems());
+    assertEquals(42, results.totalHits());
   }
 
   @Test

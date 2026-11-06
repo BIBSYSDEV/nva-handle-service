@@ -20,9 +20,13 @@ import java.net.URI;
 import java.util.List;
 import java.util.UUID;
 import no.sikt.nva.approvals.domain.NamedIdentifier;
+import no.sikt.nva.approvals.index.IndexDocument;
+import no.sikt.nva.approvals.index.Query;
 import no.sikt.nva.approvals.utils.JsonLdTestUtils.Triple;
 import nva.commons.core.paths.UriWrapper;
 import org.junit.jupiter.api.Test;
+import org.opensearch.client.opensearch.core.SearchResponse;
+import org.opensearch.client.opensearch.core.search.TotalHitsRelation;
 
 class SearchContextTriplesTest {
 
@@ -72,13 +76,31 @@ class SearchContextTriplesTest {
     var triples = toTriplesWithApprovalContext(searchResults(List.of(), null));
 
     var template = objectOf(triples, searchIri(), hydra("search"));
-    var mapping = objectOf(triples, template, hydra("mapping"));
 
     assertThat(
         triples,
         hasItems(
             Triple.literal(template, hydra("template"), SEARCH_TEMPLATE),
-            Triple.of(mapping, hydra("property"), hydra("freetextQuery"))));
+            Triple.of(
+                mappingFor(triples, template, "query"),
+                hydra("property"),
+                hydra("freetextQuery"))));
+  }
+
+  @Test
+  void shouldReturnTriplesOfSizeAndCursorMappings() throws IOException, JsonLdError {
+    var triples = toTriplesWithApprovalContext(searchResults(List.of(), null));
+
+    var template = objectOf(triples, searchIri(), hydra("search"));
+
+    assertThat(
+        triples,
+        hasItems(
+            Triple.of(mappingFor(triples, template, "size"), hydra("property"), hydra("limit")),
+            Triple.of(
+                mappingFor(triples, template, "cursor"),
+                hydra("property"),
+                hydra("pageReference"))));
   }
 
   @Test
@@ -105,9 +127,28 @@ class SearchContextTriplesTest {
   }
 
   private static IriTemplate searchTemplate() {
-    return new IriTemplate(
-        SEARCH_TEMPLATE,
-        List.of(new IriTemplateMapping("query", "hydra:freetextQuery", "Free text")));
+    return ApprovalSearchResponse.from(emptyResponse(), new Query(null), API_HOST).search();
+  }
+
+  private static SearchResponse<IndexDocument> emptyResponse() {
+    return new SearchResponse.Builder<IndexDocument>()
+        .took(1)
+        .timedOut(false)
+        .shards(shards -> shards.total(1).successful(1).failed(0))
+        .hits(
+            hits ->
+                hits.total(total -> total.value(0).relation(TotalHitsRelation.Eq)).hits(List.of()))
+        .build();
+  }
+
+  private static String mappingFor(List<Triple> triples, String template, String variable) {
+    return triples.stream()
+        .filter(triple -> triple.subject().equals(template))
+        .filter(triple -> triple.predicate().equals(hydra("mapping")))
+        .map(Triple::object)
+        .filter(node -> triples.contains(Triple.literal(node, hydra("variable"), variable)))
+        .findFirst()
+        .orElseThrow();
   }
 
   private static String hydra(String name) {
