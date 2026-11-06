@@ -23,26 +23,29 @@ public record SourceSnapshot(
 
   public static SourceSnapshot create(
       CreateSnapshotRequest createSnapshotRequest, Content content, Instant createdDate) {
+    var truncatedCreatedDate = createdDate.truncatedTo(MICROS);
     return new SourceSnapshot(
-        createIdentifier(createSnapshotRequest),
+        createIdentifier(createSnapshotRequest, truncatedCreatedDate),
         createSnapshotRequest.approvalIdentifier(),
         createSnapshotRequest.agent(),
         createSnapshotRequest.trigger(),
         createSnapshotRequest.source(),
         content,
-        createdDate.truncatedTo(MICROS));
+        truncatedCreatedDate);
   }
 
   /**
-   * The identifier is derived from the approval and event, so a redelivered message resolves to the
-   * same snapshot and the conditional write stores it only once.
+   * The identifier is ordered by when the snapshot was created, so the latest snapshot is the one
+   * saved last. The rest of the identifier is derived from the approval and event, so a redelivered
+   * message created at the same time resolves to the same snapshot.
    */
-  private static SortableIdentifier createIdentifier(CreateSnapshotRequest createSnapshotRequest) {
+  private static SortableIdentifier createIdentifier(
+      CreateSnapshotRequest createSnapshotRequest, Instant createdDate) {
     var seed =
         IDENTIFIER_SEED.formatted(
             createSnapshotRequest.approvalIdentifier(),
             createSnapshotRequest.trigger().identifier());
     var uuid = UUID.nameUUIDFromBytes(seed.getBytes(UTF_8));
-    return SortableIdentifier.create(createSnapshotRequest.timestamp(), uuid);
+    return SortableIdentifier.create(createdDate, uuid);
   }
 }
