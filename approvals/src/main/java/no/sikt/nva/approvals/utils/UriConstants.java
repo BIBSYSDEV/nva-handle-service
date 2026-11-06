@@ -21,6 +21,8 @@ public final class UriConstants {
   public static final String CONTEXT_PROPERTY = "@context";
   public static final String CURRENT_CONTEXT_VERSION = "v1";
 
+
+
   private UriConstants() {}
 
   public static URI context(String apiHost) {
