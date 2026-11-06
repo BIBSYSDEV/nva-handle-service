@@ -47,12 +47,12 @@ public record ApprovalDao(
         revision.identifier());
   }
 
-  public static ApprovalDao fromJson(String json) {
+  static ApprovalDao fromJson(String json) {
     return attempt(() -> JsonUtils.dtoObjectMapper.readValue(json, ApprovalDao.class))
         .orElseThrow();
   }
 
-  public static Key primaryKey(UUID identifier) {
+  static Key primaryKey(UUID identifier) {
     var databaseIdentifier = toDatabaseIdentifier(identifier);
     return Key.builder().partitionValue(databaseIdentifier).sortValue(databaseIdentifier).build();
   }

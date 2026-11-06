@@ -59,17 +59,17 @@ final class LatestRevisionCondition {
         .build();
   }
 
-  private static boolean isConditionFailure(TransactionCanceledException exception) {
-    return exception.hasCancellationReasons()
-        && (isConditionalCheckFailureOnApprovalItem(exception)
-            || hasTransactionConflict(exception));
-  }
-
   static boolean hasCancellationReasonAt(
       TransactionCanceledException exception, int itemIndex, String reasonCode) {
     return exception.hasCancellationReasons()
         && exception.cancellationReasons().size() > itemIndex
         && reasonCode.equals(exception.cancellationReasons().get(itemIndex).code());
+  }
+
+  private static boolean isConditionFailure(TransactionCanceledException exception) {
+    return exception.hasCancellationReasons()
+        && (isConditionalCheckFailureOnApprovalItem(exception)
+            || hasTransactionConflict(exception));
   }
 
   private static boolean isConditionalCheckFailureOnApprovalItem(

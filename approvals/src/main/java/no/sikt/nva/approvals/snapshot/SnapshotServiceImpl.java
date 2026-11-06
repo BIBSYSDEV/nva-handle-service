@@ -15,9 +15,14 @@ import no.sikt.nva.approvals.source.SourceClientException;
 import no.sikt.nva.approvals.source.SourceResponse;
 import nva.commons.core.Environment;
 import nva.commons.core.JacocoGenerated;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class SnapshotServiceImpl implements SnapshotService {
 
+  private static final Logger LOGGER = LoggerFactory.getLogger(SnapshotServiceImpl.class);
+  private static final String SKIPPED_MESSAGE =
+      "Skipped snapshot of approval {}: approval not found or source is no longer {}";
   private static final int FIRST_ATTEMPT = 1;
   private static final int MAX_ATTEMPTS = 3;
 
@@ -48,6 +53,10 @@ public class SnapshotServiceImpl implements SnapshotService {
     for (var attempt = FIRST_ATTEMPT; attempt <= MAX_ATTEMPTS; attempt++) {
       var state = findStateOfCurrentSource(createSnapshotRequest);
       if (state.isEmpty()) {
+        LOGGER.info(
+            SKIPPED_MESSAGE,
+            createSnapshotRequest.approvalIdentifier(),
+            createSnapshotRequest.source());
         return;
       }
       var content = fetchContent(createSnapshotRequest);
