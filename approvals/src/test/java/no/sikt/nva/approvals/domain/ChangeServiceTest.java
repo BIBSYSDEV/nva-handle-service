@@ -160,8 +160,7 @@ class ChangeServiceTest {
                 approvalIdentifier,
                 randomAgent(),
                 randomUri(),
-                new SourceChangedEventTrigger(SortableIdentifier.next(), randomString()),
-                timestamp),
+                new SourceChangedEventTrigger(SortableIdentifier.next(), randomString())),
             randomContent(),
             timestamp);
     approvalRepository.save(snapshot);
