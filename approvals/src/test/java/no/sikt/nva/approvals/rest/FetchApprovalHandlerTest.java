@@ -3,6 +3,7 @@ package no.sikt.nva.approvals.rest;
 import static java.net.HttpURLConnection.HTTP_BAD_REQUEST;
 import static java.net.HttpURLConnection.HTTP_INTERNAL_ERROR;
 import static java.net.HttpURLConnection.HTTP_NOT_FOUND;
+import static java.net.HttpURLConnection.HTTP_NOT_MODIFIED;
 import static java.net.HttpURLConnection.HTTP_OK;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Objects.nonNull;
@@ -13,7 +14,10 @@ import static no.unit.nva.testutils.RandomDataGenerator.randomUri;
 import static nva.commons.apigateway.ApiGatewayHandler.ALLOWED_ORIGIN_ENV;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.emptyOrNullString;
+import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
+import static org.hamcrest.Matchers.nullValue;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
@@ -50,6 +54,7 @@ import no.sikt.nva.approvals.domain.SourceConfig;
 import no.sikt.nva.approvals.source.SourceClient;
 import no.sikt.nva.approvals.source.SourceCredentials;
 import no.unit.nva.commons.json.JsonUtils;
+import no.unit.nva.identifiers.SortableIdentifier;
 import no.unit.nva.stubs.FakeContext;
 import no.unit.nva.testutils.HandlerRequestBuilder;
 import nva.commons.apigateway.GatewayResponse;
@@ -59,6 +64,8 @@ import org.apache.hc.core5.http.HttpHeaders;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.zalando.problem.Problem;
 
 class FetchApprovalHandlerTest {
@@ -76,6 +83,7 @@ class FetchApprovalHandlerTest {
   private static final String CLINICAL_TRIAL_TITLE = "Test Clinical Trial";
   private static final String NOT_A_CLINICAL_TRIAL = "[]";
   private static final String SOURCE_PATH = "/trials";
+  private static final String INITIAL_ENTITY_TAG = "\"0\"";
   private FetchApprovalHandler handler;
   private SourceClient sourceClient;
   private HttpServer server;
@@ -228,6 +236,67 @@ class FetchApprovalHandlerTest {
     var response = handleRequest(request);
 
     assertEquals(HttpURLConnection.HTTP_NOT_ACCEPTABLE, response.getStatusCode());
+  }
+
+  @Test
+  void shouldReturnEntityTagFromApprovalVersion() {
+    var approval = approvalWithVersion(SortableIdentifier.next());
+    handler = handlerFor(approval);
+
+    var response = handleRequest(createRequestWithPathParameter(approval.identifier()));
+
+    assertEquals(quoted(approval.version()), response.getHeaders().get(HttpHeaders.ETAG));
+  }
+
+  @Test
+  void shouldReturnInitialEntityTagWhenApprovalHasNoVersion() {
+    var approval = randomApproval(UUID.randomUUID(), randomUri());
+    handler = handlerFor(approval);
+
+    var response = handleRequest(createRequestWithPathParameter(approval.identifier()));
+
+    assertEquals(INITIAL_ENTITY_TAG, response.getHeaders().get(HttpHeaders.ETAG));
+  }
+
+  @ParameterizedTest
+  @ValueSource(strings = {"\"%s\"", "W/\"%s\"", "\"other\", \"%s\"", "*"})
+  void shouldReturnNotModifiedWithoutBodyWhenIfNoneMatchMatches(String ifNoneMatchTemplate) {
+    var approval = approvalWithVersion(SortableIdentifier.next());
+    handler = handlerFor(approval);
+    var ifNoneMatch = ifNoneMatchTemplate.formatted(approval.version());
+
+    var response =
+        handleRequestAsString(createRequestWithIfNoneMatch(approval.identifier(), ifNoneMatch));
+
+    assertEquals(HTTP_NOT_MODIFIED, response.getStatusCode());
+    assertEquals(quoted(approval.version()), response.getHeaders().get(HttpHeaders.ETAG));
+    assertThat(response.getBody(), is(emptyOrNullString()));
+  }
+
+  @Test
+  void shouldReturnOkWhenIfNoneMatchDoesNotMatch() {
+    var approval = approvalWithVersion(SortableIdentifier.next());
+    handler = handlerFor(approval);
+    var staleEntityTag = quoted(SortableIdentifier.next());
+
+    var response =
+        handleRequest(createRequestWithIfNoneMatch(approval.identifier(), staleEntityTag));
+
+    assertEquals(HTTP_OK, response.getStatusCode());
+  }
+
+  @Test
+  void shouldNotReturnEntityTagForHtmlAfterJsonRequest() {
+    var approval = approvalWithVersion(SortableIdentifier.next());
+    handler = handlerFor(approval);
+    handleRequest(createRequestWithPathParameter(approval.identifier()));
+    output = new ByteArrayOutputStream();
+
+    var response =
+        handleRequestAsString(
+            createRequestWithAcceptHeader(approval.identifier(), MediaType.HTML_UTF_8.toString()));
+
+    assertThat(response.getHeaders().get(HttpHeaders.ETAG), is(nullValue()));
   }
 
   @Test
@@ -425,14 +494,43 @@ class FetchApprovalHandlerTest {
   }
 
   private InputStream createRequestWithAcceptHeader(UUID approvalId, String acceptHeader) {
+    return createRequestWithHeader(approvalId, HttpHeaders.ACCEPT, acceptHeader);
+  }
+
+  private InputStream createRequestWithIfNoneMatch(UUID approvalId, String ifNoneMatch) {
+    return createRequestWithHeader(approvalId, HttpHeaders.IF_NONE_MATCH, ifNoneMatch);
+  }
+
+  private InputStream createRequestWithHeader(
+      UUID approvalId, String headerName, String headerValue) {
     try {
       return new HandlerRequestBuilder<Void>(JsonUtils.dtoObjectMapper)
           .withPathParameters(Map.of(APPROVAL_ID_PATH_PARAMETER, approvalId.toString()))
-          .withHeaders(Map.of(HttpHeaders.ACCEPT, acceptHeader))
+          .withHeaders(Map.of(headerName, headerValue))
           .build();
     } catch (JsonProcessingException e) {
       throw new RuntimeException(e);
     }
+  }
+
+  private FetchApprovalHandler handlerFor(Approval approval) {
+    return new FetchApprovalHandler(
+        new FakeApprovalService(List.of(approval)), environment, templateEngine, sourceClient);
+  }
+
+  private static Approval approvalWithVersion(SortableIdentifier version) {
+    var approval = randomApproval(UUID.randomUUID(), randomUri());
+    return new Approval(
+        approval.identifier(),
+        approval.namedIdentifiers(),
+        approval.source(),
+        approval.handle(),
+        approval.customerIdentifier(),
+        version);
+  }
+
+  private static String quoted(SortableIdentifier version) {
+    return "\"%s\"".formatted(version);
   }
 
   private static TemplateEngine createTemplateEngine() {

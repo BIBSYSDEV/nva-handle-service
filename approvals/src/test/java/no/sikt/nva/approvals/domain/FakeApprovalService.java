@@ -11,6 +11,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import no.unit.nva.identifiers.SortableIdentifier;
 
 public class FakeApprovalService implements ApprovalService {
 
@@ -37,7 +38,8 @@ public class FakeApprovalService implements ApprovalService {
     throwExceptionIfConfigured();
     var approval =
         randomApproval(
-            randomUUID(), namedIdentifiers, source, randomHandle(), agent.customerIdentifier());
+                randomUUID(), namedIdentifiers, source, randomHandle(), agent.customerIdentifier())
+            .withVersion(SortableIdentifier.next());
     approvals.add(approval);
     return approval;
   }

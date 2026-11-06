@@ -1,5 +1,6 @@
 package no.sikt.nva.approvals.rest;
 
+import static java.net.HttpURLConnection.HTTP_NOT_MODIFIED;
 import static java.net.HttpURLConnection.HTTP_OK;
 import static no.sikt.nva.approvals.utils.RequestUtils.getApiHost;
 import static no.sikt.nva.approvals.utils.RequestUtils.getApprovalIdentifier;
@@ -20,6 +21,7 @@ import no.sikt.nva.approvals.domain.ApprovalService;
 import no.sikt.nva.approvals.domain.ApprovalServiceImpl;
 import no.sikt.nva.approvals.source.SourceClient;
 import no.sikt.nva.approvals.source.SourceResponse;
+import no.sikt.nva.approvals.utils.EntityTag;
 import no.unit.nva.commons.json.JsonUtils;
 import nva.commons.apigateway.ApiGatewayHandler;
 import nva.commons.apigateway.MediaType;
@@ -37,6 +39,7 @@ public class FetchApprovalHandler extends ApiGatewayHandler<Void, Object> {
   private static final String APPROVAL_NOT_FOUND_MESSAGE = "Approval not found";
   private static final String TEMPLATE_NAME = "approval.jte";
   private static final String APPLICATION_DOMAIN_ENV = "APPLICATION_DOMAIN";
+  private static final String NOT_MODIFIED_BODY = "";
 
   private final ApprovalService approvalService;
   private final String apiHost;
@@ -88,14 +91,15 @@ public class FetchApprovalHandler extends ApiGatewayHandler<Void, Object> {
             .orElseThrow(() -> new NotFoundException(APPROVAL_NOT_FOUND_MESSAGE));
 
     if (isJsonRequest(requestInfo)) {
-      return ApprovalResponse.fromApproval(foundApproval, apiHost);
+      return jsonResponse(foundApproval, requestInfo);
     }
+    addAdditionalHeaders(Map::of);
     return renderHtml(foundApproval);
   }
 
   @Override
   protected Integer getSuccessStatusCode(Void input, Object output) {
-    return HTTP_OK;
+    return NOT_MODIFIED_BODY.equals(output) ? HTTP_NOT_MODIFIED : HTTP_OK;
   }
 
   @Override
@@ -106,6 +110,14 @@ public class FetchApprovalHandler extends ApiGatewayHandler<Void, Object> {
       headers.put(HttpHeaders.CONTENT_TYPE, MediaType.JSON_UTF_8.toString());
     }
     return headers;
+  }
+
+  private Object jsonResponse(Approval approval, RequestInfo requestInfo) {
+    var entityTag = EntityTag.forVersion(approval.version());
+    addAdditionalHeaders(() -> Map.of(HttpHeaders.ETAG, entityTag));
+    return EntityTag.isMatchedByIfNoneMatch(requestInfo, entityTag)
+        ? NOT_MODIFIED_BODY
+        : ApprovalResponse.fromApproval(approval, apiHost);
   }
 
   private boolean isJsonRequest(RequestInfo requestInfo) {
