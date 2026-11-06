@@ -41,6 +41,7 @@ class DynamoDbChangeRepositoryTest {
   private static final Environment ENVIRONMENT = new Environment();
   private static final String TABLE = ENVIRONMENT.readEnv(DynamoDbConstants.TABLE);
   private static final int PAGE_SIZE = 100;
+  private static final int SNAPSHOTS_BEYOND_FIRST_QUERY_PAGE = 30;
   private static final String CHANGE_KEY = "Change:%s";
   private static final String TYPE_FIELD = "type";
   private static final long OLDER_SNAPSHOT_AGE_IN_SECONDS = 60;
@@ -228,14 +229,60 @@ class DynamoDbChangeRepositoryTest {
     assertTrue(latestSnapshot.isEmpty());
   }
 
-  private void saveApproval(Approval approval) {
-    approvalRepository.save(randomRevision(approval, CREATE_APPROVAL));
+  @Test
+  void shouldReturnLatestRevisionOfApproval() {
+    var approval = randomApproval(randomHandle());
+    saveApproval(approval);
+    var latestRevision = updateApproval(approval);
+
+    assertThat(
+        changeRepository.findLatestRevision(approval.identifier()).orElseThrow().identifier(),
+        equalTo(latestRevision.identifier()));
   }
 
-  private void updateApproval(Approval approval) {
+  @Test
+  void shouldReturnOptionalEmptyWhenApprovalHasNoChanges() {
+    assertTrue(changeRepository.findLatestRevision(randomUUID()).isEmpty());
+  }
+
+  @Test
+  void shouldReturnOptionalEmptyWhenApprovalHasSnapshotButNoRevision() {
+    var approvalIdentifier = randomUUID();
+    approvalRepository.save(randomSourceSnapshot(approvalIdentifier));
+
+    assertTrue(changeRepository.findLatestRevision(approvalIdentifier).isEmpty());
+  }
+
+  @Test
+  void shouldReturnLatestRevisionWhenNewerSnapshotsExist() {
+    var approval = randomApproval(randomHandle());
+    var revision = saveApproval(approval);
+    saveSnapshotsNewerThan(approval.identifier(), revision.createdDate());
+
+    assertThat(
+        changeRepository.findLatestRevision(approval.identifier()).orElseThrow().identifier(),
+        equalTo(revision.identifier()));
+  }
+
+  private void saveSnapshotsNewerThan(UUID approvalIdentifier, Instant revisionCreatedDate) {
+    Stream.iterate(1, age -> age + 1)
+        .limit(SNAPSHOTS_BEYOND_FIRST_QUERY_PAGE)
+        .map(age -> randomSourceSnapshot(approvalIdentifier, revisionCreatedDate.plusSeconds(age)))
+        .forEach(approvalRepository::save);
+  }
+
+  private ApprovalRevision saveApproval(Approval approval) {
+    var revision = randomRevision(approval, CREATE_APPROVAL);
+    approvalRepository.save(revision);
+    return revision;
+  }
+
+  private ApprovalRevision updateApproval(Approval approval) {
     var latestRevision =
         approvalRepository.findByApprovalIdentifier(approval.identifier()).orElseThrow().version();
-    approvalRepository.updateApproval(randomRevision(approval, UPDATE_APPROVAL), latestRevision);
+    var revision = randomRevision(approval, UPDATE_APPROVAL);
+    approvalRepository.updateApproval(revision, latestRevision);
+    return revision;
   }
 
   private void insertChangeItemOfUnknownType(UUID approvalIdentifier) {
