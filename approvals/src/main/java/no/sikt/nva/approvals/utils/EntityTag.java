@@ -28,10 +28,14 @@ public final class EntityTag {
   }
 
   private static boolean containsMatch(String headerValue, String entityTag) {
+    return ANY.equals(headerValue.strip()) || containsEntityTag(headerValue, entityTag);
+  }
+
+  private static boolean containsEntityTag(String headerValue, String entityTag) {
     return Arrays.stream(headerValue.split(LIST_SEPARATOR))
         .map(String::strip)
         .map(EntityTag::withoutWeakPrefix)
-        .anyMatch(candidate -> ANY.equals(candidate) || entityTag.equals(candidate));
+        .anyMatch(entityTag::equals);
   }
 
   private static String withoutWeakPrefix(String candidate) {

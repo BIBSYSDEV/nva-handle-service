@@ -273,14 +273,13 @@ class FetchApprovalHandlerTest {
     assertThat(response.getBody(), is(emptyOrNullString()));
   }
 
-  @Test
-  void shouldReturnOkWhenIfNoneMatchDoesNotMatch() {
+  @ParameterizedTest
+  @ValueSource(strings = {"\"unrelated\"", "W/\"unrelated\"", "\"unrelated,*,tag\""})
+  void shouldReturnOkWhenIfNoneMatchDoesNotMatch(String ifNoneMatch) {
     var approval = approvalWithVersion(SortableIdentifier.next());
     handler = handlerFor(approval);
-    var staleEntityTag = quoted(SortableIdentifier.next());
 
-    var response =
-        handleRequest(createRequestWithIfNoneMatch(approval.identifier(), staleEntityTag));
+    var response = handleRequest(createRequestWithIfNoneMatch(approval.identifier(), ifNoneMatch));
 
     assertEquals(HTTP_OK, response.getStatusCode());
   }
