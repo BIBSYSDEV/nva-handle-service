@@ -14,19 +14,16 @@ import static no.sikt.nva.approvals.persistence.LatestRevisionCondition.expected
 import static no.sikt.nva.approvals.persistence.LatestRevisionCondition.hasCancellationReasonAt;
 import static no.sikt.nva.approvals.persistence.LatestRevisionCondition.toModifiedExceptionIfConditionFailed;
 
-import java.net.URI;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import no.sikt.nva.approvals.domain.SourceSnapshot;
-import no.unit.nva.identifiers.SortableIdentifier;
 import nva.commons.core.Environment;
 import nva.commons.core.JacocoGenerated;
 import software.amazon.awssdk.enhanced.dynamodb.AttributeConverterProvider;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedClient;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbTable;
 import software.amazon.awssdk.enhanced.dynamodb.Expression;
-import software.amazon.awssdk.enhanced.dynamodb.Key;
 import software.amazon.awssdk.enhanced.dynamodb.document.EnhancedDocument;
 import software.amazon.awssdk.enhanced.dynamodb.model.GetItemEnhancedRequest;
 import software.amazon.awssdk.enhanced.dynamodb.model.IgnoreNullsMode;
@@ -39,7 +36,6 @@ import software.amazon.awssdk.services.dynamodb.model.TransactionCanceledExcepti
 public class DynamoDbLatestSnapshotRepository implements LatestSnapshotRepository {
 
   private static final String SNAPSHOT_VERSION = "snapshotVersion";
-  private static final String SOURCE = "source";
   private static final long FIRST_SNAPSHOT_VERSION = 1L;
   private static final int SNAPSHOT_ITEM_INDEX = 1;
   private static final String NO_FAILURE = "None";
@@ -68,21 +64,22 @@ public class DynamoDbLatestSnapshotRepository implements LatestSnapshotRepositor
   }
 
   @Override
-  public Optional<SnapshotLock> findSnapshotLock(UUID approvalIdentifier) {
+  public Optional<SnapshotState> findSnapshotStateConsistently(UUID approvalIdentifier) {
     var request =
         GetItemEnhancedRequest.builder()
-            .key(approvalKey(approvalIdentifier))
+            .key(ApprovalDao.primaryKey(approvalIdentifier))
             .consistentRead(true)
             .build();
     return Optional.ofNullable(table.getItem(request))
-        .map(DynamoDbLatestSnapshotRepository::toLock);
+        .map(DynamoDbLatestSnapshotRepository::toSnapshotState);
   }
 
   @Override
-  public void saveAsLatestSnapshot(SourceSnapshot snapshot, SnapshotLock lock) {
+  public void saveAsLatestSnapshot(SourceSnapshot snapshot, SnapshotState expectedState) {
     var request =
         TransactWriteItemsEnhancedRequest.builder()
-            .addUpdateItem(table, snapshotVersionUpdate(snapshot.approvalIdentifier(), lock))
+            .addUpdateItem(
+                table, snapshotVersionUpdate(snapshot.approvalIdentifier(), expectedState))
             .addPutItem(
                 table,
                 DynamoDbApprovalRepository.newItemRequest(
@@ -97,30 +94,28 @@ public class DynamoDbLatestSnapshotRepository implements LatestSnapshotRepositor
     }
   }
 
-  private static SnapshotLock toLock(EnhancedDocument approvalItem) {
-    var latestRevision =
-        Optional.ofNullable(approvalItem.getString(ApprovalDao.LATEST_REVISION))
-            .map(SortableIdentifier::new)
-            .orElse(null);
+  private static SnapshotState toSnapshotState(EnhancedDocument approvalItem) {
+    var approvalDao = ApprovalDao.fromJson(approvalItem.toJson());
     var snapshotVersion =
         approvalItem.isPresent(SNAPSHOT_VERSION)
             ? approvalItem.getNumber(SNAPSHOT_VERSION).longValue()
             : null;
-    return new SnapshotLock(
-        URI.create(approvalItem.getString(SOURCE)), latestRevision, snapshotVersion);
+    return new SnapshotState(approvalDao.source(), approvalDao.latestRevision(), snapshotVersion);
   }
 
   private static TransactUpdateItemEnhancedRequest<EnhancedDocument> snapshotVersionUpdate(
-      UUID approvalIdentifier, SnapshotLock lock) {
+      UUID approvalIdentifier, SnapshotState expectedState) {
     return TransactUpdateItemEnhancedRequest.builder(EnhancedDocument.class)
-        .item(snapshotVersionDocument(approvalIdentifier, nextSnapshotVersion(lock)))
-        .conditionExpression(condition(lock))
+        .item(snapshotVersionDocument(approvalIdentifier, nextSnapshotVersion(expectedState)))
+        .conditionExpression(condition(expectedState))
         .ignoreNullsMode(IgnoreNullsMode.SCALAR_ONLY)
         .build();
   }
 
-  private static long nextSnapshotVersion(SnapshotLock lock) {
-    return isNull(lock.snapshotVersion()) ? FIRST_SNAPSHOT_VERSION : lock.snapshotVersion() + 1;
+  private static long nextSnapshotVersion(SnapshotState expectedState) {
+    return isNull(expectedState.snapshotVersion())
+        ? FIRST_SNAPSHOT_VERSION
+        : expectedState.snapshotVersion() + 1;
   }
 
   private static EnhancedDocument snapshotVersionDocument(
@@ -134,15 +129,16 @@ public class DynamoDbLatestSnapshotRepository implements LatestSnapshotRepositor
         .build();
   }
 
-  private static Expression condition(SnapshotLock lock) {
+  private static Expression condition(SnapshotState expectedState) {
     var approvalExists =
         Expression.builder()
             .expression(APPROVAL_EXISTS)
             .expressionNames(Map.of(PARTITION_KEY_ATTRIBUTE, PK0))
             .build();
     return Expression.join(
-        Expression.join(approvalExists, expectedRevisionCondition(lock.latestRevision()), AND),
-        snapshotVersionCondition(lock.snapshotVersion()),
+        Expression.join(
+            approvalExists, expectedRevisionCondition(expectedState.latestRevision()), AND),
+        snapshotVersionCondition(expectedState.snapshotVersion()),
         AND);
   }
 
@@ -161,11 +157,6 @@ public class DynamoDbLatestSnapshotRepository implements LatestSnapshotRepositor
             Map.of(
                 EXPECTED_SNAPSHOT_VERSION_VALUE, AttributeValue.fromN(snapshotVersion.toString())))
         .build();
-  }
-
-  private static Key approvalKey(UUID approvalIdentifier) {
-    var databaseIdentifier = toDatabaseIdentifier(approvalIdentifier);
-    return Key.builder().partitionValue(databaseIdentifier).sortValue(databaseIdentifier).build();
   }
 
   private static boolean isExistingSnapshot(TransactionCanceledException exception) {

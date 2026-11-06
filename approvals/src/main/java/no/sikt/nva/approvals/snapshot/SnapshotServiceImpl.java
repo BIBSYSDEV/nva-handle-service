@@ -9,7 +9,7 @@ import no.sikt.nva.approvals.persistence.ChangeRepository;
 import no.sikt.nva.approvals.persistence.DynamoDbChangeRepository;
 import no.sikt.nva.approvals.persistence.DynamoDbLatestSnapshotRepository;
 import no.sikt.nva.approvals.persistence.LatestSnapshotRepository;
-import no.sikt.nva.approvals.persistence.SnapshotLock;
+import no.sikt.nva.approvals.persistence.SnapshotState;
 import no.sikt.nva.approvals.source.SourceClient;
 import no.sikt.nva.approvals.source.SourceClientException;
 import no.sikt.nva.approvals.source.SourceResponse;
@@ -46,13 +46,13 @@ public class SnapshotServiceImpl implements SnapshotService {
   public void createSnapshot(CreateSnapshotRequest createSnapshotRequest)
       throws SourceClientException {
     for (var attempt = FIRST_ATTEMPT; attempt <= MAX_ATTEMPTS; attempt++) {
-      var lock = findLockOfCurrentSource(createSnapshotRequest);
-      if (lock.isEmpty()) {
+      var state = findStateOfCurrentSource(createSnapshotRequest);
+      if (state.isEmpty()) {
         return;
       }
       var content = fetchContent(createSnapshotRequest);
       try {
-        saveIfChanged(createSnapshotRequest, content, lock.get());
+        saveIfChanged(createSnapshotRequest, content, state.get());
         return;
       } catch (ApprovalModifiedException exception) {
         if (attempt == MAX_ATTEMPTS) {
@@ -63,18 +63,18 @@ public class SnapshotServiceImpl implements SnapshotService {
   }
 
   private void saveIfChanged(
-      CreateSnapshotRequest createSnapshotRequest, Content content, SnapshotLock lock) {
+      CreateSnapshotRequest createSnapshotRequest, Content content, SnapshotState state) {
     if (hasChangedSinceLatestSnapshot(createSnapshotRequest, content)) {
       latestSnapshotRepository.saveAsLatestSnapshot(
-          SourceSnapshot.create(createSnapshotRequest, content, Instant.now()), lock);
+          SourceSnapshot.create(createSnapshotRequest, content, Instant.now()), state);
     }
   }
 
-  private Optional<SnapshotLock> findLockOfCurrentSource(
+  private Optional<SnapshotState> findStateOfCurrentSource(
       CreateSnapshotRequest createSnapshotRequest) {
     return latestSnapshotRepository
-        .findSnapshotLock(createSnapshotRequest.approvalIdentifier())
-        .filter(lock -> createSnapshotRequest.source().equals(lock.source()));
+        .findSnapshotStateConsistently(createSnapshotRequest.approvalIdentifier())
+        .filter(state -> createSnapshotRequest.source().equals(state.source()));
   }
 
   private boolean hasChangedSinceLatestSnapshot(

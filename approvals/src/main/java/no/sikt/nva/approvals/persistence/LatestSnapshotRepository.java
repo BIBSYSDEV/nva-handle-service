@@ -6,7 +6,7 @@ import no.sikt.nva.approvals.domain.SourceSnapshot;
 
 public interface LatestSnapshotRepository {
 
-  Optional<SnapshotLock> findSnapshotLock(UUID approvalIdentifier);
+  Optional<SnapshotState> findSnapshotStateConsistently(UUID approvalIdentifier);
 
-  void saveAsLatestSnapshot(SourceSnapshot snapshot, SnapshotLock lock);
+  void saveAsLatestSnapshot(SourceSnapshot snapshot, SnapshotState expectedState);
 }

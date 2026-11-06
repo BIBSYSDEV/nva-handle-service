@@ -52,19 +52,19 @@ class DynamoDbLatestSnapshotRepositoryTest {
   }
 
   @Test
-  void shouldFindSnapshotLockWithSourceAndLatestRevisionOfApproval() {
+  void shouldFindSnapshotStateWithSourceAndLatestRevisionOfApproval() {
     var approval = saveApproval(randomApproval(randomHandle()));
 
-    var lock = snapshotLock(approval.identifier());
+    var state = snapshotState(approval.identifier());
 
     assertThat(
-        lock,
-        equalTo(new SnapshotLock(approval.source(), latestRevision(approval.identifier()), null)));
+        state,
+        equalTo(new SnapshotState(approval.source(), latestRevision(approval.identifier()), null)));
   }
 
   @Test
-  void shouldNotFindSnapshotLockWhenApprovalDoesNotExist() {
-    assertTrue(latestSnapshotRepository.findSnapshotLock(randomUUID()).isEmpty());
+  void shouldNotFindSnapshotStateWhenApprovalDoesNotExist() {
+    assertTrue(latestSnapshotRepository.findSnapshotStateConsistently(randomUUID()).isEmpty());
   }
 
   @Test
@@ -72,36 +72,36 @@ class DynamoDbLatestSnapshotRepositoryTest {
     var approval = saveApproval(randomApproval(randomHandle()));
     var snapshot = randomSourceSnapshot(approval.identifier());
 
-    latestSnapshotRepository.saveAsLatestSnapshot(snapshot, snapshotLock(approval.identifier()));
+    latestSnapshotRepository.saveAsLatestSnapshot(snapshot, snapshotState(approval.identifier()));
 
     assertThat(
         changeRepository.findLatestSnapshot(approval.identifier()), equalTo(Optional.of(snapshot)));
-    assertEquals(FIRST_SNAPSHOT_VERSION, snapshotLock(approval.identifier()).snapshotVersion());
+    assertEquals(FIRST_SNAPSHOT_VERSION, snapshotState(approval.identifier()).snapshotVersion());
   }
 
   @Test
-  void shouldRejectSnapshotWhenApprovalWasUpdatedAfterLockWasRead() {
+  void shouldRejectSnapshotWhenApprovalWasUpdatedAfterStateWasRead() {
     var approval = saveApproval(randomApproval(randomHandle()));
-    var lock = snapshotLock(approval.identifier());
+    var state = snapshotState(approval.identifier());
     updateApproval(approval);
     var snapshot = randomSourceSnapshot(approval.identifier());
 
     assertThrows(
         ApprovalModifiedException.class,
-        () -> latestSnapshotRepository.saveAsLatestSnapshot(snapshot, lock));
+        () -> latestSnapshotRepository.saveAsLatestSnapshot(snapshot, state));
   }
 
   @Test
-  void shouldRejectSnapshotWhenAnotherSnapshotWasSavedAfterLockWasRead() {
+  void shouldRejectSnapshotWhenAnotherSnapshotWasSavedAfterStateWasRead() {
     var approval = saveApproval(randomApproval(randomHandle()));
-    var lock = snapshotLock(approval.identifier());
+    var state = snapshotState(approval.identifier());
     latestSnapshotRepository.saveAsLatestSnapshot(
-        randomSourceSnapshot(approval.identifier()), lock);
+        randomSourceSnapshot(approval.identifier()), state);
     var concurrentSnapshot = randomSourceSnapshot(approval.identifier());
 
     assertThrows(
         ApprovalModifiedException.class,
-        () -> latestSnapshotRepository.saveAsLatestSnapshot(concurrentSnapshot, lock));
+        () -> latestSnapshotRepository.saveAsLatestSnapshot(concurrentSnapshot, state));
   }
 
   @Test
@@ -114,9 +114,9 @@ class DynamoDbLatestSnapshotRepositoryTest {
     var next =
         randomSourceSnapshot(approval.identifier(), now.plusSeconds(SNAPSHOT_AGE_IN_SECONDS));
 
-    latestSnapshotRepository.saveAsLatestSnapshot(newer, snapshotLock(approval.identifier()));
-    latestSnapshotRepository.saveAsLatestSnapshot(older, snapshotLock(approval.identifier()));
-    latestSnapshotRepository.saveAsLatestSnapshot(next, snapshotLock(approval.identifier()));
+    latestSnapshotRepository.saveAsLatestSnapshot(newer, snapshotState(approval.identifier()));
+    latestSnapshotRepository.saveAsLatestSnapshot(older, snapshotState(approval.identifier()));
+    latestSnapshotRepository.saveAsLatestSnapshot(next, snapshotState(approval.identifier()));
 
     assertThat(
         changeRepository.findLatestSnapshot(approval.identifier()), equalTo(Optional.of(next)));
@@ -126,14 +126,14 @@ class DynamoDbLatestSnapshotRepositoryTest {
   void shouldIgnoreRedeliveredSnapshot() {
     var approval = saveApproval(randomApproval(randomHandle()));
     var snapshot = randomSourceSnapshot(approval.identifier());
-    latestSnapshotRepository.saveAsLatestSnapshot(snapshot, snapshotLock(approval.identifier()));
-    var lockAfterFirstDelivery = snapshotLock(approval.identifier());
+    latestSnapshotRepository.saveAsLatestSnapshot(snapshot, snapshotState(approval.identifier()));
+    var stateAfterFirstDelivery = snapshotState(approval.identifier());
 
-    latestSnapshotRepository.saveAsLatestSnapshot(snapshot, lockAfterFirstDelivery);
+    latestSnapshotRepository.saveAsLatestSnapshot(snapshot, stateAfterFirstDelivery);
 
     assertThat(
         changeRepository.findLatestSnapshot(approval.identifier()), equalTo(Optional.of(snapshot)));
-    assertThat(snapshotLock(approval.identifier()), equalTo(lockAfterFirstDelivery));
+    assertThat(snapshotState(approval.identifier()), equalTo(stateAfterFirstDelivery));
   }
 
   private Approval saveApproval(Approval approval) {
@@ -147,8 +147,8 @@ class DynamoDbLatestSnapshotRepositoryTest {
         randomRevision(approval, UPDATE_APPROVAL), latestRevision(approval.identifier()));
   }
 
-  private SnapshotLock snapshotLock(UUID approvalIdentifier) {
-    return latestSnapshotRepository.findSnapshotLock(approvalIdentifier).orElseThrow();
+  private SnapshotState snapshotState(UUID approvalIdentifier) {
+    return latestSnapshotRepository.findSnapshotStateConsistently(approvalIdentifier).orElseThrow();
   }
 
   private SortableIdentifier latestRevision(UUID approvalIdentifier) {
