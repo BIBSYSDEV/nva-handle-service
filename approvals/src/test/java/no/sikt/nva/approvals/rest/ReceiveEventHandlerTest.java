@@ -2,9 +2,9 @@ package no.sikt.nva.approvals.rest;
 
 import static java.net.HttpURLConnection.HTTP_ACCEPTED;
 import static java.net.HttpURLConnection.HTTP_BAD_REQUEST;
+import static java.net.HttpURLConnection.HTTP_FORBIDDEN;
 import static java.net.HttpURLConnection.HTTP_INTERNAL_ERROR;
 import static java.net.HttpURLConnection.HTTP_NOT_FOUND;
-import static java.net.HttpURLConnection.HTTP_UNAUTHORIZED;
 import static java.net.HttpURLConnection.HTTP_UNSUPPORTED_TYPE;
 import static java.util.UUID.randomUUID;
 import static no.sikt.nva.approvals.utils.TestUtils.randomHandle;
@@ -59,6 +59,8 @@ class ReceiveEventHandlerTest {
   private static final String APPROVAL_NOT_FOUND_MESSAGE = "Approval not found for handle %s";
   private static final String INTERNAL_SERVER_ERROR_MESSAGE =
       "Internal server error. Contact application administrator.";
+  private static final String MISSING_CUSTOMER_MESSAGE =
+      "The authenticated client is not registered with a customer";
   private static final String CONTENT_TYPE_HEADER = "Content-Type";
   private static final String CLOUD_EVENTS_CONTENT_TYPE = "application/cloudevents+json";
   private static final String SUPPORTED_CLOUD_EVENT_TYPE = "no.sikt.nva.approval.source.changed";
@@ -155,7 +157,7 @@ class ReceiveEventHandlerTest {
   }
 
   @Test
-  void shouldReturnUnauthorizedWhenCustomerOfClientCannotBeResolved() throws IOException {
+  void shouldReturnForbiddenWhenCustomerOfClientCannotBeResolved() throws IOException {
     var request =
         new HandlerRequestBuilder<CloudEvent>(JsonUtils.dtoObjectMapper)
             .withBody(validEvent())
@@ -164,12 +166,14 @@ class ReceiveEventHandlerTest {
 
     handler.handleRequest(request, output, CONTEXT);
 
-    assertEquals(
-        HTTP_UNAUTHORIZED, GatewayResponse.fromOutputStream(output, Problem.class).getStatusCode());
+    assertProblem(
+        GatewayResponse.fromOutputStream(output, Problem.class),
+        HTTP_FORBIDDEN,
+        MISSING_CUSTOMER_MESSAGE);
   }
 
   @Test
-  void shouldReturnUnauthorizedWhenTokenCarriesNoClientId() throws IOException {
+  void shouldReturnForbiddenWhenTokenCarriesNoClientId() throws IOException {
     var request =
         new HandlerRequestBuilder<CloudEvent>(JsonUtils.dtoObjectMapper)
             .withBody(validEvent())
@@ -181,7 +185,7 @@ class ReceiveEventHandlerTest {
 
     assertProblem(
         GatewayResponse.fromOutputStream(output, Problem.class),
-        HTTP_UNAUTHORIZED,
+        HTTP_FORBIDDEN,
         "Token carries no client id");
   }
 

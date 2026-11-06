@@ -27,7 +27,6 @@ import no.unit.nva.commons.json.JsonUtils;
 import no.unit.nva.testutils.HandlerRequestBuilder;
 import nva.commons.apigateway.RequestInfo;
 import nva.commons.apigateway.exceptions.ForbiddenException;
-import nva.commons.apigateway.exceptions.UnauthorizedException;
 import nva.commons.core.paths.UriWrapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -40,6 +39,8 @@ class IdentifierAuthorizerTest {
   private static final String CUSTOMER_PATH = "customer";
   private static final String LOCALHOST = "localhost";
   private static final String REK = "REK";
+  private static final String MISSING_CUSTOMER_MESSAGE =
+      "The authenticated client is not registered with a customer";
   private IdentifierPolicyService identifierPolicyService;
   private IdentifierAuthorizer identifierAuthorizer;
 
@@ -148,14 +149,18 @@ class IdentifierAuthorizerTest {
   }
 
   @Test
-  void shouldThrowUnauthorizedWhenRequestHasNoCurrentCustomer() throws Exception {
+  void shouldThrowForbiddenWhenRequestHasNoCurrentCustomer() throws Exception {
     var requestInfo = requestInfoWithoutCustomer(THIRD_PARTY_SCOPE);
 
-    assertThrows(
-        UnauthorizedException.class,
-        () ->
-            identifierAuthorizer.authorizeIdentifiersAndSource(
-                requestInfo, randomIdentifiers(), randomUri()));
+    var exception =
+        assertThrows(
+            ForbiddenException.class,
+            () ->
+                identifierAuthorizer.authorizeIdentifiersAndSource(
+                    requestInfo, randomIdentifiers(), randomUri()));
+
+    assertEquals(HTTP_FORBIDDEN, exception.getStatusCode());
+    assertEquals(MISSING_CUSTOMER_MESSAGE, exception.getMessage());
   }
 
   private static URI customerUri(UUID customerIdentifier) {

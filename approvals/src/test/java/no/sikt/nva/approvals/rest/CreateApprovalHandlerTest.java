@@ -5,7 +5,6 @@ import static java.net.HttpURLConnection.HTTP_BAD_GATEWAY;
 import static java.net.HttpURLConnection.HTTP_BAD_REQUEST;
 import static java.net.HttpURLConnection.HTTP_CONFLICT;
 import static java.net.HttpURLConnection.HTTP_FORBIDDEN;
-import static java.net.HttpURLConnection.HTTP_UNAUTHORIZED;
 import static no.sikt.nva.approvals.utils.TestUtils.randomIdentifiers;
 import static no.sikt.nva.approvals.validation.RequestConstraints.MAX_IDENTIFIERS;
 import static no.unit.nva.testutils.RandomDataGenerator.randomString;
@@ -219,7 +218,7 @@ class CreateApprovalHandlerTest {
   }
 
   @Test
-  void shouldReturnUnauthorizedWhenTokenCarriesNoClientId() throws Exception {
+  void shouldReturnForbiddenWhenTokenCarriesNoClientId() throws Exception {
     var request =
         new HandlerRequestBuilder<CreateApprovalRequest>(JsonUtils.dtoObjectMapper)
             .withBody(randomApprovalRequest(randomUri()))
@@ -228,7 +227,7 @@ class CreateApprovalHandlerTest {
     handler.handleRequest(request, output, context);
 
     var response = GatewayResponse.fromOutputStream(output, Problem.class);
-    assertEquals(HTTP_UNAUTHORIZED, response.getStatusCode());
+    assertEquals(HTTP_FORBIDDEN, response.getStatusCode());
     assertEquals(MISSING_CLIENT_ID_MESSAGE, response.getBodyObject(Problem.class).getDetail());
   }
 
