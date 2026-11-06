@@ -24,6 +24,7 @@ import nva.commons.apigateway.GatewayResponse;
 public final class JsonLdTestUtils {
 
   public static final String APPROVAL_ONTOLOGY_NAMESPACE = "https://localhost/approval/ontology#";
+  public static final String HYDRA_NAMESPACE = "http://www.w3.org/ns/hydra/core#";
   public static final String RDF_TYPE = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type";
   private static final String XSD_STRING = "http://www.w3.org/2001/XMLSchema#string";
 

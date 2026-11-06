@@ -9,6 +9,7 @@ import static no.sikt.nva.approvals.utils.TestUtils.randomApproval;
 import static no.sikt.nva.approvals.utils.TestUtils.randomHandle;
 import static no.sikt.nva.approvals.utils.TestUtils.randomRevision;
 import static no.sikt.nva.approvals.utils.TestUtils.randomSourceSnapshot;
+import static no.sikt.nva.approvals.utils.UriConstants.CURSOR_QUERY_PARAMETER;
 import static no.sikt.nva.approvals.utils.UriConstants.approvalId;
 import static no.sikt.nva.approvals.utils.UriConstants.changeId;
 import static no.sikt.nva.approvals.utils.UriConstants.changeListId;
@@ -28,6 +29,7 @@ import no.sikt.nva.approvals.domain.ChangeList;
 import no.sikt.nva.approvals.domain.SourceChangedEventTrigger;
 import no.sikt.nva.approvals.domain.SourceSnapshot;
 import no.sikt.nva.approvals.utils.JsonLdTestUtils.Triple;
+import nva.commons.core.paths.UriWrapper;
 import org.junit.jupiter.api.Test;
 
 class ChangeContextTriplesTest {
@@ -36,8 +38,24 @@ class ChangeContextTriplesTest {
   private static final String PROV = "http://www.w3.org/ns/prov#";
   private static final String SPDX = "http://spdx.org/rdf/terms#";
   private static final String SCHEMA = "https://schema.org/";
+  private static final String HYDRA = "http://www.w3.org/ns/hydra/core#";
   private static final String XSD_DATE_TIME = "http://www.w3.org/2001/XMLSchema#dateTime";
   private static final String XSD_HEX_BINARY = "http://www.w3.org/2001/XMLSchema#hexBinary";
+
+  @Test
+  void shouldReturnTripleOfNextPageOfChangeList() throws IOException, JsonLdError {
+    var approval = randomApproval(randomHandle());
+    var snapshot = randomSourceSnapshot(approval.identifier());
+    var changeList = new ChangeList(approval, List.of(snapshot), true);
+
+    var triples = toTriplesWithApprovalContext(changeListResponse(changeList));
+
+    assertThat(
+        triples,
+        hasItem(
+            Triple.of(
+                changeListIri(approval), termIri(HYDRA, "next"), nextPageIri(approval, snapshot))));
+  }
 
   @Test
   void shouldReturnTriplesOfChangeListAboutApprovalWithChangesAsMembers()
@@ -281,6 +299,13 @@ class ChangeContextTriplesTest {
 
   private static ApprovalRevisionResponse revisionResponse(ApprovalRevision revision) {
     return ApprovalRevisionResponse.create(revision, API_HOST);
+  }
+
+  private static String nextPageIri(Approval approval, SourceSnapshot snapshot) {
+    return UriWrapper.fromUri(changeListId(API_HOST, approval.identifier()))
+        .addQueryParameter(CURSOR_QUERY_PARAMETER, snapshot.identifier().toString())
+        .getUri()
+        .toString();
   }
 
   private static String changeListIri(Approval approval) {

@@ -5,6 +5,7 @@ import static no.unit.nva.testutils.RandomDataGenerator.randomString;
 import static no.unit.nva.testutils.RandomDataGenerator.randomUri;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.contains;
+import static org.hamcrest.Matchers.endsWith;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
@@ -38,6 +39,13 @@ class ApprovalSearchResponseTest {
     var results = ApprovalSearchResponse.from(response(List.of(document), 1), query(), API_HOST);
 
     assertThat(results.hits(), contains(ApprovalHit.fromDisplay(document.display(), API_HOST)));
+  }
+
+  @Test
+  void shouldReturnSearchTemplateWithSupportedParameters() {
+    var results = ApprovalSearchResponse.from(response(List.of(), 0), query(), API_HOST);
+
+    assertThat(results.search().template(), endsWith("{?query,size,cursor}"));
   }
 
   @Test
