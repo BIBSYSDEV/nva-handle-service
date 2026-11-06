@@ -10,6 +10,7 @@ import static nva.commons.core.attempt.Try.attempt;
 
 import java.util.Map;
 import java.util.UUID;
+import no.sikt.nva.approvals.domain.Approval;
 import no.sikt.nva.approvals.domain.ApprovalConflictException;
 import no.sikt.nva.approvals.domain.ApprovalModifiedException;
 import no.sikt.nva.approvals.domain.ApprovalNotFoundException;
@@ -29,6 +30,7 @@ import nva.commons.apigateway.exceptions.UnauthorizedException;
 import nva.commons.core.Environment;
 import nva.commons.core.StringUtils;
 import nva.commons.core.paths.UriWrapper;
+import org.apache.hc.core5.http.HttpHeaders;
 
 public final class RequestUtils {
 
@@ -87,12 +89,15 @@ public final class RequestUtils {
     return environment.readEnv(API_HOST);
   }
 
-  public static Map<String, String> createAdditionalApprovalHeaders(UUID identifier, String host) {
+  public static Map<String, String> createAdditionalApprovalHeaders(
+      Approval approval, String host) {
     return Map.of(
         LOCATION_HEADER,
-        createApprovalLocationHeader(identifier, host),
+        createApprovalLocationHeader(approval.identifier(), host),
         RETRY_AFTER_HEADER,
-        RETRY_AFTER_VALUE);
+        RETRY_AFTER_VALUE,
+        HttpHeaders.ETAG,
+        EntityTag.forVersion(approval.version()));
   }
 
   public static void handleException(Exception exception) throws ApiGatewayException {

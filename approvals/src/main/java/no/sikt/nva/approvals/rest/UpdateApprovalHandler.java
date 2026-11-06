@@ -85,7 +85,6 @@ public class UpdateApprovalHandler extends ApiGatewayHandler<UpdateApprovalReque
   }
 
   private void addHeaders(Approval approval) {
-    addAdditionalHeaders(
-        () -> createAdditionalApprovalHeaders(approval.identifier(), getApiHost(environment)));
+    addAdditionalHeaders(() -> createAdditionalApprovalHeaders(approval, getApiHost(environment)));
   }
 }
