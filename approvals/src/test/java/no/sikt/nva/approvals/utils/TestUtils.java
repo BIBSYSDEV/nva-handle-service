@@ -146,8 +146,7 @@ public class TestUtils {
         randomAgent(),
         randomUri(),
         new SourceChangedEventTrigger(
-            SortableIdentifier.create(timestamp, randomUUID()), cloudEventIdentifier),
-        timestamp);
+            SortableIdentifier.create(timestamp, randomUUID()), cloudEventIdentifier));
   }
 
   public static CreateSnapshotRequest randomRevisionChange(
@@ -161,8 +160,7 @@ public class TestUtils {
         approvalIdentifier,
         randomAgent(),
         randomUri(),
-        new ApprovalRevisionTrigger(SortableIdentifier.create(timestamp, randomUUID()), activity),
-        timestamp);
+        new ApprovalRevisionTrigger(SortableIdentifier.create(timestamp, randomUUID()), activity));
   }
 
   public static SourceSnapshot randomSourceSnapshot() {
