@@ -26,7 +26,7 @@ import no.sikt.nva.approvals.domain.Content;
 import no.sikt.nva.approvals.domain.SourceSnapshot;
 import no.sikt.nva.approvals.persistence.ChangeRepository;
 import no.sikt.nva.approvals.persistence.LatestSnapshotRepository;
-import no.sikt.nva.approvals.persistence.SnapshotLock;
+import no.sikt.nva.approvals.persistence.SnapshotState;
 import no.sikt.nva.approvals.source.SourceClient;
 import no.sikt.nva.approvals.source.SourceClientException;
 import no.sikt.nva.approvals.source.SourceResponse;
@@ -126,8 +126,8 @@ class SnapshotServiceImplTest {
   @Test
   void shouldNotSaveSnapshotWhenSourceIsNoLongerTheSourceOfApproval() throws SourceClientException {
     var sourceChange = randomSourceChange();
-    when(latestSnapshotRepository.findSnapshotLock(sourceChange.approvalIdentifier()))
-        .thenReturn(Optional.of(new SnapshotLock(randomUri(), null, null)));
+    when(latestSnapshotRepository.findSnapshotStateConsistently(sourceChange.approvalIdentifier()))
+        .thenReturn(Optional.of(new SnapshotState(randomUri(), null, null)));
 
     snapshotService.createSnapshot(sourceChange);
 
@@ -138,7 +138,7 @@ class SnapshotServiceImplTest {
   @Test
   void shouldNotSaveSnapshotWhenApprovalIsNotFound() throws SourceClientException {
     var sourceChange = randomSourceChange();
-    when(latestSnapshotRepository.findSnapshotLock(sourceChange.approvalIdentifier()))
+    when(latestSnapshotRepository.findSnapshotStateConsistently(sourceChange.approvalIdentifier()))
         .thenReturn(Optional.empty());
 
     snapshotService.createSnapshot(sourceChange);
@@ -148,16 +148,17 @@ class SnapshotServiceImplTest {
   }
 
   @Test
-  void shouldSaveSnapshotWithLockReadFromApproval() throws SourceClientException {
+  void shouldSaveSnapshotWithStateReadFromApproval() throws SourceClientException {
     var sourceChange = randomSourceChange();
-    var lock = new SnapshotLock(sourceChange.source(), SortableIdentifier.next(), randomVersion());
-    when(latestSnapshotRepository.findSnapshotLock(sourceChange.approvalIdentifier()))
-        .thenReturn(Optional.of(lock));
+    var state =
+        new SnapshotState(sourceChange.source(), SortableIdentifier.next(), randomVersion());
+    when(latestSnapshotRepository.findSnapshotStateConsistently(sourceChange.approvalIdentifier()))
+        .thenReturn(Optional.of(state));
     sourceReturnsRandomContent(sourceChange);
 
     snapshotService.createSnapshot(sourceChange);
 
-    verify(latestSnapshotRepository).saveAsLatestSnapshot(any(SourceSnapshot.class), eq(lock));
+    verify(latestSnapshotRepository).saveAsLatestSnapshot(any(SourceSnapshot.class), eq(state));
   }
 
   @Test
@@ -167,31 +168,31 @@ class SnapshotServiceImplTest {
     var staleResponse = new SourceResponse(randomString(), randomString());
     var newerResponse = new SourceResponse(randomString(), randomString());
     var newerContent = Content.create(newerResponse.contentType(), newerResponse.body());
-    var firstLock = new SnapshotLock(sourceChange.source(), null, null);
-    var secondLock = new SnapshotLock(sourceChange.source(), null, randomVersion());
-    when(latestSnapshotRepository.findSnapshotLock(sourceChange.approvalIdentifier()))
-        .thenReturn(Optional.of(firstLock), Optional.of(secondLock));
+    var firstState = new SnapshotState(sourceChange.source(), null, null);
+    var secondState = new SnapshotState(sourceChange.source(), null, randomVersion());
+    when(latestSnapshotRepository.findSnapshotStateConsistently(sourceChange.approvalIdentifier()))
+        .thenReturn(Optional.of(firstState), Optional.of(secondState));
     when(sourceClient.fetchSource(any(), any()))
         .thenReturn(Optional.of(staleResponse), Optional.of(newerResponse));
     when(changeRepository.findLatestSnapshot(sourceChange.approvalIdentifier()))
         .thenReturn(Optional.empty(), Optional.of(randomSourceSnapshotWithContent(newerContent)));
     doThrow(new ApprovalModifiedException(sourceChange.approvalIdentifier()))
         .when(latestSnapshotRepository)
-        .saveAsLatestSnapshot(any(), eq(firstLock));
+        .saveAsLatestSnapshot(any(), eq(firstState));
 
     snapshotService.createSnapshot(sourceChange);
 
     verify(sourceClient, times(2)).fetchSource(any(), any());
-    verify(latestSnapshotRepository, never()).saveAsLatestSnapshot(any(), eq(secondLock));
+    verify(latestSnapshotRepository, never()).saveAsLatestSnapshot(any(), eq(secondState));
   }
 
   @Test
   void shouldStopRetryingWhenSourceIsReplacedWhileSavingSnapshot() throws SourceClientException {
     var sourceChange = randomSourceChange();
-    when(latestSnapshotRepository.findSnapshotLock(sourceChange.approvalIdentifier()))
+    when(latestSnapshotRepository.findSnapshotStateConsistently(sourceChange.approvalIdentifier()))
         .thenReturn(
-            Optional.of(new SnapshotLock(sourceChange.source(), null, null)),
-            Optional.of(new SnapshotLock(randomUri(), null, null)));
+            Optional.of(new SnapshotState(sourceChange.source(), null, null)),
+            Optional.of(new SnapshotState(randomUri(), null, null)));
     sourceReturnsRandomContent(sourceChange);
     doThrow(new ApprovalModifiedException(sourceChange.approvalIdentifier()))
         .when(latestSnapshotRepository)
@@ -218,8 +219,8 @@ class SnapshotServiceImplTest {
 
   private CreateSnapshotRequest sourceChangeOfCurrentSource() {
     var sourceChange = randomSourceChange();
-    when(latestSnapshotRepository.findSnapshotLock(sourceChange.approvalIdentifier()))
-        .thenReturn(Optional.of(new SnapshotLock(sourceChange.source(), null, null)));
+    when(latestSnapshotRepository.findSnapshotStateConsistently(sourceChange.approvalIdentifier()))
+        .thenReturn(Optional.of(new SnapshotState(sourceChange.source(), null, null)));
     return sourceChange;
   }
 
