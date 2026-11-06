@@ -233,7 +233,7 @@ public class DynamoDbApprovalRepository implements ApprovalRepository {
         .build();
   }
 
-  private static TransactPutItemEnhancedRequest<EnhancedDocument> newItemRequest(
+  static TransactPutItemEnhancedRequest<EnhancedDocument> newItemRequest(
       EnhancedDocument document) {
     return TransactPutItemEnhancedRequest.builder(EnhancedDocument.class)
         .item(document)

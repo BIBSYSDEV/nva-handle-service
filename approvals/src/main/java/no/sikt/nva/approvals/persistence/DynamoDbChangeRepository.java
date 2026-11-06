@@ -28,6 +28,8 @@ import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 
 public class DynamoDbChangeRepository implements ChangeRepository {
 
+  private static final int SNAPSHOT_SEARCH_PAGE_SIZE = 25;
+
   private final DynamoDbTable<EnhancedDocument> table;
 
   public DynamoDbChangeRepository(DynamoDbClient client, Environment environment) {
@@ -63,7 +65,10 @@ public class DynamoDbChangeRepository implements ChangeRepository {
 
   @Override
   public Optional<SourceSnapshot> findLatestSnapshot(UUID approvalIdentifier) {
-    return table.query(request(approvalIdentifier, 25).build()).items().stream()
+    return table
+        .query(request(approvalIdentifier, SNAPSHOT_SEARCH_PAGE_SIZE).consistentRead(true).build())
+        .items()
+        .stream()
         .map(EnhancedDocument::toJson)
         .map(ChangeDao::fromJson)
         .filter(SourceSnapshotDao.class::isInstance)
