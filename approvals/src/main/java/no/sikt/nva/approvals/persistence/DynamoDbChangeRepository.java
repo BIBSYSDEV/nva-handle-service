@@ -66,7 +66,10 @@ public class DynamoDbChangeRepository implements ChangeRepository {
 
   @Override
   public Optional<SourceSnapshot> findLatestSnapshot(UUID approvalIdentifier) {
-    return table.query(request(approvalIdentifier, CHANGE_PAGE_SIZE).build()).items().stream()
+    return table
+        .query(request(approvalIdentifier, CHANGE_PAGE_SIZE).consistentRead(true).build())
+        .items()
+        .stream()
         .map(EnhancedDocument::toJson)
         .map(ChangeDao::fromJson)
         .filter(SourceSnapshotDao.class::isInstance)

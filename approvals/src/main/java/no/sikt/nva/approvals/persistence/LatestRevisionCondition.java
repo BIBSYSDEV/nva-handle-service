@@ -15,7 +15,8 @@ import software.amazon.awssdk.services.dynamodb.model.TransactionCanceledExcepti
 
 final class LatestRevisionCondition {
 
-  private static final String CONDITIONAL_CHECK_FAILED = "ConditionalCheckFailed";
+  static final String CONDITIONAL_CHECK_FAILED = "ConditionalCheckFailed";
+  static final int APPROVAL_ITEM_INDEX = 0;
   private static final String TRANSACTION_CONFLICT = "TransactionConflict";
   private static final String LATEST_REVISION_ATTRIBUTE = "#latestRevision";
   private static final String EXPECTED_REVISION_VALUE = ":expectedRevision";
@@ -43,7 +44,7 @@ final class LatestRevisionCondition {
         : exception;
   }
 
-  private static Expression expectedRevisionCondition(SortableIdentifier expectedRevision) {
+  static Expression expectedRevisionCondition(SortableIdentifier expectedRevision) {
     if (isNull(expectedRevision)) {
       return Expression.builder()
           .expression(LATEST_REVISION_MISSING)
@@ -64,13 +65,16 @@ final class LatestRevisionCondition {
             || hasTransactionConflict(exception));
   }
 
+  static boolean hasCancellationReasonAt(
+      TransactionCanceledException exception, int itemIndex, String reasonCode) {
+    return exception.hasCancellationReasons()
+        && exception.cancellationReasons().size() > itemIndex
+        && reasonCode.equals(exception.cancellationReasons().get(itemIndex).code());
+  }
+
   private static boolean isConditionalCheckFailureOnApprovalItem(
       TransactionCanceledException exception) {
-    return exception.cancellationReasons().stream()
-        .findFirst()
-        .map(CancellationReason::code)
-        .filter(CONDITIONAL_CHECK_FAILED::equals)
-        .isPresent();
+    return hasCancellationReasonAt(exception, APPROVAL_ITEM_INDEX, CONDITIONAL_CHECK_FAILED);
   }
 
   private static boolean hasTransactionConflict(TransactionCanceledException exception) {
