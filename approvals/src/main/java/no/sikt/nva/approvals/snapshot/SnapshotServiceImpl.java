@@ -1,12 +1,15 @@
 package no.sikt.nva.approvals.snapshot;
 
 import java.time.Instant;
+import java.util.Optional;
+import no.sikt.nva.approvals.domain.ApprovalModifiedException;
 import no.sikt.nva.approvals.domain.Content;
 import no.sikt.nva.approvals.domain.SourceSnapshot;
-import no.sikt.nva.approvals.persistence.ApprovalRepository;
 import no.sikt.nva.approvals.persistence.ChangeRepository;
-import no.sikt.nva.approvals.persistence.DynamoDbApprovalRepository;
 import no.sikt.nva.approvals.persistence.DynamoDbChangeRepository;
+import no.sikt.nva.approvals.persistence.DynamoDbLatestSnapshotRepository;
+import no.sikt.nva.approvals.persistence.LatestSnapshotRepository;
+import no.sikt.nva.approvals.persistence.SnapshotLock;
 import no.sikt.nva.approvals.source.SourceClient;
 import no.sikt.nva.approvals.source.SourceClientException;
 import no.sikt.nva.approvals.source.SourceResponse;
@@ -15,15 +18,18 @@ import nva.commons.core.JacocoGenerated;
 
 public class SnapshotServiceImpl implements SnapshotService {
 
-  private final ApprovalRepository approvalRepository;
+  private static final int FIRST_ATTEMPT = 1;
+  private static final int MAX_ATTEMPTS = 3;
+
+  private final LatestSnapshotRepository latestSnapshotRepository;
   private final ChangeRepository changeRepository;
   private final SourceClient sourceClient;
 
   public SnapshotServiceImpl(
-      ApprovalRepository approvalRepository,
+      LatestSnapshotRepository latestSnapshotRepository,
       ChangeRepository changeRepository,
       SourceClient sourceClient) {
-    this.approvalRepository = approvalRepository;
+    this.latestSnapshotRepository = latestSnapshotRepository;
     this.changeRepository = changeRepository;
     this.sourceClient = sourceClient;
   }
@@ -31,7 +37,7 @@ public class SnapshotServiceImpl implements SnapshotService {
   @JacocoGenerated
   public static SnapshotService defaultInstance(Environment environment) {
     return new SnapshotServiceImpl(
-        DynamoDbApprovalRepository.defaultInstance(environment),
+        DynamoDbLatestSnapshotRepository.defaultInstance(environment),
         DynamoDbChangeRepository.defaultInstance(environment),
         SourceClient.defaultInstance(environment));
   }
@@ -39,10 +45,36 @@ public class SnapshotServiceImpl implements SnapshotService {
   @Override
   public void createSnapshot(CreateSnapshotRequest createSnapshotRequest)
       throws SourceClientException {
-    var content = fetchContent(createSnapshotRequest);
-    if (hasChangedSinceLatestSnapshot(createSnapshotRequest, content)) {
-      approvalRepository.save(SourceSnapshot.create(createSnapshotRequest, content, Instant.now()));
+    for (var attempt = FIRST_ATTEMPT; attempt <= MAX_ATTEMPTS; attempt++) {
+      var lock = findLockOfCurrentSource(createSnapshotRequest);
+      if (lock.isEmpty()) {
+        return;
+      }
+      var content = fetchContent(createSnapshotRequest);
+      try {
+        saveIfChanged(createSnapshotRequest, content, lock.get());
+        return;
+      } catch (ApprovalModifiedException exception) {
+        if (attempt == MAX_ATTEMPTS) {
+          throw exception;
+        }
+      }
     }
+  }
+
+  private void saveIfChanged(
+      CreateSnapshotRequest createSnapshotRequest, Content content, SnapshotLock lock) {
+    if (hasChangedSinceLatestSnapshot(createSnapshotRequest, content)) {
+      latestSnapshotRepository.saveAsLatestSnapshot(
+          SourceSnapshot.create(createSnapshotRequest, content, Instant.now()), lock);
+    }
+  }
+
+  private Optional<SnapshotLock> findLockOfCurrentSource(
+      CreateSnapshotRequest createSnapshotRequest) {
+    return latestSnapshotRepository
+        .findSnapshotLock(createSnapshotRequest.approvalIdentifier())
+        .filter(lock -> createSnapshotRequest.source().equals(lock.source()));
   }
 
   private boolean hasChangedSinceLatestSnapshot(
