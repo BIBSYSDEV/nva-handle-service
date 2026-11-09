@@ -57,8 +57,7 @@ public class DynamoDbApprovalRepository implements ApprovalRepository {
   private static final int TRANSACT_WRITE_ITEM_LIMIT = 80;
   private static final int FIRST_CHUNK = 0;
   private static final String APPROVAL_NOT_FOUND_MESSAGE = "Approval not found: %s";
-  private static final String LATEST_REVISION_NOT_FOUND_MESSAGE =
-      "Latest approval revision not found: %s";
+  private static final String REVISION_NOT_FOUND_MESSAGE = "Approval revision not found: %s";
   private static final boolean EVENTUALLY_CONSISTENT = false;
   private static final boolean STRONGLY_CONSISTENT = true;
   private final DynamoDbTable<EnhancedDocument> table;
@@ -114,12 +113,14 @@ public class DynamoDbApprovalRepository implements ApprovalRepository {
   @Override
   public void updateApproval(ApprovalRevision revision, SortableIdentifier expectedRevision) {
     var approval = revision.approval();
-    var entities = fetchEntitiesByApprovalIdentifier(toDatabaseIdentifier(approval.identifier()));
-    if (entities.isEmpty()) {
-      throw new IllegalStateException(APPROVAL_NOT_FOUND_MESSAGE.formatted(approval.identifier()));
-    }
-    var storedIdentifiers = getIdentifiers(entities);
-    var originalCreatedDate = getApproval(entities).createdDate();
+    var storedApprovalDao =
+        fetchApprovalItem(approval.identifier())
+            .orElseThrow(
+                () ->
+                    new IllegalStateException(
+                        APPROVAL_NOT_FOUND_MESSAGE.formatted(approval.identifier())));
+    var storedIdentifiers = fetchStoredIdentifiers(storedApprovalDao, expectedRevision);
+    var originalCreatedDate = storedApprovalDao.createdDate();
     var modifiedDate = revision.createdDate();
 
     var operations = new ArrayList<Operation>();
@@ -374,12 +375,20 @@ public class DynamoDbApprovalRepository implements ApprovalRepository {
   private Approval toApproval(ApprovalDao approvalDao) {
     return isNull(approvalDao.latestRevision())
         ? constructApproval(fetchEntitiesByApprovalIdentifier(approvalDao.getDatabaseIdentifier()))
-        : fetchLatestRevision(approvalDao).approval();
+        : fetchRevision(approvalDao, approvalDao.latestRevision()).approval();
   }
 
-  private ApprovalRevision fetchLatestRevision(ApprovalDao approvalDao) {
+  private Collection<NamedIdentifier> fetchStoredIdentifiers(
+      ApprovalDao approvalDao, SortableIdentifier expectedRevision) {
+    return isNull(expectedRevision)
+        ? getIdentifiers(fetchEntitiesByApprovalIdentifier(approvalDao.getDatabaseIdentifier()))
+        : fetchRevision(approvalDao, expectedRevision).approval().namedIdentifiers();
+  }
+
+  private ApprovalRevision fetchRevision(
+      ApprovalDao approvalDao, SortableIdentifier revisionIdentifier) {
     var partitionKey = approvalDao.getDatabaseIdentifier();
-    var sortKey = ApprovalRevisionDao.CHANGE_KEY_PREFIX + approvalDao.latestRevision();
+    var sortKey = ApprovalRevisionDao.CHANGE_KEY_PREFIX + revisionIdentifier;
     return fetchItem(partitionKey, sortKey, EVENTUALLY_CONSISTENT)
         .or(() -> fetchItem(partitionKey, sortKey, STRONGLY_CONSISTENT))
         .map(EnhancedDocument::toJson)
@@ -389,7 +398,7 @@ public class DynamoDbApprovalRepository implements ApprovalRepository {
         .orElseThrow(
             () ->
                 new IllegalStateException(
-                    LATEST_REVISION_NOT_FOUND_MESSAGE.formatted(approvalDao.latestRevision())));
+                    REVISION_NOT_FOUND_MESSAGE.formatted(revisionIdentifier)));
   }
 
   private Optional<EnhancedDocument> fetchItem(

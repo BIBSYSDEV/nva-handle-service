@@ -342,6 +342,19 @@ class DynamoDbApprovalRepositoryTest {
   }
 
   @Test
+  void shouldReleaseReplacedIdentifierWhenIdentifierIndexIsStale() {
+    var firstIdentifier = randomIdentifier();
+    var secondIdentifier = randomIdentifier();
+    var approval = saveApproval(randomApproval(List.of(firstIdentifier), randomUUID()));
+    updateApproval(withIdentifiers(approval, secondIdentifier));
+    hideIdentifierFromApprovalIndex(secondIdentifier);
+
+    updateApproval(withIdentifiers(approval, randomIdentifier()));
+
+    assertTrue(approvalRepository.findIdentifiers(List.of(secondIdentifier)).isEmpty());
+  }
+
+  @Test
   void shouldUpdateApprovalIdentifiersByAddingAndRemovingIdentifiers() {
     var initialIdentifiers = randomIdentifiers(3);
     var approval = randomApproval(initialIdentifiers, randomUUID());
@@ -940,6 +953,31 @@ class DynamoDbApprovalRepositoryTest {
         .findByApprovalIdentifier(approvalIdentifier)
         .map(Approval::version)
         .orElse(null);
+  }
+
+  private static Approval withIdentifiers(Approval approval, NamedIdentifier namedIdentifier) {
+    return new Approval(
+        approval.identifier(),
+        List.of(namedIdentifier),
+        approval.source(),
+        approval.handle(),
+        approval.customerIdentifier());
+  }
+
+  private void hideIdentifierFromApprovalIndex(NamedIdentifier namedIdentifier) {
+    var databaseIdentifier = IdentifierDao.toDatabaseIdentifier(namedIdentifier);
+    var key =
+        Map.of(
+            PK0, AttributeValue.builder().s(databaseIdentifier).build(),
+            SK0, AttributeValue.builder().s(databaseIdentifier).build());
+    dynamoDbLocal
+        .client()
+        .updateItem(
+            UpdateItemRequest.builder()
+                .tableName(TABLE)
+                .key(key)
+                .updateExpression("REMOVE %s, %s".formatted(PK1, SK1))
+                .build());
   }
 
   private void removeLatestRevisionFromApprovalEntity(UUID approvalIdentifier) {
