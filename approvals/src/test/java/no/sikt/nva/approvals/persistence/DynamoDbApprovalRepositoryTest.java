@@ -35,8 +35,11 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.spy;
 
 import java.net.URI;
 import java.nio.file.Path;
@@ -67,9 +70,13 @@ import nva.commons.core.ioutils.IoUtils;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentMatchers;
 import software.amazon.awssdk.enhanced.dynamodb.document.EnhancedDocument;
+import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 import software.amazon.awssdk.services.dynamodb.model.DeleteItemRequest;
+import software.amazon.awssdk.services.dynamodb.model.GetItemRequest;
+import software.amazon.awssdk.services.dynamodb.model.GetItemResponse;
 import software.amazon.awssdk.services.dynamodb.model.PutItemRequest;
 import software.amazon.awssdk.services.dynamodb.model.ScanRequest;
 import software.amazon.awssdk.services.dynamodb.model.TransactionCanceledException;
@@ -198,6 +205,52 @@ class DynamoDbApprovalRepositoryTest {
     deleteIdentifierItem(approval.namedIdentifiers().iterator().next());
 
     var foundApproval = approvalRepository.findByApprovalIdentifier(approval.identifier());
+
+    assertEquals(approval, foundApproval.orElseThrow());
+  }
+
+  @Test
+  void shouldReadApprovalFromIdentifierItemsWhenApprovalHasNoLatestRevision() {
+    var approval = saveApproval(randomApproval(randomUUID(), randomUri()));
+    removeLatestRevisionFromApprovalEntity(approval.identifier());
+
+    var foundApproval =
+        approvalRepository.findByApprovalIdentifier(approval.identifier()).orElseThrow();
+
+    assertEquals(
+        Set.copyOf(approval.namedIdentifiers()), Set.copyOf(foundApproval.namedIdentifiers()));
+    assertNull(foundApproval.version());
+  }
+
+  @Test
+  void shouldThrowExceptionWhenHandleIsMissingForApprovalWithoutLatestRevision() {
+    var approval = saveApproval(randomApproval(randomUUID(), randomUri()));
+    removeLatestRevisionFromApprovalEntity(approval.identifier());
+    var handleKey = HandleDao.toDatabaseIdentifier(approval.handle());
+    deleteItem(handleKey, handleKey);
+
+    assertThrows(
+        IllegalStateException.class,
+        () -> approvalRepository.findByApprovalIdentifier(approval.identifier()));
+  }
+
+  @Test
+  void shouldThrowExceptionWhenApprovalItemIsMissingForHandle() {
+    var approval = saveApproval(randomApproval(randomUUID(), randomUri()));
+    var approvalKey = ApprovalDao.toDatabaseIdentifier(approval.identifier());
+    deleteItem(approvalKey, approvalKey);
+
+    assertThrows(
+        IllegalStateException.class, () -> approvalRepository.findByHandle(approval.handle()));
+  }
+
+  @Test
+  void shouldFallBackToStronglyConsistentReadWhenLatestRevisionIsNotYetVisible() {
+    var approval = saveApproval(randomApproval(randomUUID(), randomUri()));
+    var laggingRepository =
+        new DynamoDbApprovalRepository(clientHidingRevisionsFromEventualReads(), ENVIRONMENT);
+
+    var foundApproval = laggingRepository.findByApprovalIdentifier(approval.identifier());
 
     assertEquals(approval, foundApproval.orElseThrow());
   }
@@ -1010,6 +1063,21 @@ class DynamoDbApprovalRepositoryTest {
     item.put("value", AttributeValue.builder().s(identifierValue).build());
 
     dynamoDbLocal.client().putItem(PutItemRequest.builder().tableName(TABLE).item(item).build());
+  }
+
+  private DynamoDbClient clientHidingRevisionsFromEventualReads() {
+    var client = spy(dynamoDbLocal.client());
+    doReturn(GetItemResponse.builder().build())
+        .when(client)
+        .getItem(
+            ArgumentMatchers.<GetItemRequest>argThat(
+                DynamoDbApprovalRepositoryTest::isEventuallyConsistentRevisionRead));
+    return client;
+  }
+
+  private static boolean isEventuallyConsistentRevisionRead(GetItemRequest request) {
+    return !Boolean.TRUE.equals(request.consistentRead())
+        && request.key().get(SK0).s().startsWith(ApprovalRevisionDao.CHANGE_KEY_PREFIX);
   }
 
   private void deleteIdentifierItem(NamedIdentifier namedIdentifier) {

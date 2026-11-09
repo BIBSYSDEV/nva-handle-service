@@ -1,5 +1,6 @@
 package no.sikt.nva.approvals.persistence;
 
+import static java.util.Objects.isNull;
 import static no.sikt.nva.approvals.persistence.ApprovalDao.toDatabaseIdentifier;
 import static no.sikt.nva.approvals.persistence.DynamoDbConstants.GSI1;
 import static no.sikt.nva.approvals.persistence.DynamoDbConstants.GSI2;
@@ -38,6 +39,7 @@ import software.amazon.awssdk.enhanced.dynamodb.Expression;
 import software.amazon.awssdk.enhanced.dynamodb.Key;
 import software.amazon.awssdk.enhanced.dynamodb.document.EnhancedDocument;
 import software.amazon.awssdk.enhanced.dynamodb.model.BatchGetItemEnhancedRequest;
+import software.amazon.awssdk.enhanced.dynamodb.model.GetItemEnhancedRequest;
 import software.amazon.awssdk.enhanced.dynamodb.model.Page;
 import software.amazon.awssdk.enhanced.dynamodb.model.PutItemEnhancedRequest;
 import software.amazon.awssdk.enhanced.dynamodb.model.ReadBatch;
@@ -48,21 +50,23 @@ import software.amazon.awssdk.services.dynamodb.model.ConditionalCheckFailedExce
 import software.amazon.awssdk.services.dynamodb.model.TransactionCanceledException;
 
 // FIXME: Suppressing warning in order to upgrade PMD version
-@SuppressWarnings("PMD.CouplingBetweenObjects")
+@SuppressWarnings({"PMD.CouplingBetweenObjects", "PMD.GodClass"})
 public class DynamoDbApprovalRepository implements ApprovalRepository {
 
   private static final int BATCH_GET_ITEM_LIMIT = 80;
   private static final int TRANSACT_WRITE_ITEM_LIMIT = 80;
   private static final int FIRST_CHUNK = 0;
   private static final String APPROVAL_NOT_FOUND_MESSAGE = "Approval not found: %s";
+  private static final String LATEST_REVISION_NOT_FOUND_MESSAGE =
+      "Latest approval revision not found: %s";
+  private static final boolean EVENTUALLY_CONSISTENT = false;
+  private static final boolean STRONGLY_CONSISTENT = true;
   private final DynamoDbTable<EnhancedDocument> table;
   private final DynamoDbEnhancedClient client;
-  private final ApprovalSnapshotReader approvalSnapshotReader;
 
   public DynamoDbApprovalRepository(DynamoDbClient client, Environment environment) {
     this.client = DynamoDbEnhancedClient.builder().dynamoDbClient(client).build();
     this.table = this.client.table(environment.readEnv(TABLE), documentTableSchema());
-    this.approvalSnapshotReader = new ApprovalSnapshotReader(table);
   }
 
   @JacocoGenerated
@@ -131,7 +135,7 @@ public class DynamoDbApprovalRepository implements ApprovalRepository {
 
   @Override
   public Optional<Approval> findByApprovalIdentifier(UUID approvalIdentifier) {
-    return approvalSnapshotReader.fetchApproval(approvalIdentifier).map(this::toApproval);
+    return fetchApprovalItem(approvalIdentifier).map(this::toApproval);
   }
 
   @Override
@@ -359,14 +363,40 @@ public class DynamoDbApprovalRepository implements ApprovalRepository {
     }
   }
 
+  private Optional<ApprovalDao> fetchApprovalItem(UUID approvalIdentifier) {
+    var databaseIdentifier = toDatabaseIdentifier(approvalIdentifier);
+    return fetchItem(databaseIdentifier, databaseIdentifier, EVENTUALLY_CONSISTENT)
+        .map(EnhancedDocument::toJson)
+        .map(this::toDatabaseEntity)
+        .map(ApprovalDao.class::cast);
+  }
+
   private Approval toApproval(ApprovalDao approvalDao) {
-    return approvalSnapshotReader
-        .fetchLatestRevision(approvalDao)
-        .map(ApprovalRevision::approval)
-        .orElseGet(
+    return isNull(approvalDao.latestRevision())
+        ? constructApproval(fetchEntitiesByApprovalIdentifier(approvalDao.getDatabaseIdentifier()))
+        : fetchLatestRevision(approvalDao).approval();
+  }
+
+  private ApprovalRevision fetchLatestRevision(ApprovalDao approvalDao) {
+    var partitionKey = approvalDao.getDatabaseIdentifier();
+    var sortKey = ApprovalRevisionDao.CHANGE_KEY_PREFIX + approvalDao.latestRevision();
+    return fetchItem(partitionKey, sortKey, EVENTUALLY_CONSISTENT)
+        .or(() -> fetchItem(partitionKey, sortKey, STRONGLY_CONSISTENT))
+        .map(EnhancedDocument::toJson)
+        .map(ChangeDao::fromJson)
+        .map(ApprovalRevisionDao.class::cast)
+        .map(ApprovalRevisionDao::toChange)
+        .orElseThrow(
             () ->
-                constructApproval(
-                    fetchEntitiesByApprovalIdentifier(approvalDao.getDatabaseIdentifier())));
+                new IllegalStateException(
+                    LATEST_REVISION_NOT_FOUND_MESSAGE.formatted(approvalDao.latestRevision())));
+  }
+
+  private Optional<EnhancedDocument> fetchItem(
+      String partitionKey, String sortKey, boolean consistentRead) {
+    var key = Key.builder().partitionValue(partitionKey).sortValue(sortKey).build();
+    var request = GetItemEnhancedRequest.builder().key(key).consistentRead(consistentRead).build();
+    return Optional.ofNullable(table.getItem(request));
   }
 
   private List<DatabaseEntry> fetchEntitiesByApprovalIdentifier(String databaseIdentifier) {
