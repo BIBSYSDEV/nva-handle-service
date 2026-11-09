@@ -1281,9 +1281,7 @@ components:
         example: '"0196a2f1e2c4-3f9b1c2d-..."'
   headers:
     ETag:
-      description: >-
-        Strong entity tag of the approval version. Approvals created before versioning was
-        introduced carry the tag `"0"`.
+      description: Strong entity tag of the approval version.
       schema:
         type: string
   responses:

@@ -83,7 +83,6 @@ class FetchApprovalHandlerTest {
   private static final String CLINICAL_TRIAL_TITLE = "Test Clinical Trial";
   private static final String NOT_A_CLINICAL_TRIAL = "[]";
   private static final String SOURCE_PATH = "/trials";
-  private static final String INITIAL_ENTITY_TAG = "\"0\"";
   private FetchApprovalHandler handler;
   private SourceClient sourceClient;
   private HttpServer server;
@@ -246,16 +245,6 @@ class FetchApprovalHandlerTest {
     var response = handleRequest(createRequestWithPathParameter(approval.identifier()));
 
     assertEquals(quoted(approval.version()), response.getHeaders().get(HttpHeaders.ETAG));
-  }
-
-  @Test
-  void shouldReturnInitialEntityTagWhenApprovalHasNoVersion() {
-    var approval = randomApproval(UUID.randomUUID(), randomUri());
-    handler = handlerFor(approval);
-
-    var response = handleRequest(createRequestWithPathParameter(approval.identifier()));
-
-    assertEquals(INITIAL_ENTITY_TAG, response.getHeaders().get(HttpHeaders.ETAG));
   }
 
   @ParameterizedTest
