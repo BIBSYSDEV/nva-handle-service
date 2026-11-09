@@ -11,6 +11,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 import no.sikt.nva.approvals.domain.Approval;
+import no.sikt.nva.approvals.domain.ApprovalRevision;
 import no.sikt.nva.approvals.domain.Change;
 import no.sikt.nva.approvals.domain.ChangeList;
 import no.sikt.nva.approvals.domain.SourceSnapshot;
@@ -27,6 +28,8 @@ import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 
 public class DynamoDbChangeRepository implements ChangeRepository {
+
+  private static final int CHANGE_PAGE_SIZE = 25;
 
   private final DynamoDbTable<EnhancedDocument> table;
 
@@ -63,12 +66,23 @@ public class DynamoDbChangeRepository implements ChangeRepository {
 
   @Override
   public Optional<SourceSnapshot> findLatestSnapshot(UUID approvalIdentifier) {
-    return table.query(request(approvalIdentifier, 25).build()).items().stream()
+    return table.query(request(approvalIdentifier, CHANGE_PAGE_SIZE).build()).items().stream()
         .map(EnhancedDocument::toJson)
         .map(ChangeDao::fromJson)
         .filter(SourceSnapshotDao.class::isInstance)
         .map(SourceSnapshotDao.class::cast)
         .map(SourceSnapshotDao::toChange)
+        .findFirst();
+  }
+
+  @Override
+  public Optional<ApprovalRevision> findLatestRevision(UUID approvalIdentifier) {
+    return table.query(request(approvalIdentifier, CHANGE_PAGE_SIZE).build()).items().stream()
+        .map(EnhancedDocument::toJson)
+        .map(ChangeDao::fromJson)
+        .filter(ApprovalRevisionDao.class::isInstance)
+        .map(ApprovalRevisionDao.class::cast)
+        .map(ApprovalRevisionDao::toChange)
         .findFirst();
   }
 

@@ -20,6 +20,7 @@ public final class UriConstants {
   public static final String SIZE_QUERY_PARAMETER = "size";
   public static final String CONTEXT_PROPERTY = "@context";
   public static final String CURRENT_CONTEXT_VERSION = "v1";
+  public static final String CURRENT_ONTOLOGY_VERSION = "1.0.0";
 
   private UriConstants() {}
 
