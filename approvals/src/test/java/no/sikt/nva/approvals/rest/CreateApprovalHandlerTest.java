@@ -40,7 +40,6 @@ import no.unit.nva.testutils.HandlerRequestBuilder;
 import nva.commons.apigateway.GatewayResponse;
 import nva.commons.core.Environment;
 import nva.commons.core.paths.UriWrapper;
-import org.apache.hc.core5.http.HttpHeaders;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.zalando.problem.Problem;
@@ -94,18 +93,6 @@ class CreateApprovalHandlerTest {
     var expectedLocation = createExpectedLocationHeader();
 
     assertEquals(expectedLocation, locationHeader);
-  }
-
-  @Test
-  void shouldSetEntityTagFromCreatedApprovalVersionOnSuccess() throws IOException {
-    var request = createRequest(randomApprovalRequest(randomUri()));
-
-    handler.handleRequest(request, output, context);
-
-    var response = GatewayResponse.fromOutputStream(output, Void.class);
-    var expectedEntityTag = "\"%s\"".formatted(approvalService.getPersistedApproval().version());
-
-    assertEquals(expectedEntityTag, response.getHeaders().get(HttpHeaders.ETAG));
   }
 
   @Test

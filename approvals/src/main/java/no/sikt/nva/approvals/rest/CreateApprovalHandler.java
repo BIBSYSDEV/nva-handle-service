@@ -80,6 +80,7 @@ public class CreateApprovalHandler extends ApiGatewayHandler<CreateApprovalReque
   }
 
   private void addHeaders(Approval approval) {
-    addAdditionalHeaders(() -> createAdditionalApprovalHeaders(approval, getApiHost(environment)));
+    addAdditionalHeaders(
+        () -> createAdditionalApprovalHeaders(approval.identifier(), getApiHost(environment)));
   }
 }

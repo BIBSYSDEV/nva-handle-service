@@ -69,8 +69,6 @@ paths:
               description: Number of seconds to wait before checking the approval
               schema:
                 type: integer
-            ETag:
-              $ref: "#/components/headers/ETag"
         "400":
           description: |-
             Bad Request. The request is rejected when:
@@ -555,8 +553,6 @@ paths:
               description: Number of seconds to wait before checking the approval
               schema:
                 type: integer
-            ETag:
-              $ref: "#/components/headers/ETag"
         "400":
           description: |-
             Bad Request. The request is rejected when:
