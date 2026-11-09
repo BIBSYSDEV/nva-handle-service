@@ -57,10 +57,12 @@ public class DynamoDbApprovalRepository implements ApprovalRepository {
   private static final String APPROVAL_NOT_FOUND_MESSAGE = "Approval not found: %s";
   private final DynamoDbTable<EnhancedDocument> table;
   private final DynamoDbEnhancedClient client;
+  private final ApprovalSnapshotReader approvalSnapshotReader;
 
   public DynamoDbApprovalRepository(DynamoDbClient client, Environment environment) {
     this.client = DynamoDbEnhancedClient.builder().dynamoDbClient(client).build();
     this.table = this.client.table(environment.readEnv(TABLE), documentTableSchema());
+    this.approvalSnapshotReader = new ApprovalSnapshotReader(table);
   }
 
   @JacocoGenerated
@@ -129,8 +131,7 @@ public class DynamoDbApprovalRepository implements ApprovalRepository {
 
   @Override
   public Optional<Approval> findByApprovalIdentifier(UUID approvalIdentifier) {
-    var entities = fetchEntitiesByApprovalIdentifier(toDatabaseIdentifier(approvalIdentifier));
-    return entities.isEmpty() ? Optional.empty() : Optional.of(constructApproval(entities));
+    return approvalSnapshotReader.fetchApproval(approvalIdentifier).map(this::toApproval);
   }
 
   @Override
@@ -356,6 +357,16 @@ public class DynamoDbApprovalRepository implements ApprovalRepository {
           requestBuilder.addPutItem(
               table, newItemRequest(identifierDao.toEnhancedDocument(approvalDao, handleDao)));
     }
+  }
+
+  private Approval toApproval(ApprovalDao approvalDao) {
+    return approvalSnapshotReader
+        .fetchLatestRevision(approvalDao)
+        .map(ApprovalRevision::approval)
+        .orElseGet(
+            () ->
+                constructApproval(
+                    fetchEntitiesByApprovalIdentifier(approvalDao.getDatabaseIdentifier())));
   }
 
   private List<DatabaseEntry> fetchEntitiesByApprovalIdentifier(String databaseIdentifier) {
