@@ -1,6 +1,7 @@
 package no.sikt.nva.approvals.batch;
 
 import static java.util.UUID.randomUUID;
+import static no.sikt.nva.approvals.batch.BatchJobType.BACKFILL_REVISIONS;
 import static no.sikt.nva.approvals.batch.BatchJobType.MIGRATE_APPROVAL_SOURCE;
 import static no.sikt.nva.approvals.batch.BatchJobType.REINDEX_APPROVALS;
 import static no.sikt.nva.approvals.persistence.ApprovalDao.toDatabaseIdentifier;
@@ -11,6 +12,7 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import java.util.List;
 import java.util.UUID;
 import no.sikt.nva.approvals.index.IndexApprovalMessage;
+import no.sikt.nva.approvals.migration.ApprovalRevisionBackfillService;
 import no.sikt.nva.approvals.migration.ApprovalSourceMigrationService;
 import no.sikt.nva.approvals.persistence.ItemKey;
 import no.sikt.nva.approvals.queue.QueueClient;
@@ -22,14 +24,18 @@ class ProcessBatchJobServiceTest {
   private static final String INDEX_APPROVAL_QUEUE_URL = "index-approval-queue";
 
   private QueueClient queueClient;
+  private ApprovalRevisionBackfillService backfillService;
   private ApprovalSourceMigrationService migrationService;
   private ProcessBatchJobService service;
 
   @BeforeEach
   void setUp() {
     queueClient = mock(QueueClient.class);
+    backfillService = mock(ApprovalRevisionBackfillService.class);
     migrationService = mock(ApprovalSourceMigrationService.class);
-    service = new ProcessBatchJobService(queueClient, migrationService, INDEX_APPROVAL_QUEUE_URL);
+    service =
+        new ProcessBatchJobService(
+            queueClient, backfillService, migrationService, INDEX_APPROVAL_QUEUE_URL);
   }
 
   @Test
@@ -37,12 +43,24 @@ class ProcessBatchJobServiceTest {
     var first = randomUUID();
     var second = randomUUID();
 
-    service.process(List.of(workMessage(first), workMessage(second)));
+    service.process(
+        List.of(workMessage(REINDEX_APPROVALS, first), workMessage(REINDEX_APPROVALS, second)));
 
     verify(queueClient)
         .send(
             List.of(new IndexApprovalMessage(first), new IndexApprovalMessage(second)),
             INDEX_APPROVAL_QUEUE_URL);
+  }
+
+  @Test
+  void shouldBackfillRevisionsOfEveryWorkItemInOneCall() {
+    var first = randomUUID();
+    var second = randomUUID();
+
+    service.process(
+        List.of(workMessage(BACKFILL_REVISIONS, first), workMessage(BACKFILL_REVISIONS, second)));
+
+    verify(backfillService).backfillRevisions(List.of(first, second));
   }
 
   @Test
@@ -71,7 +89,7 @@ class ProcessBatchJobServiceTest {
 
   @Test
   void shouldNotMigrateWhenJobIsReindexing() {
-    service.process(List.of(workMessage(randomUUID())));
+    service.process(List.of(workMessage(REINDEX_APPROVALS, randomUUID())));
 
     verifyNoInteractions(migrationService);
   }
@@ -81,8 +99,8 @@ class ProcessBatchJobServiceTest {
     return new BatchJobWorkMessage(MIGRATE_APPROVAL_SOURCE, new ItemKey(databaseIdentifier));
   }
 
-  private static BatchJobWorkMessage workMessage(UUID approvalIdentifier) {
+  private static BatchJobWorkMessage workMessage(BatchJobType jobType, UUID approvalIdentifier) {
     var databaseIdentifier = toDatabaseIdentifier(approvalIdentifier);
-    return new BatchJobWorkMessage(REINDEX_APPROVALS, new ItemKey(databaseIdentifier));
+    return new BatchJobWorkMessage(jobType, new ItemKey(databaseIdentifier));
   }
 }

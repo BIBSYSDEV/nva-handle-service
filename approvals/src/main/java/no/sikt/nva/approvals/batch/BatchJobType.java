@@ -4,11 +4,12 @@ import no.sikt.nva.approvals.persistence.ApprovalDao;
 
 public enum BatchJobType {
   REINDEX_APPROVALS,
+  BACKFILL_REVISIONS,
   MIGRATE_APPROVAL_SOURCE;
 
   public String entityType() {
     return switch (this) {
-      case REINDEX_APPROVALS, MIGRATE_APPROVAL_SOURCE -> ApprovalDao.TYPE;
+      case REINDEX_APPROVALS, BACKFILL_REVISIONS, MIGRATE_APPROVAL_SOURCE -> ApprovalDao.TYPE;
     };
   }
 }

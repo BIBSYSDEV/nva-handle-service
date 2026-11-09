@@ -972,7 +972,7 @@ Resources:
   NvaProcessBatchJobFunction:
     Type: AWS::Serverless::Function
     Properties:
-      Description: Carries out batch job work items
+      Description: Batch job processor
       CodeUri: approvals
       Handler: no.sikt.nva.approvals.batch.ProcessBatchJobHandler::handleRequest
       Timeout: 300
@@ -984,8 +984,9 @@ Resources:
               Resource: !GetAtt IndexApprovalQueue.Arn
       Environment:
         Variables:
-          INDEX_APPROVAL_QUEUE_URL: !Ref IndexApprovalQueue
           TABLE: !Ref ApprovalsTable
+          INDEX_APPROVAL_QUEUE_URL: !Ref IndexApprovalQueue
+          BACKFILL_CLIENT_ID: ""
       Events:
         BatchJobWorkItem:
           Type: SQS

@@ -12,6 +12,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 import no.sikt.nva.approvals.index.IndexApprovalMessage;
+import no.sikt.nva.approvals.migration.ApprovalRevisionBackfillService;
 import no.sikt.nva.approvals.migration.ApprovalSourceMigrationService;
 import no.sikt.nva.approvals.persistence.ItemKey;
 import no.sikt.nva.approvals.queue.QueueClient;
@@ -30,7 +31,10 @@ class ProcessBatchJobHandlerTest {
     var handler =
         new ProcessBatchJobHandler(
             new ProcessBatchJobService(
-                queueClient, mock(ApprovalSourceMigrationService.class), INDEX_APPROVAL_QUEUE_URL));
+                queueClient,
+                mock(ApprovalRevisionBackfillService.class),
+                mock(ApprovalSourceMigrationService.class),
+                INDEX_APPROVAL_QUEUE_URL));
 
     handler.handleRequest(batch(first, second), new FakeContext());
 
