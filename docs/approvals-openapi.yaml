@@ -415,7 +415,9 @@ paths:
         - external
       operationId: getApprovalById
       summary: Get Approval
-      description: Get approval by ID
+      description: >-
+        Get approval by ID. JSON responses carry an `ETag`; send it back in `If-None-Match` to get
+        `304 Not Modified` when the approval is unchanged. HTML responses carry no `ETag`.
       parameters:
         - name: approvalId
           in: path
@@ -423,6 +425,7 @@ paths:
           schema:
             type: string
             format: uuid
+        - $ref: "#/components/parameters/IfNoneMatch"
       x-amazon-apigateway-integration:
         uri:
           Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${NvaFetchApprovalFunction.Arn}/invocations
@@ -430,8 +433,16 @@ paths:
         httpMethod: POST
         type: AWS_PROXY
       responses:
+        "304":
+          description: Not Modified - the `If-None-Match` matches the current `ETag`. No body.
+          headers:
+            ETag:
+              $ref: "#/components/headers/ETag"
         "200":
           description: Approval found
+          headers:
+            ETag:
+              $ref: "#/components/headers/ETag"
           content:
             application/ld+json:
               schema:
@@ -1260,6 +1271,21 @@ components:
         type: string
         pattern: "^[0-9]+\\.[0-9]+\\.[0-9]+$"
         example: 1.0.0
+    IfNoneMatch:
+      name: If-None-Match
+      in: header
+      required: false
+      description: One or more entity tags, or `*`. Weak tags (`W/"..."`) are compared weakly.
+      schema:
+        type: string
+        example: '"0196a2f1e2c4-3f9b1c2d-..."'
+  headers:
+    ETag:
+      description: >-
+        Strong entity tag of the approval version. Approvals created before versioning was
+        introduced carry the tag `"0"`.
+      schema:
+        type: string
   responses:
     Context:
       description: JSON-LD context
