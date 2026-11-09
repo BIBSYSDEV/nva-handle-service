@@ -3,9 +3,9 @@ package no.sikt.nva.approvals.rest;
 import static java.net.HttpURLConnection.HTTP_ACCEPTED;
 import static java.net.HttpURLConnection.HTTP_BAD_GATEWAY;
 import static java.net.HttpURLConnection.HTTP_BAD_REQUEST;
-import static java.net.HttpURLConnection.HTTP_CONFLICT;
 import static java.net.HttpURLConnection.HTTP_FORBIDDEN;
 import static java.net.HttpURLConnection.HTTP_NOT_FOUND;
+import static java.net.HttpURLConnection.HTTP_PRECON_FAILED;
 import static java.net.HttpURLConnection.HTTP_UNAUTHORIZED;
 import static no.sikt.nva.approvals.utils.TestUtils.randomApproval;
 import static no.sikt.nva.approvals.utils.TestUtils.randomIdentifier;
@@ -36,6 +36,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import no.sikt.nva.approvals.domain.Agent;
+import no.sikt.nva.approvals.domain.Approval;
 import no.sikt.nva.approvals.domain.ApprovalModifiedException;
 import no.sikt.nva.approvals.domain.ApprovalNotFoundException;
 import no.sikt.nva.approvals.domain.ApprovalService;
@@ -44,18 +45,24 @@ import no.sikt.nva.approvals.domain.CustomerMismatchException;
 import no.sikt.nva.approvals.domain.FakeApprovalService;
 import no.sikt.nva.approvals.domain.NamedIdentifier;
 import no.unit.nva.commons.json.JsonUtils;
+import no.unit.nva.identifiers.SortableIdentifier;
 import no.unit.nva.stubs.FakeContext;
 import no.unit.nva.testutils.HandlerRequestBuilder;
 import nva.commons.apigateway.GatewayResponse;
 import nva.commons.core.Environment;
 import nva.commons.core.paths.UriWrapper;
+import org.apache.hc.core5.http.HttpHeaders;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.zalando.problem.Problem;
 
 class UpdateApprovalHandlerTest {
 
   private static final Context context = new FakeContext();
+  private static final int HTTP_PRECONDITION_REQUIRED = 428;
+  private static final String ANY_ENTITY_TAG = "*";
   private static final String APPROVAL_ID_PATH_PARAMETER = "approvalId";
   private static final String APPROVAL_PATH = "approval";
   private static final String API_HOST = "API_HOST";
@@ -315,7 +322,7 @@ class UpdateApprovalHandlerTest {
   }
 
   @Test
-  void shouldReturnConflictWhenApprovalWasModifiedByAnotherRequest() throws IOException {
+  void shouldReturnPreconditionFailedWhenApprovalWasModifiedByAnotherRequest() throws IOException {
     handler =
         new UpdateApprovalHandler(
             new FakeApprovalService(new ApprovalModifiedException(approvalId)),
@@ -327,7 +334,52 @@ class UpdateApprovalHandlerTest {
 
     var response = GatewayResponse.fromOutputStream(output, Void.class);
 
-    assertEquals(HTTP_CONFLICT, response.getStatusCode());
+    assertEquals(HTTP_PRECON_FAILED, response.getStatusCode());
+  }
+
+  @Test
+  void shouldReturnPreconditionRequiredWhenIfMatchIsMissing() throws IOException {
+    var request = createRequestWithoutIfMatch(randomUpdateApprovalRequest(), approvalId);
+
+    handler.handleRequest(request, output, context);
+
+    var response = GatewayResponse.fromOutputStream(output, Void.class);
+
+    assertEquals(HTTP_PRECONDITION_REQUIRED, response.getStatusCode());
+  }
+
+  @ParameterizedTest
+  @ValueSource(strings = {"\"%s\"", "\"other\", \"%s\"", "*"})
+  void shouldAcceptUpdateWhenIfMatchMatchesCurrentVersion(String ifMatchTemplate)
+      throws IOException {
+    var version = SortableIdentifier.next();
+    handler = handlerWithStoredApproval(version);
+    var ifMatch = ifMatchTemplate.formatted(version);
+
+    handler.handleRequest(
+        createRequestWithIfMatch(randomUpdateApprovalRequest(), approvalId, ifMatch),
+        output,
+        context);
+
+    var response = GatewayResponse.fromOutputStream(output, Void.class);
+    assertEquals(HTTP_ACCEPTED, response.getStatusCode());
+  }
+
+  @ParameterizedTest
+  @ValueSource(strings = {"W/\"%s\"", "\"other\""})
+  void shouldReturnPreconditionFailedWhenIfMatchDoesNotStronglyMatchCurrentVersion(
+      String ifMatchTemplate) throws IOException {
+    var version = SortableIdentifier.next();
+    handler = handlerWithStoredApproval(version);
+    var ifMatch = ifMatchTemplate.formatted(version);
+
+    handler.handleRequest(
+        createRequestWithIfMatch(randomUpdateApprovalRequest(), approvalId, ifMatch),
+        output,
+        context);
+
+    var response = GatewayResponse.fromOutputStream(output, Void.class);
+    assertEquals(HTTP_PRECON_FAILED, response.getStatusCode());
   }
 
   @Test
@@ -385,6 +437,7 @@ class UpdateApprovalHandlerTest {
     var request =
         new HandlerRequestBuilder<UpdateApprovalRequest>(JsonUtils.dtoObjectMapper)
             .withBody(randomUpdateApprovalRequest())
+            .withHeaders(Map.of(HttpHeaders.IF_MATCH, ANY_ENTITY_TAG))
             .withPathParameters(Map.of(APPROVAL_ID_PATH_PARAMETER, approvalId.toString()))
             .build();
 
@@ -398,7 +451,7 @@ class UpdateApprovalHandlerTest {
   @Test
   void shouldPassSourceCustomerAndClientFromRequestToApprovalService() throws Exception {
     var approvalService = mock(ApprovalService.class);
-    when(approvalService.updateApproval(any(), any(), any(), any()))
+    when(approvalService.updateApproval(any(), any(), any(), any(), any()))
         .thenReturn(randomApproval(approvalId, randomUri()));
     var customerIdentifier = UUID.randomUUID();
     when(identifierAuthorizer.authorizeIdentifiersAndSource(any(), any(), any()))
@@ -413,7 +466,8 @@ class UpdateApprovalHandlerTest {
             eq(approvalId),
             eq(updateApprovalRequest.identifiers()),
             eq(updateApprovalRequest.source()),
-            eq(new Agent(customerIdentifier, CLIENT_ID)));
+            eq(new Agent(customerIdentifier, CLIENT_ID)),
+            any());
   }
 
   @Test
@@ -547,11 +601,43 @@ class UpdateApprovalHandlerTest {
 
   private InputStream createRequest(UpdateApprovalRequest request, UUID approvalId)
       throws JsonProcessingException {
+    return createRequestWithIfMatch(request, approvalId, ANY_ENTITY_TAG);
+  }
+
+  private InputStream createRequestWithIfMatch(
+      UpdateApprovalRequest request, UUID approvalId, String ifMatch)
+      throws JsonProcessingException {
+    return new HandlerRequestBuilder<UpdateApprovalRequest>(JsonUtils.dtoObjectMapper)
+        .withBody(request)
+        .withClientId(CLIENT_ID)
+        .withHeaders(Map.of(HttpHeaders.IF_MATCH, ifMatch))
+        .withPathParameters(Map.of(APPROVAL_ID_PATH_PARAMETER, approvalId.toString()))
+        .build();
+  }
+
+  private InputStream createRequestWithoutIfMatch(UpdateApprovalRequest request, UUID approvalId)
+      throws JsonProcessingException {
     return new HandlerRequestBuilder<UpdateApprovalRequest>(JsonUtils.dtoObjectMapper)
         .withBody(request)
         .withClientId(CLIENT_ID)
         .withPathParameters(Map.of(APPROVAL_ID_PATH_PARAMETER, approvalId.toString()))
         .build();
+  }
+
+  private UpdateApprovalHandler handlerWithStoredApproval(SortableIdentifier version) {
+    var storedApproval = randomApproval(approvalId, randomUri());
+    var versionedApproval =
+        new Approval(
+            approvalId,
+            storedApproval.namedIdentifiers(),
+            storedApproval.source(),
+            storedApproval.handle(),
+            storedApproval.customerIdentifier(),
+            version);
+    return new UpdateApprovalHandler(
+        new FakeApprovalService(List.of(versionedApproval)),
+        identifierAuthorizer,
+        new Environment());
   }
 
   private InputStream createRequestWithInvalidApprovalId(UpdateApprovalRequest request)
@@ -568,6 +654,7 @@ class UpdateApprovalHandlerTest {
     return new HandlerRequestBuilder<String>(JsonUtils.dtoObjectMapper)
         .withBody(jsonBody)
         .withClientId(CLIENT_ID)
+        .withHeaders(Map.of(HttpHeaders.IF_MATCH, ANY_ENTITY_TAG))
         .withPathParameters(Map.of(APPROVAL_ID_PATH_PARAMETER, approvalId.toString()))
         .build();
   }

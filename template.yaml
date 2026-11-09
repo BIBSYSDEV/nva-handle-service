@@ -102,8 +102,8 @@ Globals:
   Api:
     OpenApiVersion: 3.0.1
     Cors:
-      AllowMethods: "'OPTIONS,POST'"
-      AllowHeaders: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+      AllowMethods: "'OPTIONS,GET,POST,PUT'"
+      AllowHeaders: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,If-Match,If-None-Match'"
       AllowOrigin: "'*'"
 
 Resources:

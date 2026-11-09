@@ -489,6 +489,10 @@ paths:
         Replaces the writable state of an existing approval. The submitted identifiers and
         source overwrite the stored values. The handle and the approval identifier are
         assigned on creation and cannot be changed.
+
+        The request must carry `If-Match` with the `ETag` from the latest `GET` of the
+        approval, so concurrent updates cannot overwrite each other. The response carries no
+        `ETag`; read the approval again before the next update.
       parameters:
         - name: approvalId
           in: path
@@ -496,6 +500,15 @@ paths:
           schema:
             type: string
             format: uuid
+        - name: If-Match
+          in: header
+          required: true
+          description: >-
+            `ETag` of the approval version the update is based on, or `*` for any version.
+            Compared strongly, so weak tags (`W/"..."`) never match.
+          schema:
+            type: string
+            example: '"0196a2f1e2c4-3f9b1c2d-..."'
       x-amazon-apigateway-request-validator: no_validation
       requestBody:
         required: true
@@ -598,6 +611,20 @@ paths:
           description: >-
             Conflict - one or more of the submitted identifiers already belong to another
             approval.
+          content:
+            "application/json":
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "412":
+          description: >-
+            Precondition Failed - `If-Match` does not match the current version of the
+            approval, which was modified after it was read. Read it again and retry.
+          content:
+            "application/json":
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "428":
+          description: Precondition Required - the `If-Match` header is missing.
           content:
             "application/json":
               schema:
