@@ -1,8 +1,6 @@
 package no.sikt.nva.approvals.persistence;
 
-import static java.util.Objects.isNull;
 import static no.sikt.nva.approvals.persistence.ApprovalDao.toDatabaseIdentifier;
-import static no.sikt.nva.approvals.persistence.DynamoDbConstants.GSI1;
 import static no.sikt.nva.approvals.persistence.DynamoDbConstants.GSI2;
 import static no.sikt.nva.approvals.persistence.DynamoDbConstants.PK0;
 import static no.sikt.nva.approvals.persistence.DynamoDbConstants.SK0;
@@ -50,7 +48,7 @@ import software.amazon.awssdk.services.dynamodb.model.ConditionalCheckFailedExce
 import software.amazon.awssdk.services.dynamodb.model.TransactionCanceledException;
 
 // FIXME: Suppressing warning in order to upgrade PMD version
-@SuppressWarnings({"PMD.CouplingBetweenObjects", "PMD.GodClass"})
+@SuppressWarnings("PMD.CouplingBetweenObjects")
 public class DynamoDbApprovalRepository implements ApprovalRepository {
 
   private static final int BATCH_GET_ITEM_LIMIT = 80;
@@ -119,7 +117,8 @@ public class DynamoDbApprovalRepository implements ApprovalRepository {
                 () ->
                     new IllegalStateException(
                         APPROVAL_NOT_FOUND_MESSAGE.formatted(approval.identifier())));
-    var storedIdentifiers = fetchStoredIdentifiers(storedApprovalDao, expectedRevision);
+    var storedIdentifiers =
+        fetchRevision(storedApprovalDao, expectedRevision).approval().namedIdentifiers();
     var originalCreatedDate = storedApprovalDao.createdDate();
     var modifiedDate = revision.createdDate();
 
@@ -136,7 +135,8 @@ public class DynamoDbApprovalRepository implements ApprovalRepository {
 
   @Override
   public Optional<Approval> findByApprovalIdentifier(UUID approvalIdentifier) {
-    return fetchApprovalItem(approvalIdentifier).map(this::toApproval);
+    return fetchApprovalItem(approvalIdentifier)
+        .map(approvalDao -> fetchRevision(approvalDao, approvalDao.latestRevision()).approval());
   }
 
   @Override
@@ -372,19 +372,6 @@ public class DynamoDbApprovalRepository implements ApprovalRepository {
         .map(ApprovalDao.class::cast);
   }
 
-  private Approval toApproval(ApprovalDao approvalDao) {
-    return isNull(approvalDao.latestRevision())
-        ? constructApproval(fetchEntitiesByApprovalIdentifier(approvalDao.getDatabaseIdentifier()))
-        : fetchRevision(approvalDao, approvalDao.latestRevision()).approval();
-  }
-
-  private Collection<NamedIdentifier> fetchStoredIdentifiers(
-      ApprovalDao approvalDao, SortableIdentifier expectedRevision) {
-    return isNull(expectedRevision)
-        ? getIdentifiers(fetchEntitiesByApprovalIdentifier(approvalDao.getDatabaseIdentifier()))
-        : fetchRevision(approvalDao, expectedRevision).approval().namedIdentifiers();
-  }
-
   private ApprovalRevision fetchRevision(
       ApprovalDao approvalDao, SortableIdentifier revisionIdentifier) {
     var partitionKey = approvalDao.getDatabaseIdentifier();
@@ -406,18 +393,6 @@ public class DynamoDbApprovalRepository implements ApprovalRepository {
     var key = Key.builder().partitionValue(partitionKey).sortValue(sortKey).build();
     var request = GetItemEnhancedRequest.builder().key(key).consistentRead(consistentRead).build();
     return Optional.ofNullable(table.getItem(request));
-  }
-
-  private List<DatabaseEntry> fetchEntitiesByApprovalIdentifier(String databaseIdentifier) {
-    return table
-        .index(GSI1)
-        .query(keyEqualTo(Key.builder().partitionValue(databaseIdentifier).build()))
-        .stream()
-        .map(Page::items)
-        .flatMap(List::stream)
-        .map(EnhancedDocument::toJson)
-        .map(this::toDatabaseEntity)
-        .toList();
   }
 
   private DatabaseEntry toDatabaseEntity(String value) {

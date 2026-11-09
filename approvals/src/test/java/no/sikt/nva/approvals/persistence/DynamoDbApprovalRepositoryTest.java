@@ -35,7 +35,6 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
-import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.doReturn;
@@ -210,28 +209,13 @@ class DynamoDbApprovalRepositoryTest {
   }
 
   @Test
-  void shouldReadApprovalFromIdentifierItemsWhenApprovalHasNoLatestRevision() {
+  void shouldThrowExceptionWhenHandleItemIsMissingForHandle() {
     var approval = saveApproval(randomApproval(randomUUID(), randomUri()));
-    removeLatestRevisionFromApprovalEntity(approval.identifier());
-
-    var foundApproval =
-        approvalRepository.findByApprovalIdentifier(approval.identifier()).orElseThrow();
-
-    assertEquals(
-        Set.copyOf(approval.namedIdentifiers()), Set.copyOf(foundApproval.namedIdentifiers()));
-    assertNull(foundApproval.version());
-  }
-
-  @Test
-  void shouldThrowExceptionWhenHandleIsMissingForApprovalWithoutLatestRevision() {
-    var approval = saveApproval(randomApproval(randomUUID(), randomUri()));
-    removeLatestRevisionFromApprovalEntity(approval.identifier());
     var handleKey = HandleDao.toDatabaseIdentifier(approval.handle());
     deleteItem(handleKey, handleKey);
 
     assertThrows(
-        IllegalStateException.class,
-        () -> approvalRepository.findByApprovalIdentifier(approval.identifier()));
+        IllegalStateException.class, () -> approvalRepository.findByHandle(approval.handle()));
   }
 
   @Test
@@ -346,10 +330,10 @@ class DynamoDbApprovalRepositoryTest {
     var firstIdentifier = randomIdentifier();
     var secondIdentifier = randomIdentifier();
     var approval = saveApproval(randomApproval(List.of(firstIdentifier), randomUUID()));
-    updateApproval(withIdentifiers(approval, secondIdentifier));
+    updateApproval(withIdentifiers(approval, List.of(secondIdentifier)));
     hideIdentifierFromApprovalIndex(secondIdentifier);
 
-    updateApproval(withIdentifiers(approval, randomIdentifier()));
+    updateApproval(withIdentifiers(approval, List.of(randomIdentifier())));
 
     assertTrue(approvalRepository.findIdentifiers(List.of(secondIdentifier)).isEmpty());
   }
@@ -533,18 +517,6 @@ class DynamoDbApprovalRepositoryTest {
     var revision = randomRevision(withIdentifiers(approval, randomIdentifiers(2)), UPDATE_APPROVAL);
 
     approvalRepository.updateApproval(revision, latestRevision(approval.identifier()));
-
-    assertEquals(revision.identifier(), latestRevision(approval.identifier()));
-  }
-
-  @Test
-  void shouldUpdateApprovalStoredWithoutLatestRevision() {
-    var approval = randomApproval(randomHandle());
-    saveApproval(approval);
-    removeLatestRevisionFromApprovalEntity(approval.identifier());
-    var revision = randomRevision(withIdentifiers(approval, randomIdentifiers(2)), UPDATE_APPROVAL);
-
-    approvalRepository.updateApproval(revision, null);
 
     assertEquals(revision.identifier(), latestRevision(approval.identifier()));
   }
@@ -955,15 +927,6 @@ class DynamoDbApprovalRepositoryTest {
         .orElse(null);
   }
 
-  private static Approval withIdentifiers(Approval approval, NamedIdentifier namedIdentifier) {
-    return new Approval(
-        approval.identifier(),
-        List.of(namedIdentifier),
-        approval.source(),
-        approval.handle(),
-        approval.customerIdentifier());
-  }
-
   private void hideIdentifierFromApprovalIndex(NamedIdentifier namedIdentifier) {
     var databaseIdentifier = IdentifierDao.toDatabaseIdentifier(namedIdentifier);
     var key =
@@ -977,23 +940,6 @@ class DynamoDbApprovalRepositoryTest {
                 .tableName(TABLE)
                 .key(key)
                 .updateExpression("REMOVE %s, %s".formatted(PK1, SK1))
-                .build());
-  }
-
-  private void removeLatestRevisionFromApprovalEntity(UUID approvalIdentifier) {
-    var databaseIdentifier = ApprovalDao.toDatabaseIdentifier(approvalIdentifier);
-    var key =
-        Map.of(
-            PK0, AttributeValue.builder().s(databaseIdentifier).build(),
-            SK0, AttributeValue.builder().s(databaseIdentifier).build());
-
-    dynamoDbLocal
-        .client()
-        .updateItem(
-            UpdateItemRequest.builder()
-                .tableName(TABLE)
-                .key(key)
-                .updateExpression("REMOVE %s".formatted(ApprovalDao.LATEST_REVISION))
                 .build());
   }
 
