@@ -112,7 +112,7 @@ public class DynamoDbApprovalRepository implements ApprovalRepository {
   public void updateApproval(ApprovalRevision revision, SortableIdentifier expectedRevision) {
     var approval = revision.approval();
     var storedApprovalDao =
-        fetchApprovalItem(approval.identifier())
+        fetchApprovalItem(approval.identifier(), EVENTUALLY_CONSISTENT)
             .orElseThrow(
                 () ->
                     new IllegalStateException(
@@ -135,8 +135,12 @@ public class DynamoDbApprovalRepository implements ApprovalRepository {
 
   @Override
   public Optional<Approval> findByApprovalIdentifier(UUID approvalIdentifier) {
-    return fetchApprovalItem(approvalIdentifier)
-        .map(approvalDao -> fetchRevision(approvalDao, approvalDao.latestRevision()).approval());
+    return findApproval(approvalIdentifier, EVENTUALLY_CONSISTENT);
+  }
+
+  @Override
+  public Optional<Approval> findCurrentApproval(UUID approvalIdentifier) {
+    return findApproval(approvalIdentifier, STRONGLY_CONSISTENT);
   }
 
   @Override
@@ -364,9 +368,14 @@ public class DynamoDbApprovalRepository implements ApprovalRepository {
     }
   }
 
-  private Optional<ApprovalDao> fetchApprovalItem(UUID approvalIdentifier) {
+  private Optional<Approval> findApproval(UUID approvalIdentifier, boolean consistentRead) {
+    return fetchApprovalItem(approvalIdentifier, consistentRead)
+        .map(approvalDao -> fetchRevision(approvalDao, approvalDao.latestRevision()).approval());
+  }
+
+  private Optional<ApprovalDao> fetchApprovalItem(UUID approvalIdentifier, boolean consistentRead) {
     var databaseIdentifier = toDatabaseIdentifier(approvalIdentifier);
-    return fetchItem(databaseIdentifier, databaseIdentifier, EVENTUALLY_CONSISTENT)
+    return fetchItem(databaseIdentifier, databaseIdentifier, consistentRead)
         .map(EnhancedDocument::toJson)
         .map(this::toDatabaseEntity)
         .map(ApprovalDao.class::cast);

@@ -88,7 +88,8 @@ public class ApprovalServiceImpl implements ApprovalService {
       throws ApprovalServiceException, ApprovalConflictException {
     var identifiers = approvalRepository.findIdentifiers(namedIdentifiers);
     var approval =
-        getApprovalByIdentifier(approvalId)
+        approvalRepository
+            .findCurrentApproval(approvalId)
             .orElseThrow(() -> new ApprovalNotFoundException(approvalId));
     approval.ensureOwnedBy(agent.customerIdentifier());
     ensureVersionMatches(approval, versionPrecondition);

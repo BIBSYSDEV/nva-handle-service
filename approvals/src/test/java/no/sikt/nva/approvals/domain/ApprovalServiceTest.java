@@ -259,7 +259,7 @@ class ApprovalServiceTest {
       throws ApprovalServiceException, ApprovalConflictException {
     var approval = randomApproval(randomUUID(), randomUri());
     var newIdentifiers = randomIdentifiers(2);
-    when(approvalRepository.findByApprovalIdentifier(approval.identifier()))
+    when(approvalRepository.findCurrentApproval(approval.identifier()))
         .thenReturn(Optional.of(versioned(approval)));
     when(approvalRepository.findIdentifiers(newIdentifiers)).thenReturn(List.of());
     doNothing().when(approvalRepository).updateApproval(any(), any());
@@ -280,7 +280,7 @@ class ApprovalServiceTest {
       throws ApprovalServiceException, ApprovalConflictException {
     var approval = randomApproval(randomUUID(), randomUri());
     var unchangedIdentifiers = List.copyOf(approval.namedIdentifiers());
-    when(approvalRepository.findByApprovalIdentifier(approval.identifier()))
+    when(approvalRepository.findCurrentApproval(approval.identifier()))
         .thenReturn(Optional.of(versioned(approval)));
     when(approvalRepository.findIdentifiers(unchangedIdentifiers)).thenReturn(List.of());
 
@@ -299,7 +299,7 @@ class ApprovalServiceTest {
       throws ApprovalServiceException, ApprovalConflictException {
     var approval = versioned(randomApproval(randomUUID(), randomUri()));
     var unchangedIdentifiers = List.copyOf(approval.namedIdentifiers());
-    when(approvalRepository.findByApprovalIdentifier(approval.identifier()))
+    when(approvalRepository.findCurrentApproval(approval.identifier()))
         .thenReturn(Optional.of(approval));
     when(approvalRepository.findIdentifiers(unchangedIdentifiers)).thenReturn(List.of());
 
@@ -321,7 +321,7 @@ class ApprovalServiceTest {
     var secondIdentifier = randomIdentifier();
     var approval = randomApproval(List.of(firstIdentifier, secondIdentifier), randomUUID());
     var reorderedIdentifiers = List.of(secondIdentifier, firstIdentifier);
-    when(approvalRepository.findByApprovalIdentifier(approval.identifier()))
+    when(approvalRepository.findCurrentApproval(approval.identifier()))
         .thenReturn(Optional.of(versioned(approval)));
     when(approvalRepository.findIdentifiers(reorderedIdentifiers)).thenReturn(List.of());
 
@@ -340,7 +340,7 @@ class ApprovalServiceTest {
       throws ApprovalServiceException, ApprovalConflictException {
     var approval = randomApproval(randomUUID(), randomUri());
     var newIdentifiers = randomIdentifiers(2);
-    when(approvalRepository.findByApprovalIdentifier(approval.identifier()))
+    when(approvalRepository.findCurrentApproval(approval.identifier()))
         .thenReturn(Optional.of(versioned(approval)));
     when(approvalRepository.findIdentifiers(newIdentifiers)).thenReturn(List.of());
 
@@ -359,7 +359,7 @@ class ApprovalServiceTest {
       throws ApprovalServiceException, ApprovalConflictException {
     var approval = randomApproval(randomUUID(), randomUri());
     var unchangedIdentifiers = List.copyOf(approval.namedIdentifiers());
-    when(approvalRepository.findByApprovalIdentifier(approval.identifier()))
+    when(approvalRepository.findCurrentApproval(approval.identifier()))
         .thenReturn(Optional.of(versioned(approval)));
     when(approvalRepository.findIdentifiers(unchangedIdentifiers)).thenReturn(List.of());
 
@@ -378,7 +378,7 @@ class ApprovalServiceTest {
       throws ApprovalServiceException, ApprovalConflictException {
     var approval = randomApproval(randomUUID(), randomUri());
     var versionedApproval = versioned(approval);
-    when(approvalRepository.findByApprovalIdentifier(approval.identifier()))
+    when(approvalRepository.findCurrentApproval(approval.identifier()))
         .thenReturn(Optional.of(versionedApproval));
 
     approvalService.updateApproval(
@@ -397,7 +397,7 @@ class ApprovalServiceTest {
     var approval = randomApproval(randomUUID(), randomUri());
     var newSource = randomUri();
     var unchangedIdentifiers = List.copyOf(approval.namedIdentifiers());
-    when(approvalRepository.findByApprovalIdentifier(approval.identifier()))
+    when(approvalRepository.findCurrentApproval(approval.identifier()))
         .thenReturn(Optional.of(versioned(approval)));
     when(approvalRepository.findIdentifiers(unchangedIdentifiers)).thenReturn(List.of());
 
@@ -417,7 +417,7 @@ class ApprovalServiceTest {
       throws ApprovalServiceException, ApprovalConflictException {
     var approval = randomApproval(randomUUID(), randomUri());
     var unchangedIdentifiers = List.copyOf(approval.namedIdentifiers());
-    when(approvalRepository.findByApprovalIdentifier(approval.identifier()))
+    when(approvalRepository.findCurrentApproval(approval.identifier()))
         .thenReturn(Optional.of(versioned(approval)));
     when(approvalRepository.findIdentifiers(unchangedIdentifiers)).thenReturn(List.of());
 
@@ -434,7 +434,7 @@ class ApprovalServiceTest {
   @Test
   void shouldThrowApprovalModifiedExceptionWithoutWritingWhenVersionPreconditionFails() {
     var approval = versioned(randomApproval(randomUUID(), randomUri()));
-    when(approvalRepository.findByApprovalIdentifier(approval.identifier()))
+    when(approvalRepository.findCurrentApproval(approval.identifier()))
         .thenReturn(Optional.of(approval));
 
     assertThrows(
@@ -452,7 +452,7 @@ class ApprovalServiceTest {
   @Test
   void shouldThrowApprovalNotFoundExceptionWhenApprovalDoesNotExistDuringUpdate() {
     var approvalId = randomUUID();
-    when(approvalRepository.findByApprovalIdentifier(approvalId)).thenReturn(Optional.empty());
+    when(approvalRepository.findCurrentApproval(approvalId)).thenReturn(Optional.empty());
 
     assertThrows(
         ApprovalNotFoundException.class,
@@ -465,7 +465,7 @@ class ApprovalServiceTest {
   void shouldThrowCustomerMismatchExceptionWhenCustomerDoesNotOwnApprovalDuringUpdate() {
     var approval = randomApproval(randomUUID(), randomUri());
     var newIdentifiers = randomIdentifiers(2);
-    when(approvalRepository.findByApprovalIdentifier(approval.identifier()))
+    when(approvalRepository.findCurrentApproval(approval.identifier()))
         .thenReturn(Optional.of(versioned(approval)));
     when(approvalRepository.findIdentifiers(newIdentifiers)).thenReturn(List.of());
 
@@ -492,7 +492,7 @@ class ApprovalServiceTest {
             ApprovalDao.toDatabaseIdentifier(randomUUID()),
             HandleDao.toDatabaseIdentifier(randomHandle()));
 
-    when(approvalRepository.findByApprovalIdentifier(approval.identifier()))
+    when(approvalRepository.findCurrentApproval(approval.identifier()))
         .thenReturn(Optional.of(versioned(approval)));
     when(approvalRepository.findIdentifiers(List.of(newIdentifier)))
         .thenReturn(List.of(conflictingIdentifier));
@@ -516,7 +516,7 @@ class ApprovalServiceTest {
     var secondIdentifier = new NamedIdentifier(name, FIRST_VALUE_WHEN_SORTED);
     var newIdentifiers = List.of(firstIdentifier, secondIdentifier);
 
-    when(approvalRepository.findByApprovalIdentifier(approval.identifier()))
+    when(approvalRepository.findCurrentApproval(approval.identifier()))
         .thenReturn(Optional.of(versioned(approval)));
     when(approvalRepository.findIdentifiers(newIdentifiers))
         .thenReturn(
@@ -556,7 +556,7 @@ class ApprovalServiceTest {
   void shouldKeepCustomerIdOnUpdate() throws ApprovalServiceException, ApprovalConflictException {
     var approval = randomApproval(randomUUID(), randomUri());
     var newIdentifiers = randomIdentifiers(2);
-    when(approvalRepository.findByApprovalIdentifier(approval.identifier()))
+    when(approvalRepository.findCurrentApproval(approval.identifier()))
         .thenReturn(Optional.of(versioned(approval)));
     when(approvalRepository.findIdentifiers(newIdentifiers)).thenReturn(List.of());
     doNothing().when(approvalRepository).updateApproval(any(), any());
@@ -589,7 +589,7 @@ class ApprovalServiceTest {
       throws ApprovalServiceException, ApprovalConflictException {
     var approval = randomApproval(randomUUID(), randomUri());
     var newIdentifiers = randomIdentifiers(2);
-    when(approvalRepository.findByApprovalIdentifier(approval.identifier()))
+    when(approvalRepository.findCurrentApproval(approval.identifier()))
         .thenReturn(Optional.of(versioned(approval)));
     when(approvalRepository.findIdentifiers(newIdentifiers)).thenReturn(List.of());
 
@@ -623,7 +623,7 @@ class ApprovalServiceTest {
     var approval = randomApproval(randomUUID(), randomUri());
     var agent = randomAgent(approval.customerIdentifier());
     var newIdentifiers = randomIdentifiers(2);
-    when(approvalRepository.findByApprovalIdentifier(approval.identifier()))
+    when(approvalRepository.findCurrentApproval(approval.identifier()))
         .thenReturn(Optional.of(versioned(approval)));
     when(approvalRepository.findIdentifiers(newIdentifiers)).thenReturn(List.of());
 
