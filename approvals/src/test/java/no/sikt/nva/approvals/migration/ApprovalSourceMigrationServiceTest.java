@@ -3,8 +3,8 @@ package no.sikt.nva.approvals.migration;
 import static java.util.UUID.randomUUID;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
 import java.net.URI;
@@ -51,8 +51,8 @@ class ApprovalSourceMigrationServiceTest {
 
     migrationService.migrateApprovals(List.of(approvalIdentifier));
 
-    verify(approvalRepository, never())
-        .replaceSource(approvalIdentifier, UNAFFECTED_SOURCE, UNAFFECTED_SOURCE);
+    verify(approvalRepository).findSources(List.of(approvalIdentifier));
+    verifyNoMoreInteractions(approvalRepository);
   }
 
   @Test
