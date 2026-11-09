@@ -972,7 +972,7 @@ Resources:
   NvaProcessBatchJobFunction:
     Type: AWS::Serverless::Function
     Properties:
-      Description: Hands batch job work items to the queue that owns the work
+      Description: Batch job processor
       CodeUri: approvals
       Handler: no.sikt.nva.approvals.batch.ProcessBatchJobHandler::handleRequest
       Timeout: 60
