@@ -160,7 +160,7 @@ Resources:
   CreateSnapshotQueue:
     Type: AWS::SQS::Queue
     Properties:
-      VisibilityTimeout: 1800
+      VisibilityTimeout: 360
       RedrivePolicy:
         deadLetterTargetArn: !GetAtt CreateSnapshotDlq.Arn
         maxReceiveCount: 3
@@ -201,7 +201,7 @@ Resources:
   IndexApprovalQueue:
     Type: AWS::SQS::Queue
     Properties:
-      VisibilityTimeout: 1800
+      VisibilityTimeout: 360
       RedrivePolicy:
         deadLetterTargetArn: !GetAtt IndexApprovalDlq.Arn
         maxReceiveCount: 3
@@ -912,7 +912,7 @@ Resources:
     Properties:
       CodeUri: approvals
       Handler: no.sikt.nva.approvals.snapshot.CreateSnapshotHandler::handleRequest
-      Timeout: 300
+      Timeout: 30
       Policies:
         - !Ref DynamoDbTableAccessPolicy
         - !Ref ReadApprovalCredentialsManagedPolicy
@@ -975,7 +975,7 @@ Resources:
       Description: Batch job processor
       CodeUri: approvals
       Handler: no.sikt.nva.approvals.batch.ProcessBatchJobHandler::handleRequest
-      Timeout: 300
+      Timeout: 60
       Policies:
         - !Ref DynamoDbTableAccessPolicy
         - Statement:
@@ -1008,7 +1008,7 @@ Resources:
     Properties:
       CodeUri: approvals
       Handler: no.sikt.nva.approvals.index.IndexApprovalHandler::handleRequest
-      Timeout: 300
+      Timeout: 30
       Policies:
         - !Ref DynamoDbTableAccessPolicy
         - !Ref ReadSearchInfrastructureCredentialsManagedPolicy
