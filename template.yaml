@@ -977,13 +977,16 @@ Resources:
       Handler: no.sikt.nva.approvals.batch.ProcessBatchJobHandler::handleRequest
       Timeout: 60
       Policies:
+        - !Ref DynamoDbTableAccessPolicy
         - Statement:
             - Effect: Allow
               Action: sqs:SendMessage
               Resource: !GetAtt IndexApprovalQueue.Arn
       Environment:
         Variables:
+          TABLE: !Ref ApprovalsTable
           INDEX_APPROVAL_QUEUE_URL: !Ref IndexApprovalQueue
+          BACKFILL_CLIENT_ID: ""
       Events:
         BatchJobWorkItem:
           Type: SQS

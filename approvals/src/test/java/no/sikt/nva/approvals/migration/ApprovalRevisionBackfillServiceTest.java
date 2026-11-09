@@ -5,18 +5,18 @@ import static no.sikt.nva.approvals.domain.ApprovalActivity.CREATE_APPROVAL;
 import static no.sikt.nva.approvals.utils.TestUtils.randomApproval;
 import static no.sikt.nva.approvals.utils.TestUtils.randomHandle;
 import static no.sikt.nva.approvals.utils.TestUtils.randomRevision;
-import static no.sikt.nva.approvals.utils.UriConstants.CURRENT_ONTOLOGY_VERSION;
-import static no.sikt.nva.approvals.utils.UriConstants.ONTOLOGY_PATH;
-import static no.sikt.nva.approvals.utils.UriConstants.context;
-import static no.sikt.nva.approvals.utils.UriConstants.version;
+import static no.unit.nva.testutils.RandomDataGenerator.randomString;
 import static no.unit.nva.testutils.RandomDataGenerator.randomUri;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.isNull;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
+import java.net.URI;
 import java.util.List;
 import java.util.Optional;
 import no.sikt.nva.approvals.domain.Agent;
@@ -31,8 +31,7 @@ import org.mockito.ArgumentCaptor;
 
 class ApprovalRevisionBackfillServiceTest {
 
-  private static final String CLIENT_ID = "the-only-production-client";
-  private static final String API_HOST = "api.example.org";
+  private static final String CLIENT_ID = randomString();
 
   private ApprovalRepository approvalRepository;
   private ChangeRepository changeRepository;
@@ -43,8 +42,7 @@ class ApprovalRevisionBackfillServiceTest {
     approvalRepository = mock(ApprovalRepository.class);
     changeRepository = mock(ChangeRepository.class);
     backfillService =
-        new ApprovalRevisionBackfillService(
-            approvalRepository, changeRepository, CLIENT_ID, API_HOST);
+        new ApprovalRevisionBackfillService(approvalRepository, changeRepository, CLIENT_ID);
   }
 
   @Test
@@ -68,14 +66,14 @@ class ApprovalRevisionBackfillServiceTest {
   }
 
   @Test
-  void shouldCreateRevisionWithCurrentContextAndOntologyVersion() {
+  void shouldCreateRevisionWithSameContextAndOntologyAsOtherRevisions() {
     var approval = approvalWithoutRevision();
 
     backfillService.backfillRevisions(List.of(approval.identifier()));
 
     var revision = capturedRevision();
-    assertEquals(context(API_HOST), revision.context());
-    assertEquals(version(API_HOST, ONTOLOGY_PATH, CURRENT_ONTOLOGY_VERSION), revision.ontology());
+    assertEquals(URI.create("approval/context"), revision.context());
+    assertEquals(URI.create("approval/ontology"), revision.ontology());
   }
 
   @Test
@@ -96,19 +94,23 @@ class ApprovalRevisionBackfillServiceTest {
     when(approvalRepository.findByApprovalIdentifier(approvalIdentifier))
         .thenReturn(Optional.empty());
 
-    assertEquals(0, backfillService.backfillRevisions(List.of(approvalIdentifier)));
+    backfillService.backfillRevisions(List.of(approvalIdentifier));
+
+    verify(approvalRepository).findByApprovalIdentifier(approvalIdentifier);
+    verifyNoMoreInteractions(approvalRepository);
   }
 
   @Test
-  void shouldReturnNumberBackfilledApprovals() {
+  void shouldBackfillRemainingApprovalsWhenOneOfThemFails() {
+    var failing = approvalWithoutRevision();
     var backfilled = approvalWithoutRevision();
-    var skipped = randomApproval(randomHandle());
-    when(changeRepository.findLatestRevision(skipped.identifier()))
-        .thenReturn(Optional.of(randomRevision(skipped, CREATE_APPROVAL)));
+    doThrow(new IllegalStateException())
+        .when(changeRepository)
+        .findLatestRevision(failing.identifier());
 
-    assertEquals(
-        1,
-        backfillService.backfillRevisions(List.of(backfilled.identifier(), skipped.identifier())));
+    backfillService.backfillRevisions(List.of(failing.identifier(), backfilled.identifier()));
+
+    assertEquals(backfilled.identifier(), capturedRevision().approval().identifier());
   }
 
   private Approval approvalWithoutRevision() {
