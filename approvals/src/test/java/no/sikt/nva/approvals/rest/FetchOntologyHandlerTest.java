@@ -63,6 +63,15 @@ class FetchOntologyHandlerTest {
   }
 
   @Test
+  void shouldDefineTermsUsedBySearchResults() throws IOException {
+    handler.handleRequest(createRequest(), outputStream, CONTEXT);
+
+    var response = GatewayResponse.fromOutputStream(outputStream, String.class);
+    assertThat(response.getBody(), containsString(":ApprovalSearchResults a rdfs:Class"));
+    assertThat(response.getBody(), containsString("rdfs:subClassOf hydra:Collection"));
+  }
+
+  @Test
   void shouldPointToVersionedOntologyInContentLocationWhenVersionIsNotGiven() throws IOException {
     handler.handleRequest(createRequest(), outputStream, CONTEXT);
 
