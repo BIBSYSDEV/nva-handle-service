@@ -5,8 +5,8 @@ A batch job walks the whole approvals table and loads one work item per matching
 It runs on two functions:
 
 - **StartBatchJobHandler** scans the table and puts work items on `BatchJobWorkQueue`
-- **ProcessBatchJobHandler** turns one work item into a message on the queue that owns the work,
-  for reindexing that is `IndexApprovalQueue`
+- **ProcessBatchJobHandler** carries out one work item, either by putting a message on the
+  queue that owns the work (`IndexApprovalQueue` for reindexing) or by doing the work itself
 
 Both read from a queue, and the scanner writes to the queue it reads from, so a job is
 started with a single message and continues on its own.
@@ -45,7 +45,8 @@ and `maxItems` is unlimited when left out.
 ### Adding a job type
 
 1. Add a constant to `BatchJobType` and say which entity type it scans.
-2. Route the constant to the queue that owns its work in `ProcessBatchJobService`.
+2. Handle the constant in `ProcessBatchJobService`, either by routing it to the queue that
+   owns its work or by doing the work there.
 3. Document it here.
 
 ### How to trigger

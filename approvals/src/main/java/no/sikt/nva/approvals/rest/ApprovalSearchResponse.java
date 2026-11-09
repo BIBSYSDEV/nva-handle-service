@@ -33,7 +33,16 @@ public record ApprovalSearchResponse(
     URI id,
     int totalHits,
     List<ApprovalHit> hits,
-    URI next) {
+    URI next,
+    IriTemplate search) {
+
+  private static final String SEARCH_TEMPLATE = "%s{?query,size,cursor}";
+  private static final String FREE_TEXT_QUERY_PROPERTY = "hydra:freetextQuery";
+  private static final String LIMIT_PROPERTY = "hydra:limit";
+  private static final String PAGE_REFERENCE_PROPERTY = "hydra:pageReference";
+  private static final String QUERY_DESCRIPTION = "Free text matched against the approvals";
+  private static final String SIZE_DESCRIPTION = "Maximum number of approvals on one page";
+  private static final String CURSOR_DESCRIPTION = "Paging token, taken from next";
 
   public static ApprovalSearchResponse from(
       SearchResponse<IndexDocument> response, Query query, String apiHost) {
@@ -42,7 +51,19 @@ public record ApprovalSearchResponse(
         pageId(query, apiHost),
         totalHits(response),
         toHits(response, apiHost),
-        nextPage(response, query, apiHost));
+        nextPage(response, query, apiHost),
+        searchTemplate(apiHost));
+  }
+
+  private static IriTemplate searchTemplate(String apiHost) {
+    return new IriTemplate(
+        SEARCH_TEMPLATE.formatted(searchId(apiHost)),
+        List.of(
+            new IriTemplateMapping(
+                SEARCH_QUERY_PARAMETER, FREE_TEXT_QUERY_PROPERTY, QUERY_DESCRIPTION),
+            new IriTemplateMapping(SIZE_QUERY_PARAMETER, LIMIT_PROPERTY, SIZE_DESCRIPTION),
+            new IriTemplateMapping(
+                CURSOR_QUERY_PARAMETER, PAGE_REFERENCE_PROPERTY, CURSOR_DESCRIPTION)));
   }
 
   private static URI pageId(Query query, String apiHost) {

@@ -975,7 +975,7 @@ Resources:
       Description: Batch job processor
       CodeUri: approvals
       Handler: no.sikt.nva.approvals.batch.ProcessBatchJobHandler::handleRequest
-      Timeout: 60
+      Timeout: 300
       Policies:
         - !Ref DynamoDbTableAccessPolicy
         - Statement:

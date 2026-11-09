@@ -13,6 +13,7 @@ import java.util.List;
 import java.util.UUID;
 import no.sikt.nva.approvals.index.IndexApprovalMessage;
 import no.sikt.nva.approvals.migration.ApprovalRevisionBackfillService;
+import no.sikt.nva.approvals.migration.ApprovalSourceMigrationService;
 import no.sikt.nva.approvals.persistence.ItemKey;
 import no.sikt.nva.approvals.queue.QueueClient;
 import no.unit.nva.stubs.FakeContext;
@@ -32,6 +33,7 @@ class ProcessBatchJobHandlerTest {
             new ProcessBatchJobService(
                 queueClient,
                 mock(ApprovalRevisionBackfillService.class),
+                mock(ApprovalSourceMigrationService.class),
                 INDEX_APPROVAL_QUEUE_URL));
 
     handler.handleRequest(batch(first, second), new FakeContext());
