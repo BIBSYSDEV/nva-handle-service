@@ -160,7 +160,7 @@ Resources:
   CreateSnapshotQueue:
     Type: AWS::SQS::Queue
     Properties:
-      VisibilityTimeout: 180
+      VisibilityTimeout: 360
       RedrivePolicy:
         deadLetterTargetArn: !GetAtt CreateSnapshotDlq.Arn
         maxReceiveCount: 3
@@ -173,7 +173,7 @@ Resources:
   BatchJobQueue:
     Type: AWS::SQS::Queue
     Properties:
-      VisibilityTimeout: 180
+      VisibilityTimeout: 360
       MessageRetentionPeriod: 1209600
       RedrivePolicy:
         deadLetterTargetArn: !GetAtt BatchJobDlq.Arn
@@ -187,7 +187,7 @@ Resources:
   BatchJobWorkQueue:
     Type: AWS::SQS::Queue
     Properties:
-      VisibilityTimeout: 180
+      VisibilityTimeout: 360
       MessageRetentionPeriod: 1209600
       RedrivePolicy:
         deadLetterTargetArn: !GetAtt BatchJobWorkDlq.Arn
@@ -201,7 +201,7 @@ Resources:
   IndexApprovalQueue:
     Type: AWS::SQS::Queue
     Properties:
-      VisibilityTimeout: 180
+      VisibilityTimeout: 360
       RedrivePolicy:
         deadLetterTargetArn: !GetAtt IndexApprovalDlq.Arn
         maxReceiveCount: 3
