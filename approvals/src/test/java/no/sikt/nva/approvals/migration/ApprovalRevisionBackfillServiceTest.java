@@ -59,7 +59,7 @@ class ApprovalRevisionBackfillServiceTest {
   }
 
   @Test
-  void shouldCreatedRevisionWithProvidedClient() {
+  void shouldCreateRevisionWithProvidedClient() {
     var approval = approvalWithoutRevision();
 
     backfillService.backfillRevisions(List.of(approval.identifier()));
