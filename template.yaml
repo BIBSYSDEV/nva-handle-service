@@ -1024,7 +1024,9 @@ Resources:
           Type: SQS
           Properties:
             Queue: !GetAtt IndexApprovalQueue.Arn
-            BatchSize: 1
+            BatchSize: 10
+            FunctionResponseTypes:
+              - ReportBatchItemFailures
 
   NvaInitApprovalsIndexFunctionLogGroup:
     Type: AWS::Logs::LogGroup
