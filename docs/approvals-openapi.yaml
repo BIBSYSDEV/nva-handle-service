@@ -416,8 +416,8 @@ paths:
       operationId: getApprovalById
       summary: Get Approval
       description: >-
-        Get approval by ID. JSON responses carry an `ETag`; send it back in `If-None-Match` to get
-        `304 Not Modified` when the approval is unchanged. HTML responses carry no `ETag`.
+        Get approval by ID. Responses carry an `ETag`; send it back in `If-None-Match` to get
+        `304 Not Modified` when the approval is unchanged.
       parameters:
         - name: approvalId
           in: path
@@ -450,9 +450,6 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Approval"
-            text/html:
-              schema:
-                type: string
         "400":
           description: >-
             Bad Request - `approvalId` is not a UUID, or query parameters are combined with the
