@@ -9,8 +9,11 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
+import java.io.IOException;
+import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -24,70 +27,132 @@ import org.junit.jupiter.api.Test;
 
 class IndexingServiceTest {
 
-  private static final String APPROVAL_NOT_FOUND_MESSAGE = "Approval not found";
-
   private IndexingService indexingService;
-  private ChangeRepository repository;
+  private ChangeRepository changeRepository;
   private ApprovalRepository approvalRepository;
-  private IndexDocumentGenerator indexDocumentGenerator;
+  private IndexDocumentGenerator generator;
   private SearchClient searchClient;
 
   @BeforeEach
   void setUp() {
-    repository = mock(ChangeRepository.class);
+    changeRepository = mock(ChangeRepository.class);
     approvalRepository = mock(ApprovalRepository.class);
-    indexDocumentGenerator = mock(IndexDocumentGenerator.class);
+    generator = mock(IndexDocumentGenerator.class);
     searchClient = mock(SearchClient.class);
     indexingService =
-        new IndexingService(repository, approvalRepository, indexDocumentGenerator, searchClient);
+        new IndexingService(changeRepository, approvalRepository, generator, searchClient);
   }
 
   @Test
-  void shouldIndexGeneratedDocument()
-      throws IndexDocumentGeneratorException, IndexingServiceException {
+  void shouldIndexEveryGeneratedDocumentInOneRequest() throws IndexDocumentGeneratorException {
+    var first = indexDocument();
+    var second = indexDocument();
+
+    indexingService.index(List.of(first.identifier(), second.identifier()));
+
+    verify(searchClient).index(List.of(first, second));
+  }
+
+  @Test
+  void shouldReportApprovalWithoutSnapshotAsFailed() {
     var approvalIdentifier = randomUUID();
-    var snapshot = randomSourceSnapshot();
-    var approval = givenApprovalWithSnapshot(approvalIdentifier, snapshot);
-    var indexDocument = indexDocument(approvalIdentifier);
-    when(indexDocumentGenerator.generate(snapshot, approval)).thenReturn(indexDocument);
 
-    indexingService.index(approvalIdentifier);
-
-    verify(searchClient).index(indexDocument);
+    assertEquals(
+        Set.of(approvalIdentifier), indexingService.index(List.of(approvalIdentifier)).failed());
   }
 
   @Test
-  void shouldThrowIndexingServiceExceptionWhenRepositoryReturnsNoSnapshot() {
-    assertThrows(IndexingServiceException.class, () -> indexingService.index(randomUUID()));
-  }
-
-  @Test
-  void shouldThrowIndexingServiceExceptionWhenRepositoryReturnsNoApproval() {
+  void shouldReportApprovalThatDoesNotExistAsFailed() {
     var approvalIdentifier = randomUUID();
-    when(repository.findLatestSnapshot(approvalIdentifier))
-        .thenReturn(Optional.of(randomSourceSnapshot()));
+    when(changeRepository.findLatestSnapshot(approvalIdentifier))
+        .thenReturn(Optional.of(randomSourceSnapshot(approvalIdentifier)));
 
-    var exception =
-        assertThrows(
-            IndexingServiceException.class, () -> indexingService.index(approvalIdentifier));
-    assertEquals(APPROVAL_NOT_FOUND_MESSAGE, exception.getMessage());
+    assertEquals(
+        Set.of(approvalIdentifier), indexingService.index(List.of(approvalIdentifier)).failed());
   }
 
   @Test
-  void shouldThrowIndexingServiceExceptionWhenIndexingDocumentGeneratorThrowsException()
+  void shouldReportApprovalAsFailedWhenDocumentGenerationFails()
       throws IndexDocumentGeneratorException {
     var approvalIdentifier = randomUUID();
-    var snapshot = randomSourceSnapshot();
-    var approval = givenApprovalWithSnapshot(approvalIdentifier, snapshot);
-    when(indexDocumentGenerator.generate(snapshot, approval))
-        .thenThrow(IndexDocumentGeneratorException.class);
+    var snapshot = randomSourceSnapshot(approvalIdentifier);
+    var approval = givenStoredApproval(approvalIdentifier, snapshot);
+    when(generator.generate(snapshot, approval)).thenThrow(IndexDocumentGeneratorException.class);
 
-    assertThrows(IndexingServiceException.class, () -> indexingService.index(approvalIdentifier));
+    assertEquals(
+        Set.of(approvalIdentifier), indexingService.index(List.of(approvalIdentifier)).failed());
   }
 
-  private Approval givenApprovalWithSnapshot(UUID approvalIdentifier, SourceSnapshot snapshot) {
+  @Test
+  void shouldIndexRemainingApprovalsWhenOneOfThemHasNoSnapshot()
+      throws IndexDocumentGeneratorException {
+    var failingIdentifier = randomUUID();
+    var document = indexDocument();
+
+    indexingService.index(List.of(failingIdentifier, document.identifier()));
+
+    verify(searchClient).index(List.of(document));
+  }
+
+  @Test
+  void shouldNotSendRequestWhenNoDocumentCouldBeGenerated() {
+    indexingService.index(List.of(randomUUID()));
+
+    verifyNoInteractions(searchClient);
+  }
+
+  @Test
+  void shouldReportDocumentRejectedByIndexAsFailed() throws IndexDocumentGeneratorException {
+    var document = indexDocument();
+    when(searchClient.index(List.of(document))).thenReturn(Set.of());
+
+    assertEquals(
+        Set.of(document.identifier()),
+        indexingService.index(List.of(document.identifier())).failed());
+  }
+
+  @Test
+  void shouldReportGeneratedAndAcceptedDocumentAsIndexed() throws IndexDocumentGeneratorException {
+    var document = indexDocument();
+    when(searchClient.index(List.of(document))).thenReturn(Set.of(document.identifier()));
+
+    assertEquals(
+        Set.of(document.identifier()),
+        indexingService.index(List.of(document.identifier())).indexed());
+  }
+
+  @Test
+  void shouldReportApprovalAsFailedWhenRepositoryThrows() {
+    var approvalIdentifier = randomUUID();
+    when(changeRepository.findLatestSnapshot(approvalIdentifier))
+        .thenThrow(new IllegalStateException());
+
+    assertEquals(
+        Set.of(approvalIdentifier), indexingService.index(List.of(approvalIdentifier)).failed());
+  }
+
+  @Test
+  void shouldPropagateExceptionWhenIndexRequestFails() throws IndexDocumentGeneratorException {
+    var document = indexDocument();
+    when(searchClient.index(List.of(document)))
+        .thenThrow(new SearchClientException(randomString(), new IOException()));
+
+    assertThrows(
+        SearchClientException.class, () -> indexingService.index(List.of(document.identifier())));
+  }
+
+  private IndexDocument indexDocument() throws IndexDocumentGeneratorException {
+    var approvalIdentifier = randomUUID();
+    var snapshot = randomSourceSnapshot(approvalIdentifier);
+    var approval = givenStoredApproval(approvalIdentifier, snapshot);
+    var document = indexDocument(approvalIdentifier);
+    when(generator.generate(snapshot, approval)).thenReturn(document);
+    return document;
+  }
+
+  private Approval givenStoredApproval(UUID approvalIdentifier, SourceSnapshot snapshot) {
     var approval = randomApproval(approvalIdentifier, randomUri());
-    when(repository.findLatestSnapshot(approvalIdentifier)).thenReturn(Optional.of(snapshot));
+    when(changeRepository.findLatestSnapshot(approvalIdentifier)).thenReturn(Optional.of(snapshot));
     when(approvalRepository.findByApprovalIdentifier(approvalIdentifier))
         .thenReturn(Optional.of(approval));
     return approval;

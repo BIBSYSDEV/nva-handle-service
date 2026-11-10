@@ -45,6 +45,7 @@ class SearchClientTest {
   private static final String INDEX_NAME = "approvals";
   private static final String UNREACHABLE_HOST = "http://localhost:1";
   private static final String UNMAPPED_FIELD = "unmappedField";
+  private static final String IDENTIFIER_FIELD = "identifier";
   private static final IndexDocument SEARCHABLE_DOCUMENT = randomIndexDocument();
   private static final IndexDocument SECOND_DOCUMENT = randomIndexDocument();
   private static final OpenSearchContainer<?> CONTAINER =
@@ -64,8 +65,7 @@ class SearchClientTest {
     searchableIndexName = randomIndexName();
     var client = searchClient(searchableIndexName);
     client.createIndex();
-    client.index(SEARCHABLE_DOCUMENT);
-    client.index(SECOND_DOCUMENT);
+    client.index(List.of(SEARCHABLE_DOCUMENT, SECOND_DOCUMENT));
     refresh(searchableIndexName);
   }
 
@@ -76,12 +76,31 @@ class SearchClientTest {
   }
 
   @Test
-  void shouldIndexDocument() throws IOException {
+  void shouldIndexEveryDocumentInBatch() throws IOException {
+    var first = randomIndexDocument();
+    var second = randomIndexDocument();
+
+    searchClient.index(List.of(first, second));
+
+    assertEquals(
+        List.of(first, second),
+        List.of(getIndexedDocument(first.identifier()), getIndexedDocument(second.identifier())));
+  }
+
+  @Test
+  void shouldNotReturnIdentifierOfDocumentRejectedByIndex() throws IOException {
+    var indexName = randomIndexName();
+    createIndexRejectingIdentifier(indexName);
     var document = randomIndexDocument();
 
-    searchClient.index(document);
+    assertEquals(Set.of(), searchClient(indexName).index(List.of(document)));
+  }
 
-    assertEquals(document, getIndexedDocument(document.identifier()));
+  @Test
+  void shouldReturnIdentifiersOfIndexedDocuments() {
+    var document = randomIndexDocument();
+
+    assertEquals(Set.of(document.identifier()), searchClient.index(List.of(document)));
   }
 
   @Test
@@ -89,7 +108,7 @@ class SearchClientTest {
     try (var unreachableTransport = transport(UNREACHABLE_HOST)) {
       var client = new SearchClient(new OpenSearchClient(unreachableTransport), INDEX_NAME);
 
-      assertThrows(SearchClientException.class, () -> client.index(randomIndexDocument()));
+      assertThrows(SearchClientException.class, () -> client.index(List.of(randomIndexDocument())));
     }
   }
 
@@ -285,6 +304,20 @@ class SearchClientTest {
       throws IOException {
     openSearchClient.index(
         request -> request.index(indexName).id(randomUUID().toString()).document(document));
+  }
+
+  private static void createIndexRejectingIdentifier(String indexName) throws IOException {
+    openSearchClient
+        .indices()
+        .create(
+            request ->
+                request
+                    .index(indexName)
+                    .mappings(
+                        mappings ->
+                            mappings.properties(
+                                IDENTIFIER_FIELD,
+                                property -> property.integer(integer -> integer))));
   }
 
   private static boolean indexExists(String indexName) throws IOException {
