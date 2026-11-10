@@ -22,10 +22,10 @@ import org.slf4j.LoggerFactory;
 
 public class IndexingService {
 
-  private static final String MISSING_SNAPSHOT_MESSAGE = "Approval is missing snapshot";
-  private static final String APPROVAL_NOT_FOUND_MESSAGE = "Approval not found";
+  private static final String MISSING_SNAPSHOT_MESSAGE = "Approval is missing snapshot ";
+  private static final String APPROVAL_NOT_FOUND_MESSAGE = "Approval not found ";
   private static final String INDEXING_FAILED_MESSAGE =
-      "Could not create an index document of approval {}, reporting it as failed";
+      "Could not create an index document of approval {}";
   private static final Logger LOGGER = LoggerFactory.getLogger(IndexingService.class);
 
   private final ChangeRepository changeRepository;
@@ -95,12 +95,14 @@ public class IndexingService {
       throws IndexingServiceException {
     return changeRepository
         .findLatestSnapshot(approvalIdentifier)
-        .orElseThrow(() -> new IndexingServiceException(MISSING_SNAPSHOT_MESSAGE));
+        .orElseThrow(
+            () -> new IndexingServiceException(MISSING_SNAPSHOT_MESSAGE + approvalIdentifier));
   }
 
   private Approval fetchApproval(UUID approvalIdentifier) throws IndexingServiceException {
     return approvalRepository
         .findByApprovalIdentifier(approvalIdentifier)
-        .orElseThrow(() -> new IndexingServiceException(APPROVAL_NOT_FOUND_MESSAGE));
+        .orElseThrow(
+            () -> new IndexingServiceException(APPROVAL_NOT_FOUND_MESSAGE + approvalIdentifier));
   }
 }

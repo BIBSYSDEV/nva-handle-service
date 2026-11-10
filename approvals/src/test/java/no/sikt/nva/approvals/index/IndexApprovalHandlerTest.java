@@ -97,6 +97,18 @@ class IndexApprovalHandlerTest {
     assertEquals(List.of(unreadableMessage.getMessageId()), failedMessageIds(response));
   }
 
+  @Test
+  void shouldReportBatchItemFailureForMessageWithoutApprovalIdentifier() {
+    var message = new SQSMessage();
+    message.setMessageId(randomString());
+    message.setBody(new IndexApprovalMessage(null).toJsonString());
+    when(indexingService.index(List.of())).thenReturn(new IndexingResult(Set.of(), Set.of()));
+
+    var response = handler.handleRequest(sqsEvent(message), CONTEXT);
+
+    assertEquals(List.of(message.getMessageId()), failedMessageIds(response));
+  }
+
   private static List<String> failedMessageIds(SQSBatchResponse response) {
     return response.getBatchItemFailures().stream()
         .map(BatchItemFailure::getItemIdentifier)

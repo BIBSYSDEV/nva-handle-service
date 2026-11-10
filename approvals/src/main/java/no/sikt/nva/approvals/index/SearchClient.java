@@ -180,13 +180,15 @@ public class SearchClient {
   private BulkRequest createBulkRequest(Collection<IndexDocument> documents) {
     return new BulkRequest.Builder()
         .index(indexName)
-        .operations(documents.stream().map(SearchClient::toBulkOperation).toList())
+        .operations(documents.stream().map(this::toBulkOperation).toList())
         .build();
   }
 
-  private static BulkOperation toBulkOperation(IndexDocument document) {
+  private BulkOperation toBulkOperation(IndexDocument document) {
     return new BulkOperation.Builder()
-        .index(operation -> operation.id(document.identifier().toString()).document(document))
+        .index(
+            operation ->
+                operation.index(indexName).id(document.identifier().toString()).document(document))
         .build();
   }
 }

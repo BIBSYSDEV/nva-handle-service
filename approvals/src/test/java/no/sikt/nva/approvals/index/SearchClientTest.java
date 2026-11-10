@@ -88,7 +88,7 @@ class SearchClientTest {
   }
 
   @Test
-  void shouldNotReturnIdentifierOfDocumentRejectedByIndex() throws IOException {
+  void shouldNotReturnIdentifierOfNonIndexedDocument() throws IOException {
     var indexName = randomIndexName();
     createIndexRejectingIdentifier(indexName);
     var document = randomIndexDocument();

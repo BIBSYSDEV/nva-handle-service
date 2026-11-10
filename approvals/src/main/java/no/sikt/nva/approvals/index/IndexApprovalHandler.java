@@ -1,5 +1,7 @@
 package no.sikt.nva.approvals.index;
 
+import static java.util.function.Predicate.not;
+import static java.util.stream.Collectors.toSet;
 import static nva.commons.core.attempt.Try.attempt;
 
 import com.amazonaws.services.lambda.runtime.Context;
@@ -19,8 +21,10 @@ import org.slf4j.LoggerFactory;
 
 public class IndexApprovalHandler implements RequestHandler<SQSEvent, SQSBatchResponse> {
 
-  private static final String UNREADABLE_MESSAGE = "Could not read message {}";
-  private static final String BATCH_SUMMARY_MESSAGE = "Indexed {} approvals, {} failed";
+  private static final String INVALID_MESSAGE = "Could not read message {}, reporting it as failed";
+  private static final String MISSING_IDENTIFIER_MESSAGE = "Message has no approval identifier";
+  private static final String BATCH_SUMMARY_MESSAGE =
+      "Indexed {} approvals, {} failed to index, {} messages reported as failed";
   private static final Logger LOGGER = LoggerFactory.getLogger(IndexApprovalHandler.class);
 
   private final IndexingService indexingService;
@@ -36,38 +40,61 @@ public class IndexApprovalHandler implements RequestHandler<SQSEvent, SQSBatchRe
 
   @Override
   public SQSBatchResponse handleRequest(SQSEvent event, Context context) {
-    var result = indexingService.index(approvalIdentifiers(event));
-    LOGGER.info(BATCH_SUMMARY_MESSAGE, result.indexed().size(), result.failed().size());
-    return SQSBatchResponse.builder()
-        .withBatchItemFailures(batchItemFailures(event, result.indexed()))
-        .build();
+    var queuedApprovals = queuedApprovals(event);
+    var result = indexingService.index(approvalIdentifiers(queuedApprovals));
+    var batchItemFailures = batchItemFailures(event, queuedApprovals, result.indexed());
+    LOGGER.info(
+        BATCH_SUMMARY_MESSAGE,
+        result.indexed().size(),
+        result.failed().size(),
+        batchItemFailures.size());
+    return SQSBatchResponse.builder().withBatchItemFailures(batchItemFailures).build();
   }
 
-  private static List<UUID> approvalIdentifiers(SQSEvent event) {
+  private static List<QueuedApproval> queuedApprovals(SQSEvent event) {
     return event.getRecords().stream()
-        .map(IndexApprovalHandler::approvalIdentifier)
+        .map(IndexApprovalHandler::queuedApproval)
         .flatMap(Optional::stream)
-        .distinct()
         .toList();
   }
 
+  private static Optional<QueuedApproval> queuedApproval(SQSMessage message) {
+    return attempt(() -> readApprovalIdentifier(message))
+        .toOptional(failure -> logInvalidMessage(message, failure.getException()))
+        .map(approvalIdentifier -> new QueuedApproval(message.getMessageId(), approvalIdentifier));
+  }
+
+  private static UUID readApprovalIdentifier(SQSMessage message) {
+    return Optional.ofNullable(
+            IndexApprovalMessage.fromString(message.getBody()).approvalIdentifier())
+        .orElseThrow(() -> new IllegalArgumentException(MISSING_IDENTIFIER_MESSAGE));
+  }
+
+  private static void logInvalidMessage(SQSMessage message, Exception exception) {
+    LOGGER.error(INVALID_MESSAGE, message.getMessageId(), exception);
+  }
+
+  private static List<UUID> approvalIdentifiers(List<QueuedApproval> queuedApprovals) {
+    return queuedApprovals.stream().map(QueuedApproval::approvalIdentifier).distinct().toList();
+  }
+
   private static List<BatchItemFailure> batchItemFailures(
-      SQSEvent event, Set<UUID> indexedIdentifiers) {
+      SQSEvent event, List<QueuedApproval> queuedApprovals, Set<UUID> indexedIdentifiers) {
+    var indexedMessageIds = indexedMessageIds(queuedApprovals, indexedIdentifiers);
     return event.getRecords().stream()
-        .filter(message -> isNotIndexed(message, indexedIdentifiers))
         .map(SQSMessage::getMessageId)
+        .filter(not(indexedMessageIds::contains))
         .map(messageId -> BatchItemFailure.builder().withItemIdentifier(messageId).build())
         .toList();
   }
 
-  private static boolean isNotIndexed(SQSMessage message, Set<UUID> indexedIdentifiers) {
-    return approvalIdentifier(message)
-        .map(identifier -> !indexedIdentifiers.contains(identifier))
-        .orElse(true);
+  private static Set<String> indexedMessageIds(
+      List<QueuedApproval> queuedApprovals, Set<UUID> indexedIdentifiers) {
+    return queuedApprovals.stream()
+        .filter(queued -> indexedIdentifiers.contains(queued.approvalIdentifier()))
+        .map(QueuedApproval::messageId)
+        .collect(toSet());
   }
 
-  private static Optional<UUID> approvalIdentifier(SQSMessage message) {
-    return attempt(() -> IndexApprovalMessage.fromString(message.getBody()).approvalIdentifier())
-        .toOptional(_ -> LOGGER.error(UNREADABLE_MESSAGE, message.getMessageId()));
-  }
+  private record QueuedApproval(String messageId, UUID approvalIdentifier) {}
 }
