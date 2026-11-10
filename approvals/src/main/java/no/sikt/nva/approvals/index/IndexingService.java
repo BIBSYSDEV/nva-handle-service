@@ -1,5 +1,6 @@
 package no.sikt.nva.approvals.index;
 
+import java.util.List;
 import java.util.UUID;
 import no.sikt.nva.approvals.domain.Approval;
 import no.sikt.nva.approvals.domain.SourceSnapshot;
@@ -14,6 +15,7 @@ public class IndexingService {
 
   private static final String MISSING_SNAPSHOT_MESSAGE = "Approval is missing snapshot";
   private static final String APPROVAL_NOT_FOUND_MESSAGE = "Approval not found";
+  private static final String INDEXING_REJECTED_MESSAGE = "Index rejected the approval document";
   private final ChangeRepository changeRepository;
   private final ApprovalRepository approvalRepository;
   private final IndexDocumentGenerator generator;
@@ -42,7 +44,10 @@ public class IndexingService {
   public void index(UUID approvalIdentifier) throws IndexingServiceException {
     var snapshot = fetchLatestSnapshot(approvalIdentifier);
     var approval = fetchApproval(approvalIdentifier);
-    searchClient.index(generateIndexDocument(snapshot, approval));
+    var document = generateIndexDocument(snapshot, approval);
+    if (!searchClient.index(List.of(document)).contains(approvalIdentifier)) {
+      throw new IndexingServiceException(INDEXING_REJECTED_MESSAGE);
+    }
   }
 
   private IndexDocument generateIndexDocument(SourceSnapshot snapshot, Approval approval)
