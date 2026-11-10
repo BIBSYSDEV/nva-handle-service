@@ -96,7 +96,6 @@ class DynamoDbApprovalRepositoryTest {
   private static final String CLIENT_IDENTIFIER_FIELD = "clientIdentifier";
   private static final String CREATED_DATE_FIELD = "createdDate";
   private static final String CHANGE_KEY = "Change:%s";
-  private static final String APPROVAL_KEY_PREFIX = "Approval:";
   private static final String EVENT_KEY = "Event:%s";
   private static final String CLOUD_EVENT_IDENTIFIER_FIELD = "cloudEventIdentifier";
   private static final String APPROVAL_REVISION_TYPE = "ApprovalRevision";
@@ -230,27 +229,14 @@ class DynamoDbApprovalRepositoryTest {
   }
 
   @Test
-  void shouldFallBackToStronglyConsistentReadWhenLatestRevisionIsNotYetVisible() {
+  void shouldReadApprovalWithStronglyConsistentReads() {
     var approval = saveApproval(randomApproval(randomUUID(), randomUri()));
     var laggingRepository =
-        new DynamoDbApprovalRepository(
-            clientHidingFromEventualReads(ApprovalRevisionDao.CHANGE_KEY_PREFIX), ENVIRONMENT);
+        new DynamoDbApprovalRepository(clientHidingFromEventualReads(), ENVIRONMENT);
 
     var foundApproval = laggingRepository.findByApprovalIdentifier(approval.identifier());
 
     assertEquals(approval, foundApproval.orElseThrow());
-  }
-
-  @Test
-  void shouldReadCurrentApprovalWithStronglyConsistentRead() {
-    var approval = saveApproval(randomApproval(randomUUID(), randomUri()));
-    var laggingRepository =
-        new DynamoDbApprovalRepository(
-            clientHidingFromEventualReads(APPROVAL_KEY_PREFIX), ENVIRONMENT);
-
-    var currentApproval = laggingRepository.findCurrentApproval(approval.identifier());
-
-    assertEquals(approval, currentApproval.orElseThrow());
   }
 
   @Test
@@ -1063,19 +1049,14 @@ class DynamoDbApprovalRepositoryTest {
     dynamoDbLocal.client().putItem(PutItemRequest.builder().tableName(TABLE).item(item).build());
   }
 
-  private DynamoDbClient clientHidingFromEventualReads(String sortKeyPrefix) {
+  private DynamoDbClient clientHidingFromEventualReads() {
     var client = spy(dynamoDbLocal.client());
     doReturn(GetItemResponse.builder().build())
         .when(client)
         .getItem(
             ArgumentMatchers.<GetItemRequest>argThat(
-                request -> isEventuallyConsistentRead(request, sortKeyPrefix)));
+                request -> !Boolean.TRUE.equals(request.consistentRead())));
     return client;
-  }
-
-  private static boolean isEventuallyConsistentRead(GetItemRequest request, String sortKeyPrefix) {
-    return !Boolean.TRUE.equals(request.consistentRead())
-        && request.key().get(SK0).s().startsWith(sortKeyPrefix);
   }
 
   private void deleteIdentifierItem(NamedIdentifier namedIdentifier) {

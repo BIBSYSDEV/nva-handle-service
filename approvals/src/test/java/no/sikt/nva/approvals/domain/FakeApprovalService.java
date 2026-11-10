@@ -11,7 +11,6 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
-import java.util.function.Predicate;
 import no.unit.nva.identifiers.SortableIdentifier;
 
 public class FakeApprovalService implements ApprovalService {
@@ -57,11 +56,11 @@ public class FakeApprovalService implements ApprovalService {
       Collection<NamedIdentifier> identifiers,
       URI source,
       Agent agent,
-      Predicate<SortableIdentifier> versionPrecondition)
+      SortableIdentifier expectedVersion)
       throws ApprovalServiceException, ApprovalConflictException {
     throwExceptionIfConfigured();
     getApprovalByIdentifier(approvalId)
-        .filter(approval -> !versionPrecondition.test(approval.version()))
+        .filter(approval -> !expectedVersion.equals(approval.version()))
         .ifPresent(
             approval -> {
               throw new ApprovalModifiedException(approvalId);

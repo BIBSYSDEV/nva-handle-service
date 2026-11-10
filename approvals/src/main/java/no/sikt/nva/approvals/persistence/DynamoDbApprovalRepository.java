@@ -56,8 +56,6 @@ public class DynamoDbApprovalRepository implements ApprovalRepository {
   private static final int FIRST_CHUNK = 0;
   private static final String APPROVAL_NOT_FOUND_MESSAGE = "Approval not found: %s";
   private static final String REVISION_NOT_FOUND_MESSAGE = "Approval revision not found: %s";
-  private static final boolean EVENTUALLY_CONSISTENT = false;
-  private static final boolean STRONGLY_CONSISTENT = true;
   private final DynamoDbTable<EnhancedDocument> table;
   private final DynamoDbEnhancedClient client;
 
@@ -112,7 +110,7 @@ public class DynamoDbApprovalRepository implements ApprovalRepository {
   public void updateApproval(ApprovalRevision revision, SortableIdentifier expectedRevision) {
     var approval = revision.approval();
     var storedApprovalDao =
-        fetchApprovalItem(approval.identifier(), EVENTUALLY_CONSISTENT)
+        fetchApprovalItem(approval.identifier())
             .orElseThrow(
                 () ->
                     new IllegalStateException(
@@ -135,12 +133,8 @@ public class DynamoDbApprovalRepository implements ApprovalRepository {
 
   @Override
   public Optional<Approval> findByApprovalIdentifier(UUID approvalIdentifier) {
-    return findApproval(approvalIdentifier, EVENTUALLY_CONSISTENT);
-  }
-
-  @Override
-  public Optional<Approval> findCurrentApproval(UUID approvalIdentifier) {
-    return findApproval(approvalIdentifier, STRONGLY_CONSISTENT);
+    return fetchApprovalItem(approvalIdentifier)
+        .map(approvalDao -> fetchRevision(approvalDao, approvalDao.latestRevision()).approval());
   }
 
   @Override
@@ -368,14 +362,9 @@ public class DynamoDbApprovalRepository implements ApprovalRepository {
     }
   }
 
-  private Optional<Approval> findApproval(UUID approvalIdentifier, boolean consistentRead) {
-    return fetchApprovalItem(approvalIdentifier, consistentRead)
-        .map(approvalDao -> fetchRevision(approvalDao, approvalDao.latestRevision()).approval());
-  }
-
-  private Optional<ApprovalDao> fetchApprovalItem(UUID approvalIdentifier, boolean consistentRead) {
+  private Optional<ApprovalDao> fetchApprovalItem(UUID approvalIdentifier) {
     var databaseIdentifier = toDatabaseIdentifier(approvalIdentifier);
-    return fetchItem(databaseIdentifier, databaseIdentifier, consistentRead)
+    return fetchItem(databaseIdentifier, databaseIdentifier)
         .map(EnhancedDocument::toJson)
         .map(this::toDatabaseEntity)
         .map(ApprovalDao.class::cast);
@@ -385,8 +374,7 @@ public class DynamoDbApprovalRepository implements ApprovalRepository {
       ApprovalDao approvalDao, SortableIdentifier revisionIdentifier) {
     var partitionKey = approvalDao.getDatabaseIdentifier();
     var sortKey = ApprovalRevisionDao.CHANGE_KEY_PREFIX + revisionIdentifier;
-    return fetchItem(partitionKey, sortKey, EVENTUALLY_CONSISTENT)
-        .or(() -> fetchItem(partitionKey, sortKey, STRONGLY_CONSISTENT))
+    return fetchItem(partitionKey, sortKey)
         .map(EnhancedDocument::toJson)
         .map(ChangeDao::fromJson)
         .map(ApprovalRevisionDao.class::cast)
@@ -397,10 +385,9 @@ public class DynamoDbApprovalRepository implements ApprovalRepository {
                     REVISION_NOT_FOUND_MESSAGE.formatted(revisionIdentifier)));
   }
 
-  private Optional<EnhancedDocument> fetchItem(
-      String partitionKey, String sortKey, boolean consistentRead) {
+  private Optional<EnhancedDocument> fetchItem(String partitionKey, String sortKey) {
     var key = Key.builder().partitionValue(partitionKey).sortValue(sortKey).build();
-    var request = GetItemEnhancedRequest.builder().key(key).consistentRead(consistentRead).build();
+    var request = GetItemEnhancedRequest.builder().key(key).consistentRead(true).build();
     return Optional.ofNullable(table.getItem(request));
   }
 

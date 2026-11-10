@@ -504,8 +504,8 @@ paths:
           in: header
           required: true
           description: >-
-            `ETag` of the approval version the update is based on, or `*` for any version.
-            Compared strongly, so weak tags (`W/"..."`) never match.
+            The single `ETag` of the approval version the update is based on. Lists, `*` and
+            weak tags (`W/"..."`) never match.
           schema:
             type: string
             example: '"0196a2f1e2c4-3f9b1c2d-..."'

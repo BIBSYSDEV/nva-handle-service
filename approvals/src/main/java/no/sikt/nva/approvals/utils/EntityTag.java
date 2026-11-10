@@ -1,7 +1,9 @@
 package no.sikt.nva.approvals.utils;
 
+import static nva.commons.core.attempt.Try.attempt;
+
 import java.util.Arrays;
-import java.util.stream.Stream;
+import java.util.Optional;
 import no.unit.nva.identifiers.SortableIdentifier;
 import nva.commons.apigateway.RequestInfo;
 import org.apache.hc.core5.http.HttpHeaders;
@@ -11,6 +13,8 @@ public final class EntityTag {
   private static final String WEAK_PREFIX = "W/";
   private static final String ANY = "*";
   private static final String LIST_SEPARATOR = ",";
+  private static final String QUOTE = "\"";
+  private static final String EMPTY = "";
 
   private EntityTag() {}
 
@@ -25,21 +29,20 @@ public final class EntityTag {
         .orElse(false);
   }
 
-  public static boolean isMatchedByIfMatch(String headerValue, String entityTag) {
-    return isAny(headerValue) || candidates(headerValue).anyMatch(entityTag::equals);
+  public static Optional<SortableIdentifier> toVersion(String entityTag) {
+    return attempt(() -> new SortableIdentifier(entityTag.strip().replace(QUOTE, EMPTY)))
+        .toOptional();
   }
 
   private static boolean containsMatch(String headerValue, String entityTag) {
-    return isAny(headerValue)
-        || candidates(headerValue).map(EntityTag::withoutWeakPrefix).anyMatch(entityTag::equals);
+    return ANY.equals(headerValue.strip()) || containsEntityTag(headerValue, entityTag);
   }
 
-  private static boolean isAny(String headerValue) {
-    return ANY.equals(headerValue.strip());
-  }
-
-  private static Stream<String> candidates(String headerValue) {
-    return Arrays.stream(headerValue.split(LIST_SEPARATOR)).map(String::strip);
+  private static boolean containsEntityTag(String headerValue, String entityTag) {
+    return Arrays.stream(headerValue.split(LIST_SEPARATOR))
+        .map(String::strip)
+        .map(EntityTag::withoutWeakPrefix)
+        .anyMatch(entityTag::equals);
   }
 
   private static String withoutWeakPrefix(String candidate) {

@@ -62,7 +62,9 @@ class UpdateApprovalHandlerTest {
 
   private static final Context context = new FakeContext();
   private static final int HTTP_PRECONDITION_REQUIRED = 428;
-  private static final String ANY_ENTITY_TAG = "*";
+  private static final String ENTITY_TAG_TEMPLATE = "\"%s\"";
+  private static final String ANY_ENTITY_TAG =
+      ENTITY_TAG_TEMPLATE.formatted(SortableIdentifier.next());
   private static final String APPROVAL_ID_PATH_PARAMETER = "approvalId";
   private static final String APPROVAL_PATH = "approval";
   private static final String API_HOST = "API_HOST";
@@ -348,13 +350,11 @@ class UpdateApprovalHandlerTest {
     assertEquals(HTTP_PRECONDITION_REQUIRED, response.getStatusCode());
   }
 
-  @ParameterizedTest
-  @ValueSource(strings = {"\"%s\"", "\"other\", \"%s\"", "*"})
-  void shouldAcceptUpdateWhenIfMatchMatchesCurrentVersion(String ifMatchTemplate)
-      throws IOException {
+  @Test
+  void shouldAcceptUpdateWhenIfMatchMatchesCurrentVersion() throws IOException {
     var version = SortableIdentifier.next();
     handler = handlerWithStoredApproval(version);
-    var ifMatch = ifMatchTemplate.formatted(version);
+    var ifMatch = ENTITY_TAG_TEMPLATE.formatted(version);
 
     handler.handleRequest(
         createRequestWithIfMatch(randomUpdateApprovalRequest(), approvalId, ifMatch),
@@ -366,9 +366,16 @@ class UpdateApprovalHandlerTest {
   }
 
   @ParameterizedTest
-  @ValueSource(strings = {"W/\"%s\"", "\"other\""})
-  void shouldReturnPreconditionFailedWhenIfMatchDoesNotStronglyMatchCurrentVersion(
-      String ifMatchTemplate) throws IOException {
+  @ValueSource(
+      strings = {
+        "W/\"%s\"",
+        "\"other\"",
+        "\"other\", \"%s\"",
+        "*",
+        "\"0196a2f1e2c4-00000000-0000-0000-0000-000000000000\""
+      })
+  void shouldReturnPreconditionFailedWhenIfMatchIsNotTheCurrentEntityTag(String ifMatchTemplate)
+      throws IOException {
     var version = SortableIdentifier.next();
     handler = handlerWithStoredApproval(version);
     var ifMatch = ifMatchTemplate.formatted(version);

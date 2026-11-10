@@ -4,7 +4,6 @@ import java.net.URI;
 import java.util.Collection;
 import java.util.Optional;
 import java.util.UUID;
-import java.util.function.Predicate;
 import no.unit.nva.identifiers.SortableIdentifier;
 
 public interface ApprovalService {
@@ -19,6 +18,6 @@ public interface ApprovalService {
       Collection<NamedIdentifier> namedIdentifiers,
       URI source,
       Agent agent,
-      Predicate<SortableIdentifier> versionPrecondition)
+      SortableIdentifier expectedVersion)
       throws ApprovalServiceException, ApprovalConflictException;
 }

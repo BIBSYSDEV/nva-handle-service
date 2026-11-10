@@ -15,7 +15,6 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.UUID;
-import java.util.function.Predicate;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import no.sikt.nva.approvals.persistence.ApprovalRepository;
@@ -84,15 +83,14 @@ public class ApprovalServiceImpl implements ApprovalService {
       Collection<NamedIdentifier> namedIdentifiers,
       URI source,
       Agent agent,
-      Predicate<SortableIdentifier> versionPrecondition)
+      SortableIdentifier expectedVersion)
       throws ApprovalServiceException, ApprovalConflictException {
     var identifiers = approvalRepository.findIdentifiers(namedIdentifiers);
     var approval =
-        approvalRepository
-            .findCurrentApproval(approvalId)
+        getApprovalByIdentifier(approvalId)
             .orElseThrow(() -> new ApprovalNotFoundException(approvalId));
     approval.ensureOwnedBy(agent.customerIdentifier());
-    ensureVersionMatches(approval, versionPrecondition);
+    ensureVersionMatches(approval, expectedVersion);
     ensureIdentifiersAreNotUsedByOtherApproval(identifiers, approval);
     if (isUnchanged(approval, namedIdentifiers, source)) {
       return approval;
@@ -102,14 +100,13 @@ public class ApprovalServiceImpl implements ApprovalService {
         new Approval(
             approvalId, namedIdentifiers, source, approval.handle(), approval.customerIdentifier());
     var revision = createRevision(updatedApproval, agent, UPDATE_APPROVAL);
-    approvalRepository.updateApproval(revision, approval.version());
+    approvalRepository.updateApproval(revision, expectedVersion);
 
     return revision.approval();
   }
 
-  private static void ensureVersionMatches(
-      Approval approval, Predicate<SortableIdentifier> versionPrecondition) {
-    if (!versionPrecondition.test(approval.version())) {
+  private static void ensureVersionMatches(Approval approval, SortableIdentifier expectedVersion) {
+    if (!expectedVersion.equals(approval.version())) {
       throw new ApprovalModifiedException(approval.identifier());
     }
   }
