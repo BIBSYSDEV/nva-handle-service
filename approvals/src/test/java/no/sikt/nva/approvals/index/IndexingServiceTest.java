@@ -11,6 +11,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -50,10 +51,11 @@ class IndexingServiceTest {
     var approval = givenApprovalWithSnapshot(approvalIdentifier, snapshot);
     var indexDocument = indexDocument(approvalIdentifier);
     when(indexDocumentGenerator.generate(snapshot, approval)).thenReturn(indexDocument);
+    when(searchClient.index(List.of(indexDocument))).thenReturn(Set.of(approvalIdentifier));
 
     indexingService.index(approvalIdentifier);
 
-    verify(searchClient).index(indexDocument);
+    verify(searchClient).index(List.of(indexDocument));
   }
 
   @Test
