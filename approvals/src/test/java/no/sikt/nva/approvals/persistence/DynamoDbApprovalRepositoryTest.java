@@ -229,10 +229,10 @@ class DynamoDbApprovalRepositoryTest {
   }
 
   @Test
-  void shouldFallBackToStronglyConsistentReadWhenLatestRevisionIsNotYetVisible() {
+  void shouldReadApprovalWithStronglyConsistentReads() {
     var approval = saveApproval(randomApproval(randomUUID(), randomUri()));
     var laggingRepository =
-        new DynamoDbApprovalRepository(clientHidingRevisionsFromEventualReads(), ENVIRONMENT);
+        new DynamoDbApprovalRepository(clientHidingFromEventualReads(), ENVIRONMENT);
 
     var foundApproval = laggingRepository.findByApprovalIdentifier(approval.identifier());
 
@@ -1049,19 +1049,14 @@ class DynamoDbApprovalRepositoryTest {
     dynamoDbLocal.client().putItem(PutItemRequest.builder().tableName(TABLE).item(item).build());
   }
 
-  private DynamoDbClient clientHidingRevisionsFromEventualReads() {
+  private DynamoDbClient clientHidingFromEventualReads() {
     var client = spy(dynamoDbLocal.client());
     doReturn(GetItemResponse.builder().build())
         .when(client)
         .getItem(
             ArgumentMatchers.<GetItemRequest>argThat(
-                DynamoDbApprovalRepositoryTest::isEventuallyConsistentRevisionRead));
+                request -> !Boolean.TRUE.equals(request.consistentRead())));
     return client;
-  }
-
-  private static boolean isEventuallyConsistentRevisionRead(GetItemRequest request) {
-    return !Boolean.TRUE.equals(request.consistentRead())
-        && request.key().get(SK0).s().startsWith(ApprovalRevisionDao.CHANGE_KEY_PREFIX);
   }
 
   private void deleteIdentifierItem(NamedIdentifier namedIdentifier) {

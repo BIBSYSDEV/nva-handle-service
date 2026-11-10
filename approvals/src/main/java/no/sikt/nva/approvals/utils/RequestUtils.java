@@ -25,6 +25,7 @@ import nva.commons.apigateway.exceptions.BadRequestException;
 import nva.commons.apigateway.exceptions.ConflictException;
 import nva.commons.apigateway.exceptions.ForbiddenException;
 import nva.commons.apigateway.exceptions.NotFoundException;
+import nva.commons.apigateway.exceptions.PreconditionFailedException;
 import nva.commons.apigateway.exceptions.UnauthorizedException;
 import nva.commons.core.Environment;
 import nva.commons.core.StringUtils;
@@ -114,7 +115,7 @@ public final class RequestUtils {
           new ConflictException(
               conflictException.getMessage(), conflictException.getConflictingKeys());
       case ApprovalModifiedException modifiedException ->
-          new ConflictException(modifiedException.getMessage());
+          new PreconditionFailedException(modifiedException.getMessage());
       case IllegalArgumentException illegalArgumentException ->
           new BadRequestException(illegalArgumentException.getMessage());
       case BadRequestException badRequestException -> badRequestException;
