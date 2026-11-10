@@ -37,6 +37,8 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.spy;
 
 import java.net.URI;
 import java.nio.file.Path;
@@ -67,8 +69,13 @@ import nva.commons.core.ioutils.IoUtils;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentMatchers;
 import software.amazon.awssdk.enhanced.dynamodb.document.EnhancedDocument;
+import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
+import software.amazon.awssdk.services.dynamodb.model.DeleteItemRequest;
+import software.amazon.awssdk.services.dynamodb.model.GetItemRequest;
+import software.amazon.awssdk.services.dynamodb.model.GetItemResponse;
 import software.amazon.awssdk.services.dynamodb.model.PutItemRequest;
 import software.amazon.awssdk.services.dynamodb.model.ScanRequest;
 import software.amazon.awssdk.services.dynamodb.model.TransactionCanceledException;
@@ -183,25 +190,63 @@ class DynamoDbApprovalRepositoryTest {
   }
 
   @Test
-  void shouldThrowExceptionWhenHandleNotFoundInDatabase() {
+  void shouldReturnEmptyOptionalWhenOnlyIdentifierAndHandleItemsExist() {
     var approvalId = randomUUID();
-    var identifierValue = randomString();
+    insertIdentifierOnly(approvalId, randomString());
+    insertHandleOnly(approvalId, randomHandle().value().toString());
 
-    insertIdentifierOnly(approvalId, identifierValue);
-
-    assertThrows(
-        IllegalStateException.class, () -> approvalRepository.findByApprovalIdentifier(approvalId));
+    assertTrue(approvalRepository.findByApprovalIdentifier(approvalId).isEmpty());
   }
 
   @Test
-  void shouldThrowExceptionWhenApprovalNotFoundInDatabase() {
-    var approvalId = randomUUID();
-    var identifierValue = randomString();
-    insertIdentifierOnly(approvalId, identifierValue);
-    insertHandleOnly(approvalId, randomHandle().value().toString());
+  void shouldReadApprovalFromLatestRevisionWhenIdentifierItemsAreNotYetIndexed() {
+    var approval = saveApproval(randomApproval(randomUUID(), randomUri()));
+    deleteIdentifierItem(approval.namedIdentifiers().iterator().next());
+
+    var foundApproval = approvalRepository.findByApprovalIdentifier(approval.identifier());
+
+    assertEquals(approval, foundApproval.orElseThrow());
+  }
+
+  @Test
+  void shouldThrowExceptionWhenHandleItemIsMissingForHandle() {
+    var approval = saveApproval(randomApproval(randomUUID(), randomUri()));
+    var handleKey = HandleDao.toDatabaseIdentifier(approval.handle());
+    deleteItem(handleKey, handleKey);
 
     assertThrows(
-        IllegalStateException.class, () -> approvalRepository.findByApprovalIdentifier(approvalId));
+        IllegalStateException.class, () -> approvalRepository.findByHandle(approval.handle()));
+  }
+
+  @Test
+  void shouldThrowExceptionWhenApprovalItemIsMissingForHandle() {
+    var approval = saveApproval(randomApproval(randomUUID(), randomUri()));
+    var approvalKey = ApprovalDao.toDatabaseIdentifier(approval.identifier());
+    deleteItem(approvalKey, approvalKey);
+
+    assertThrows(
+        IllegalStateException.class, () -> approvalRepository.findByHandle(approval.handle()));
+  }
+
+  @Test
+  void shouldFallBackToStronglyConsistentReadWhenLatestRevisionIsNotYetVisible() {
+    var approval = saveApproval(randomApproval(randomUUID(), randomUri()));
+    var laggingRepository =
+        new DynamoDbApprovalRepository(clientHidingRevisionsFromEventualReads(), ENVIRONMENT);
+
+    var foundApproval = laggingRepository.findByApprovalIdentifier(approval.identifier());
+
+    assertEquals(approval, foundApproval.orElseThrow());
+  }
+
+  @Test
+  void shouldThrowExceptionWhenLatestRevisionItemIsMissing() {
+    var approval = saveApproval(randomApproval(randomUUID(), randomUri()));
+    deleteRevisionItem(approval);
+
+    assertThrows(
+        IllegalStateException.class,
+        () -> approvalRepository.findByApprovalIdentifier(approval.identifier()));
   }
 
   @Test
@@ -278,6 +323,19 @@ class DynamoDbApprovalRepositoryTest {
 
     assertTrue(
         persistedApproval.orElseThrow().namedIdentifiers().containsAll(remainingIdentifiers));
+  }
+
+  @Test
+  void shouldReleaseReplacedIdentifierWhenIdentifierIndexIsStale() {
+    var firstIdentifier = randomIdentifier();
+    var secondIdentifier = randomIdentifier();
+    var approval = saveApproval(randomApproval(List.of(firstIdentifier), randomUUID()));
+    updateApproval(withIdentifiers(approval, List.of(secondIdentifier)));
+    hideIdentifierFromApprovalIndex(secondIdentifier);
+
+    updateApproval(withIdentifiers(approval, List.of(randomIdentifier())));
+
+    assertTrue(approvalRepository.findIdentifiers(List.of(secondIdentifier)).isEmpty());
   }
 
   @Test
@@ -459,18 +517,6 @@ class DynamoDbApprovalRepositoryTest {
     var revision = randomRevision(withIdentifiers(approval, randomIdentifiers(2)), UPDATE_APPROVAL);
 
     approvalRepository.updateApproval(revision, latestRevision(approval.identifier()));
-
-    assertEquals(revision.identifier(), latestRevision(approval.identifier()));
-  }
-
-  @Test
-  void shouldUpdateApprovalStoredWithoutLatestRevision() {
-    var approval = randomApproval(randomHandle());
-    saveApproval(approval);
-    removeLatestRevisionFromApprovalEntity(approval.identifier());
-    var revision = randomRevision(withIdentifiers(approval, randomIdentifiers(2)), UPDATE_APPROVAL);
-
-    approvalRepository.updateApproval(revision, null);
 
     assertEquals(revision.identifier(), latestRevision(approval.identifier()));
   }
@@ -881,20 +927,19 @@ class DynamoDbApprovalRepositoryTest {
         .orElse(null);
   }
 
-  private void removeLatestRevisionFromApprovalEntity(UUID approvalIdentifier) {
-    var databaseIdentifier = ApprovalDao.toDatabaseIdentifier(approvalIdentifier);
+  private void hideIdentifierFromApprovalIndex(NamedIdentifier namedIdentifier) {
+    var databaseIdentifier = IdentifierDao.toDatabaseIdentifier(namedIdentifier);
     var key =
         Map.of(
             PK0, AttributeValue.builder().s(databaseIdentifier).build(),
             SK0, AttributeValue.builder().s(databaseIdentifier).build());
-
     dynamoDbLocal
         .client()
         .updateItem(
             UpdateItemRequest.builder()
                 .tableName(TABLE)
                 .key(key)
-                .updateExpression("REMOVE %s".formatted(ApprovalDao.LATEST_REVISION))
+                .updateExpression("REMOVE %s, %s".formatted(PK1, SK1))
                 .build());
   }
 
@@ -1002,6 +1047,42 @@ class DynamoDbApprovalRepositoryTest {
     item.put("value", AttributeValue.builder().s(identifierValue).build());
 
     dynamoDbLocal.client().putItem(PutItemRequest.builder().tableName(TABLE).item(item).build());
+  }
+
+  private DynamoDbClient clientHidingRevisionsFromEventualReads() {
+    var client = spy(dynamoDbLocal.client());
+    doReturn(GetItemResponse.builder().build())
+        .when(client)
+        .getItem(
+            ArgumentMatchers.<GetItemRequest>argThat(
+                DynamoDbApprovalRepositoryTest::isEventuallyConsistentRevisionRead));
+    return client;
+  }
+
+  private static boolean isEventuallyConsistentRevisionRead(GetItemRequest request) {
+    return !Boolean.TRUE.equals(request.consistentRead())
+        && request.key().get(SK0).s().startsWith(ApprovalRevisionDao.CHANGE_KEY_PREFIX);
+  }
+
+  private void deleteIdentifierItem(NamedIdentifier namedIdentifier) {
+    var databaseIdentifier = IdentifierDao.toDatabaseIdentifier(namedIdentifier);
+    deleteItem(databaseIdentifier, databaseIdentifier);
+  }
+
+  private void deleteRevisionItem(Approval approval) {
+    deleteItem(
+        ApprovalDao.toDatabaseIdentifier(approval.identifier()),
+        CHANGE_KEY.formatted(approval.version()));
+  }
+
+  private void deleteItem(String partitionKey, String sortKey) {
+    var key =
+        Map.of(
+            PK0, AttributeValue.builder().s(partitionKey).build(),
+            SK0, AttributeValue.builder().s(sortKey).build());
+    dynamoDbLocal
+        .client()
+        .deleteItem(DeleteItemRequest.builder().tableName(TABLE).key(key).build());
   }
 
   private void insertHandleOnly(UUID approvalId, String handleUri) {
