@@ -3,14 +3,15 @@ package no.sikt.nva.approvals.index;
 import static java.util.UUID.randomUUID;
 import static no.unit.nva.testutils.RandomDataGenerator.randomString;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import com.amazonaws.services.lambda.runtime.events.SQSEvent;
 import com.amazonaws.services.lambda.runtime.events.SQSEvent.SQSMessage;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import java.util.List;
+import java.util.Set;
 import no.unit.nva.commons.json.JsonUtils;
 import no.unit.nva.stubs.FakeContext;
 import org.junit.jupiter.api.BeforeEach;
@@ -29,22 +30,22 @@ class IndexApprovalHandlerTest {
   }
 
   @Test
-  void shouldIndexApproval() throws JsonProcessingException, IndexingServiceException {
+  void shouldIndexApproval() throws JsonProcessingException {
     var approvalIdentifier = randomUUID();
+    when(indexingService.index(List.of(approvalIdentifier)))
+        .thenReturn(new IndexingResult(Set.of(approvalIdentifier), Set.of()));
 
     handler.handleRequest(
         sqsEvent(new IndexApprovalMessage(approvalIdentifier)), new FakeContext());
 
-    verify(indexingService).index(approvalIdentifier);
+    verify(indexingService).index(List.of(approvalIdentifier));
   }
 
   @Test
-  void shouldThrowRuntimeExceptionWhenIndexingServiceThrowsException()
-      throws IndexingServiceException {
+  void shouldThrowRuntimeExceptionWhenApprovalCouldNotBeIndexed() {
     var approvalIdentifier = randomUUID();
-    doThrow(new IndexingServiceException(randomString()))
-        .when(indexingService)
-        .index(approvalIdentifier);
+    when(indexingService.index(List.of(approvalIdentifier)))
+        .thenReturn(new IndexingResult(Set.of(), Set.of(approvalIdentifier)));
 
     assertThrows(
         RuntimeException.class,
