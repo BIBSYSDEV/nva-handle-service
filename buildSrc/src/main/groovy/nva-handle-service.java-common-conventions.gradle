@@ -6,7 +6,6 @@ nva {
     errorprone {
         allErrorsAsWarnings = false
     }
-    generatedCode = ['gg/jte/generated/**']
     java {
         languageVersion = 25
     }

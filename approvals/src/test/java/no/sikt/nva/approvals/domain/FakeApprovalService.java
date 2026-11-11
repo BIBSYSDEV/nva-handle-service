@@ -11,6 +11,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import no.unit.nva.identifiers.SortableIdentifier;
 
 public class FakeApprovalService implements ApprovalService {
 
@@ -51,9 +52,19 @@ public class FakeApprovalService implements ApprovalService {
 
   @Override
   public Approval updateApproval(
-      UUID approvalId, Collection<NamedIdentifier> identifiers, URI source, Agent agent)
+      UUID approvalId,
+      Collection<NamedIdentifier> identifiers,
+      URI source,
+      Agent agent,
+      SortableIdentifier expectedVersion)
       throws ApprovalServiceException, ApprovalConflictException {
     throwExceptionIfConfigured();
+    getApprovalByIdentifier(approvalId)
+        .filter(approval -> !expectedVersion.equals(approval.version()))
+        .ifPresent(
+            approval -> {
+              throw new ApprovalModifiedException(approvalId);
+            });
     return randomApproval(approvalId, randomUri());
   }
 

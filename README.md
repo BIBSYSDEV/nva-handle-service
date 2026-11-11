@@ -22,7 +22,7 @@ flowchart TB
     subgraph clients["Clients"]
         NVA["NVA backend<br/>(scope: backend)"]
         THIRD["Third party<br/>(scope: third-party/approval-upsert)"]
-        BROWSER["Browser<br/>(GET, text/html)"]
+        BROWSER["Browser<br/>(GET, application/json)"]
     end
 
     subgraph aws["AWS – nva-handle-service"]

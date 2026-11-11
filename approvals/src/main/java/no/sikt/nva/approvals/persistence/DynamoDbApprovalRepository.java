@@ -1,7 +1,6 @@
 package no.sikt.nva.approvals.persistence;
 
 import static no.sikt.nva.approvals.persistence.ApprovalDao.toDatabaseIdentifier;
-import static no.sikt.nva.approvals.persistence.DynamoDbConstants.GSI1;
 import static no.sikt.nva.approvals.persistence.DynamoDbConstants.GSI2;
 import static no.sikt.nva.approvals.persistence.DynamoDbConstants.PK0;
 import static no.sikt.nva.approvals.persistence.DynamoDbConstants.SK0;
@@ -38,6 +37,7 @@ import software.amazon.awssdk.enhanced.dynamodb.Expression;
 import software.amazon.awssdk.enhanced.dynamodb.Key;
 import software.amazon.awssdk.enhanced.dynamodb.document.EnhancedDocument;
 import software.amazon.awssdk.enhanced.dynamodb.model.BatchGetItemEnhancedRequest;
+import software.amazon.awssdk.enhanced.dynamodb.model.GetItemEnhancedRequest;
 import software.amazon.awssdk.enhanced.dynamodb.model.Page;
 import software.amazon.awssdk.enhanced.dynamodb.model.PutItemEnhancedRequest;
 import software.amazon.awssdk.enhanced.dynamodb.model.ReadBatch;
@@ -55,6 +55,7 @@ public class DynamoDbApprovalRepository implements ApprovalRepository {
   private static final int TRANSACT_WRITE_ITEM_LIMIT = 80;
   private static final int FIRST_CHUNK = 0;
   private static final String APPROVAL_NOT_FOUND_MESSAGE = "Approval not found: %s";
+  private static final String REVISION_NOT_FOUND_MESSAGE = "Approval revision not found: %s";
   private final DynamoDbTable<EnhancedDocument> table;
   private final DynamoDbEnhancedClient client;
 
@@ -108,12 +109,15 @@ public class DynamoDbApprovalRepository implements ApprovalRepository {
   @Override
   public void updateApproval(ApprovalRevision revision, SortableIdentifier expectedRevision) {
     var approval = revision.approval();
-    var entities = fetchEntitiesByApprovalIdentifier(toDatabaseIdentifier(approval.identifier()));
-    if (entities.isEmpty()) {
-      throw new IllegalStateException(APPROVAL_NOT_FOUND_MESSAGE.formatted(approval.identifier()));
-    }
-    var storedIdentifiers = getIdentifiers(entities);
-    var originalCreatedDate = getApproval(entities).createdDate();
+    var storedApprovalDao =
+        fetchApprovalItem(approval.identifier())
+            .orElseThrow(
+                () ->
+                    new IllegalStateException(
+                        APPROVAL_NOT_FOUND_MESSAGE.formatted(approval.identifier())));
+    var storedIdentifiers =
+        fetchRevision(storedApprovalDao, expectedRevision).approval().namedIdentifiers();
+    var originalCreatedDate = storedApprovalDao.createdDate();
     var modifiedDate = revision.createdDate();
 
     var operations = new ArrayList<Operation>();
@@ -129,8 +133,8 @@ public class DynamoDbApprovalRepository implements ApprovalRepository {
 
   @Override
   public Optional<Approval> findByApprovalIdentifier(UUID approvalIdentifier) {
-    var entities = fetchEntitiesByApprovalIdentifier(toDatabaseIdentifier(approvalIdentifier));
-    return entities.isEmpty() ? Optional.empty() : Optional.of(constructApproval(entities));
+    return fetchApprovalItem(approvalIdentifier)
+        .map(approvalDao -> fetchRevision(approvalDao, approvalDao.latestRevision()).approval());
   }
 
   @Override
@@ -358,16 +362,33 @@ public class DynamoDbApprovalRepository implements ApprovalRepository {
     }
   }
 
-  private List<DatabaseEntry> fetchEntitiesByApprovalIdentifier(String databaseIdentifier) {
-    return table
-        .index(GSI1)
-        .query(keyEqualTo(Key.builder().partitionValue(databaseIdentifier).build()))
-        .stream()
-        .map(Page::items)
-        .flatMap(List::stream)
+  private Optional<ApprovalDao> fetchApprovalItem(UUID approvalIdentifier) {
+    var databaseIdentifier = toDatabaseIdentifier(approvalIdentifier);
+    return fetchItem(databaseIdentifier, databaseIdentifier)
         .map(EnhancedDocument::toJson)
         .map(this::toDatabaseEntity)
-        .toList();
+        .map(ApprovalDao.class::cast);
+  }
+
+  private ApprovalRevision fetchRevision(
+      ApprovalDao approvalDao, SortableIdentifier revisionIdentifier) {
+    var partitionKey = approvalDao.getDatabaseIdentifier();
+    var sortKey = ApprovalRevisionDao.CHANGE_KEY_PREFIX + revisionIdentifier;
+    return fetchItem(partitionKey, sortKey)
+        .map(EnhancedDocument::toJson)
+        .map(ChangeDao::fromJson)
+        .map(ApprovalRevisionDao.class::cast)
+        .map(ApprovalRevisionDao::toChange)
+        .orElseThrow(
+            () ->
+                new IllegalStateException(
+                    REVISION_NOT_FOUND_MESSAGE.formatted(revisionIdentifier)));
+  }
+
+  private Optional<EnhancedDocument> fetchItem(String partitionKey, String sortKey) {
+    var key = Key.builder().partitionValue(partitionKey).sortValue(sortKey).build();
+    var request = GetItemEnhancedRequest.builder().key(key).consistentRead(true).build();
+    return Optional.ofNullable(table.getItem(request));
   }
 
   private DatabaseEntry toDatabaseEntity(String value) {

@@ -23,10 +23,6 @@ Parameters:
     Type: "AWS::SSM::Parameter::Value<String>"
     Description: The Api domain
     Default: /NVA/ApiDomain
-  ApplicationDomain:
-    Type: "AWS::SSM::Parameter::Value<String>"
-    Description: The Application domain
-    Default: /NVA/ApplicationDomain
   CustomDomainBasePath:
     Type: String
     Description: Base path mapping in CustomDomain
@@ -102,8 +98,8 @@ Globals:
   Api:
     OpenApiVersion: 3.0.1
     Cors:
-      AllowMethods: "'OPTIONS,POST'"
-      AllowHeaders: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+      AllowMethods: "'OPTIONS,GET,POST,PUT'"
+      AllowHeaders: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,If-Match,If-None-Match'"
       AllowOrigin: "'*'"
 
 Resources:
@@ -160,7 +156,7 @@ Resources:
   CreateSnapshotQueue:
     Type: AWS::SQS::Queue
     Properties:
-      VisibilityTimeout: 1800
+      VisibilityTimeout: 360
       RedrivePolicy:
         deadLetterTargetArn: !GetAtt CreateSnapshotDlq.Arn
         maxReceiveCount: 3
@@ -201,7 +197,7 @@ Resources:
   IndexApprovalQueue:
     Type: AWS::SQS::Queue
     Properties:
-      VisibilityTimeout: 1800
+      VisibilityTimeout: 360
       RedrivePolicy:
         deadLetterTargetArn: !GetAtt IndexApprovalDlq.Arn
         maxReceiveCount: 3
@@ -734,15 +730,12 @@ Resources:
       Handler: no.sikt.nva.approvals.rest.FetchApprovalHandler::handleRequest
       Policies:
         - !Ref DynamoDbTableAccessPolicy
-        - !Ref ReadApprovalCredentialsManagedPolicy
       Environment:
         Variables:
           HANDLE_PREFIX: !If [IsProd, !Ref HandlePrefixForApprovals, !Ref HandlePrefix]
           TABLE: !Ref ApprovalsTable
           HANDLE_BASE_URI: !Ref HandleBaseUri
           HANDLE_DATABASE_SECRET_NAME: !Ref HandleDatabaseSecretName
-          APPLICATION_DOMAIN: !Ref ApplicationDomain
-          APPROVAL_CREDENTIALS: !Ref ApprovalCredentialsName
       Events:
         GetApproval:
           Type: Api
@@ -912,7 +905,7 @@ Resources:
     Properties:
       CodeUri: approvals
       Handler: no.sikt.nva.approvals.snapshot.CreateSnapshotHandler::handleRequest
-      Timeout: 300
+      Timeout: 30
       Policies:
         - !Ref DynamoDbTableAccessPolicy
         - !Ref ReadApprovalCredentialsManagedPolicy
@@ -975,7 +968,7 @@ Resources:
       Description: Batch job processor
       CodeUri: approvals
       Handler: no.sikt.nva.approvals.batch.ProcessBatchJobHandler::handleRequest
-      Timeout: 300
+      Timeout: 60
       Policies:
         - !Ref DynamoDbTableAccessPolicy
         - Statement:
@@ -1008,7 +1001,7 @@ Resources:
     Properties:
       CodeUri: approvals
       Handler: no.sikt.nva.approvals.index.IndexApprovalHandler::handleRequest
-      Timeout: 300
+      Timeout: 30
       Policies:
         - !Ref DynamoDbTableAccessPolicy
         - !Ref ReadSearchInfrastructureCredentialsManagedPolicy

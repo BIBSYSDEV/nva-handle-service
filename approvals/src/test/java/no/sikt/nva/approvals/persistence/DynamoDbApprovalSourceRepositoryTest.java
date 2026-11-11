@@ -80,8 +80,9 @@ class DynamoDbApprovalSourceRepositoryTest {
     sourceRepository.replaceSource(approval, DOUBLED_SOURCE, REPAIRED_SOURCE);
 
     assertEquals(
-        REPAIRED_SOURCE,
-        approvalRepository.findByApprovalIdentifier(approval).orElseThrow().source());
+        approval, approvalRepository.findByApprovalIdentifier(approval).orElseThrow().identifier());
+    assertEquals(
+        Map.of(approval, REPAIRED_SOURCE), sourceRepository.findSources(List.of(approval)));
   }
 
   private UUID saveApprovalWithSource(URI source) {

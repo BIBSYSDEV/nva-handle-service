@@ -22,6 +22,7 @@ import no.sikt.nva.approvals.persistence.DynamoDbApprovalRepository;
 import no.sikt.nva.approvals.persistence.NamedIdentifierQueryObject;
 import no.sikt.nva.approvals.utils.UriConstants;
 import no.sikt.nva.handle.HandleDatabase;
+import no.unit.nva.identifiers.SortableIdentifier;
 import nva.commons.core.Environment;
 import nva.commons.core.JacocoGenerated;
 
@@ -78,13 +79,18 @@ public class ApprovalServiceImpl implements ApprovalService {
 
   @Override
   public Approval updateApproval(
-      UUID approvalId, Collection<NamedIdentifier> namedIdentifiers, URI source, Agent agent)
+      UUID approvalId,
+      Collection<NamedIdentifier> namedIdentifiers,
+      URI source,
+      Agent agent,
+      SortableIdentifier expectedVersion)
       throws ApprovalServiceException, ApprovalConflictException {
     var identifiers = approvalRepository.findIdentifiers(namedIdentifiers);
     var approval =
         getApprovalByIdentifier(approvalId)
             .orElseThrow(() -> new ApprovalNotFoundException(approvalId));
     approval.ensureOwnedBy(agent.customerIdentifier());
+    ensureVersionMatches(approval, expectedVersion);
     ensureIdentifiersAreNotUsedByOtherApproval(identifiers, approval);
     if (isUnchanged(approval, namedIdentifiers, source)) {
       return approval;
@@ -94,9 +100,15 @@ public class ApprovalServiceImpl implements ApprovalService {
         new Approval(
             approvalId, namedIdentifiers, source, approval.handle(), approval.customerIdentifier());
     var revision = createRevision(updatedApproval, agent, UPDATE_APPROVAL);
-    approvalRepository.updateApproval(revision, approval.version());
+    approvalRepository.updateApproval(revision, expectedVersion);
 
     return revision.approval();
+  }
+
+  private static void ensureVersionMatches(Approval approval, SortableIdentifier expectedVersion) {
+    if (!expectedVersion.equals(approval.version())) {
+      throw new ApprovalModifiedException(approval.identifier());
+    }
   }
 
   private static boolean hasSameIdentifiers(
