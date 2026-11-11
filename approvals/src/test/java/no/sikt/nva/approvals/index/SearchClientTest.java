@@ -283,6 +283,28 @@ class SearchClientTest {
     assertEquals(List.of(SEARCHABLE_DOCUMENT), searchFreeText(namedIdentifierName));
   }
 
+  @Test
+  void shouldFindDocumentByPersonFilter() {
+    var personIdentifier = person().id();
+
+    assertEquals(List.of(SEARCHABLE_DOCUMENT), searchByPerson(personIdentifier));
+  }
+
+  @Test
+  void shouldNotFindDocumentWhenPersonFilterMatchesNoInvestigator() {
+    assertEquals(List.of(), searchByPerson(randomString()));
+  }
+
+  private static List<IndexDocument> searchByPerson(String person) {
+    return searchClient(searchableIndexName)
+        .search(new Query(null, List.of(new PersonFilter(person)), null, Query.DEFAULT_SIZE))
+        .hits()
+        .hits()
+        .stream()
+        .map(Hit::source)
+        .toList();
+  }
+
   private static Person person() {
     return SEARCHABLE_DOCUMENT.persons().iterator().next();
   }
@@ -297,7 +319,7 @@ class SearchClientTest {
 
   private static List<Hit<IndexDocument>> searchPage(String cursor) {
     return searchClient(searchableIndexName)
-        .search(new Query(StringUtils.EMPTY_STRING, cursor, 1))
+        .search(new Query(StringUtils.EMPTY_STRING, List.of(), cursor, 1))
         .hits()
         .hits();
   }

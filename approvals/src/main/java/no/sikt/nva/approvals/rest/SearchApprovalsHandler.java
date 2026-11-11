@@ -4,9 +4,11 @@ import static java.net.HttpURLConnection.HTTP_OK;
 import static no.sikt.nva.approvals.utils.RequestUtils.getApiHost;
 import static no.sikt.nva.approvals.utils.RequestUtils.toApiGatewayException;
 import static no.sikt.nva.approvals.utils.UriConstants.CURSOR_QUERY_PARAMETER;
+import static no.sikt.nva.approvals.utils.UriConstants.PERSON_QUERY_PARAMETER;
 import static no.sikt.nva.approvals.utils.UriConstants.SEARCH_QUERY_PARAMETER;
 import static no.sikt.nva.approvals.utils.UriConstants.SIZE_QUERY_PARAMETER;
 import static no.sikt.nva.approvals.validation.RequestConstraints.INVALID_CURSOR_MESSAGE;
+import static no.sikt.nva.approvals.validation.RequestConstraints.INVALID_PERSON_MESSAGE;
 import static no.sikt.nva.approvals.validation.RequestConstraints.INVALID_SIZE_MESSAGE;
 import static no.sikt.nva.approvals.validation.RequestConstraints.MAX_SEARCH_SIZE;
 import static no.sikt.nva.approvals.validation.RequestConstraints.UNSUPPORTED_PARAMETER_MESSAGE;
@@ -15,13 +17,17 @@ import static nva.commons.apigateway.MediaTypes.APPLICATION_JSON_LD;
 import static nva.commons.core.attempt.Try.attempt;
 
 import com.amazonaws.services.lambda.runtime.Context;
+import java.net.URI;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import no.sikt.nva.approvals.index.PersonFilter;
 import no.sikt.nva.approvals.index.Query;
 import no.sikt.nva.approvals.index.SearchClient;
+import no.sikt.nva.approvals.index.SearchFilter;
+import no.sikt.nva.approvals.utils.PersonIdentifier;
 import nva.commons.apigateway.ApiGatewayHandler;
 import nva.commons.apigateway.MediaType;
 import nva.commons.apigateway.RequestInfo;
@@ -33,6 +39,7 @@ import nva.commons.core.JacocoGenerated;
 public class SearchApprovalsHandler extends ApiGatewayHandler<Void, ApprovalSearchResponse> {
 
   private static final int MINIMUM_SIZE = 0;
+  private static final String PATH_SEPARATOR = "/";
   private static final Set<String> SUPPORTED_PARAMETERS = SearchParameter.parameterNames();
 
   private final SearchClient searchClient;
@@ -67,7 +74,8 @@ public class SearchApprovalsHandler extends ApiGatewayHandler<Void, ApprovalSear
     var submitted =
         Optional.ofNullable(requestInfo.getQueryParameters()).orElseGet(Map::of).keySet();
     if (!SUPPORTED_PARAMETERS.containsAll(submitted)) {
-      throw new BadRequestException(UNSUPPORTED_PARAMETER_MESSAGE);
+      throw new BadRequestException(
+          UNSUPPORTED_PARAMETER_MESSAGE.formatted(SearchParameter.parameterNameList()));
     }
   }
 
@@ -83,8 +91,27 @@ public class SearchApprovalsHandler extends ApiGatewayHandler<Void, ApprovalSear
   private static Query toQuery(RequestInfo requestInfo) throws BadRequestException {
     return new Query(
         requestInfo.getQueryParameterOpt(SEARCH_QUERY_PARAMETER).orElse(null),
+        filters(requestInfo),
         cursor(requestInfo),
         size(requestInfo));
+  }
+
+  private static List<SearchFilter> filters(RequestInfo requestInfo) throws BadRequestException {
+    var requested = requestInfo.getQueryParameterOpt(PERSON_QUERY_PARAMETER);
+    return requested.isPresent()
+        ? List.of(new PersonFilter(personIdentifier(requested.get())))
+        : List.of();
+  }
+
+  private static String personIdentifier(String value) throws BadRequestException {
+    return attempt(() -> toPersonIdentifier(value).value())
+        .orElseThrow(_ -> badRequest(INVALID_PERSON_MESSAGE, PERSON_QUERY_PARAMETER));
+  }
+
+  private static PersonIdentifier toPersonIdentifier(String value) {
+    return value.contains(PATH_SEPARATOR)
+        ? PersonIdentifier.fromUri(URI.create(value))
+        : new PersonIdentifier(value);
   }
 
   private static String cursor(RequestInfo requestInfo) throws BadRequestException {

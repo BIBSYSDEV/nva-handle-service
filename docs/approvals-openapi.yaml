@@ -125,6 +125,11 @@ paths:
           description: Free text to search
           schema:
             type: string
+        - name: person
+          in: query
+          description: Person identifier or the person uri.
+          schema:
+            type: string
         - name: size
           in: query
           description: Maximum number of hits on one page
@@ -1188,12 +1193,16 @@ components:
         next: https://api.nva.unit.no/approval?query=diabetes&size=10&cursor=6ff5f1b5-97c1-40f0-86ad-2cbd9006eee2
         search:
           type: IriTemplate
-          template: https://api.nva.unit.no/approval{?query,size,cursor}
+          template: https://api.nva.unit.no/approval{?query,person,size,cursor}
           mapping:
             - type: IriTemplateMapping
               variable: query
               property: "hydra:freetextQuery"
               description: Free text matched against the approvals
+            - type: IriTemplateMapping
+              variable: person
+              property: "schema:contributor"
+              description: Cristin person identifier or uri of an investigator on the approved study
     IriTemplate:
       type: object
       description: The Hydra template describing how to query this collection

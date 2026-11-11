@@ -19,7 +19,9 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import no.sikt.nva.approvals.index.IndexDocument;
+import no.sikt.nva.approvals.index.PersonFilter;
 import no.sikt.nva.approvals.index.Query;
+import no.sikt.nva.approvals.index.SearchFilter;
 import no.sikt.nva.approvals.utils.UriConstants;
 import nva.commons.core.StringUtils;
 import nva.commons.core.paths.UriWrapper;
@@ -59,12 +61,24 @@ public record ApprovalSearchResponse(
   }
 
   private static Map<String, String> searchParameters(Query query) {
-    return Stream.of(
-            parameter(SEARCH_QUERY_PARAMETER, query.query()),
-            parameter(CURSOR_QUERY_PARAMETER, query.cursor()),
-            parameter(SIZE_QUERY_PARAMETER, String.valueOf(query.size())))
+    return Stream.concat(
+            Stream.of(
+                parameter(SEARCH_QUERY_PARAMETER, query.query()),
+                parameter(CURSOR_QUERY_PARAMETER, query.cursor()),
+                parameter(SIZE_QUERY_PARAMETER, String.valueOf(query.size()))),
+            query.filters().stream().map(ApprovalSearchResponse::filterParameter))
         .flatMap(Optional::stream)
         .collect(Collectors.toMap(Entry::getKey, Entry::getValue));
+  }
+
+  private static Optional<Entry<String, String>> filterParameter(SearchFilter filter) {
+    return parameter(parameterOf(filter).getParameterName(), filter.value());
+  }
+
+  private static SearchParameter parameterOf(SearchFilter filter) {
+    return switch (filter) {
+      case PersonFilter _ -> SearchParameter.PERSON;
+    };
   }
 
   private static Optional<Entry<String, String>> parameter(String name, String value) {
@@ -96,6 +110,6 @@ public record ApprovalSearchResponse(
   }
 
   private static Query nextQuery(Query query, String cursor) {
-    return new Query(query.query(), cursor, query.size());
+    return new Query(query.query(), query.filters(), cursor, query.size());
   }
 }

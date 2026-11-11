@@ -259,6 +259,7 @@ response.
 | `time` (events)      | mandatory                                                            |
 | `?handle=`           | either `handle` or both `name` and `value`, never both               |
 | `?name=` / `?value=` | same length and name rules as an identifier, both or none            |
+| `?person=`           | a cristin person identifier, or the cristin person uri holding it    |
 | `{approvalId}`       | a UUID, and not combined with query parameters                       |
 
 Names are compared ignoring case and surrounding whitespace when looking for duplicates, values are compared exactly.

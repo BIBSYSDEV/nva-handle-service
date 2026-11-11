@@ -18,6 +18,7 @@ import java.util.stream.Collectors;
 import no.sikt.nva.approvals.index.IndexDocument;
 import no.sikt.nva.approvals.index.IndexDocument.Display;
 import no.sikt.nva.approvals.index.IndexDocument.Identifier;
+import no.sikt.nva.approvals.index.PersonFilter;
 import no.sikt.nva.approvals.index.Query;
 import org.junit.jupiter.api.Test;
 import org.opensearch.client.opensearch.core.SearchResponse;
@@ -29,6 +30,7 @@ class ApprovalSearchResponseTest {
   private static final String API_HOST = randomUri().getHost();
   private static final String QUERY_PARAMETER = "query";
   private static final String SIZE_PARAMETER = "size";
+  private static final String PERSON_PARAMETER = "person";
   private static final String CURSOR_PARAMETER = "cursor";
   private static final int SINGLE_HIT = 1;
 
@@ -45,7 +47,7 @@ class ApprovalSearchResponseTest {
   void shouldReturnSearchTemplateWithSupportedParameters() {
     var results = ApprovalSearchResponse.from(response(List.of(), 0), query(), API_HOST);
 
-    assertThat(results.search().template(), endsWith("{?query,size,cursor}"));
+    assertThat(results.search().template(), endsWith("{?query,person,size,cursor}"));
   }
 
   @Test
@@ -57,13 +59,33 @@ class ApprovalSearchResponseTest {
 
   @Test
   void shouldBuildIdFromQueryAndSize() {
-    var query = new Query(randomString(), null, 5);
+    var query = new Query(randomString(), List.of(), null, 5);
 
     var results = ApprovalSearchResponse.from(response(List.of(), 0), query, API_HOST);
 
     assertEquals(
         Map.of(QUERY_PARAMETER, query.query(), SIZE_PARAMETER, "5"),
         queryParametersOf(results.id()));
+  }
+
+  @Test
+  void shouldBuildIdFromPersonFilter() {
+    var query = new Query(null, List.of(new PersonFilter("12345")), null, 5);
+
+    var results = ApprovalSearchResponse.from(response(List.of(), 0), query, API_HOST);
+
+    assertEquals(
+        Map.of(PERSON_PARAMETER, "12345", SIZE_PARAMETER, "5"), queryParametersOf(results.id()));
+  }
+
+  @Test
+  void shouldKeepPersonFilterOnNextPage() {
+    var document = indexDocument();
+    var query = new Query(null, List.of(new PersonFilter("12345")), null, SINGLE_HIT);
+
+    var results = ApprovalSearchResponse.from(response(List.of(document), 50), query, API_HOST);
+
+    assertEquals("12345", queryParametersOf(results.next()).get(PERSON_PARAMETER));
   }
 
   @Test
@@ -76,7 +98,7 @@ class ApprovalSearchResponseTest {
   @Test
   void shouldReturnNextPageUriWithCursorOfLastHitWhenPageIsFull() {
     var document = indexDocument();
-    var query = new Query(randomString(), null, SINGLE_HIT);
+    var query = new Query(randomString(), List.of(), null, SINGLE_HIT);
 
     var results = ApprovalSearchResponse.from(response(List.of(document), 50), query, API_HOST);
 
@@ -86,7 +108,7 @@ class ApprovalSearchResponseTest {
 
   @Test
   void shouldNotReturnNextWhenRequestedSizeIsZero() {
-    var query = new Query(randomString(), null, 0);
+    var query = new Query(randomString(), List.of(), null, 0);
 
     var results = ApprovalSearchResponse.from(response(List.of(), 42), query, API_HOST);
 
