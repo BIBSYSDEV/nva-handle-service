@@ -1,6 +1,6 @@
 package no.sikt.nva.approvals.index;
 
-import static java.util.stream.Collectors.partitioningBy;
+import static java.util.function.Predicate.not;
 import static java.util.stream.Collectors.toSet;
 import static nva.commons.core.attempt.Try.attempt;
 
@@ -18,6 +18,7 @@ import nva.commons.core.attempt.Failure;
 import nva.commons.core.ioutils.IoUtils;
 import org.opensearch.client.json.jackson.JacksonJsonpMapper;
 import org.opensearch.client.opensearch.OpenSearchClient;
+import org.opensearch.client.opensearch._types.ErrorCause;
 import org.opensearch.client.opensearch._types.FieldValue;
 import org.opensearch.client.opensearch._types.OpenSearchException;
 import org.opensearch.client.opensearch._types.SortOrder;
@@ -50,8 +51,6 @@ public class SearchClient {
   private static final TypeMapping MAPPINGS = readMappings();
   private static final String DOCUMENT_REJECTED_MESSAGE =
       "IndexDocument with id {} was rejected: {}";
-  private static final boolean REJECTED = true;
-  private static final boolean ACCEPTED = false;
   private static final Logger LOGGER = LoggerFactory.getLogger(SearchClient.class);
 
   private final OpenSearchClient client;
@@ -101,10 +100,9 @@ public class SearchClient {
   }
 
   private static Set<UUID> indexedIdentifiers(BulkResponse response) {
-    var itemsByRejection =
-        response.items().stream().collect(partitioningBy(SearchClient::isRejected));
-    itemsByRejection.get(REJECTED).forEach(SearchClient::logRejection);
-    return itemsByRejection.get(ACCEPTED).stream()
+    response.items().stream().filter(SearchClient::isRejected).forEach(SearchClient::logRejection);
+    return response.items().stream()
+        .filter(not(SearchClient::isRejected))
         .map(BulkResponseItem::id)
         .filter(Objects::nonNull)
         .map(UUID::fromString)
@@ -116,7 +114,11 @@ public class SearchClient {
   }
 
   private static void logRejection(BulkResponseItem item) {
-    LOGGER.error(DOCUMENT_REJECTED_MESSAGE, item.id(), item.error().toJsonString());
+    LOGGER.error(DOCUMENT_REJECTED_MESSAGE, item.id(), getErrorCause(item));
+  }
+
+  private static String getErrorCause(BulkResponseItem item) {
+    return Optional.ofNullable(item.error()).map(ErrorCause::toJsonString).orElse(null);
   }
 
   private SearchClientException indexingException(Failure<Set<UUID>> failure) {
