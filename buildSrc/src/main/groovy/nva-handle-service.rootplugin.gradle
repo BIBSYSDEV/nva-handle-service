@@ -6,7 +6,6 @@ nva {
     dependencyAnalysis {
         enforced = true
     }
-    generatedCode = ['gg/jte/generated/**']
     spectral {
         documents = ['docs/*.yaml']
         rulesetFile = file('.spectral.yaml')

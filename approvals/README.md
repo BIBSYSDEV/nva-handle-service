@@ -31,11 +31,8 @@ flowchart TB
     HDB --> PG[("PostgreSQL")]
     REPO --> DDB[("DynamoDB<br/>PK0/SK0 + GSI1 + GSI2")]
 
-    FA --> JTE["jte template<br/>approval.jte"]
-    FA --> DMP["SourceClient → customer sources"]
-
     classDef ext fill:#f6f6f6,stroke:#999,stroke-dasharray: 4 3
-    class PG,DMP ext
+    class PG ext
 ```
 
 ## Domain model
@@ -133,8 +130,8 @@ Corrections against the current implementation:
 
 - The `handle` field is never `null` in a `200` response — an `Approval` cannot exist without a handle, so the poll
   loop should terminate on `200`, not on a non-null `handle`. Until the record is readable, `GET` returns `404`.
-- Step 5 is not implemented here; `source` is stored as provenance and nothing is harvested from it. The only place the
-  `source` URI is dereferenced is the HTML representation, see [Reading approvals](#reading-approvals).
+- Step 5 is not implemented here; `source` is stored as provenance and the API serves it as such. The `source` URI is
+  dereferenced when a source change is snapshotted, not when an approval is read.
 - Step 6 is served by `nva-search-api`, not by this service.
 - The auth server in step 1 is the NVA Cognito user pool. Third parties need the scope
   `https://api.nva.unit.no/scopes/third-party/approval-upsert`; internal backends use
@@ -144,12 +141,8 @@ Corrections against the current implementation:
 
 - `FetchApprovalHandler` serves both `GET /{approvalId}` and `GET /?handle=…` / `GET /?name=…&value=…`. Mixing a path
   parameter with query parameters returns `400 Bad Request`.
-- Content negotiation: `text/html` (jte template `approval.jte`), `application/ld+json` and `application/json`. With no
-  `Accept` header the response is `application/json`.
-- The HTML view is enriched with clinical trial data when the `source` URI matches a source config in the customer's
-  identifier policy. `SourceClient` fetches the source with the authentication the source config names: none, or OAuth2
-  client credentials stored under the source config's key in the `ApprovalCredentials` secret. The JSON and JSON-LD
-  representations are not enriched.
+- Content negotiation: `application/json` and `application/ld+json`. With no `Accept` header the response is
+  `application/json`, and any other `Accept` gives `406 Not Acceptable`.
 - `GET /context` and `GET /ontology` serve the JSON-LD context and the RDF ontology (Turtle) for the API. Both are
   versioned, see [Vocabulary and versioning](#vocabulary-and-versioning).
 
@@ -237,7 +230,7 @@ items and an update at most 42, so every write fits in one transaction.
 | ------ | --------------------------------- | -------------------- | ------------------------------------------------------------ | ------- | ------------------------------------------------------------ |
 | POST   | `/`                               | `createApproval`     | `…/scopes/third-party/approval-upsert` or `…/scopes/backend` | `202`   | Create an approval with identifiers and a source URI         |
 | GET    | `/`                               | `getApprovalByQuery` | open                                                         | `200`   | Look up an approval by `?handle=` or `?name=`&`?value=`      |
-| GET    | `/{approvalId}`                   | `getApprovalById`    | open                                                         | `200`   | Fetch an approval by id (html, json or ld+json)              |
+| GET    | `/{approvalId}`                   | `getApprovalById`    | open                                                         | `200`   | Fetch an approval by id (json or ld+json)                    |
 | GET    | `/{approvalId}/change`            | `getApprovalChanges` | `…/scopes/third-party/approval-upsert` or `…/scopes/backend` | `200`   | Changes of an approval, newest first, `?cursor=` from `next` |
 | GET    | `/{approvalId}/change/{changeId}` | `getChange`          | `…/scopes/third-party/approval-upsert` or `…/scopes/backend` | `200`   | One change of an approval (json or ld+json)                  |
 | PUT    | `/{approvalId}`                   | `updateApproval`     | `…/scopes/third-party/approval-upsert` or `…/scopes/backend` | `202`   | Replace the identifiers on an approval                       |
@@ -336,8 +329,7 @@ Environment variables, set in [`template.yaml`](../template.yaml):
 | `HANDLE_PREFIX`               | create, update, fetch | Handle prefix — `20.500.14886` in production, otherwise `11250.1`             |
 | `HANDLE_BASE_URI`             | create, update, fetch | Host part of handle URIs (`https://hdl.handle.net`)                           |
 | `HANDLE_DATABASE_SECRET_NAME` | create, update, fetch | Secrets Manager secret holding Handle database credentials (`HandleDatabase`) |
-| `APPROVAL_CREDENTIALS`        | fetch                 | Secret holding the credentials of all sources, by key (`ApprovalCredentials`) |
-| `APPLICATION_DOMAIN`          | fetch                 | Domain used in the HTML view                                                  |
+| `APPROVAL_CREDENTIALS`        | snapshot              | Secret holding the credentials of all sources, by key (`ApprovalCredentials`) |
 | `COGNITO_AUTHORIZER_URLS`     | all                   | Cognito issuers                                                               |
 | `ALLOWED_ORIGIN`              | all                   | CORS                                                                          |
 
@@ -351,10 +343,9 @@ src/main/
 ├── java/no/sikt/nva/approvals/
 │   ├── domain/        # Approval, NamedIdentifier, Handle, IdentifierPolicy, ApprovalService(+Impl)
 │   ├── persistence/   # ApprovalRepository, DynamoDbApprovalRepository, DAOs, query objects
-│   ├── rest/          # Create/Update/Fetch handlers, request and response models, ApprovalHtmlModel
-│   ├── dmp/           # Clinical trial models
+│   ├── rest/          # Create/Update/Fetch handlers, request and response models
 │   ├── source/        # SourceClient, OAuth2TokenService and source credentials
 │   ├── validation/    # RequestValidator, RequestConstraints and custom constraints
 │   └── utils/         # RequestUtils, ValidationUtils
-└── resources/jte/     # HTML templates (approval.jte)
+└── resources/         # JSON-LD context, index mappings and frames, ontology
 ```
