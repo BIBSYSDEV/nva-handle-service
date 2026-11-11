@@ -1,10 +1,16 @@
 package no.sikt.nva.approvals.index;
 
+import static java.util.stream.Collectors.partitioningBy;
+import static java.util.stream.Collectors.toSet;
 import static nva.commons.core.attempt.Try.attempt;
 
 import java.io.StringReader;
 import java.nio.file.Path;
+import java.util.Collection;
+import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
+import java.util.UUID;
 import nva.commons.core.Environment;
 import nva.commons.core.JacocoGenerated;
 import nva.commons.core.StringUtils;
@@ -17,18 +23,22 @@ import org.opensearch.client.opensearch._types.OpenSearchException;
 import org.opensearch.client.opensearch._types.SortOrder;
 import org.opensearch.client.opensearch._types.mapping.TypeMapping;
 import org.opensearch.client.opensearch._types.query_dsl.Operator;
-import org.opensearch.client.opensearch.core.IndexRequest;
-import org.opensearch.client.opensearch.core.IndexResponse;
+import org.opensearch.client.opensearch.core.BulkRequest;
+import org.opensearch.client.opensearch.core.BulkResponse;
 import org.opensearch.client.opensearch.core.SearchRequest;
 import org.opensearch.client.opensearch.core.SearchResponse;
+import org.opensearch.client.opensearch.core.bulk.BulkOperation;
+import org.opensearch.client.opensearch.core.bulk.BulkResponseItem;
 import org.opensearch.client.opensearch.indices.CreateIndexRequest;
 import org.opensearch.client.opensearch.indices.CreateIndexResponse;
 import org.opensearch.client.opensearch.indices.DeleteIndexRequest;
 import org.opensearch.client.opensearch.indices.DeleteIndexResponse;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class SearchClient {
 
-  private static final String INDEXING_FAILED_MESSAGE = "Failed to index document: ";
+  private static final String INDEXING_FAILED_MESSAGE = "Failed to index documents in: ";
   private static final String INDEX_CREATION_FAILED_MESSAGE = "Failed to create index: ";
   private static final String INDEX_DELETION_FAILED_MESSAGE = "Failed to delete index: ";
   private static final String INDEX_ALREADY_EXISTS = "resource_already_exists_exception";
@@ -38,6 +48,11 @@ public class SearchClient {
   public static final String SEARCH_INDEX = "SEARCH_INDEX";
   private static final String MAPPINGS_FILE = "index/approval-mappings.json";
   private static final TypeMapping MAPPINGS = readMappings();
+  private static final String DOCUMENT_REJECTED_MESSAGE =
+      "IndexDocument with id {} was rejected: {}";
+  private static final boolean REJECTED = true;
+  private static final boolean ACCEPTED = false;
+  private static final Logger LOGGER = LoggerFactory.getLogger(SearchClient.class);
 
   private final OpenSearchClient client;
   private final String indexName;
@@ -79,15 +94,33 @@ public class SearchClient {
         .orElseThrow(this::searchException);
   }
 
-  public void index(IndexDocument document) {
-    attempt(() -> client.index(toIndexRequest(document)))
-        .orElseThrow(failure -> indexingException(document, failure));
+  public Set<UUID> index(Collection<IndexDocument> documents) {
+    return attempt(() -> client.bulk(createBulkRequest(documents)))
+        .map(SearchClient::indexedIdentifiers)
+        .orElseThrow(this::indexingException);
   }
 
-  private static SearchClientException indexingException(
-      IndexDocument document, Failure<IndexResponse> failure) {
-    return new SearchClientException(
-        INDEXING_FAILED_MESSAGE + document.identifier(), failure.getException());
+  private static Set<UUID> indexedIdentifiers(BulkResponse response) {
+    var itemsByRejection =
+        response.items().stream().collect(partitioningBy(SearchClient::isRejected));
+    itemsByRejection.get(REJECTED).forEach(SearchClient::logRejection);
+    return itemsByRejection.get(ACCEPTED).stream()
+        .map(BulkResponseItem::id)
+        .filter(Objects::nonNull)
+        .map(UUID::fromString)
+        .collect(toSet());
+  }
+
+  private static boolean isRejected(BulkResponseItem item) {
+    return Objects.nonNull(item.error());
+  }
+
+  private static void logRejection(BulkResponseItem item) {
+    LOGGER.error(DOCUMENT_REJECTED_MESSAGE, item.id(), item.error().toJsonString());
+  }
+
+  private SearchClientException indexingException(Failure<Set<UUID>> failure) {
+    return new SearchClientException(INDEXING_FAILED_MESSAGE + indexName, failure.getException());
   }
 
   private static TypeMapping readMappings() {
@@ -142,11 +175,18 @@ public class SearchClient {
     return new SearchClientException(SEARCH_FAILED_MESSAGE + indexName, failure.getException());
   }
 
-  private IndexRequest<IndexDocument> toIndexRequest(IndexDocument document) {
-    return new IndexRequest.Builder<IndexDocument>()
+  BulkRequest createBulkRequest(Collection<IndexDocument> documents) {
+    return new BulkRequest.Builder()
         .index(indexName)
-        .id(document.identifier().toString())
-        .document(document)
+        .operations(documents.stream().map(this::toBulkOperation).toList())
+        .build();
+  }
+
+  private BulkOperation toBulkOperation(IndexDocument document) {
+    return new BulkOperation.Builder()
+        .index(
+            operation ->
+                operation.index(indexName).id(document.identifier().toString()).document(document))
         .build();
   }
 }
