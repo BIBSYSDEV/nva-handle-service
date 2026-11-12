@@ -126,6 +126,6 @@
 
 :organization a rdf:Property ;
     rdfs:label "organization" ;
-    rdfs:comment "An organization named as a trial site on the approved study" ;
+    rdfs:comment "An organization associated with the approval" ;
     rdfs:domain :Approval ;
     rdfs:range xsd:string .

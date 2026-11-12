@@ -305,7 +305,7 @@ class SearchClientTest {
   }
 
   @Test
-  void shouldNotFindDocumentWhenOrganizationFilterMatchesNoTrialSite() {
+  void shouldNotFindDocumentWhenNoOrganizationMatchesFilter() {
     assertEquals(List.of(), searchByFilter(new OrganizationFilter(randomString())));
   }
 
