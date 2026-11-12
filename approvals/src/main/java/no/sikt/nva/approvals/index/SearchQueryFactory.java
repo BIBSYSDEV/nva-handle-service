@@ -13,6 +13,8 @@ final class SearchQueryFactory {
   private static final String FREE_TEXT_FIELD = "freeText";
   private static final String PERSONS_PATH = "persons";
   private static final String PERSONS_ID_FIELD = "persons.id";
+  private static final String ORGANIZATIONS_PATH = "organizations";
+  private static final String ORGANIZATIONS_ID_FIELD = "organizations.id";
 
   private SearchQueryFactory() {}
 
@@ -35,6 +37,8 @@ final class SearchQueryFactory {
     return switch (filter) {
       case PersonFilter person ->
           nestedTerm(builder, PERSONS_PATH, PERSONS_ID_FIELD, person.value());
+      case OrganizationFilter organization ->
+          nestedTerm(builder, ORGANIZATIONS_PATH, ORGANIZATIONS_ID_FIELD, organization.value());
     };
   }
 

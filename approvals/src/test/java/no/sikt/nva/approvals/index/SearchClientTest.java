@@ -295,9 +295,27 @@ class SearchClientTest {
     assertEquals(List.of(), searchByPerson(randomString()));
   }
 
+  @Test
+  void shouldFindDocumentByOrganizationFilter() {
+    var organizationIdentifier = organization().id();
+
+    assertEquals(
+        List.of(SEARCHABLE_DOCUMENT),
+        searchByFilter(new OrganizationFilter(organizationIdentifier)));
+  }
+
+  @Test
+  void shouldNotFindDocumentWhenOrganizationFilterMatchesNoTrialSite() {
+    assertEquals(List.of(), searchByFilter(new OrganizationFilter(randomString())));
+  }
+
   private static List<IndexDocument> searchByPerson(String person) {
+    return searchByFilter(new PersonFilter(person));
+  }
+
+  private static List<IndexDocument> searchByFilter(SearchFilter filter) {
     return searchClient(searchableIndexName)
-        .search(new Query(null, List.of(new PersonFilter(person)), null, Query.DEFAULT_SIZE))
+        .search(new Query(null, List.of(filter), null, Query.DEFAULT_SIZE))
         .hits()
         .hits()
         .stream()

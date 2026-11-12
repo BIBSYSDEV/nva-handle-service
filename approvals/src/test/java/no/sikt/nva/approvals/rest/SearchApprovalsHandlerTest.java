@@ -20,6 +20,7 @@ import java.io.InputStream;
 import java.util.List;
 import java.util.Map;
 import no.sikt.nva.approvals.index.IndexDocument;
+import no.sikt.nva.approvals.index.OrganizationFilter;
 import no.sikt.nva.approvals.index.PersonFilter;
 import no.sikt.nva.approvals.index.Query;
 import no.sikt.nva.approvals.index.SearchClient;
@@ -43,6 +44,8 @@ class SearchApprovalsHandlerTest {
   private static final String SIZE_PARAMETER = "size";
   private static final String PERSON_PARAMETER = "person";
   private static final String PERSON_ID = "12345";
+  private static final String ORGANIZATION_PARAMETER = "organization";
+  private static final String ORGANIZATION_ID = "1972.0.0.0";
 
   private SearchClient searchClient;
   private SearchApprovalsHandler handler;
@@ -101,6 +104,45 @@ class SearchApprovalsHandlerTest {
   @Test
   void shouldReturnBadRequestWhenPersonIsNotAPersonUri() throws IOException {
     var response = send(request(Map.of(PERSON_PARAMETER, "https://api.example.org/people/12345")));
+
+    assertThat(response.getStatusCode(), equalTo(HTTP_BAD_REQUEST));
+  }
+
+  @Test
+  void shouldSearchWithOrganizationIdentifierFromRequest() throws IOException {
+    send(request(Map.of(ORGANIZATION_PARAMETER, ORGANIZATION_ID)));
+
+    verify(searchClient)
+        .search(new Query(null, List.of(new OrganizationFilter(ORGANIZATION_ID)), null, 10));
+  }
+
+  @Test
+  void shouldSearchWithEveryFilterWhenPersonAndOrganizationAreCombined() throws IOException {
+    send(request(Map.of(PERSON_PARAMETER, PERSON_ID, ORGANIZATION_PARAMETER, ORGANIZATION_ID)));
+
+    verify(searchClient)
+        .search(
+            new Query(
+                null,
+                List.of(new PersonFilter(PERSON_ID), new OrganizationFilter(ORGANIZATION_ID)),
+                null,
+                10));
+  }
+
+  @Test
+  void shouldSearchWithIdentifierExtractedFromOrganizationUri() throws IOException {
+    var organizationUri = "https://api.example.org/cristin/organization/" + ORGANIZATION_ID;
+
+    send(request(Map.of(ORGANIZATION_PARAMETER, organizationUri)));
+
+    verify(searchClient)
+        .search(new Query(null, List.of(new OrganizationFilter(ORGANIZATION_ID)), null, 10));
+  }
+
+  @Test
+  void shouldReturnBadRequestWhenOrganizationIsNotAnOrganizationUri() throws IOException {
+    var response =
+        send(request(Map.of(ORGANIZATION_PARAMETER, "https://api.example.org/places/185")));
 
     assertThat(response.getStatusCode(), equalTo(HTTP_BAD_REQUEST));
   }

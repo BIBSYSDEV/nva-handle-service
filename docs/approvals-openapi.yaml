@@ -130,6 +130,11 @@ paths:
           description: Person identifier or the person uri.
           schema:
             type: string
+        - name: organization
+          in: query
+          description: Organization identifier or the organization uri.
+          schema:
+            type: string
         - name: size
           in: query
           description: Maximum number of hits on one page
@@ -1193,7 +1198,7 @@ components:
         next: https://api.nva.unit.no/approval?query=diabetes&size=10&cursor=6ff5f1b5-97c1-40f0-86ad-2cbd9006eee2
         search:
           type: IriTemplate
-          template: https://api.nva.unit.no/approval{?query,person,size,cursor}
+          template: https://api.nva.unit.no/approval{?query,person,organization,size,cursor}
           mapping:
             - type: IriTemplateMapping
               variable: query
@@ -1202,7 +1207,11 @@ components:
             - type: IriTemplateMapping
               variable: person
               property: "person"
-              description: Person identifier or uri of an person on the approved study
+              description: Person identifier or uri of an investigator on the approved study
+            - type: IriTemplateMapping
+              variable: organization
+              property: "organization"
+              description: Organization identifier or uri of a trial site on the approved study
     IriTemplate:
       type: object
       description: The Hydra template describing how to query this collection
