@@ -33,8 +33,7 @@ import nva.commons.core.JacocoGenerated;
 public class SearchApprovalsHandler extends ApiGatewayHandler<Void, ApprovalSearchResponse> {
 
   private static final int MINIMUM_SIZE = 0;
-  private static final Set<String> SUPPORTED_PARAMETERS =
-      Set.of(SEARCH_QUERY_PARAMETER, SIZE_QUERY_PARAMETER, CURSOR_QUERY_PARAMETER);
+  private static final Set<String> SUPPORTED_PARAMETERS = SearchParameter.parameterNames();
 
   private final SearchClient searchClient;
   private final String apiHost;
