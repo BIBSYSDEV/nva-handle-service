@@ -48,15 +48,7 @@
       }
     },
     "identifiers": {
-      "type": "nested",
-      "properties": {
-        "name": {
-          "type": "keyword"
-        },
-        "value": {
-          "type": "keyword"
-        }
-      }
+      "type": "keyword"
     },
     "display": {
       "type": "object",

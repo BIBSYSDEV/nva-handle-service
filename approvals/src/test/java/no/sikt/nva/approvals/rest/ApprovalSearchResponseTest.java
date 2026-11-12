@@ -47,7 +47,9 @@ class ApprovalSearchResponseTest {
   void shouldReturnSearchTemplateWithSupportedParameters() {
     var results = ApprovalSearchResponse.from(response(List.of(), 0), query(), API_HOST);
 
-    assertThat(results.search().template(), endsWith("{?query,person,organization,size,cursor}"));
+    assertThat(
+        results.search().template(),
+        endsWith("{?query,person,organization,identifier,size,cursor}"));
   }
 
   @Test
@@ -158,15 +160,15 @@ class ApprovalSearchResponseTest {
     var identifier = randomUUID();
     var handle = randomString() + "/" + randomString();
     var title = randomString();
-    var identifiers = Set.of(new Identifier(randomString(), randomString()));
+    var namedIdentifier = new Identifier(randomString(), randomString());
     return new IndexDocument(
         identifier,
         handle,
         title,
         Set.of(),
         Set.of(),
-        identifiers,
-        new Display(identifier, handle, title, identifiers),
+        Set.of(namedIdentifier.name() + ":" + namedIdentifier.value()),
+        new Display(identifier, handle, title, Set.of(namedIdentifier)),
         Set.of());
   }
 }

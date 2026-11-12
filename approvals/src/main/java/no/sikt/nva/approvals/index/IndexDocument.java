@@ -20,7 +20,7 @@ public record IndexDocument(
     String title,
     Set<Person> persons,
     Set<Organization> organizations,
-    Set<Identifier> identifiers,
+    Set<String> identifiers,
     Display display,
     Set<String> freeText) {
 
@@ -31,6 +31,7 @@ public record IndexDocument(
     var identifiers = getIdentifiers(approval);
     var handle = approval.handle().identifier();
     var display = new Display(approval.identifier(), handle, trial.title(), identifiers);
+    var searchableIdentifiers = getSearchableIdentifiers(identifiers);
     var persons = getPersons(trial);
     var organizations = getOrganizations(trial);
     return new IndexDocument(
@@ -39,7 +40,7 @@ public record IndexDocument(
         trial.title(),
         persons,
         organizations,
-        identifiers,
+        searchableIdentifiers,
         display,
         getFreeText(identifier, handle, trial.title(), persons, organizations, identifiers));
   }
@@ -61,6 +62,12 @@ public record IndexDocument(
                     namedIdentifier -> Stream.of(namedIdentifier.name(), namedIdentifier.value())))
         .flatMap(Function.identity())
         .filter(Objects::nonNull)
+        .collect(Collectors.toSet());
+  }
+
+  private static Set<String> getSearchableIdentifiers(Set<Identifier> identifiers) {
+    return identifiers.stream()
+        .map(identifier -> IdentifierFilter.namespaced(identifier.name(), identifier.value()))
         .collect(Collectors.toSet());
   }
 

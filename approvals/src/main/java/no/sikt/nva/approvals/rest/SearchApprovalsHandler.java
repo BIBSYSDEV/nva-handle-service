@@ -4,11 +4,13 @@ import static java.net.HttpURLConnection.HTTP_OK;
 import static no.sikt.nva.approvals.utils.RequestUtils.getApiHost;
 import static no.sikt.nva.approvals.utils.RequestUtils.toApiGatewayException;
 import static no.sikt.nva.approvals.utils.UriConstants.CURSOR_QUERY_PARAMETER;
+import static no.sikt.nva.approvals.utils.UriConstants.IDENTIFIER_QUERY_PARAMETER;
 import static no.sikt.nva.approvals.utils.UriConstants.ORGANIZATION_QUERY_PARAMETER;
 import static no.sikt.nva.approvals.utils.UriConstants.PERSON_QUERY_PARAMETER;
 import static no.sikt.nva.approvals.utils.UriConstants.SEARCH_QUERY_PARAMETER;
 import static no.sikt.nva.approvals.utils.UriConstants.SIZE_QUERY_PARAMETER;
 import static no.sikt.nva.approvals.validation.RequestConstraints.INVALID_CURSOR_MESSAGE;
+import static no.sikt.nva.approvals.validation.RequestConstraints.INVALID_IDENTIFIER_MESSAGE;
 import static no.sikt.nva.approvals.validation.RequestConstraints.INVALID_ORGANIZATION_MESSAGE;
 import static no.sikt.nva.approvals.validation.RequestConstraints.INVALID_PERSON_MESSAGE;
 import static no.sikt.nva.approvals.validation.RequestConstraints.INVALID_SIZE_MESSAGE;
@@ -26,6 +28,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Stream;
+import no.sikt.nva.approvals.index.IdentifierFilter;
 import no.sikt.nva.approvals.index.OrganizationFilter;
 import no.sikt.nva.approvals.index.PersonFilter;
 import no.sikt.nva.approvals.index.Query;
@@ -102,9 +105,23 @@ public class SearchApprovalsHandler extends ApiGatewayHandler<Void, ApprovalSear
   }
 
   private static List<SearchFilter> filters(RequestInfo requestInfo) throws BadRequestException {
-    return Stream.of(personFilter(requestInfo), organizationFilter(requestInfo))
+    return Stream.of(
+            personFilter(requestInfo),
+            organizationFilter(requestInfo),
+            identifierFilter(requestInfo))
         .flatMap(Optional::stream)
         .toList();
+  }
+
+  private static Optional<SearchFilter> identifierFilter(RequestInfo requestInfo)
+      throws BadRequestException {
+    var requested = requestInfo.getQueryParameterOpt(IDENTIFIER_QUERY_PARAMETER);
+    return requested.isPresent() ? Optional.of(namedIdentifier(requested.get())) : Optional.empty();
+  }
+
+  private static IdentifierFilter namedIdentifier(String value) throws BadRequestException {
+    return attempt(() -> IdentifierFilter.fromParameter(value))
+        .orElseThrow(_ -> badRequest(INVALID_IDENTIFIER_MESSAGE, IDENTIFIER_QUERY_PARAMETER));
   }
 
   private static Optional<SearchFilter> personFilter(RequestInfo requestInfo)

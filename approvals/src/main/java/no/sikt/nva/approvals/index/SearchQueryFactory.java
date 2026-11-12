@@ -15,6 +15,7 @@ final class SearchQueryFactory {
   private static final String PERSONS_ID_FIELD = "persons.id";
   private static final String ORGANIZATIONS_PATH = "organizations";
   private static final String ORGANIZATIONS_ID_FIELD = "organizations.id";
+  private static final String IDENTIFIERS_FIELD = "identifiers";
 
   private SearchQueryFactory() {}
 
@@ -39,15 +40,16 @@ final class SearchQueryFactory {
           nestedTerm(builder, PERSONS_PATH, PERSONS_ID_FIELD, person.value());
       case OrganizationFilter organization ->
           nestedTerm(builder, ORGANIZATIONS_PATH, ORGANIZATIONS_ID_FIELD, organization.value());
+      case IdentifierFilter identifier -> term(builder, IDENTIFIERS_FIELD, identifier.value());
     };
   }
 
   private static ObjectBuilder<Query> nestedTerm(
       Query.Builder builder, String path, String field, String value) {
-    return builder.nested(
-        nested ->
-            nested
-                .path(path)
-                .query(inner -> inner.term(term -> term.field(field).value(FieldValue.of(value)))));
+    return builder.nested(nested -> nested.path(path).query(inner -> term(inner, field, value)));
+  }
+
+  private static ObjectBuilder<Query> term(Query.Builder builder, String field, String value) {
+    return builder.term(inner -> inner.field(field).value(FieldValue.of(value)));
   }
 }

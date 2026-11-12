@@ -55,7 +55,7 @@ class IndexDocumentTest {
 
     assertThat(
         indexDocument.identifiers(),
-        contains(new IndexDocument.Identifier(namedIdentifier.name(), namedIdentifier.value())));
+        contains(namedIdentifier.name() + ":" + namedIdentifier.value()));
   }
 
   @Test

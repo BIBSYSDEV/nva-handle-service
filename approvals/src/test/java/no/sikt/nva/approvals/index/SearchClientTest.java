@@ -17,6 +17,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import no.sikt.nva.approvals.domain.NamedIdentifier;
 import no.sikt.nva.approvals.index.FramedClinicalTrial.Investigator;
 import no.sikt.nva.approvals.index.FramedClinicalTrial.TrialSite;
 import no.sikt.nva.approvals.index.IndexDocument.Identifier;
@@ -309,6 +310,54 @@ class SearchClientTest {
     assertEquals(List.of(), searchByFilter(new OrganizationFilter(randomString())));
   }
 
+  @Test
+  void shouldFindDocumentByNamespacedIdentifierFilter() {
+    var identifier = namedIdentifier();
+
+    assertEquals(
+        List.of(SEARCHABLE_DOCUMENT),
+        searchByFilter(new IdentifierFilter(identifier.name(), identifier.value())));
+  }
+
+  @Test
+  void shouldNotMatchNamespaceAndValueFromDifferentIdentifiers() throws IOException {
+    var first = new Identifier(randomString(), randomString());
+    var second = new Identifier(randomString(), randomString());
+    var indexName = indexWithIdentifiers(first, second);
+
+    var hits = searchIn(indexName, new IdentifierFilter(first.name(), second.value()));
+
+    assertEquals(List.of(), hits);
+  }
+
+  private static String indexWithIdentifiers(Identifier first, Identifier second)
+      throws IOException {
+    var indexName = randomIndexName();
+    var client = searchClient(indexName);
+    client.createIndex();
+    client.index(
+        List.of(
+            IndexDocument.create(
+                randomTrial(),
+                randomApproval(
+                    List.of(
+                        new NamedIdentifier(first.name(), first.value()),
+                        new NamedIdentifier(second.name(), second.value())),
+                    randomUUID()))));
+    refresh(indexName);
+    return indexName;
+  }
+
+  private static List<IndexDocument> searchIn(String indexName, SearchFilter filter) {
+    return searchClient(indexName)
+        .search(new Query(null, List.of(filter), null, Query.DEFAULT_SIZE))
+        .hits()
+        .hits()
+        .stream()
+        .map(Hit::source)
+        .toList();
+  }
+
   private static List<IndexDocument> searchByPerson(String person) {
     return searchByFilter(new PersonFilter(person));
   }
@@ -332,7 +381,7 @@ class SearchClientTest {
   }
 
   private static Identifier namedIdentifier() {
-    return SEARCHABLE_DOCUMENT.identifiers().iterator().next();
+    return SEARCHABLE_DOCUMENT.display().identifiers().iterator().next();
   }
 
   private static List<Hit<IndexDocument>> searchPage(String cursor) {
