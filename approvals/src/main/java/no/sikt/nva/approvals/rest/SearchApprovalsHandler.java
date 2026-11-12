@@ -4,6 +4,7 @@ import static java.net.HttpURLConnection.HTTP_OK;
 import static no.sikt.nva.approvals.utils.RequestUtils.getApiHost;
 import static no.sikt.nva.approvals.utils.RequestUtils.toApiGatewayException;
 import static no.sikt.nva.approvals.utils.UriConstants.CURSOR_QUERY_PARAMETER;
+import static no.sikt.nva.approvals.utils.UriConstants.HANDLE_QUERY_PARAMETER;
 import static no.sikt.nva.approvals.utils.UriConstants.IDENTIFIER_QUERY_PARAMETER;
 import static no.sikt.nva.approvals.utils.UriConstants.ORGANIZATION_QUERY_PARAMETER;
 import static no.sikt.nva.approvals.utils.UriConstants.PERSON_QUERY_PARAMETER;
@@ -15,6 +16,7 @@ import static no.sikt.nva.approvals.validation.RequestConstraints.INVALID_ORGANI
 import static no.sikt.nva.approvals.validation.RequestConstraints.INVALID_PERSON_MESSAGE;
 import static no.sikt.nva.approvals.validation.RequestConstraints.INVALID_SIZE_MESSAGE;
 import static no.sikt.nva.approvals.validation.RequestConstraints.MAX_SEARCH_SIZE;
+import static no.sikt.nva.approvals.validation.RequestConstraints.NOT_A_HANDLE_MESSAGE;
 import static no.sikt.nva.approvals.validation.RequestConstraints.UNSUPPORTED_PARAMETER_MESSAGE;
 import static no.sikt.nva.approvals.validation.RequestValidator.badRequest;
 import static nva.commons.apigateway.MediaTypes.APPLICATION_JSON_LD;
@@ -28,6 +30,8 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Stream;
+import no.sikt.nva.approvals.domain.Handle;
+import no.sikt.nva.approvals.index.HandleFilter;
 import no.sikt.nva.approvals.index.IdentifierFilter;
 import no.sikt.nva.approvals.index.OrganizationFilter;
 import no.sikt.nva.approvals.index.PersonFilter;
@@ -108,9 +112,28 @@ public class SearchApprovalsHandler extends ApiGatewayHandler<Void, ApprovalSear
     return Stream.of(
             personFilter(requestInfo),
             organizationFilter(requestInfo),
-            identifierFilter(requestInfo))
+            identifierFilter(requestInfo),
+            handleFilter(requestInfo))
         .flatMap(Optional::stream)
         .toList();
+  }
+
+  private static Optional<SearchFilter> handleFilter(RequestInfo requestInfo)
+      throws BadRequestException {
+    var requested = requestInfo.getQueryParameterOpt(HANDLE_QUERY_PARAMETER);
+    return requested.isPresent()
+        ? Optional.of(new HandleFilter(handleIdentifier(requested.get())))
+        : Optional.empty();
+  }
+
+  private static String handleIdentifier(String value) throws BadRequestException {
+    return attempt(() -> toHandle(value).identifier())
+        .orElseThrow(_ -> badRequest(NOT_A_HANDLE_MESSAGE, HANDLE_QUERY_PARAMETER));
+  }
+
+  private static Handle toHandle(String value) {
+    var candidate = URI.create(value);
+    return candidate.isAbsolute() ? new Handle(candidate) : Handle.fromIdentifier(value);
   }
 
   private static Optional<SearchFilter> identifierFilter(RequestInfo requestInfo)

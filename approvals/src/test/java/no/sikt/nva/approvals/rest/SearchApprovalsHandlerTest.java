@@ -19,6 +19,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.List;
 import java.util.Map;
+import no.sikt.nva.approvals.index.HandleFilter;
 import no.sikt.nva.approvals.index.IdentifierFilter;
 import no.sikt.nva.approvals.index.IndexDocument;
 import no.sikt.nva.approvals.index.OrganizationFilter;
@@ -49,6 +50,8 @@ class SearchApprovalsHandlerTest {
   private static final String ORGANIZATION_ID = "1972.0.0.0";
   private static final String IDENTIFIER_PARAMETER = "identifier";
   private static final String NAMESPACED_IDENTIFIER = "REK:123456";
+  private static final String HANDLE_PARAMETER = "handle";
+  private static final String HANDLE_ID = "11250.1/12345";
 
   private SearchClient searchClient;
   private SearchApprovalsHandler handler;
@@ -175,6 +178,27 @@ class SearchApprovalsHandlerTest {
   }
 
   @Test
+  void shouldSearchWithHandleIdentifierFromRequest() throws IOException {
+    send(request(Map.of(HANDLE_PARAMETER, HANDLE_ID)));
+
+    verify(searchClient).search(new Query(null, List.of(new HandleFilter(HANDLE_ID)), null, 10));
+  }
+
+  @Test
+  void shouldSearchWithIdentifierExtractedFromHandleUri() throws IOException {
+    send(request(Map.of(HANDLE_PARAMETER, "https://hdl.handle.net/" + HANDLE_ID)));
+
+    verify(searchClient).search(new Query(null, List.of(new HandleFilter(HANDLE_ID)), null, 10));
+  }
+
+  @Test
+  void shouldReturnBadRequestWhenHandleIsNotAHandleUri() throws IOException {
+    var response = send(request(Map.of(HANDLE_PARAMETER, "https://example.org/11250.1/12345")));
+
+    assertThat(response.getStatusCode(), equalTo(HTTP_BAD_REQUEST));
+  }
+
+  @Test
   void shouldReturnBadRequestWhenSizeIsNotANumber() throws IOException {
     var response = send(request(Map.of(SIZE_PARAMETER, "abc")));
 
@@ -218,7 +242,7 @@ class SearchApprovalsHandlerTest {
 
   @Test
   void shouldReturnBadRequestWhenQueryParameterIsNotSupported() throws IOException {
-    var response = send(request(Map.of("handle", randomString())));
+    var response = send(request(Map.of("unsupported", randomString())));
 
     assertThat(response.getStatusCode(), equalTo(HTTP_BAD_REQUEST));
   }

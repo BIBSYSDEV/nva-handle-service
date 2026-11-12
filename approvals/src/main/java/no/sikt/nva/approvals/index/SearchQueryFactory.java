@@ -16,6 +16,7 @@ final class SearchQueryFactory {
   private static final String ORGANIZATIONS_PATH = "organizations";
   private static final String ORGANIZATIONS_ID_FIELD = "organizations.id";
   private static final String IDENTIFIERS_FIELD = "identifiers";
+  private static final String HANDLE_FIELD = "handle";
 
   private SearchQueryFactory() {}
 
@@ -41,6 +42,7 @@ final class SearchQueryFactory {
       case OrganizationFilter organization ->
           nestedTerm(builder, ORGANIZATIONS_PATH, ORGANIZATIONS_ID_FIELD, organization.value());
       case IdentifierFilter identifier -> term(builder, IDENTIFIERS_FIELD, identifier.value());
+      case HandleFilter handle -> term(builder, HANDLE_FIELD, handle.value());
     };
   }
 

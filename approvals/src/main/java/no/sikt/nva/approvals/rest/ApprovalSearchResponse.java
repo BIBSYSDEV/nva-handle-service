@@ -18,6 +18,7 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import no.sikt.nva.approvals.index.HandleFilter;
 import no.sikt.nva.approvals.index.IdentifierFilter;
 import no.sikt.nva.approvals.index.IndexDocument;
 import no.sikt.nva.approvals.index.OrganizationFilter;
@@ -82,6 +83,7 @@ public record ApprovalSearchResponse(
       case PersonFilter _ -> SearchParameter.PERSON;
       case OrganizationFilter _ -> SearchParameter.ORGANIZATION;
       case IdentifierFilter _ -> SearchParameter.IDENTIFIER;
+      case HandleFilter _ -> SearchParameter.HANDLE;
     };
   }
 

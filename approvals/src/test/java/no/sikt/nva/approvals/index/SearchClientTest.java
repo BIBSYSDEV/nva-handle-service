@@ -358,6 +358,18 @@ class SearchClientTest {
         .toList();
   }
 
+  @Test
+  void shouldFindDocumentByHandleFilter() {
+    assertEquals(
+        List.of(SEARCHABLE_DOCUMENT),
+        searchByFilter(new HandleFilter(SEARCHABLE_DOCUMENT.handle())));
+  }
+
+  @Test
+  void shouldNotFindDocumentWhenHandleFilterMatchesNoApproval() {
+    assertEquals(List.of(), searchByFilter(new HandleFilter(randomHandle().identifier())));
+  }
+
   private static List<IndexDocument> searchByPerson(String person) {
     return searchByFilter(new PersonFilter(person));
   }
