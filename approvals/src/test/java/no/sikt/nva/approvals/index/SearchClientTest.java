@@ -381,7 +381,7 @@ class SearchClientTest {
   }
 
   private static Identifier namedIdentifier() {
-    return SEARCHABLE_DOCUMENT.identifiers().iterator().next();
+    return SEARCHABLE_DOCUMENT.display().identifiers().iterator().next();
   }
 
   private static List<Hit<IndexDocument>> searchPage(String cursor) {

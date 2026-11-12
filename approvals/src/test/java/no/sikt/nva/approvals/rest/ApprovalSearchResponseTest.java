@@ -160,15 +160,15 @@ class ApprovalSearchResponseTest {
     var identifier = randomUUID();
     var handle = randomString() + "/" + randomString();
     var title = randomString();
-    var identifiers = Set.of(new Identifier(randomString(), randomString()));
+    var namedIdentifier = new Identifier(randomString(), randomString());
     return new IndexDocument(
         identifier,
         handle,
         title,
         Set.of(),
         Set.of(),
-        identifiers,
-        new Display(identifier, handle, title, identifiers),
+        Set.of(namedIdentifier.name() + ":" + namedIdentifier.value()),
+        new Display(identifier, handle, title, Set.of(namedIdentifier)),
         Set.of());
   }
 }

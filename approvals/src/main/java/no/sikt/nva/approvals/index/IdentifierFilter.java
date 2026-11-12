@@ -23,8 +23,12 @@ public record IdentifierFilter(String namespace, String identifier) implements S
     return new IdentifierFilter(parts[0], parts[1]);
   }
 
+  static String namespaced(String namespace, String identifier) {
+    return namespace + SEPARATOR + identifier;
+  }
+
   @Override
   public String value() {
-    return namespace + SEPARATOR + identifier;
+    return namespaced(namespace, identifier);
   }
 }
