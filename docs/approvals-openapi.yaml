@@ -474,8 +474,7 @@ paths:
                 $ref: "#/components/schemas/Approval"
         "400":
           description: >-
-            Bad Request - `approvalId` is not a UUID, or query parameters are combined with the
-            path parameter. Listed in `errors` with pointer `approvalId`.
+            Bad Request - `approvalId` is not a UUID. Listed in `errors` with pointer `approvalId`.
           content:
             "application/json":
               schema:

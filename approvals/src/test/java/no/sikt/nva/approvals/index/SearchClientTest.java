@@ -46,6 +46,8 @@ class SearchClientTest {
   private static final String INDEX_NAME = "approvals";
   private static final String UNREACHABLE_HOST = "http://localhost:1";
   private static final String UNMAPPED_FIELD = "unmappedField";
+  private static final char TYPO = 'x';
+  private static final char ALTERNATIVE_TYPO = 'y';
   private static final String IDENTIFIER_FIELD = "identifier";
   private static final IndexDocument SEARCHABLE_DOCUMENT = randomIndexDocument();
   private static final IndexDocument SECOND_DOCUMENT = randomIndexDocument();
@@ -358,7 +360,8 @@ class SearchClientTest {
   }
 
   private static String withTypo(String value) {
-    return value.charAt(0) + "x" + value.substring(2);
+    var replacement = value.charAt(1) == TYPO ? ALTERNATIVE_TYPO : TYPO;
+    return value.charAt(0) + String.valueOf(replacement) + value.substring(2);
   }
 
   private static List<IndexDocument> searchFreeText(String value) {

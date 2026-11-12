@@ -139,8 +139,8 @@ Corrections against the current implementation:
 
 ## Reading approvals
 
-- `FetchApprovalHandler` serves `GET /{approvalId}`. Mixing a path parameter with query parameters returns
-  `400 Bad Request`.
+- `FetchApprovalHandler` serves `GET /{approvalId}`. A `400 Bad Request` means `approvalId` is not a UUID; query
+  parameters on that path are ignored.
 - `SearchApprovalsHandler` serves `GET /`. `?query=` is free text matched against the title and the names of people
   and organizations, tolerating typos. Identifiers are not free text: `?person=`, `?organization=`, `?identifier=`
   and `?handle=` filter on them exactly, and combine with each other and with `?query=`.
