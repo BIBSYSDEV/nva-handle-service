@@ -122,9 +122,7 @@ paths:
       parameters:
         - name: query
           in: query
-          description: >-
-            Free text matched against the title and the names of people and organizations,
-            tolerating typos. Identifiers are matched by their own parameters, not by this one.
+          description: Free text matched against title and names, tolerating typos.
           schema:
             type: string
         - name: person
@@ -473,8 +471,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/Approval"
         "400":
-          description: >-
-            Bad Request - `approvalId` is not a UUID. Listed in `errors` with pointer `approvalId`.
+          description: Bad Request
           content:
             "application/json":
               schema:
