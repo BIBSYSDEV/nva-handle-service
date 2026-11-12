@@ -1202,7 +1202,7 @@ components:
             - type: IriTemplateMapping
               variable: person
               property: "schema:contributor"
-              description: Cristin person identifier or uri of an investigator on the approved study
+              description: Person identifier or uri of an person on the approved study
     IriTemplate:
       type: object
       description: The Hydra template describing how to query this collection

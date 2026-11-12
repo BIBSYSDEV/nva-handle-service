@@ -36,7 +36,7 @@ public final class RequestConstraints {
   public static final String INVALID_CURSOR_MESSAGE = "Must be the cursor given in next";
   public static final int MAX_SEARCH_SIZE = 100;
   public static final String UNSUPPORTED_PARAMETER_MESSAGE = "Supported query parameters are %s";
-  public static final String INVALID_PERSON_MESSAGE = "Must be a cristin person identifier or uri";
+  public static final String INVALID_PERSON_MESSAGE = "Must be a person identifier or uri";
   public static final String INVALID_SIZE_MESSAGE =
       "Must be an integer from 0 to " + MAX_SEARCH_SIZE;
 
