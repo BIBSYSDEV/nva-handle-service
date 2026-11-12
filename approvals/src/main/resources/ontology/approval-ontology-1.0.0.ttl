@@ -117,3 +117,9 @@
     rdfs:comment "The title of the approval, taken from its source" ;
     rdfs:domain :Approval ;
     rdfs:range xsd:string .
+
+:person a rdf:Property ;
+    rdfs:label "person" ;
+    rdfs:comment "A person named as an investigator on the approved study" ;
+    rdfs:domain :Approval ;
+    rdfs:range xsd:string .

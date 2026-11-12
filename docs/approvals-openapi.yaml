@@ -1201,7 +1201,7 @@ components:
               description: Free text matched against the approvals
             - type: IriTemplateMapping
               variable: person
-              property: "schema:contributor"
+              property: "person"
               description: Person identifier or uri of an person on the approved study
     IriTemplate:
       type: object

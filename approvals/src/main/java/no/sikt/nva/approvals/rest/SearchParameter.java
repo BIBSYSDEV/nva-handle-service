@@ -16,7 +16,7 @@ public enum SearchParameter {
   QUERY(SEARCH_QUERY_PARAMETER, "hydra:freetextQuery", "Free text matched against the approvals"),
   PERSON(
       PERSON_QUERY_PARAMETER,
-      "schema:contributor",
+      "person",
       "Cristin person identifier or uri of an investigator on the approved study"),
   SIZE(SIZE_QUERY_PARAMETER, "hydra:limit", "Maximum number of approvals on one page"),
   CURSOR(CURSOR_QUERY_PARAMETER, "hydra:pageReference", "Paging token, taken from next");
