@@ -7,6 +7,7 @@ import static no.sikt.nva.approvals.persistence.DynamoDbConstants.SK0;
 import static no.sikt.nva.approvals.persistence.DynamoDbConstants.SK1;
 import static no.sikt.nva.approvals.persistence.DynamoDbConstants.SK2;
 import static no.sikt.nva.approvals.persistence.DynamoDbConstants.STRING;
+import static nva.commons.core.attempt.Try.attempt;
 
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.annotation.JsonTypeInfo.Id;
@@ -15,8 +16,10 @@ import java.net.URI;
 import java.time.Instant;
 import java.util.UUID;
 import no.sikt.nva.approvals.domain.ApprovalRevision;
+import no.unit.nva.commons.json.JsonUtils;
 import no.unit.nva.identifiers.SortableIdentifier;
 import nva.commons.core.StringUtils;
+import software.amazon.awssdk.enhanced.dynamodb.Key;
 import software.amazon.awssdk.enhanced.dynamodb.document.EnhancedDocument;
 
 @JsonTypeInfo(use = Id.NAME, property = "type")
@@ -42,6 +45,16 @@ public record ApprovalDao(
         createdDate,
         revision.createdDate(),
         revision.identifier());
+  }
+
+  static ApprovalDao fromJson(String json) {
+    return attempt(() -> JsonUtils.dtoObjectMapper.readValue(json, ApprovalDao.class))
+        .orElseThrow();
+  }
+
+  static Key primaryKey(UUID identifier) {
+    var databaseIdentifier = toDatabaseIdentifier(identifier);
+    return Key.builder().partitionValue(databaseIdentifier).sortValue(databaseIdentifier).build();
   }
 
   @Override

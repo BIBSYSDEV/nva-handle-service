@@ -1,29 +1,40 @@
 package no.sikt.nva.approvals.snapshot;
 
 import java.time.Instant;
+import java.util.Optional;
+import no.sikt.nva.approvals.domain.ApprovalModifiedException;
 import no.sikt.nva.approvals.domain.Content;
 import no.sikt.nva.approvals.domain.SourceSnapshot;
-import no.sikt.nva.approvals.persistence.ApprovalRepository;
 import no.sikt.nva.approvals.persistence.ChangeRepository;
-import no.sikt.nva.approvals.persistence.DynamoDbApprovalRepository;
 import no.sikt.nva.approvals.persistence.DynamoDbChangeRepository;
+import no.sikt.nva.approvals.persistence.DynamoDbSnapshotRepository;
+import no.sikt.nva.approvals.persistence.SnapshotRepository;
+import no.sikt.nva.approvals.persistence.SnapshotState;
 import no.sikt.nva.approvals.source.SourceClient;
 import no.sikt.nva.approvals.source.SourceClientException;
 import no.sikt.nva.approvals.source.SourceResponse;
 import nva.commons.core.Environment;
 import nva.commons.core.JacocoGenerated;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class SnapshotServiceImpl implements SnapshotService {
 
-  private final ApprovalRepository approvalRepository;
+  private static final Logger LOGGER = LoggerFactory.getLogger(SnapshotServiceImpl.class);
+  private static final String SKIPPED_MESSAGE =
+      "Skipped snapshot of approval {}: approval not found or source is no longer {}";
+  private static final int FIRST_ATTEMPT = 1;
+  private static final int MAX_ATTEMPTS = 3;
+
+  private final SnapshotRepository snapshotRepository;
   private final ChangeRepository changeRepository;
   private final SourceClient sourceClient;
 
   public SnapshotServiceImpl(
-      ApprovalRepository approvalRepository,
+      SnapshotRepository snapshotRepository,
       ChangeRepository changeRepository,
       SourceClient sourceClient) {
-    this.approvalRepository = approvalRepository;
+    this.snapshotRepository = snapshotRepository;
     this.changeRepository = changeRepository;
     this.sourceClient = sourceClient;
   }
@@ -31,7 +42,7 @@ public class SnapshotServiceImpl implements SnapshotService {
   @JacocoGenerated
   public static SnapshotService defaultInstance(Environment environment) {
     return new SnapshotServiceImpl(
-        DynamoDbApprovalRepository.defaultInstance(environment),
+        DynamoDbSnapshotRepository.defaultInstance(environment),
         DynamoDbChangeRepository.defaultInstance(environment),
         SourceClient.defaultInstance(environment));
   }
@@ -39,10 +50,40 @@ public class SnapshotServiceImpl implements SnapshotService {
   @Override
   public void createSnapshot(CreateSnapshotRequest createSnapshotRequest)
       throws SourceClientException {
-    var content = fetchContent(createSnapshotRequest);
-    if (hasChangedSinceLatestSnapshot(createSnapshotRequest, content)) {
-      approvalRepository.save(SourceSnapshot.create(createSnapshotRequest, content, Instant.now()));
+    for (var attempt = FIRST_ATTEMPT; attempt <= MAX_ATTEMPTS; attempt++) {
+      var state = findStateOfCurrentSource(createSnapshotRequest);
+      if (state.isEmpty()) {
+        LOGGER.info(
+            SKIPPED_MESSAGE,
+            createSnapshotRequest.approvalIdentifier(),
+            createSnapshotRequest.source());
+        return;
+      }
+      var content = fetchContent(createSnapshotRequest);
+      try {
+        saveIfChanged(createSnapshotRequest, content, state.get());
+        return;
+      } catch (ApprovalModifiedException exception) {
+        if (attempt == MAX_ATTEMPTS) {
+          throw exception;
+        }
+      }
     }
+  }
+
+  private void saveIfChanged(
+      CreateSnapshotRequest createSnapshotRequest, Content content, SnapshotState state) {
+    if (hasChangedSinceLatestSnapshot(createSnapshotRequest, content)) {
+      snapshotRepository.save(
+          SourceSnapshot.create(createSnapshotRequest, content, Instant.now()), state);
+    }
+  }
+
+  private Optional<SnapshotState> findStateOfCurrentSource(
+      CreateSnapshotRequest createSnapshotRequest) {
+    return snapshotRepository
+        .findSnapshotStateConsistently(createSnapshotRequest.approvalIdentifier())
+        .filter(state -> createSnapshotRequest.source().equals(state.source()));
   }
 
   private boolean hasChangedSinceLatestSnapshot(

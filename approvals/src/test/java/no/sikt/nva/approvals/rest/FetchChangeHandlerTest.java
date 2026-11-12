@@ -108,7 +108,7 @@ class FetchChangeHandlerTest {
   @Test
   void shouldReturnSourceSnapshotWhenChangeIsSnapshotOfApprovalSource() throws IOException {
     var snapshot = randomSourceSnapshot();
-    approvalRepository.save(snapshot);
+    dynamoDbLocal.saveSnapshot(TABLE, snapshot);
 
     var response =
         send(request(snapshot.approvalIdentifier(), snapshot.identifier().toString(), Map.of()));
@@ -161,7 +161,7 @@ class FetchChangeHandlerTest {
 
   private SourceSnapshot saveSnapshot() {
     var snapshot = randomSourceSnapshot();
-    approvalRepository.save(snapshot);
+    dynamoDbLocal.saveSnapshot(TABLE, snapshot);
     return snapshot;
   }
 

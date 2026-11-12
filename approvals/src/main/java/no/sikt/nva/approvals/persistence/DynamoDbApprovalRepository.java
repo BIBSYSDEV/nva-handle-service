@@ -25,7 +25,6 @@ import no.sikt.nva.approvals.domain.ApprovalRevision;
 import no.sikt.nva.approvals.domain.Handle;
 import no.sikt.nva.approvals.domain.IdentifierPolicy;
 import no.sikt.nva.approvals.domain.NamedIdentifier;
-import no.sikt.nva.approvals.domain.SourceSnapshot;
 import no.sikt.nva.approvals.events.SourceChangedEvent;
 import no.unit.nva.commons.json.JsonUtils;
 import no.unit.nva.identifiers.SortableIdentifier;
@@ -85,19 +84,6 @@ public class DynamoDbApprovalRepository implements ApprovalRepository {
     var request =
         PutItemEnhancedRequest.builder(EnhancedDocument.class)
             .item(EventDao.fromEvent(event, approvalIdentifier, Instant.now()).toEnhancedDocument())
-            .conditionExpression(newDaoCondition())
-            .build();
-    try {
-      table.putItem(request);
-    } catch (ConditionalCheckFailedException ignored) {
-    }
-  }
-
-  @Override
-  public void save(SourceSnapshot snapshot) {
-    var request =
-        PutItemEnhancedRequest.builder(EnhancedDocument.class)
-            .item(SourceSnapshotDao.fromSourceSnapshot(snapshot).toEnhancedDocument())
             .conditionExpression(newDaoCondition())
             .build();
     try {
@@ -237,7 +223,7 @@ public class DynamoDbApprovalRepository implements ApprovalRepository {
         .build();
   }
 
-  private static TransactPutItemEnhancedRequest<EnhancedDocument> newItemRequest(
+  static TransactPutItemEnhancedRequest<EnhancedDocument> newItemRequest(
       EnhancedDocument document) {
     return TransactPutItemEnhancedRequest.builder(EnhancedDocument.class)
         .item(document)
