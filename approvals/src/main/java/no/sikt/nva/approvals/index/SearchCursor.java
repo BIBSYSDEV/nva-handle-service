@@ -12,6 +12,7 @@ import org.opensearch.client.opensearch._types.FieldValue;
 public final class SearchCursor {
 
   private static final String MALFORMED_CURSOR_EXCEPTION = "Cursor cannot be decoded";
+  private static final int SORTED_FIELD_COUNT = 2;
 
   private SearchCursor() {}
 
@@ -29,12 +30,17 @@ public final class SearchCursor {
   private static List<FieldValue> decode(String cursor) throws Exception {
     var json = new String(Base64.getUrlDecoder().decode(cursor), UTF_8);
     List<Object> values = JsonUtils.dtoObjectMapper.readValue(json, List.class);
+    if (values.size() != SORTED_FIELD_COUNT) {
+      throw new IllegalArgumentException(MALFORMED_CURSOR_EXCEPTION);
+    }
     return values.stream().map(SearchCursor::toFieldValue).toList();
   }
 
   private static FieldValue toFieldValue(Object value) {
-    return value instanceof Number number
-        ? FieldValue.of(number.doubleValue())
-        : FieldValue.of(String.valueOf(value));
+    return switch (value) {
+      case Number number -> FieldValue.of(number.doubleValue());
+      case String text -> FieldValue.of(text);
+      default -> throw new IllegalArgumentException(MALFORMED_CURSOR_EXCEPTION);
+    };
   }
 }
