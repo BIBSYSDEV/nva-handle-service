@@ -1207,11 +1207,11 @@ components:
             - type: IriTemplateMapping
               variable: person
               property: "person"
-              description: Person identifier or uri of an investigator on the approved study
+              description: Person identifier or person uri
             - type: IriTemplateMapping
               variable: organization
               property: "organization"
-              description: Organization identifier or uri of a trial site on the approved study
+              description: Organization identifier or organization uri
     IriTemplate:
       type: object
       description: The Hydra template describing how to query this collection
