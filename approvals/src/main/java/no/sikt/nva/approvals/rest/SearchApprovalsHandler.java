@@ -11,12 +11,12 @@ import static no.sikt.nva.approvals.utils.UriConstants.PERSON_QUERY_PARAMETER;
 import static no.sikt.nva.approvals.utils.UriConstants.SEARCH_QUERY_PARAMETER;
 import static no.sikt.nva.approvals.utils.UriConstants.SIZE_QUERY_PARAMETER;
 import static no.sikt.nva.approvals.validation.RequestConstraints.INVALID_CURSOR_MESSAGE;
+import static no.sikt.nva.approvals.validation.RequestConstraints.INVALID_HANDLE_MESSAGE;
 import static no.sikt.nva.approvals.validation.RequestConstraints.INVALID_IDENTIFIER_MESSAGE;
 import static no.sikt.nva.approvals.validation.RequestConstraints.INVALID_ORGANIZATION_MESSAGE;
 import static no.sikt.nva.approvals.validation.RequestConstraints.INVALID_PERSON_MESSAGE;
 import static no.sikt.nva.approvals.validation.RequestConstraints.INVALID_SIZE_MESSAGE;
 import static no.sikt.nva.approvals.validation.RequestConstraints.MAX_SEARCH_SIZE;
-import static no.sikt.nva.approvals.validation.RequestConstraints.NOT_A_HANDLE_MESSAGE;
 import static no.sikt.nva.approvals.validation.RequestConstraints.UNSUPPORTED_PARAMETER_MESSAGE;
 import static no.sikt.nva.approvals.validation.RequestValidator.badRequest;
 import static nva.commons.apigateway.MediaTypes.APPLICATION_JSON_LD;
@@ -128,7 +128,7 @@ public class SearchApprovalsHandler extends ApiGatewayHandler<Void, ApprovalSear
 
   private static String handleIdentifier(String value) throws BadRequestException {
     return attempt(() -> toHandle(value).identifier())
-        .orElseThrow(_ -> badRequest(NOT_A_HANDLE_MESSAGE, HANDLE_QUERY_PARAMETER));
+        .orElseThrow(_ -> badRequest(INVALID_HANDLE_MESSAGE, HANDLE_QUERY_PARAMETER));
   }
 
   private static Handle toHandle(String value) {
