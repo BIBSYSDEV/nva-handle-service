@@ -122,7 +122,7 @@ paths:
       parameters:
         - name: query
           in: query
-          description: Free text to search
+          description: Free text
           schema:
             type: string
         - name: person
@@ -155,10 +155,9 @@ paths:
             default: 10
         - name: cursor
           in: query
-          description: Cursor identifier of the last hit on the previous page
+          description: Paging token, taken from next
           schema:
             type: string
-            format: uuid
       x-amazon-apigateway-integration:
         uri:
           Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${NvaSearchApprovalsFunction.Arn}/invocations
@@ -471,9 +470,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/Approval"
         "400":
-          description: >-
-            Bad Request - `approvalId` is not a UUID, or query parameters are combined with the
-            path parameter. Listed in `errors` with pointer `approvalId`.
+          description: Bad Request
           content:
             "application/json":
               schema:
@@ -1213,7 +1210,7 @@ components:
             - type: IriTemplateMapping
               variable: query
               property: "hydra:freetextQuery"
-              description: Free text matched against the approvals
+              description: Free text
             - type: IriTemplateMapping
               variable: person
               property: "person"

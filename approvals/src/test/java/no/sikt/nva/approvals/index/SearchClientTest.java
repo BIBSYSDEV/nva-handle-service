@@ -46,6 +46,9 @@ class SearchClientTest {
   private static final String INDEX_NAME = "approvals";
   private static final String UNREACHABLE_HOST = "http://localhost:1";
   private static final String UNMAPPED_FIELD = "unmappedField";
+  private static final char TYPO = 'x';
+  private static final char ALTERNATIVE_TYPO = 'y';
+  private static final String SHARED_LAST_NAME = "Nordmann";
   private static final String IDENTIFIER_FIELD = "identifier";
   private static final IndexDocument SEARCHABLE_DOCUMENT = randomIndexDocument();
   private static final IndexDocument SECOND_DOCUMENT = randomIndexDocument();
@@ -237,6 +240,18 @@ class SearchClientTest {
   }
 
   @Test
+  void shouldFindDocumentByMisspelledPersonName() {
+    var personName = person().name();
+
+    assertEquals(List.of(SEARCHABLE_DOCUMENT), searchFreeText(withTypo(personName)));
+  }
+
+  private static String withTypo(String value) {
+    var replacement = value.charAt(1) == TYPO ? ALTERNATIVE_TYPO : TYPO;
+    return value.charAt(0) + String.valueOf(replacement) + value.substring(2);
+  }
+
+  @Test
   void shouldFindDocumentByOrganizationIdentifier() {
     var organizationIdentifier = organization().id();
 
@@ -261,7 +276,7 @@ class SearchClientTest {
   void shouldReturnEachDocumentOnceWhenPagingWithCursor() {
     var firstPage = searchPage(null);
 
-    var secondPage = searchPage(firstPage.getFirst().source().identifier().toString());
+    var secondPage = searchPage(SearchCursor.fromSortValues(firstPage.getFirst().sort()));
 
     var documents =
         Stream.of(firstPage.getFirst().source(), secondPage.getFirst().source())
@@ -401,6 +416,42 @@ class SearchClientTest {
         .search(new Query(StringUtils.EMPTY_STRING, List.of(), cursor, 1))
         .hits()
         .hits();
+  }
+
+  @Test
+  void shouldRankExactNameAboveFuzzyMatch() throws IOException {
+    var exactName = randomString();
+    var exact = documentWithFirstName(exactName);
+    var fuzzy = documentWithFirstName(withTypo(exactName));
+    var indexName = indexWithDocuments(exact, fuzzy);
+
+    var hits = searchIn(indexName, exactName);
+
+    assertEquals(exact, hits.getFirst());
+  }
+
+  private static String indexWithDocuments(IndexDocument... documents) throws IOException {
+    var indexName = randomIndexName();
+    var client = searchClient(indexName);
+    client.createIndex();
+    client.index(List.of(documents));
+    refresh(indexName);
+    return indexName;
+  }
+
+  private static IndexDocument documentWithFirstName(String firstName) {
+    var trial =
+        new FramedClinicalTrial(
+            randomString(),
+            Set.of(new Investigator(cristinUri("person"), firstName, SHARED_LAST_NAME)),
+            Set.of(new TrialSite(cristinUri("organization"), randomString())));
+    return IndexDocument.create(trial, randomApproval(randomHandle()));
+  }
+
+  private static List<IndexDocument> searchIn(String indexName, String freeText) {
+    return searchClient(indexName).search(new Query(freeText)).hits().hits().stream()
+        .map(Hit::source)
+        .toList();
   }
 
   private static List<IndexDocument> searchFreeText(String value) {

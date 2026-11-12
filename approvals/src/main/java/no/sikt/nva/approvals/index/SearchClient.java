@@ -19,7 +19,6 @@ import nva.commons.core.ioutils.IoUtils;
 import org.opensearch.client.json.jackson.JacksonJsonpMapper;
 import org.opensearch.client.opensearch.OpenSearchClient;
 import org.opensearch.client.opensearch._types.ErrorCause;
-import org.opensearch.client.opensearch._types.FieldValue;
 import org.opensearch.client.opensearch._types.OpenSearchException;
 import org.opensearch.client.opensearch._types.SortOrder;
 import org.opensearch.client.opensearch._types.mapping.TypeMapping;
@@ -44,6 +43,7 @@ public class SearchClient {
   private static final String INDEX_ALREADY_EXISTS = "resource_already_exists_exception";
   private static final String SEARCH_FAILED_MESSAGE = "Failed to search index: ";
   private static final String IDENTIFIER = "identifier";
+  private static final String SCORE = "_score";
   public static final String SEARCH_INDEX = "SEARCH_INDEX";
   private static final String MAPPINGS_FILE = "index/approval-mappings.json";
   private static final TypeMapping MAPPINGS = readMappings();
@@ -154,6 +154,7 @@ public class SearchClient {
         new SearchRequest.Builder()
             .index(indexName)
             .size(query.size())
+            .sort(sort -> sort.field(field -> field.field(SCORE).order(SortOrder.Desc)))
             .sort(sort -> sort.field(field -> field.field(IDENTIFIER).order(SortOrder.Asc)))
             .query(
                 builder ->
@@ -162,7 +163,7 @@ public class SearchClient {
                             SearchQueryFactory.toBoolQuery(
                                 bool, freeText(query), query.filters())));
     return Optional.ofNullable(query.cursor())
-        .map(cursor -> request.searchAfter(FieldValue.of(cursor)))
+        .map(cursor -> request.searchAfter(SearchCursor.toSortValues(cursor)))
         .orElse(request)
         .build();
   }
