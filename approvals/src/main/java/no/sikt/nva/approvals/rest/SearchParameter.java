@@ -15,14 +15,9 @@ import java.util.Set;
 
 public enum SearchParameter {
   QUERY(SEARCH_QUERY_PARAMETER, "hydra:freetextQuery", "Free text matched against the approvals"),
-  PERSON(
-      PERSON_QUERY_PARAMETER,
-      "person",
-      "Person identifier or uri of an investigator on the approved study"),
+  PERSON(PERSON_QUERY_PARAMETER, "person", "Person identifier or person uri"),
   ORGANIZATION(
-      ORGANIZATION_QUERY_PARAMETER,
-      "organization",
-      "Organization identifier or uri of a trial site on the approved study"),
+      ORGANIZATION_QUERY_PARAMETER, "organization", "Organization identifier or organization uri"),
   SIZE(SIZE_QUERY_PARAMETER, "hydra:limit", "Maximum number of approvals on one page"),
   CURSOR(CURSOR_QUERY_PARAMETER, "hydra:pageReference", "Paging token, taken from next");
 
