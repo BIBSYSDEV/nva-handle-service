@@ -113,24 +113,6 @@ class IndexDocumentTest {
   }
 
   @Test
-  void shouldAddApprovalIdentifierToFreeText() {
-    var approval = randomApproval(randomHandle());
-
-    var indexDocument = IndexDocument.create(framedClinicalTrial(), approval);
-
-    assertThat(indexDocument.freeText(), hasItem(approval.identifier().toString()));
-  }
-
-  @Test
-  void shouldAddHandleToFreeText() {
-    var handle = randomHandle();
-
-    var indexDocument = IndexDocument.create(framedClinicalTrial(), randomApproval(handle));
-
-    assertThat(indexDocument.freeText(), hasItem(handle.identifier()));
-  }
-
-  @Test
   void shouldAddTitleToFreeText() {
     var trial = framedClinicalTrial();
 
@@ -149,20 +131,6 @@ class IndexDocumentTest {
   }
 
   @Test
-  void shouldAddPersonIdentifierToFreeText() {
-    var personIdentifier = randomString();
-    var trial =
-        new FramedClinicalTrial(
-            randomString(),
-            Set.of(investigator(personIdentifier)),
-            Set.of(trialSite(randomString())));
-
-    var indexDocument = IndexDocument.create(trial, randomApproval(randomHandle()));
-
-    assertThat(indexDocument.freeText(), hasItem(personIdentifier));
-  }
-
-  @Test
   void shouldAddOrganizationNameToFreeText() {
     var trial = framedClinicalTrial();
 
@@ -172,37 +140,25 @@ class IndexDocumentTest {
   }
 
   @Test
-  void shouldAddOrganizationIdentifierToFreeText() {
-    var organizationIdentifier = randomString();
-    var trial =
-        new FramedClinicalTrial(
-            randomString(),
-            Set.of(investigator(randomString())),
-            Set.of(trialSite(organizationIdentifier)));
+  void shouldNotAddHandleOrApprovalIdentifierToFreeText() {
+    var handle = randomHandle();
+    var approval = randomApproval(handle);
 
-    var indexDocument = IndexDocument.create(trial, randomApproval(randomHandle()));
+    var indexDocument = IndexDocument.create(framedClinicalTrial(), approval);
 
-    assertThat(indexDocument.freeText(), hasItem(organizationIdentifier));
+    assertThat(indexDocument.freeText(), not(hasItem(handle.identifier())));
+    assertThat(indexDocument.freeText(), not(hasItem(approval.identifier().toString())));
   }
 
   @Test
-  void shouldAddNamedIdentifierValueToFreeText() {
+  void shouldNotAddNamedIdentifierToFreeText() {
     var namedIdentifier = randomIdentifier();
     var approval = randomApproval(randomHandle(), namedIdentifier);
 
     var indexDocument = IndexDocument.create(framedClinicalTrial(), approval);
 
-    assertThat(indexDocument.freeText(), hasItem(namedIdentifier.value()));
-  }
-
-  @Test
-  void shouldAddNamedIdentifierNameToFreeText() {
-    var namedIdentifier = randomIdentifier();
-    var approval = randomApproval(randomHandle(), namedIdentifier);
-
-    var indexDocument = IndexDocument.create(framedClinicalTrial(), approval);
-
-    assertThat(indexDocument.freeText(), hasItem(namedIdentifier.name()));
+    assertThat(indexDocument.freeText(), not(hasItem(namedIdentifier.name())));
+    assertThat(indexDocument.freeText(), not(hasItem(namedIdentifier.value())));
   }
 
   @Test

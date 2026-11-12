@@ -13,7 +13,6 @@ import java.util.Set;
 import java.util.UUID;
 import nva.commons.core.Environment;
 import nva.commons.core.JacocoGenerated;
-import nva.commons.core.StringUtils;
 import nva.commons.core.attempt.Failure;
 import nva.commons.core.ioutils.IoUtils;
 import org.opensearch.client.json.jackson.JacksonJsonpMapper;
@@ -159,16 +158,11 @@ public class SearchClient {
                 builder ->
                     builder.bool(
                         bool ->
-                            SearchQueryFactory.toBoolQuery(
-                                bool, freeText(query), query.filters())));
+                            SearchQueryFactory.toBoolQuery(bool, query.query(), query.filters())));
     return Optional.ofNullable(query.cursor())
         .map(cursor -> request.searchAfter(FieldValue.of(cursor)))
         .orElse(request)
         .build();
-  }
-
-  private static String freeText(Query query) {
-    return StringUtils.isBlank(query.query()) ? null : query.searchTerm();
   }
 
   private SearchClientException searchException(Failure<SearchResponse<IndexDocument>> failure) {

@@ -16,7 +16,10 @@ import java.util.List;
 import java.util.Set;
 
 public enum SearchParameter {
-  QUERY(SEARCH_QUERY_PARAMETER, "hydra:freetextQuery", "Free text matched against the approvals"),
+  QUERY(
+      SEARCH_QUERY_PARAMETER,
+      "hydra:freetextQuery",
+      "Free text matched against title and names, tolerating typos"),
   PERSON(PERSON_QUERY_PARAMETER, "person", "Person identifier or person uri"),
   ORGANIZATION(
       ORGANIZATION_QUERY_PARAMETER, "organization", "Organization identifier or organization uri"),

@@ -188,27 +188,6 @@ class SearchClientTest {
   }
 
   @Test
-  void shouldFindDocumentByApprovalIdentifier() {
-    var approvalIdentifier = SEARCHABLE_DOCUMENT.identifier().toString();
-
-    assertEquals(List.of(SEARCHABLE_DOCUMENT), searchFreeText(approvalIdentifier));
-  }
-
-  @Test
-  void shouldFindDocumentByHandleIdentifier() {
-    var handleIdentifier = SEARCHABLE_DOCUMENT.handle();
-
-    assertEquals(List.of(SEARCHABLE_DOCUMENT), searchFreeText(handleIdentifier));
-  }
-
-  @Test
-  void shouldFindDocumentByHandleUri() {
-    var handleUri = "https://hdl.handle.net/" + SEARCHABLE_DOCUMENT.handle();
-
-    assertEquals(List.of(SEARCHABLE_DOCUMENT), searchFreeText(handleUri));
-  }
-
-  @Test
   void shouldFindDocumentByTitle() {
     var title = SEARCHABLE_DOCUMENT.title();
 
@@ -216,17 +195,20 @@ class SearchClientTest {
   }
 
   @Test
-  void shouldFindDocumentByPersonIdentifier() {
-    var personIdentifier = person().id();
+  void shouldFindDocumentByMisspelledPersonName() {
+    var personName = person().name();
 
-    assertEquals(List.of(SEARCHABLE_DOCUMENT), searchFreeText(personIdentifier));
+    assertEquals(List.of(SEARCHABLE_DOCUMENT), searchFreeText(withTypo(personName)));
   }
 
   @Test
-  void shouldFindDocumentByPersonUri() {
-    var personUri = "https://api.example.org/cristin/person/" + person().id();
+  void shouldNotFindDocumentByHandleThroughFreeText() {
+    assertEquals(List.of(), searchFreeText(SEARCHABLE_DOCUMENT.handle()));
+  }
 
-    assertEquals(List.of(SEARCHABLE_DOCUMENT), searchFreeText(personUri));
+  @Test
+  void shouldNotFindDocumentByNamedIdentifierValueThroughFreeText() {
+    assertEquals(List.of(), searchFreeText(namedIdentifier().value()));
   }
 
   @Test
@@ -234,20 +216,6 @@ class SearchClientTest {
     var personName = person().name();
 
     assertEquals(List.of(SEARCHABLE_DOCUMENT), searchFreeText(personName));
-  }
-
-  @Test
-  void shouldFindDocumentByOrganizationIdentifier() {
-    var organizationIdentifier = organization().id();
-
-    assertEquals(List.of(SEARCHABLE_DOCUMENT), searchFreeText(organizationIdentifier));
-  }
-
-  @Test
-  void shouldFindDocumentByOrganizationUri() {
-    var organizationUri = "https://api.example.org/cristin/organization/" + organization().id();
-
-    assertEquals(List.of(SEARCHABLE_DOCUMENT), searchFreeText(organizationUri));
   }
 
   @Test
@@ -268,20 +236,6 @@ class SearchClientTest {
             .collect(Collectors.toSet());
 
     assertEquals(Set.of(SEARCHABLE_DOCUMENT, SECOND_DOCUMENT), documents);
-  }
-
-  @Test
-  void shouldFindDocumentByNamedIdentifierValue() {
-    var namedIdentifierValue = namedIdentifier().value();
-
-    assertEquals(List.of(SEARCHABLE_DOCUMENT), searchFreeText(namedIdentifierValue));
-  }
-
-  @Test
-  void shouldFindDocumentByNamedIdentifierName() {
-    var namedIdentifierName = namedIdentifier().name();
-
-    assertEquals(List.of(SEARCHABLE_DOCUMENT), searchFreeText(namedIdentifierName));
   }
 
   @Test
@@ -401,6 +355,10 @@ class SearchClientTest {
         .search(new Query(StringUtils.EMPTY_STRING, List.of(), cursor, 1))
         .hits()
         .hits();
+  }
+
+  private static String withTypo(String value) {
+    return value.charAt(0) + "x" + value.substring(2);
   }
 
   private static List<IndexDocument> searchFreeText(String value) {

@@ -139,8 +139,11 @@ Corrections against the current implementation:
 
 ## Reading approvals
 
-- `FetchApprovalHandler` serves both `GET /{approvalId}` and `GET /?handle=…` / `GET /?name=…&value=…`. Mixing a path
-  parameter with query parameters returns `400 Bad Request`.
+- `FetchApprovalHandler` serves `GET /{approvalId}`. Mixing a path parameter with query parameters returns
+  `400 Bad Request`.
+- `SearchApprovalsHandler` serves `GET /`. `?query=` is free text matched against the title and the names of people
+  and organizations, tolerating typos. Identifiers are not free text: `?person=`, `?organization=`, `?identifier=`
+  and `?handle=` filter on them exactly, and combine with each other and with `?query=`.
 - Content negotiation: `application/json` and `application/ld+json`. With no `Accept` header the response is
   `application/json`, and any other `Accept` gives `406 Not Acceptable`.
 - `GET /context` and `GET /ontology` serve the JSON-LD context and the RDF ontology (Turtle) for the API. Both are

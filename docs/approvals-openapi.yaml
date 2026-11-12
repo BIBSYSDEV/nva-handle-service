@@ -122,7 +122,9 @@ paths:
       parameters:
         - name: query
           in: query
-          description: Free text to search
+          description: >-
+            Free text matched against the title and the names of people and organizations,
+            tolerating typos. Identifiers are matched by their own parameters, not by this one.
           schema:
             type: string
         - name: person
@@ -1213,7 +1215,7 @@ components:
             - type: IriTemplateMapping
               variable: query
               property: "hydra:freetextQuery"
-              description: Free text matched against the approvals
+              description: Free text matched against title and names, tolerating typos
             - type: IriTemplateMapping
               variable: person
               property: "person"

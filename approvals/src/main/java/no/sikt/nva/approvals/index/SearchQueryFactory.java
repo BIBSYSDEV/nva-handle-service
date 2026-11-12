@@ -11,6 +11,7 @@ import org.opensearch.client.util.ObjectBuilder;
 final class SearchQueryFactory {
 
   private static final String FREE_TEXT_FIELD = "freeText";
+  private static final String AUTOMATIC_FUZZINESS = "AUTO";
   private static final String PERSONS_PATH = "persons";
   private static final String PERSONS_ID_FIELD = "persons.id";
   private static final String ORGANIZATIONS_PATH = "organizations";
@@ -32,7 +33,11 @@ final class SearchQueryFactory {
         ? builder.matchAll(matchAll -> matchAll)
         : builder.match(
             match ->
-                match.field(FREE_TEXT_FIELD).query(FieldValue.of(freeText)).operator(Operator.And));
+                match
+                    .field(FREE_TEXT_FIELD)
+                    .query(FieldValue.of(freeText))
+                    .operator(Operator.And)
+                    .fuzziness(AUTOMATIC_FUZZINESS));
   }
 
   private static ObjectBuilder<Query> filterQuery(Query.Builder builder, SearchFilter filter) {

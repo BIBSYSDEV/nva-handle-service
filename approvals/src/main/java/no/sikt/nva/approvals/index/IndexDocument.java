@@ -42,24 +42,15 @@ public record IndexDocument(
         organizations,
         searchableIdentifiers,
         display,
-        getFreeText(identifier, handle, trial.title(), persons, organizations, identifiers));
+        getFreeText(trial.title(), persons, organizations));
   }
 
   private static Set<String> getFreeText(
-      UUID identifier,
-      String handle,
-      String title,
-      Set<Person> persons,
-      Set<Organization> organizations,
-      Set<Identifier> identifiers) {
+      String title, Set<Person> persons, Set<Organization> organizations) {
     return Stream.of(
-            Stream.of(identifier.toString(), handle, title),
-            persons.stream().flatMap(person -> Stream.of(person.id(), person.name())),
-            organizations.stream()
-                .flatMap(organization -> Stream.of(organization.id(), organization.name())),
-            identifiers.stream()
-                .flatMap(
-                    namedIdentifier -> Stream.of(namedIdentifier.name(), namedIdentifier.value())))
+            Stream.of(title),
+            persons.stream().map(Person::name),
+            organizations.stream().map(Organization::name))
         .flatMap(Function.identity())
         .filter(Objects::nonNull)
         .collect(Collectors.toSet());
