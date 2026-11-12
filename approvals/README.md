@@ -141,9 +141,8 @@ Corrections against the current implementation:
 
 - `FetchApprovalHandler` serves `GET /{approvalId}`. A `400 Bad Request` means `approvalId` is not a UUID; query
   parameters on that path are ignored.
-- `SearchApprovalsHandler` serves `GET /`. `?query=` is free text matched against the title and the names of people
-  and organizations, tolerating typos. Identifiers are not free text: `?person=`, `?organization=`, `?identifier=`
-  and `?handle=` filter on them exactly, and combine with each other and with `?query=`.
+- `SearchApprovalsHandler` serves `GET /`. `?query=` is free text and tolerates typos, so it is not an exact match.
+  `?person=`, `?organization=`, `?identifier=` and `?handle=` are, and combine with each other and with `?query=`.
 - Content negotiation: `application/json` and `application/ld+json`. With no `Accept` header the response is
   `application/json`, and any other `Accept` gives `406 Not Acceptable`.
 - `GET /context` and `GET /ontology` serve the JSON-LD context and the RDF ontology (Turtle) for the API. Both are
@@ -287,11 +286,13 @@ parameters. A missing body has no field to point to, so it returns only `detail`
 }
 ```
 
-Query parameters on `GET /` must be URL-encoded, and you supply either `handle` or both `name` and `value`:
+Query parameters on `GET /` must be URL-encoded, and combine freely:
 
 ```
-GET /approval?handle=https%3A%2F%2Fhdl.handle.net%2F11250.1%2F12345
-GET /approval?name=REK&value=123456
+GET /approval?query=diabetes
+GET /approval?identifier=REK%3A123456
+GET /approval?person=12345&organization=1972.0.0.0
+GET /approval?handle=11250.1%2F12345
 ```
 
 Request body for `POST /`:

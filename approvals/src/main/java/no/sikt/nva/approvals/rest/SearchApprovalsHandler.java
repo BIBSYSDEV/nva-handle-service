@@ -28,7 +28,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
-import java.util.UUID;
 import java.util.stream.Stream;
 import no.sikt.nva.approvals.domain.Handle;
 import no.sikt.nva.approvals.index.HandleFilter;
@@ -37,6 +36,7 @@ import no.sikt.nva.approvals.index.OrganizationFilter;
 import no.sikt.nva.approvals.index.PersonFilter;
 import no.sikt.nva.approvals.index.Query;
 import no.sikt.nva.approvals.index.SearchClient;
+import no.sikt.nva.approvals.index.SearchCursor;
 import no.sikt.nva.approvals.index.SearchFilter;
 import no.sikt.nva.approvals.utils.OrganizationIdentifier;
 import no.sikt.nva.approvals.utils.PersonIdentifier;
@@ -187,12 +187,17 @@ public class SearchApprovalsHandler extends ApiGatewayHandler<Void, ApprovalSear
 
   private static String cursor(RequestInfo requestInfo) throws BadRequestException {
     var requested = requestInfo.getQueryParameterOpt(CURSOR_QUERY_PARAMETER);
-    return requested.isPresent() ? approvalIdentifier(requested.get()) : null;
+    return requested.isPresent() ? pageCursor(requested.get()) : null;
   }
 
-  private static String approvalIdentifier(String value) throws BadRequestException {
-    return attempt(() -> UUID.fromString(value).toString())
+  private static String pageCursor(String value) throws BadRequestException {
+    return attempt(() -> decodable(value))
         .orElseThrow(_ -> badRequest(INVALID_CURSOR_MESSAGE, CURSOR_QUERY_PARAMETER));
+  }
+
+  private static String decodable(String value) {
+    SearchCursor.toSortValues(value);
+    return value;
   }
 
   private static int size(RequestInfo requestInfo) throws BadRequestException {

@@ -155,10 +155,9 @@ paths:
             default: 10
         - name: cursor
           in: query
-          description: Cursor identifier of the last hit on the previous page
+          description: Paging token, taken from next
           schema:
             type: string
-            format: uuid
       x-amazon-apigateway-integration:
         uri:
           Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${NvaSearchApprovalsFunction.Arn}/invocations

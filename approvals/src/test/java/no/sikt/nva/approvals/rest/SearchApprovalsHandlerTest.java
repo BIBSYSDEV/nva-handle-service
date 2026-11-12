@@ -27,6 +27,7 @@ import no.sikt.nva.approvals.index.PersonFilter;
 import no.sikt.nva.approvals.index.Query;
 import no.sikt.nva.approvals.index.SearchClient;
 import no.sikt.nva.approvals.index.SearchClientException;
+import no.sikt.nva.approvals.index.SearchCursor;
 import no.unit.nva.commons.json.JsonUtils;
 import no.unit.nva.stubs.FakeContext;
 import no.unit.nva.testutils.HandlerRequestBuilder;
@@ -34,6 +35,7 @@ import nva.commons.apigateway.GatewayResponse;
 import nva.commons.core.Environment;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.opensearch.client.opensearch._types.FieldValue;
 import org.opensearch.client.opensearch.core.SearchResponse;
 import org.opensearch.client.opensearch.core.search.TotalHitsRelation;
 
@@ -77,7 +79,7 @@ class SearchApprovalsHandlerTest {
   @Test
   void shouldSearchWithRequestedCursorAndSize() throws IOException {
     var query = randomString();
-    var cursor = randomUUID().toString();
+    var cursor = pageCursor();
 
     send(request(Map.of(QUERY_PARAMETER, query, CURSOR_PARAMETER, cursor, SIZE_PARAMETER, "5")));
 
@@ -248,7 +250,7 @@ class SearchApprovalsHandlerTest {
   }
 
   @Test
-  void shouldReturnBadRequestWhenCursorIsNotAnApprovalIdentifier() throws IOException {
+  void shouldReturnBadRequestWhenCursorCannotBeDecoded() throws IOException {
     var response = send(request(Map.of(CURSOR_PARAMETER, randomString())));
 
     assertThat(response.getStatusCode(), equalTo(HTTP_BAD_REQUEST));
@@ -269,6 +271,11 @@ class SearchApprovalsHandlerTest {
     var response = send(request(Map.of(QUERY_PARAMETER, randomString())));
 
     assertThat(response.getStatusCode(), equalTo(HTTP_OK));
+  }
+
+  private static String pageCursor() {
+    return SearchCursor.fromSortValues(
+        List.of(FieldValue.of(1.0), FieldValue.of(randomUUID().toString())));
   }
 
   private static SearchResponse<IndexDocument> emptyResponse() {

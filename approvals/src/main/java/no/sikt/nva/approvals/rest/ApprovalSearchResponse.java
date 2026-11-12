@@ -15,7 +15,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Optional;
-import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import no.sikt.nva.approvals.index.HandleFilter;
@@ -24,6 +23,7 @@ import no.sikt.nva.approvals.index.IndexDocument;
 import no.sikt.nva.approvals.index.OrganizationFilter;
 import no.sikt.nva.approvals.index.PersonFilter;
 import no.sikt.nva.approvals.index.Query;
+import no.sikt.nva.approvals.index.SearchCursor;
 import no.sikt.nva.approvals.index.SearchFilter;
 import no.sikt.nva.approvals.utils.UriConstants;
 import nva.commons.core.StringUtils;
@@ -108,9 +108,8 @@ public record ApprovalSearchResponse(
     return Optional.of(response.hits().hits())
         .filter(hits -> !hits.isEmpty() && hits.size() == query.size())
         .map(List::getLast)
-        .map(Hit::source)
-        .map(IndexDocument::identifier)
-        .map(UUID::toString)
+        .map(Hit::sort)
+        .map(SearchCursor::fromSortValues)
         .map(cursor -> pageId(nextQuery(query, cursor), apiHost))
         .orElse(null);
   }

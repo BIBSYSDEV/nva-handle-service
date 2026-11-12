@@ -20,7 +20,9 @@ import no.sikt.nva.approvals.index.IndexDocument.Display;
 import no.sikt.nva.approvals.index.IndexDocument.Identifier;
 import no.sikt.nva.approvals.index.PersonFilter;
 import no.sikt.nva.approvals.index.Query;
+import no.sikt.nva.approvals.index.SearchCursor;
 import org.junit.jupiter.api.Test;
+import org.opensearch.client.opensearch._types.FieldValue;
 import org.opensearch.client.opensearch.core.SearchResponse;
 import org.opensearch.client.opensearch.core.search.Hit;
 import org.opensearch.client.opensearch.core.search.TotalHitsRelation;
@@ -105,7 +107,8 @@ class ApprovalSearchResponseTest {
     var results = ApprovalSearchResponse.from(response(List.of(document), 50), query, API_HOST);
 
     assertEquals(
-        document.identifier().toString(), queryParametersOf(results.next()).get(CURSOR_PARAMETER));
+        SearchCursor.fromSortValues(sortValuesOf(document)),
+        queryParametersOf(results.next()).get(CURSOR_PARAMETER));
   }
 
   @Test
@@ -153,7 +156,12 @@ class ApprovalSearchResponseTest {
         .index("approvals")
         .id(document.identifier().toString())
         .source(document)
+        .sort(sortValuesOf(document))
         .build();
+  }
+
+  private static List<FieldValue> sortValuesOf(IndexDocument document) {
+    return List.of(FieldValue.of(1.0), FieldValue.of(document.identifier().toString()));
   }
 
   private static IndexDocument indexDocument() {
