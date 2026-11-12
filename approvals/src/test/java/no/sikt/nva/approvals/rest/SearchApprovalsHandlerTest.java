@@ -19,6 +19,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.List;
 import java.util.Map;
+import no.sikt.nva.approvals.index.IdentifierFilter;
 import no.sikt.nva.approvals.index.IndexDocument;
 import no.sikt.nva.approvals.index.OrganizationFilter;
 import no.sikt.nva.approvals.index.PersonFilter;
@@ -46,6 +47,8 @@ class SearchApprovalsHandlerTest {
   private static final String PERSON_ID = "12345";
   private static final String ORGANIZATION_PARAMETER = "organization";
   private static final String ORGANIZATION_ID = "1972.0.0.0";
+  private static final String IDENTIFIER_PARAMETER = "identifier";
+  private static final String NAMESPACED_IDENTIFIER = "REK:123456";
 
   private SearchClient searchClient;
   private SearchApprovalsHandler handler;
@@ -150,6 +153,23 @@ class SearchApprovalsHandlerTest {
   @Test
   void shouldReturnBadRequestWhenPersonPathIsNotAPerson() throws IOException {
     var response = send(request(Map.of(PERSON_PARAMETER, "/people/12345")));
+
+    assertThat(response.getStatusCode(), equalTo(HTTP_BAD_REQUEST));
+  }
+
+  @Test
+  void shouldSearchWithNamespacedIdentifierFromRequest() throws IOException {
+    send(request(Map.of(IDENTIFIER_PARAMETER, NAMESPACED_IDENTIFIER)));
+
+    verify(searchClient)
+        .search(
+            new Query(
+                null, List.of(IdentifierFilter.fromParameter(NAMESPACED_IDENTIFIER)), null, 10));
+  }
+
+  @Test
+  void shouldReturnBadRequestWhenIdentifierHasNoNamespace() throws IOException {
+    var response = send(request(Map.of(IDENTIFIER_PARAMETER, "123456")));
 
     assertThat(response.getStatusCode(), equalTo(HTTP_BAD_REQUEST));
   }

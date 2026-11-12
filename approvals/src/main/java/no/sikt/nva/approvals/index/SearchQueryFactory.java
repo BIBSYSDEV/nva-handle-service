@@ -15,6 +15,9 @@ final class SearchQueryFactory {
   private static final String PERSONS_ID_FIELD = "persons.id";
   private static final String ORGANIZATIONS_PATH = "organizations";
   private static final String ORGANIZATIONS_ID_FIELD = "organizations.id";
+  private static final String IDENTIFIERS_PATH = "identifiers";
+  private static final String IDENTIFIERS_NAME_FIELD = "identifiers.name";
+  private static final String IDENTIFIERS_VALUE_FIELD = "identifiers.value";
 
   private SearchQueryFactory() {}
 
@@ -39,15 +42,37 @@ final class SearchQueryFactory {
           nestedTerm(builder, PERSONS_PATH, PERSONS_ID_FIELD, person.value());
       case OrganizationFilter organization ->
           nestedTerm(builder, ORGANIZATIONS_PATH, ORGANIZATIONS_ID_FIELD, organization.value());
+      case IdentifierFilter identifier -> identifierQuery(builder, identifier);
     };
   }
 
   private static ObjectBuilder<Query> nestedTerm(
       Query.Builder builder, String path, String field, String value) {
+    return builder.nested(nested -> nested.path(path).query(inner -> term(inner, field, value)));
+  }
+
+  private static ObjectBuilder<Query> identifierQuery(
+      Query.Builder builder, IdentifierFilter filter) {
     return builder.nested(
         nested ->
             nested
-                .path(path)
-                .query(inner -> inner.term(term -> term.field(field).value(FieldValue.of(value)))));
+                .path(IDENTIFIERS_PATH)
+                .query(
+                    inner ->
+                        inner.bool(
+                            bool ->
+                                bool.must(
+                                        must ->
+                                            term(must, IDENTIFIERS_NAME_FIELD, filter.namespace()))
+                                    .must(
+                                        must ->
+                                            term(
+                                                must,
+                                                IDENTIFIERS_VALUE_FIELD,
+                                                filter.identifier())))));
+  }
+
+  private static ObjectBuilder<Query> term(Query.Builder builder, String field, String value) {
+    return builder.term(inner -> inner.field(field).value(FieldValue.of(value)));
   }
 }
