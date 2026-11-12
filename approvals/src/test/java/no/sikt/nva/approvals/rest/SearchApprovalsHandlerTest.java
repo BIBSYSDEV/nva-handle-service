@@ -20,6 +20,7 @@ import java.io.InputStream;
 import java.util.List;
 import java.util.Map;
 import no.sikt.nva.approvals.index.IndexDocument;
+import no.sikt.nva.approvals.index.PersonFilter;
 import no.sikt.nva.approvals.index.Query;
 import no.sikt.nva.approvals.index.SearchClient;
 import no.sikt.nva.approvals.index.SearchClientException;
@@ -40,6 +41,8 @@ class SearchApprovalsHandlerTest {
   private static final String QUERY_PARAMETER = "query";
   private static final String CURSOR_PARAMETER = "cursor";
   private static final String SIZE_PARAMETER = "size";
+  private static final String PERSON_PARAMETER = "person";
+  private static final String PERSON_ID = "12345";
 
   private SearchClient searchClient;
   private SearchApprovalsHandler handler;
@@ -69,7 +72,7 @@ class SearchApprovalsHandlerTest {
 
     send(request(Map.of(QUERY_PARAMETER, query, CURSOR_PARAMETER, cursor, SIZE_PARAMETER, "5")));
 
-    verify(searchClient).search(new Query(query, cursor, 5));
+    verify(searchClient).search(new Query(query, List.of(), cursor, 5));
   }
 
   @Test
@@ -77,6 +80,36 @@ class SearchApprovalsHandlerTest {
     send(request(Map.of()));
 
     verify(searchClient).search(new Query(null));
+  }
+
+  @Test
+  void shouldSearchWithPersonIdentifierFromRequest() throws IOException {
+    send(request(Map.of(PERSON_PARAMETER, PERSON_ID)));
+
+    verify(searchClient).search(new Query(null, List.of(new PersonFilter(PERSON_ID)), null, 10));
+  }
+
+  @Test
+  void shouldSearchWithIdentifierExtractedFromPersonUri() throws IOException {
+    var personUri = "https://api.example.org/cristin/person/" + PERSON_ID;
+
+    send(request(Map.of(PERSON_PARAMETER, personUri)));
+
+    verify(searchClient).search(new Query(null, List.of(new PersonFilter(PERSON_ID)), null, 10));
+  }
+
+  @Test
+  void shouldReturnBadRequestWhenPersonIsNotAPersonUri() throws IOException {
+    var response = send(request(Map.of(PERSON_PARAMETER, "https://api.example.org/people/12345")));
+
+    assertThat(response.getStatusCode(), equalTo(HTTP_BAD_REQUEST));
+  }
+
+  @Test
+  void shouldReturnBadRequestWhenPersonPathIsNotAPerson() throws IOException {
+    var response = send(request(Map.of(PERSON_PARAMETER, "/people/12345")));
+
+    assertThat(response.getStatusCode(), equalTo(HTTP_BAD_REQUEST));
   }
 
   @Test

@@ -23,7 +23,6 @@ import org.opensearch.client.opensearch._types.FieldValue;
 import org.opensearch.client.opensearch._types.OpenSearchException;
 import org.opensearch.client.opensearch._types.SortOrder;
 import org.opensearch.client.opensearch._types.mapping.TypeMapping;
-import org.opensearch.client.opensearch._types.query_dsl.Operator;
 import org.opensearch.client.opensearch.core.BulkRequest;
 import org.opensearch.client.opensearch.core.BulkResponse;
 import org.opensearch.client.opensearch.core.SearchRequest;
@@ -44,7 +43,6 @@ public class SearchClient {
   private static final String INDEX_DELETION_FAILED_MESSAGE = "Failed to delete index: ";
   private static final String INDEX_ALREADY_EXISTS = "resource_already_exists_exception";
   private static final String SEARCH_FAILED_MESSAGE = "Failed to search index: ";
-  private static final String FREE_TEXT = "freeText";
   private static final String IDENTIFIER = "identifier";
   public static final String SEARCH_INDEX = "SEARCH_INDEX";
   private static final String MAPPINGS_FILE = "index/approval-mappings.json";
@@ -159,18 +157,18 @@ public class SearchClient {
             .sort(sort -> sort.field(field -> field.field(IDENTIFIER).order(SortOrder.Asc)))
             .query(
                 builder ->
-                    StringUtils.isBlank(query.query())
-                        ? builder.matchAll(matchAll -> matchAll)
-                        : builder.match(
-                            match ->
-                                match
-                                    .field(FREE_TEXT)
-                                    .query(FieldValue.of(query.searchTerm()))
-                                    .operator(Operator.And)));
+                    builder.bool(
+                        bool ->
+                            SearchQueryFactory.toBoolQuery(
+                                bool, freeText(query), query.filters())));
     return Optional.ofNullable(query.cursor())
         .map(cursor -> request.searchAfter(FieldValue.of(cursor)))
         .orElse(request)
         .build();
+  }
+
+  private static String freeText(Query query) {
+    return StringUtils.isBlank(query.query()) ? null : query.searchTerm();
   }
 
   private SearchClientException searchException(Failure<SearchResponse<IndexDocument>> failure) {

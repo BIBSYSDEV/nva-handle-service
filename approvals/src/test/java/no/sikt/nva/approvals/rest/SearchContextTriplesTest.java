@@ -33,7 +33,8 @@ class SearchContextTriplesTest {
   private static final String API_HOST = "localhost";
   private static final String XSD_INTEGER = "http://www.w3.org/2001/XMLSchema#integer";
   private static final int TOTAL_ITEMS = 42;
-  private static final String SEARCH_TEMPLATE = "https://localhost/approval{?query,size,cursor}";
+  private static final String SEARCH_TEMPLATE =
+      "https://localhost/approval{?query,person,size,cursor}";
 
   @Test
   void shouldReturnTriplesOfSearchResultsTypeAndItsHits() throws IOException, JsonLdError {
