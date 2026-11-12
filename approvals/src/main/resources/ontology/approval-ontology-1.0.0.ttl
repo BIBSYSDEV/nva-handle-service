@@ -120,6 +120,6 @@
 
 :person a rdf:Property ;
     rdfs:label "person" ;
-    rdfs:comment "A person named as an investigator on the approved study" ;
+    rdfs:comment "A person associated with the approval" ;
     rdfs:domain :Approval ;
     rdfs:range xsd:string .

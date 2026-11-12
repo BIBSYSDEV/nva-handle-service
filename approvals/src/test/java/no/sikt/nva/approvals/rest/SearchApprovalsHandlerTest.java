@@ -99,14 +99,14 @@ class SearchApprovalsHandlerTest {
   }
 
   @Test
-  void shouldReturnBadRequestWhenPersonIsNotACristinPersonUri() throws IOException {
+  void shouldReturnBadRequestWhenPersonIsNotAPersonUri() throws IOException {
     var response = send(request(Map.of(PERSON_PARAMETER, "https://api.example.org/people/12345")));
 
     assertThat(response.getStatusCode(), equalTo(HTTP_BAD_REQUEST));
   }
 
   @Test
-  void shouldReturnBadRequestWhenPersonPathIsNotACristinPerson() throws IOException {
+  void shouldReturnBadRequestWhenPersonPathIsNotAPerson() throws IOException {
     var response = send(request(Map.of(PERSON_PARAMETER, "/people/12345")));
 
     assertThat(response.getStatusCode(), equalTo(HTTP_BAD_REQUEST));

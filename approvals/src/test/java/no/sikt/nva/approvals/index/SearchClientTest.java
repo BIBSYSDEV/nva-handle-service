@@ -291,7 +291,7 @@ class SearchClientTest {
   }
 
   @Test
-  void shouldNotFindDocumentWhenPersonFilterMatchesNoInvestigator() {
+  void shouldNotFindDocumentWhenNoPersonMatchesFilter() {
     assertEquals(List.of(), searchByPerson(randomString()));
   }
 
