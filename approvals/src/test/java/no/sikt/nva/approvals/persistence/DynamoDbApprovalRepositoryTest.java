@@ -21,7 +21,6 @@ import static no.sikt.nva.approvals.utils.TestUtils.randomIdentifierPolicy;
 import static no.sikt.nva.approvals.utils.TestUtils.randomIdentifiers;
 import static no.sikt.nva.approvals.utils.TestUtils.randomRevision;
 import static no.sikt.nva.approvals.utils.TestUtils.randomRevisionChange;
-import static no.sikt.nva.approvals.utils.TestUtils.randomSourceChange;
 import static no.sikt.nva.approvals.utils.TestUtils.randomSourceConfig;
 import static no.sikt.nva.approvals.utils.TestUtils.randomSourceSnapshot;
 import static no.sikt.nva.approvals.utils.TestUtils.randomTimestamp;
@@ -1214,7 +1213,7 @@ class DynamoDbApprovalRepositoryTest {
   @Test
   void shouldNotFindApprovalWhenOnlySnapshotExistsForApprovalIdentifier() {
     var snapshot = randomSourceSnapshot();
-    approvalRepository.save(snapshot);
+    dynamoDbLocal.saveSnapshot(TABLE, snapshot);
 
     var approval = approvalRepository.findByApprovalIdentifier(snapshot.approvalIdentifier());
 
@@ -1222,38 +1221,14 @@ class DynamoDbApprovalRepositoryTest {
   }
 
   @Test
-  void shouldPersistSnapshot() {
-    var snapshot = randomSourceSnapshot();
-    approvalRepository.save(snapshot);
-
-    var persisted = storedSnapshot(snapshot);
-
-    assertThat(persisted, equalTo(SourceSnapshotDao.fromSourceSnapshot(snapshot)));
-  }
-
-  @Test
   void shouldPersistTriggerOfSnapshotCreatedFromApprovalRevision() {
     var revisionChange = randomRevisionChange(randomUUID(), randomTimestamp(), UPDATE_APPROVAL);
     var snapshot = SourceSnapshot.create(revisionChange, randomContent(), randomTimestamp());
-    approvalRepository.save(snapshot);
+    dynamoDbLocal.saveSnapshot(TABLE, snapshot);
 
     var persisted = storedSnapshot(snapshot).toChange();
 
     assertThat(persisted.activity(), equalTo(revisionChange.trigger()));
-  }
-
-  @Test
-  void shouldNotOverwriteSnapshotWhenSameEventIsSavedAgain() {
-    var sourceChange = randomSourceChange();
-    var snapshot = SourceSnapshot.create(sourceChange, randomContent(), randomTimestamp());
-    approvalRepository.save(snapshot);
-    var stored = storedSnapshot(snapshot);
-
-    approvalRepository.save(
-        SourceSnapshot.create(sourceChange, randomContent(), randomTimestamp()));
-    var redelivered = storedSnapshot(snapshot);
-
-    assertThat(stored, equalTo(redelivered));
   }
 
   private List<ApprovalRevision> revisions(UUID approvalIdentifier) {

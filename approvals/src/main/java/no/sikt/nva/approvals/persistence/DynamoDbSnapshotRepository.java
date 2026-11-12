@@ -33,7 +33,7 @@ import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 import software.amazon.awssdk.services.dynamodb.model.TransactionCanceledException;
 
-public class DynamoDbLatestSnapshotRepository implements LatestSnapshotRepository {
+public class DynamoDbSnapshotRepository implements SnapshotRepository {
 
   private static final String SNAPSHOT_VERSION = "snapshotVersion";
   private static final long FIRST_SNAPSHOT_VERSION = 1L;
@@ -53,14 +53,14 @@ public class DynamoDbLatestSnapshotRepository implements LatestSnapshotRepositor
   private final DynamoDbEnhancedClient client;
   private final DynamoDbTable<EnhancedDocument> table;
 
-  public DynamoDbLatestSnapshotRepository(DynamoDbClient client, Environment environment) {
+  public DynamoDbSnapshotRepository(DynamoDbClient client, Environment environment) {
     this.client = DynamoDbEnhancedClient.builder().dynamoDbClient(client).build();
     this.table = this.client.table(environment.readEnv(TABLE), documentTableSchema());
   }
 
   @JacocoGenerated
-  public static LatestSnapshotRepository defaultInstance(Environment environment) {
-    return new DynamoDbLatestSnapshotRepository(defaultDynamoClient(environment), environment);
+  public static SnapshotRepository defaultInstance(Environment environment) {
+    return new DynamoDbSnapshotRepository(defaultDynamoClient(environment), environment);
   }
 
   @Override
@@ -71,11 +71,11 @@ public class DynamoDbLatestSnapshotRepository implements LatestSnapshotRepositor
             .consistentRead(true)
             .build();
     return Optional.ofNullable(table.getItem(request))
-        .map(DynamoDbLatestSnapshotRepository::toSnapshotState);
+        .map(DynamoDbSnapshotRepository::toSnapshotState);
   }
 
   @Override
-  public void saveAsLatestSnapshot(SourceSnapshot snapshot, SnapshotState expectedState) {
+  public void save(SourceSnapshot snapshot, SnapshotState expectedState) {
     var request =
         TransactWriteItemsEnhancedRequest.builder()
             .addUpdateItem(

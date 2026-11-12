@@ -67,7 +67,7 @@ class DynamoDbChangeRepositoryTest {
   void shouldListRevisionsAndSnapshotsOfApprovalAsChanges() {
     var approval = randomApproval(randomHandle());
     saveApproval(approval);
-    approvalRepository.save(randomSourceSnapshot(approval.identifier()));
+    dynamoDbLocal.saveSnapshot(TABLE, randomSourceSnapshot(approval.identifier()));
 
     var changes =
         changeRepository.listChangesByApproval(approval, null, PAGE_SIZE).changes().stream()
@@ -91,7 +91,7 @@ class DynamoDbChangeRepositoryTest {
   void shouldNotListChangesOfOtherApprovals() {
     var approval = randomApproval(randomHandle());
     saveApproval(approval);
-    approvalRepository.save(randomSourceSnapshot());
+    dynamoDbLocal.saveSnapshot(TABLE, randomSourceSnapshot());
 
     var changes = changeRepository.listChangesByApproval(approval, null, PAGE_SIZE).changes();
 
@@ -111,7 +111,7 @@ class DynamoDbChangeRepositoryTest {
   void shouldReportMoreChangesWhenPageIsFull() {
     var approval = randomApproval(randomHandle());
     saveApproval(approval);
-    approvalRepository.save(randomSourceSnapshot(approval.identifier()));
+    dynamoDbLocal.saveSnapshot(TABLE, randomSourceSnapshot(approval.identifier()));
 
     var page = changeRepository.listChangesByApproval(approval, null, 1);
 
@@ -122,7 +122,7 @@ class DynamoDbChangeRepositoryTest {
   void shouldNotReportMoreChangesWhenApprovalHasExactlyPageSizeChanges() {
     var approval = randomApproval(randomHandle());
     saveApproval(approval);
-    approvalRepository.save(randomSourceSnapshot(approval.identifier()));
+    dynamoDbLocal.saveSnapshot(TABLE, randomSourceSnapshot(approval.identifier()));
 
     var page = changeRepository.listChangesByApproval(approval, null, 2);
 
@@ -133,7 +133,7 @@ class DynamoDbChangeRepositoryTest {
   void shouldReturnNoMoreThanPageSizeChanges() {
     var approval = randomApproval(randomHandle());
     saveApproval(approval);
-    approvalRepository.save(randomSourceSnapshot(approval.identifier()));
+    dynamoDbLocal.saveSnapshot(TABLE, randomSourceSnapshot(approval.identifier()));
 
     var page = changeRepository.listChangesByApproval(approval, null, 1);
 
@@ -144,8 +144,8 @@ class DynamoDbChangeRepositoryTest {
   void shouldListEveryChangeExactlyOnceWhenPagingWithNext() {
     var approval = randomApproval(randomHandle());
     saveApproval(approval);
-    approvalRepository.save(randomSourceSnapshot(approval.identifier()));
-    approvalRepository.save(randomSourceSnapshot(approval.identifier()));
+    dynamoDbLocal.saveSnapshot(TABLE, randomSourceSnapshot(approval.identifier()));
+    dynamoDbLocal.saveSnapshot(TABLE, randomSourceSnapshot(approval.identifier()));
 
     var identifiers =
         Stream.iterate(
@@ -168,7 +168,7 @@ class DynamoDbChangeRepositoryTest {
     var approval = randomApproval(randomHandle());
     var snapshot = randomSourceSnapshot(approval.identifier());
     saveApproval(approval);
-    approvalRepository.save(snapshot);
+    dynamoDbLocal.saveSnapshot(TABLE, snapshot);
 
     var change = changeRepository.findChange(approval.identifier(), snapshot.identifier());
 
@@ -178,7 +178,7 @@ class DynamoDbChangeRepositoryTest {
   @Test
   void shouldReturnOptionalEmtpyWhenChangeDoesNotExist() {
     var snapshot = randomSourceSnapshot();
-    approvalRepository.save(snapshot);
+    dynamoDbLocal.saveSnapshot(TABLE, snapshot);
 
     var change = changeRepository.findChange(randomUUID(), snapshot.identifier());
 
@@ -192,10 +192,11 @@ class DynamoDbChangeRepositoryTest {
     var newerSnapshot =
         randomSourceSnapshot(
             approval.identifier(), now.minusSeconds(NEWER_SNAPSHOT_AGE_IN_SECONDS));
-    approvalRepository.save(
+    dynamoDbLocal.saveSnapshot(
+        TABLE,
         randomSourceSnapshot(
             approval.identifier(), now.minusSeconds(OLDER_SNAPSHOT_AGE_IN_SECONDS)));
-    approvalRepository.save(newerSnapshot);
+    dynamoDbLocal.saveSnapshot(TABLE, newerSnapshot);
     saveApproval(approval);
 
     var latestSnapshot = changeRepository.findLatestSnapshot(approval.identifier());
@@ -209,7 +210,7 @@ class DynamoDbChangeRepositoryTest {
     var snapshot =
         randomSourceSnapshot(
             approval.identifier(), Instant.now().minusSeconds(OLDER_SNAPSHOT_AGE_IN_SECONDS));
-    approvalRepository.save(snapshot);
+    dynamoDbLocal.saveSnapshot(TABLE, snapshot);
     saveApproval(approval);
     updateApproval(approval);
     updateApproval(approval);
@@ -248,7 +249,7 @@ class DynamoDbChangeRepositoryTest {
   @Test
   void shouldReturnOptionalEmptyWhenApprovalHasSnapshotButNoRevision() {
     var approvalIdentifier = randomUUID();
-    approvalRepository.save(randomSourceSnapshot(approvalIdentifier));
+    dynamoDbLocal.saveSnapshot(TABLE, randomSourceSnapshot(approvalIdentifier));
 
     assertTrue(changeRepository.findLatestRevision(approvalIdentifier).isEmpty());
   }
@@ -268,7 +269,7 @@ class DynamoDbChangeRepositoryTest {
     Stream.iterate(1, age -> age + 1)
         .limit(SNAPSHOTS_BEYOND_FIRST_QUERY_PAGE)
         .map(age -> randomSourceSnapshot(approvalIdentifier, revisionCreatedDate.plusSeconds(age)))
-        .forEach(approvalRepository::save);
+        .forEach(snapshot -> dynamoDbLocal.saveSnapshot(TABLE, snapshot));
   }
 
   private ApprovalRevision saveApproval(Approval approval) {

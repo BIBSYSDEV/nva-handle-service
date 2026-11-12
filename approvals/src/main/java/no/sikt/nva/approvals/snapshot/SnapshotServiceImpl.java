@@ -7,8 +7,8 @@ import no.sikt.nva.approvals.domain.Content;
 import no.sikt.nva.approvals.domain.SourceSnapshot;
 import no.sikt.nva.approvals.persistence.ChangeRepository;
 import no.sikt.nva.approvals.persistence.DynamoDbChangeRepository;
-import no.sikt.nva.approvals.persistence.DynamoDbLatestSnapshotRepository;
-import no.sikt.nva.approvals.persistence.LatestSnapshotRepository;
+import no.sikt.nva.approvals.persistence.DynamoDbSnapshotRepository;
+import no.sikt.nva.approvals.persistence.SnapshotRepository;
 import no.sikt.nva.approvals.persistence.SnapshotState;
 import no.sikt.nva.approvals.source.SourceClient;
 import no.sikt.nva.approvals.source.SourceClientException;
@@ -26,15 +26,15 @@ public class SnapshotServiceImpl implements SnapshotService {
   private static final int FIRST_ATTEMPT = 1;
   private static final int MAX_ATTEMPTS = 3;
 
-  private final LatestSnapshotRepository latestSnapshotRepository;
+  private final SnapshotRepository snapshotRepository;
   private final ChangeRepository changeRepository;
   private final SourceClient sourceClient;
 
   public SnapshotServiceImpl(
-      LatestSnapshotRepository latestSnapshotRepository,
+      SnapshotRepository snapshotRepository,
       ChangeRepository changeRepository,
       SourceClient sourceClient) {
-    this.latestSnapshotRepository = latestSnapshotRepository;
+    this.snapshotRepository = snapshotRepository;
     this.changeRepository = changeRepository;
     this.sourceClient = sourceClient;
   }
@@ -42,7 +42,7 @@ public class SnapshotServiceImpl implements SnapshotService {
   @JacocoGenerated
   public static SnapshotService defaultInstance(Environment environment) {
     return new SnapshotServiceImpl(
-        DynamoDbLatestSnapshotRepository.defaultInstance(environment),
+        DynamoDbSnapshotRepository.defaultInstance(environment),
         DynamoDbChangeRepository.defaultInstance(environment),
         SourceClient.defaultInstance(environment));
   }
@@ -74,14 +74,14 @@ public class SnapshotServiceImpl implements SnapshotService {
   private void saveIfChanged(
       CreateSnapshotRequest createSnapshotRequest, Content content, SnapshotState state) {
     if (hasChangedSinceLatestSnapshot(createSnapshotRequest, content)) {
-      latestSnapshotRepository.saveAsLatestSnapshot(
+      snapshotRepository.save(
           SourceSnapshot.create(createSnapshotRequest, content, Instant.now()), state);
     }
   }
 
   private Optional<SnapshotState> findStateOfCurrentSource(
       CreateSnapshotRequest createSnapshotRequest) {
-    return latestSnapshotRepository
+    return snapshotRepository
         .findSnapshotStateConsistently(createSnapshotRequest.approvalIdentifier())
         .filter(state -> createSnapshotRequest.source().equals(state.source()));
   }

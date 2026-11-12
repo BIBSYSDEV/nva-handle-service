@@ -9,11 +9,14 @@ import static no.sikt.nva.approvals.persistence.DynamoDbConstants.PK2;
 import static no.sikt.nva.approvals.persistence.DynamoDbConstants.SK0;
 import static no.sikt.nva.approvals.persistence.DynamoDbConstants.SK1;
 import static no.sikt.nva.approvals.persistence.DynamoDbConstants.SK2;
+import static no.sikt.nva.approvals.persistence.DynamoDbConstants.documentTableSchema;
 import static nva.commons.core.attempt.Try.attempt;
 
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Optional;
+import no.sikt.nva.approvals.domain.SourceSnapshot;
+import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedClient;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import software.amazon.awssdk.services.dynamodb.model.AttributeDefinition;
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
@@ -49,6 +52,14 @@ public record DynamoDbLocal(DynamoDbClient client) {
               key.put(SK0, item.get(SK0));
               client.deleteItem(DeleteItemRequest.builder().tableName(table).key(key).build());
             });
+  }
+
+  public void saveSnapshot(String table, SourceSnapshot snapshot) {
+    DynamoDbEnhancedClient.builder()
+        .dynamoDbClient(client)
+        .build()
+        .table(table, documentTableSchema())
+        .putItem(SourceSnapshotDao.fromSourceSnapshot(snapshot).toEnhancedDocument());
   }
 
   private static void createTableIfNotExists(DynamoDbClient client, String table) {

@@ -4,9 +4,9 @@ import java.util.Optional;
 import java.util.UUID;
 import no.sikt.nva.approvals.domain.SourceSnapshot;
 
-public interface LatestSnapshotRepository {
+public interface SnapshotRepository {
 
   Optional<SnapshotState> findSnapshotStateConsistently(UUID approvalIdentifier);
 
-  void saveAsLatestSnapshot(SourceSnapshot snapshot, SnapshotState expectedState);
+  void save(SourceSnapshot snapshot, SnapshotState expectedState);
 }

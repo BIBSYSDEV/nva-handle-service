@@ -164,7 +164,7 @@ class ChangeServiceTest {
                 timestamp),
             randomContent(),
             timestamp);
-    approvalRepository.save(snapshot);
+    dynamoDbLocal.saveSnapshot(TABLE, snapshot);
     return snapshot;
   }
 
