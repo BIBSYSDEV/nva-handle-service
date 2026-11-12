@@ -4,10 +4,12 @@ import static java.net.HttpURLConnection.HTTP_OK;
 import static no.sikt.nva.approvals.utils.RequestUtils.getApiHost;
 import static no.sikt.nva.approvals.utils.RequestUtils.toApiGatewayException;
 import static no.sikt.nva.approvals.utils.UriConstants.CURSOR_QUERY_PARAMETER;
+import static no.sikt.nva.approvals.utils.UriConstants.ORGANIZATION_QUERY_PARAMETER;
 import static no.sikt.nva.approvals.utils.UriConstants.PERSON_QUERY_PARAMETER;
 import static no.sikt.nva.approvals.utils.UriConstants.SEARCH_QUERY_PARAMETER;
 import static no.sikt.nva.approvals.utils.UriConstants.SIZE_QUERY_PARAMETER;
 import static no.sikt.nva.approvals.validation.RequestConstraints.INVALID_CURSOR_MESSAGE;
+import static no.sikt.nva.approvals.validation.RequestConstraints.INVALID_ORGANIZATION_MESSAGE;
 import static no.sikt.nva.approvals.validation.RequestConstraints.INVALID_PERSON_MESSAGE;
 import static no.sikt.nva.approvals.validation.RequestConstraints.INVALID_SIZE_MESSAGE;
 import static no.sikt.nva.approvals.validation.RequestConstraints.MAX_SEARCH_SIZE;
@@ -23,10 +25,13 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Stream;
+import no.sikt.nva.approvals.index.OrganizationFilter;
 import no.sikt.nva.approvals.index.PersonFilter;
 import no.sikt.nva.approvals.index.Query;
 import no.sikt.nva.approvals.index.SearchClient;
 import no.sikt.nva.approvals.index.SearchFilter;
+import no.sikt.nva.approvals.utils.OrganizationIdentifier;
 import no.sikt.nva.approvals.utils.PersonIdentifier;
 import nva.commons.apigateway.ApiGatewayHandler;
 import nva.commons.apigateway.MediaType;
@@ -97,10 +102,25 @@ public class SearchApprovalsHandler extends ApiGatewayHandler<Void, ApprovalSear
   }
 
   private static List<SearchFilter> filters(RequestInfo requestInfo) throws BadRequestException {
+    return Stream.of(personFilter(requestInfo), organizationFilter(requestInfo))
+        .flatMap(Optional::stream)
+        .toList();
+  }
+
+  private static Optional<SearchFilter> personFilter(RequestInfo requestInfo)
+      throws BadRequestException {
     var requested = requestInfo.getQueryParameterOpt(PERSON_QUERY_PARAMETER);
     return requested.isPresent()
-        ? List.of(new PersonFilter(personIdentifier(requested.get())))
-        : List.of();
+        ? Optional.of(new PersonFilter(personIdentifier(requested.get())))
+        : Optional.empty();
+  }
+
+  private static Optional<SearchFilter> organizationFilter(RequestInfo requestInfo)
+      throws BadRequestException {
+    var requested = requestInfo.getQueryParameterOpt(ORGANIZATION_QUERY_PARAMETER);
+    return requested.isPresent()
+        ? Optional.of(new OrganizationFilter(organizationIdentifier(requested.get())))
+        : Optional.empty();
   }
 
   private static String personIdentifier(String value) throws BadRequestException {
@@ -112,6 +132,17 @@ public class SearchApprovalsHandler extends ApiGatewayHandler<Void, ApprovalSear
     return value.contains(PATH_SEPARATOR)
         ? PersonIdentifier.fromUri(URI.create(value))
         : new PersonIdentifier(value);
+  }
+
+  private static String organizationIdentifier(String value) throws BadRequestException {
+    return attempt(() -> toOrganizationIdentifier(value).value())
+        .orElseThrow(_ -> badRequest(INVALID_ORGANIZATION_MESSAGE, ORGANIZATION_QUERY_PARAMETER));
+  }
+
+  private static OrganizationIdentifier toOrganizationIdentifier(String value) {
+    return value.contains(PATH_SEPARATOR)
+        ? OrganizationIdentifier.fromUri(URI.create(value))
+        : new OrganizationIdentifier(value);
   }
 
   private static String cursor(RequestInfo requestInfo) throws BadRequestException {

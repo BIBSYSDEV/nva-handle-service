@@ -123,3 +123,9 @@
     rdfs:comment "A person associated with the approval" ;
     rdfs:domain :Approval ;
     rdfs:range xsd:string .
+
+:organization a rdf:Property ;
+    rdfs:label "organization" ;
+    rdfs:comment "An organization associated with the approval" ;
+    rdfs:domain :Approval ;
+    rdfs:range xsd:string .

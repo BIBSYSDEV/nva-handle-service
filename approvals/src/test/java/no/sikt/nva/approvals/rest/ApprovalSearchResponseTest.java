@@ -47,7 +47,7 @@ class ApprovalSearchResponseTest {
   void shouldReturnSearchTemplateWithSupportedParameters() {
     var results = ApprovalSearchResponse.from(response(List.of(), 0), query(), API_HOST);
 
-    assertThat(results.search().template(), endsWith("{?query,person,size,cursor}"));
+    assertThat(results.search().template(), endsWith("{?query,person,organization,size,cursor}"));
   }
 
   @Test

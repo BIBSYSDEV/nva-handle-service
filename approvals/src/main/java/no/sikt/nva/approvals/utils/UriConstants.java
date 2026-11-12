@@ -18,6 +18,7 @@ public final class UriConstants {
   public static final String CURSOR_QUERY_PARAMETER = "cursor";
   public static final String SEARCH_QUERY_PARAMETER = "query";
   public static final String PERSON_QUERY_PARAMETER = "person";
+  public static final String ORGANIZATION_QUERY_PARAMETER = "organization";
   public static final String SIZE_QUERY_PARAMETER = "size";
   public static final String CONTEXT_PROPERTY = "@context";
   public static final String CURRENT_CONTEXT_VERSION = "v1";
