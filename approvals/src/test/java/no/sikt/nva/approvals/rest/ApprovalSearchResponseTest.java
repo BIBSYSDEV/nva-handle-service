@@ -49,7 +49,7 @@ class ApprovalSearchResponseTest {
 
     assertThat(
         results.search().template(),
-        endsWith("{?query,person,organization,identifier,size,cursor}"));
+        endsWith("{?query,person,organization,identifier,handle,size,cursor}"));
   }
 
   @Test

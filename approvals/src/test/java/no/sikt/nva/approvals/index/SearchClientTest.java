@@ -330,6 +330,18 @@ class SearchClientTest {
     assertEquals(List.of(), hits);
   }
 
+  @Test
+  void shouldFindDocumentByHandleFilter() {
+    assertEquals(
+        List.of(SEARCHABLE_DOCUMENT),
+        searchByFilter(new HandleFilter(SEARCHABLE_DOCUMENT.handle())));
+  }
+
+  @Test
+  void shouldNotFindDocumentWhenHandleFilterMatchesNoApproval() {
+    assertEquals(List.of(), searchByFilter(new HandleFilter(randomHandle().identifier())));
+  }
+
   private static String indexWithIdentifiers(Identifier first, Identifier second)
       throws IOException {
     var indexName = randomIndexName();

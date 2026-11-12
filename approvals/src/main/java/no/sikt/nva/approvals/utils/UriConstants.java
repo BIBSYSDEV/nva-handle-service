@@ -20,6 +20,7 @@ public final class UriConstants {
   public static final String PERSON_QUERY_PARAMETER = "person";
   public static final String ORGANIZATION_QUERY_PARAMETER = "organization";
   public static final String IDENTIFIER_QUERY_PARAMETER = "identifier";
+  public static final String HANDLE_QUERY_PARAMETER = "handle";
   public static final String SIZE_QUERY_PARAMETER = "size";
   public static final String CONTEXT_PROPERTY = "@context";
   public static final String CURRENT_CONTEXT_VERSION = "v1";

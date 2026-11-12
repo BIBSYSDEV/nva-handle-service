@@ -41,6 +41,7 @@ public final class RequestConstraints {
       "Must be an organization identifier or uri";
   public static final String INVALID_IDENTIFIER_MESSAGE =
       "Must be an identifier namespace and value separated by a colon";
+  public static final String INVALID_HANDLE_MESSAGE = "Must be a handle identifier or uri";
   public static final String INVALID_SIZE_MESSAGE =
       "Must be an integer from 0 to " + MAX_SEARCH_SIZE;
 

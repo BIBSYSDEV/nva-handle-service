@@ -12,7 +12,7 @@ class SearchParameterTest {
   @Test
   void shouldListEverySupportedParameterName() {
     assertEquals(
-        Set.of("query", "person", "organization", "identifier", "size", "cursor"),
+        Set.of("query", "person", "organization", "identifier", "handle", "size", "cursor"),
         SearchParameter.parameterNames());
   }
 
@@ -21,7 +21,7 @@ class SearchParameterTest {
     var searchId = randomUri();
 
     assertEquals(
-        searchId + "{?query,person,organization,identifier,size,cursor}",
+        searchId + "{?query,person,organization,identifier,handle,size,cursor}",
         SearchParameter.iriTemplate(searchId));
   }
 

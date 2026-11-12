@@ -140,6 +140,11 @@ paths:
           description: Identifier namespace and value separated by a colon, for example REK:123456.
           schema:
             type: string
+        - name: handle
+          in: query
+          description: Handle identifier or the handle uri.
+          schema:
+            type: string
         - name: size
           in: query
           description: Maximum number of hits on one page
@@ -1203,7 +1208,7 @@ components:
         next: https://api.nva.unit.no/approval?query=diabetes&size=10&cursor=6ff5f1b5-97c1-40f0-86ad-2cbd9006eee2
         search:
           type: IriTemplate
-          template: https://api.nva.unit.no/approval{?query,person,organization,identifier,size,cursor}
+          template: https://api.nva.unit.no/approval{?query,person,organization,identifier,handle,size,cursor}
           mapping:
             - type: IriTemplateMapping
               variable: query
@@ -1221,6 +1226,10 @@ components:
               variable: identifier
               property: "identifiers"
               description: Identifier namespace and value separated by a colon
+            - type: IriTemplateMapping
+              variable: handle
+              property: "handle"
+              description: Handle identifier or handle uri
     IriTemplate:
       type: object
       description: The Hydra template describing how to query this collection

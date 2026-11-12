@@ -3,6 +3,7 @@ package no.sikt.nva.approvals.rest;
 import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toUnmodifiableSet;
 import static no.sikt.nva.approvals.utils.UriConstants.CURSOR_QUERY_PARAMETER;
+import static no.sikt.nva.approvals.utils.UriConstants.HANDLE_QUERY_PARAMETER;
 import static no.sikt.nva.approvals.utils.UriConstants.IDENTIFIER_QUERY_PARAMETER;
 import static no.sikt.nva.approvals.utils.UriConstants.ORGANIZATION_QUERY_PARAMETER;
 import static no.sikt.nva.approvals.utils.UriConstants.PERSON_QUERY_PARAMETER;
@@ -23,6 +24,7 @@ public enum SearchParameter {
       IDENTIFIER_QUERY_PARAMETER,
       "identifiers",
       "Identifier namespace and value separated by a colon"),
+  HANDLE(HANDLE_QUERY_PARAMETER, "handle", "Handle identifier or handle uri"),
   SIZE(SIZE_QUERY_PARAMETER, "hydra:limit", "Maximum number of approvals on one page"),
   CURSOR(CURSOR_QUERY_PARAMETER, "hydra:pageReference", "Paging token, taken from next");
 
