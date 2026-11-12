@@ -26,7 +26,6 @@ public record SourceChangedMessage(
         approvalIdentifier,
         new Agent(customerIdentifier, clientIdentifier),
         source,
-        new SourceChangedEventTrigger(eventIdentifier, cloudEventIdentifier),
-        timestamp);
+        new SourceChangedEventTrigger(eventIdentifier, cloudEventIdentifier));
   }
 }

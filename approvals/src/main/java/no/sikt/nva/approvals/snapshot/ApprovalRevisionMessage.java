@@ -32,7 +32,6 @@ public record ApprovalRevisionMessage(
         approvalIdentifier,
         new Agent(customerIdentifier, clientIdentifier),
         toApproval().source(),
-        new ApprovalRevisionTrigger(revisionIdentifier, activity),
-        timestamp);
+        new ApprovalRevisionTrigger(revisionIdentifier, activity));
   }
 }

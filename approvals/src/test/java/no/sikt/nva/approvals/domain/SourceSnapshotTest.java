@@ -8,6 +8,7 @@ import static no.sikt.nva.approvals.utils.TestUtils.randomTimestamp;
 import static no.unit.nva.testutils.RandomDataGenerator.randomString;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.Matchers.not;
 
 import java.time.Instant;
@@ -15,14 +16,32 @@ import org.junit.jupiter.api.Test;
 
 class SourceSnapshotTest {
 
-  @Test
-  void shouldCreateSameSnapshotIdentifierForTheSameApprovalAndEvent() {
-    var sourceChange = randomSourceChange();
+  private static final long TRIGGER_DELAY = 60;
 
-    var first = SourceSnapshot.create(sourceChange, randomContent(), randomTimestamp());
-    var redelivered = SourceSnapshot.create(sourceChange, randomContent(), randomTimestamp());
+  @Test
+  void shouldCreateSameSnapshotIdentifierForTheSameApprovalEventAndCreatedDate() {
+    var sourceChange = randomSourceChange();
+    var createdDate = randomTimestamp();
+
+    var first = SourceSnapshot.create(sourceChange, randomContent(), createdDate);
+    var redelivered = SourceSnapshot.create(sourceChange, randomContent(), createdDate);
 
     assertThat(redelivered.identifier(), equalTo(first.identifier()));
+  }
+
+  @Test
+  void shouldSortSnapshotCreatedLaterAfterEarlierSnapshotWhenItsTriggerIsOlder() {
+    var approvalIdentifier = randomUUID();
+    var now = Instant.now();
+    var newerTrigger = randomSourceChange(approvalIdentifier, randomString(), now);
+    var olderTrigger =
+        randomSourceChange(approvalIdentifier, randomString(), now.minusSeconds(TRIGGER_DELAY));
+
+    var earlier = SourceSnapshot.create(newerTrigger, randomContent(), now);
+    var later =
+        SourceSnapshot.create(olderTrigger, randomContent(), now.plusSeconds(TRIGGER_DELAY));
+
+    assertThat(later.identifier().toString(), greaterThan(earlier.identifier().toString()));
   }
 
   @Test
