@@ -20,6 +20,7 @@ public record ClinicalTrialView(
     implements SourceView {
 
   public ClinicalTrialView {
+    statuses = nonNull(statuses) ? statuses : Map.of();
     events = emptyIfNull(events);
     sponsors = emptyIfNull(sponsors);
     trialSites = emptyIfNull(trialSites);

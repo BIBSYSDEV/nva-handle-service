@@ -7,6 +7,7 @@ import static no.sikt.nva.approvals.persistence.DynamoDbConstants.STRING;
 import static nva.commons.core.attempt.Try.attempt;
 
 import com.fasterxml.jackson.annotation.JsonTypeName;
+import com.fasterxml.jackson.databind.JsonNode;
 import java.time.Instant;
 import java.util.UUID;
 import no.sikt.nva.approvals.domain.SourceView;
@@ -22,7 +23,7 @@ public record SourceViewDao(
     SortableIdentifier snapshotIdentifier,
     String contentHash,
     int viewVersion,
-    SourceView view,
+    JsonNode view,
     Instant createdDate,
     Instant modifiedDate)
     implements DatabaseEntry {
@@ -38,7 +39,7 @@ public record SourceViewDao(
         update.snapshotIdentifier(),
         update.contentHash(),
         update.viewVersion(),
-        update.view(),
+        JsonUtils.dtoObjectMapper.valueToTree(update.view()),
         createdDate,
         modifiedDate);
   }
@@ -54,7 +55,7 @@ public record SourceViewDao(
         snapshotIdentifier,
         contentHash,
         viewVersion,
-        view,
+        readView(),
         createdDate,
         modifiedDate);
   }
@@ -70,5 +71,10 @@ public record SourceViewDao(
   @Override
   public String getDatabaseIdentifier() {
     return SORT_KEY;
+  }
+
+  private SourceView readView() {
+    return attempt(() -> JsonUtils.dtoObjectMapper.treeToValue(view, SourceView.class))
+        .orElse(failure -> null);
   }
 }
