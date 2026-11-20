@@ -48,8 +48,7 @@ class DynamoDbSourceViewRepositoryTest {
   void shouldFindSavedSourceView() {
     var sourceView = sourceView(NOW, VIEW_VERSION);
 
-    repository.save(sourceView);
-
+    assertTrue(repository.save(sourceView));
     assertEquals(Optional.of(sourceView), repository.find(approvalIdentifier));
   }
 
@@ -92,6 +91,7 @@ class DynamoDbSourceViewRepositoryTest {
     repository.save(stored);
 
     assertFalse(repository.save(withViewVersion(stored, VIEW_VERSION)));
+    assertEquals(Optional.of(stored), repository.find(approvalIdentifier));
   }
 
   private StoredSourceView sourceView(Instant snapshotTime, int viewVersion) {
