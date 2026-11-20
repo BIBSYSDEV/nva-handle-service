@@ -23,7 +23,7 @@ public class IndexDocumentGenerator {
     if (isMissingContent(snapshot)) {
       throw new IndexDocumentGeneratorException(EMPTY_SNAPSHOT_MESSAGE);
     }
-    return attempt(() -> FRAMER.frame(snapshot))
+    return attempt(() -> FRAMER.frame(snapshot.content().body()))
         .map(jsonObject -> fromJson(jsonObject.toString()))
         .map(framedClinicalTrial -> IndexDocument.create(framedClinicalTrial, approval))
         .orElseThrow(failure -> framingException(snapshot, failure));
