@@ -26,15 +26,7 @@
       "type": "Sponsor",
       "name": "Akershus University Hospital",
       "organizationTypeCode": "8",
-      "organizationTypeDisplayName": "Hospital",
-      "contactInformation": {
-        "address": {
-          "street": "Sykehusveien 25",
-          "city": "Loerenskog",
-          "postcode": "1474",
-          "country": "Norway"
-        }
-      }
+      "organizationTypeDisplayName": "Hospital"
     }
   ],
   "publicContactPoint": {

@@ -20,21 +20,10 @@
     "date":                        { "@type": "xsd:date" },
     "sponsors":                    { "@id": "sponsor", "@container": "@set" },
     "name":                        { "@type": "xsd:string" },
-    "organizationTypeDisplayName": { "@type": "xsd:string" },
-    "publicContactPoint":          {},
-    "organizationName":            { "@type": "xsd:string" },
-    "functionalName":              { "@type": "xsd:string" },
-    "functionalEmailAddress":      { "@type": "xsd:string" },
-    "functionalPhoneNumber":       { "@type": "xsd:string" },
     "trialSites":                  { "@id": "trialSite", "@container": "@set" },
     "departmentName":              { "@type": "xsd:string" },
     "siteLocation":                { "@type": "xsd:string" },
     "nvaOrganizationId":           { "@type": "@id" },
-    "address":                     {},
-    "street":                      { "@type": "xsd:string" },
-    "city":                        { "@type": "xsd:string" },
-    "postcode":                    { "@type": "xsd:string" },
-    "country":                     { "@type": "xsd:string" },
     "investigator": {
       "@context": { "title": { "@id": "ctis:title", "@type": "xsd:string" } }
     },
@@ -50,25 +39,12 @@
   "modified": {},
   "statuses": { "@explicit": true, "eea": {}, "norway": {} },
   "events": { "@explicit": true, "region": {}, "date": {} },
-  "sponsors": {
-    "@explicit": true,
-    "name": {},
-    "organizationTypeDisplayName": {},
-    "contactInformation": { "@explicit": true, "address": {} }
-  },
-  "publicContactPoint": {
-    "@explicit": true,
-    "organizationName": {},
-    "functionalName": {},
-    "functionalEmailAddress": {},
-    "functionalPhoneNumber": {}
-  },
+  "sponsors": { "@explicit": true, "name": {} },
   "trialSites": {
     "@explicit": true,
     "departmentName": {},
     "siteLocation": {},
     "nvaOrganizationId": {},
-    "address": { "@explicit": true, "street": {}, "city": {}, "postcode": {}, "country": {} },
     "investigator": {
       "@explicit": true,
       "title": {},
