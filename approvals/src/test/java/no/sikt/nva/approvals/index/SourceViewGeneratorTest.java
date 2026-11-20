@@ -5,8 +5,10 @@ import static no.unit.nva.testutils.RandomDataGenerator.randomString;
 import static nva.commons.core.ioutils.IoUtils.stringFromResources;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsInAnyOrder;
-import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.empty;
+import static org.hamcrest.Matchers.is;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.net.URI;
@@ -24,14 +26,22 @@ class SourceViewGeneratorTest {
   private static final String JSON_LD_MEDIA_TYPE = "application/ld+json";
   private static final String CLINICAL_TRIAL_FILE = "clinical-trial.json";
   private static final String CLINICAL_TRIAL_TITLE = "METIMMOX-2: Test Clinical Trial";
-  private static final String CLINICAL_TRIAL_TYPE = "\"type\" : \"ClinicalTrial\"";
+  private static final String CLINICAL_TRIAL_TYPE = "ClinicalTrial";
+  private static final String TYPE_FIELD = "type";
   private static final String INVESTIGATOR_TITLE = "Prof.";
   private static final String NORWAY_STATUS = "Ongoing";
+  private static final String STATUSES_FIELD = "statuses";
   private static final String SPONSOR_CITY = "Loerenskog";
   private static final URI TRIAL_SITE_ID =
       URI.create("https://api.nva.unit.no/cristin/organization/1972.0.0.0");
   private static final URI INVESTIGATOR_ID =
       URI.create("https://api.nva.unit.no/cristin/person/23297");
+  private static final String MINIMAL_CLINICAL_TRIAL =
+      """
+      {"@context": "https://api.legemiddelverket.no/ctis/context/clinical-trial.json",
+       "type": "ClinicalTrial", "publicTitle": "%s"}
+      """
+          .formatted(CLINICAL_TRIAL_TITLE);
 
   private final SourceViewGenerator generator = new SourceViewGenerator();
 
@@ -85,12 +95,28 @@ class SourceViewGeneratorTest {
   }
 
   @Test
+  void shouldCreateEmptyCollectionsAndNoNullsWhenSourceIsMinimal() throws Exception {
+    var content = Content.create(JSON_LD_MEDIA_TYPE, MINIMAL_CLINICAL_TRIAL);
+    var view = (ClinicalTrialView) generator.generate(randomSourceSnapshotWithContent(content));
+
+    var json =
+        JsonUtils.dtoObjectMapper.readTree(JsonUtils.dtoObjectMapper.writeValueAsString(view));
+
+    assertEquals(CLINICAL_TRIAL_TITLE, view.title());
+    assertThat(view.events(), is(empty()));
+    assertThat(view.sponsors(), is(empty()));
+    assertThat(view.trialSites(), is(empty()));
+    assertFalse(json.has(STATUSES_FIELD));
+  }
+
+  @Test
   void shouldSerializeViewWithClinicalTrialType() throws Exception {
     SourceView view = generateClinicalTrialView();
 
-    var json = JsonUtils.dtoObjectMapper.writeValueAsString(view);
+    var json =
+        JsonUtils.dtoObjectMapper.readTree(JsonUtils.dtoObjectMapper.writeValueAsString(view));
 
-    assertThat(json, containsString(CLINICAL_TRIAL_TYPE));
+    assertEquals(CLINICAL_TRIAL_TYPE, json.get(TYPE_FIELD).asText());
   }
 
   @Test
