@@ -13,6 +13,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.net.URI;
 import java.nio.file.Path;
+import java.util.Map;
 import no.sikt.nva.approvals.domain.ClinicalTrialView;
 import no.sikt.nva.approvals.domain.ClinicalTrialView.Event;
 import no.sikt.nva.approvals.domain.ClinicalTrialView.Investigator;
@@ -32,6 +33,10 @@ class SourceViewGeneratorTest {
   private static final String INVESTIGATOR_TITLE = "Prof.";
   private static final String NORWAY_STATUS = "Ongoing";
   private static final String EEA_STATUS = "Authorised";
+  private static final String SWEDEN_STATUS = "Ended";
+  private static final String EEA_REGION_KEY = "eea";
+  private static final String NORWAY_REGION_KEY = "norway";
+  private static final String SWEDEN_REGION_KEY = "sweden";
   private static final URI CLINICAL_TRIAL_ID =
       URI.create("https://st-api.legemiddelverket.no/ctis/clinical-trial/2022-500027-76-00");
   private static final String CLINICAL_TRIAL_IDENTIFIER = "2022-500027-76-00";
@@ -102,7 +107,6 @@ class SourceViewGeneratorTest {
     assertEquals(CLINICAL_TRIAL_ID, view.id());
     assertEquals(CLINICAL_TRIAL_IDENTIFIER, view.identifier());
     assertEquals(MODIFIED_DATE, view.modified());
-    assertEquals(EEA_STATUS, view.statuses().eea());
     assertThat(
         view.events(),
         containsInAnyOrder(
@@ -111,10 +115,18 @@ class SourceViewGeneratorTest {
   }
 
   @Test
-  void shouldCreateStatusesAndSponsorName() throws SourceViewGeneratorException {
+  void shouldCreateStatusesForEveryRegionAndSponsorName() throws SourceViewGeneratorException {
     var view = generateClinicalTrialView();
 
-    assertEquals(NORWAY_STATUS, view.statuses().norway());
+    assertEquals(
+        Map.of(
+            EEA_REGION_KEY,
+            EEA_STATUS,
+            NORWAY_REGION_KEY,
+            NORWAY_STATUS,
+            SWEDEN_REGION_KEY,
+            SWEDEN_STATUS),
+        view.statuses());
     assertEquals(SPONSOR_NAME, view.sponsors().getFirst().name());
   }
 

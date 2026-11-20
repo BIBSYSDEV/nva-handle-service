@@ -3,6 +3,7 @@ package no.sikt.nva.approvals.domain;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import java.net.URI;
 import java.util.List;
+import java.util.Map;
 
 @JsonTypeName("ClinicalTrial")
 public record ClinicalTrialView(
@@ -10,13 +11,11 @@ public record ClinicalTrialView(
     String identifier,
     String title,
     String modified,
-    Statuses statuses,
+    Map<String, String> statuses,
     List<Event> events,
     List<Sponsor> sponsors,
     List<TrialSite> trialSites)
     implements SourceView {
-
-  public record Statuses(String eea, String norway) {}
 
   public record Event(String type, String region, String date) {}
 
