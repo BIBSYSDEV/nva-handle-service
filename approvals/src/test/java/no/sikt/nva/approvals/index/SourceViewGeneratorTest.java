@@ -31,7 +31,8 @@ class SourceViewGeneratorTest {
   private static final String INVESTIGATOR_TITLE = "Prof.";
   private static final String NORWAY_STATUS = "Ongoing";
   private static final String STATUSES_FIELD = "statuses";
-  private static final String SPONSOR_CITY = "Loerenskog";
+  private static final String SPONSOR_NAME = "Akershus University Hospital";
+  private static final String EMPTY_CONTENT_MESSAGE = "Snapshot content is empty";
   private static final URI TRIAL_SITE_ID =
       URI.create("https://api.nva.unit.no/cristin/organization/1972.0.0.0");
   private static final URI INVESTIGATOR_ID =
@@ -85,13 +86,11 @@ class SourceViewGeneratorTest {
   }
 
   @Test
-  void shouldCreateStatusesAndSponsorAddress() throws SourceViewGeneratorException {
+  void shouldCreateStatusesAndSponsorName() throws SourceViewGeneratorException {
     var view = generateClinicalTrialView();
 
-    var sponsorAddress = view.sponsors().getFirst().contactInformation().address();
-
     assertEquals(NORWAY_STATUS, view.statuses().norway());
-    assertEquals(SPONSOR_CITY, sponsorAddress.city());
+    assertEquals(SPONSOR_NAME, view.sponsors().getFirst().name());
   }
 
   @Test
@@ -131,7 +130,10 @@ class SourceViewGeneratorTest {
   void shouldThrowWhenSnapshotContentIsMissing() {
     var snapshot = randomSourceSnapshotWithContent(new Content(null, null, null));
 
-    assertThrows(SourceViewGeneratorException.class, () -> generator.generate(snapshot));
+    var exception =
+        assertThrows(SourceViewGeneratorException.class, () -> generator.generate(snapshot));
+
+    assertEquals(EMPTY_CONTENT_MESSAGE, exception.getMessage());
   }
 
   private ClinicalTrialView generateClinicalTrialView() throws SourceViewGeneratorException {

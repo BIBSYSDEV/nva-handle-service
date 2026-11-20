@@ -13,7 +13,6 @@ public record ClinicalTrialView(
     Statuses statuses,
     List<Event> events,
     List<Sponsor> sponsors,
-    PublicContactPoint publicContactPoint,
     List<TrialSite> trialSites)
     implements SourceView {
 
@@ -21,24 +20,12 @@ public record ClinicalTrialView(
 
   public record Event(String type, String region, String date) {}
 
-  public record Sponsor(
-      String name, String organizationTypeDisplayName, ContactInformation contactInformation) {}
-
-  public record ContactInformation(Address address) {}
-
-  public record Address(String street, String city, String postcode, String country) {}
-
-  public record PublicContactPoint(
-      String organizationName,
-      String functionalName,
-      String functionalEmailAddress,
-      String functionalPhoneNumber) {}
+  public record Sponsor(String name) {}
 
   public record TrialSite(
       URI nvaOrganizationId,
       String departmentName,
       String siteLocation,
-      Address address,
       Investigator investigator) {}
 
   public record Investigator(
