@@ -26,7 +26,7 @@ public class IndexDocumentGenerator {
       "index/ctis-clinical-trial-context.json";
 
   private static final Document CLINICAL_TRIAL_FRAME = readDocument(CLINICAL_TRIAL_FRAME_FILE);
-  private static final Document CTIS_CLINICAL_TRIAL_CONTEXT =
+  static final Document CTIS_CLINICAL_TRIAL_CONTEXT =
       readDocument(CTIS_CLINICAL_TRIAL_CONTEXT_FILE);
 
   public IndexDocumentGenerator() {}
@@ -56,7 +56,7 @@ public class IndexDocumentGenerator {
         .get();
   }
 
-  private static Document readDocument(String fileName) {
+  static Document readDocument(String fileName) {
     return attempt(() -> IoUtils.stringFromResources(Path.of(fileName)))
         .map(StringReader::new)
         .map(JsonDocument::of)

@@ -16,13 +16,25 @@
       "date": "2022-10-05"
     }
   ],
+  "statuses": {
+    "eea": "Authorised",
+    "norway": "Ongoing"
+  },
   "publicTitle": "METIMMOX-2: Test Clinical Trial",
   "sponsors": [
     {
       "type": "Sponsor",
       "name": "Akershus University Hospital",
       "organizationTypeCode": "8",
-      "organizationTypeDisplayName": "Hospital"
+      "organizationTypeDisplayName": "Hospital",
+      "contactInformation": {
+        "address": {
+          "street": "Sykehusveien 25",
+          "city": "Loerenskog",
+          "postcode": "1474",
+          "country": "Norway"
+        }
+      }
     }
   ],
   "publicContactPoint": {
