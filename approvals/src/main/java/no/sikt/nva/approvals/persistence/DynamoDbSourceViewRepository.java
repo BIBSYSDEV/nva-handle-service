@@ -8,10 +8,11 @@ import static no.sikt.nva.approvals.persistence.SourceViewDao.SNAPSHOT_IDENTIFIE
 import static no.sikt.nva.approvals.persistence.SourceViewDao.SORT_KEY;
 import static no.sikt.nva.approvals.persistence.SourceViewDao.VIEW_VERSION;
 
-import java.time.Instant;
+import java.time.Clock;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import no.sikt.nva.approvals.domain.SourceViewUpdate;
 import no.sikt.nva.approvals.domain.StoredSourceView;
 import nva.commons.core.Environment;
 import nva.commons.core.JacocoGenerated;
@@ -37,18 +38,21 @@ public class DynamoDbSourceViewRepository implements SourceViewRepository {
           + " OR (#snapshotIdentifier = :snapshotIdentifier AND #viewVersion < :viewVersion)";
 
   private final DynamoDbTable<EnhancedDocument> table;
+  private final Clock clock;
 
-  public DynamoDbSourceViewRepository(DynamoDbClient client, Environment environment) {
+  public DynamoDbSourceViewRepository(DynamoDbClient client, Environment environment, Clock clock) {
     this.table =
         DynamoDbEnhancedClient.builder()
             .dynamoDbClient(client)
             .build()
             .table(environment.readEnv(TABLE), documentTableSchema());
+    this.clock = clock;
   }
 
   @JacocoGenerated
   public static SourceViewRepository defaultInstance(Environment environment) {
-    return new DynamoDbSourceViewRepository(defaultDynamoClient(environment), environment);
+    return new DynamoDbSourceViewRepository(
+        defaultDynamoClient(environment), environment, Clock.systemUTC());
   }
 
   @Override
@@ -61,19 +65,17 @@ public class DynamoDbSourceViewRepository implements SourceViewRepository {
   }
 
   @Override
-  public boolean save(StoredSourceView sourceView) {
-    var modifiedDate = Instant.now();
+  public boolean save(SourceViewUpdate update) {
+    var modifiedDate = clock.instant();
     var createdDate =
-        find(sourceView.approvalIdentifier())
-            .map(StoredSourceView::createdDate)
-            .orElse(modifiedDate);
+        find(update.approvalIdentifier()).map(StoredSourceView::createdDate).orElse(modifiedDate);
     try {
       table.putItem(
           PutItemEnhancedRequest.builder(EnhancedDocument.class)
               .item(
-                  SourceViewDao.fromStoredSourceView(sourceView, createdDate, modifiedDate)
+                  SourceViewDao.fromSourceViewUpdate(update, createdDate, modifiedDate)
                       .toEnhancedDocument())
-              .conditionExpression(newerThanStored(sourceView))
+              .conditionExpression(newerThanStored(update))
               .build());
       return true;
     } catch (ConditionalCheckFailedException ignored) {
@@ -81,7 +83,7 @@ public class DynamoDbSourceViewRepository implements SourceViewRepository {
     }
   }
 
-  private static Expression newerThanStored(StoredSourceView sourceView) {
+  private static Expression newerThanStored(SourceViewUpdate update) {
     return Expression.builder()
         .expression(NEWER_THAN_STORED)
         .expressionNames(
@@ -91,9 +93,9 @@ public class DynamoDbSourceViewRepository implements SourceViewRepository {
         .expressionValues(
             Map.of(
                 SNAPSHOT_IDENTIFIER_VALUE,
-                AttributeValue.fromS(sourceView.snapshotIdentifier().toString()),
+                AttributeValue.fromS(update.snapshotIdentifier().toString()),
                 VIEW_VERSION_VALUE,
-                AttributeValue.fromN(String.valueOf(sourceView.viewVersion()))))
+                AttributeValue.fromN(String.valueOf(update.viewVersion()))))
         .build();
   }
 
