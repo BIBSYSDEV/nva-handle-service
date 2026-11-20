@@ -1,0 +1,55 @@
+{
+  "@context": {
+    "@version": 1.1,
+    "@vocab": "https://api.legemiddelverket.no/ontology#",
+    "ctis": "https://api.legemiddelverket.no/ontology#",
+    "ClinicalTrial": {
+      "@id": "ctis:ClinicalTrial",
+      "@context": { "title": { "@id": "ctis:publicTitle", "@type": "xsd:string" } }
+    },
+    "xsd": "http://www.w3.org/2001/XMLSchema#",
+    "id": "@id",
+    "type": "@type",
+    "identifier":                  { "@type": "xsd:string" },
+    "modified":                    { "@type": "xsd:dateTime" },
+    "statuses":                    { "@id": "clinicalTrialStatuses" },
+    "events":                      { "@id": "event", "@container": "@set" },
+    "region":                      { "@type": "xsd:string" },
+    "date":                        { "@type": "xsd:date" },
+    "sponsors":                    { "@id": "sponsor", "@container": "@set" },
+    "name":                        { "@type": "xsd:string" },
+    "trialSites":                  { "@id": "trialSite", "@container": "@set" },
+    "departmentName":              { "@type": "xsd:string" },
+    "siteLocation":                { "@type": "xsd:string" },
+    "nvaOrganizationId":           { "@type": "@id" },
+    "investigator": {
+      "@context": { "title": { "@id": "ctis:title", "@type": "xsd:string" } }
+    },
+    "firstName":                   { "@type": "xsd:string" },
+    "lastName":                    { "@type": "xsd:string" },
+    "department":                  { "@type": "xsd:string" },
+    "nvaPersonId":                 { "@type": "@id" }
+  },
+  "@type": "ClinicalTrial",
+  "@explicit": true,
+  "identifier": {},
+  "title": {},
+  "modified": {},
+  "statuses": {},
+  "events": { "@explicit": true, "region": {}, "date": {} },
+  "sponsors": { "@explicit": true, "name": {} },
+  "trialSites": {
+    "@explicit": true,
+    "departmentName": {},
+    "siteLocation": {},
+    "nvaOrganizationId": {},
+    "investigator": {
+      "@explicit": true,
+      "title": {},
+      "firstName": {},
+      "lastName": {},
+      "department": {},
+      "nvaPersonId": {}
+    }
+  }
+}
