@@ -37,7 +37,7 @@
   "identifier": {},
   "title": {},
   "modified": {},
-  "statuses": { "@explicit": true, "eea": {}, "norway": {} },
+  "statuses": {},
   "events": { "@explicit": true, "region": {}, "date": {} },
   "sponsors": { "@explicit": true, "name": {} },
   "trialSites": {
