@@ -10,6 +10,7 @@ import com.fasterxml.jackson.annotation.JsonTypeName;
 import java.time.Instant;
 import java.util.UUID;
 import no.sikt.nva.approvals.domain.SourceView;
+import no.sikt.nva.approvals.domain.SourceViewUpdate;
 import no.sikt.nva.approvals.domain.StoredSourceView;
 import no.unit.nva.commons.json.JsonUtils;
 import no.unit.nva.identifiers.SortableIdentifier;
@@ -30,14 +31,14 @@ public record SourceViewDao(
   public static final String SNAPSHOT_IDENTIFIER = "snapshotIdentifier";
   public static final String VIEW_VERSION = "viewVersion";
 
-  public static SourceViewDao fromStoredSourceView(
-      StoredSourceView sourceView, Instant createdDate, Instant modifiedDate) {
+  public static SourceViewDao fromSourceViewUpdate(
+      SourceViewUpdate update, Instant createdDate, Instant modifiedDate) {
     return new SourceViewDao(
-        sourceView.approvalIdentifier(),
-        sourceView.snapshotIdentifier(),
-        sourceView.contentHash(),
-        sourceView.viewVersion(),
-        sourceView.view(),
+        update.approvalIdentifier(),
+        update.snapshotIdentifier(),
+        update.contentHash(),
+        update.viewVersion(),
+        update.view(),
         createdDate,
         modifiedDate);
   }

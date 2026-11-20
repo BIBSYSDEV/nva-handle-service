@@ -7,12 +7,14 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.time.Clock;
 import java.time.Instant;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import no.sikt.nva.approvals.domain.ClinicalTrialView;
-import no.sikt.nva.approvals.domain.SourceView;
+import no.sikt.nva.approvals.domain.SourceViewUpdate;
 import no.sikt.nva.approvals.domain.StoredSourceView;
 import no.unit.nva.identifiers.SortableIdentifier;
 import nva.commons.core.Environment;
@@ -24,18 +26,20 @@ class DynamoDbSourceViewRepositoryTest {
 
   private static final Environment ENVIRONMENT = new Environment();
   private static final String TABLE = ENVIRONMENT.readEnv(DynamoDbConstants.TABLE);
-  private static final Instant NOW = Instant.parse("2026-11-20T12:00:00Z");
-  private static final Instant EARLIER = NOW.minusSeconds(3600);
+  private static final Instant NEWER_SNAPSHOT = Instant.parse("2026-11-20T12:00:00Z");
+  private static final Instant OLDER_SNAPSHOT = NEWER_SNAPSHOT.minusSeconds(3600);
+  private static final Instant FIRST_SAVE = Instant.parse("2026-11-20T13:00:00Z");
+  private static final Instant SECOND_SAVE = FIRST_SAVE.plusSeconds(60);
   private static final int VIEW_VERSION = 1;
 
-  private SourceViewRepository repository;
   private DynamoDbLocal dynamoDbLocal;
+  private SourceViewRepository repository;
   private UUID approvalIdentifier;
 
   @BeforeEach
   void setUp() {
     dynamoDbLocal = dynamoDBLocal(TABLE);
-    repository = new DynamoDbSourceViewRepository(dynamoDbLocal.client(), ENVIRONMENT);
+    repository = repositoryAt(FIRST_SAVE);
     approvalIdentifier = randomUUID();
   }
 
@@ -46,106 +50,100 @@ class DynamoDbSourceViewRepositoryTest {
 
   @Test
   void shouldFindSavedSourceView() {
-    var sourceView = sourceView(NOW, VIEW_VERSION);
+    var update = update(NEWER_SNAPSHOT, VIEW_VERSION);
 
-    assertTrue(repository.save(sourceView));
-    assertEquals(Optional.of(sourceView), findWithoutDates());
+    assertTrue(repository.save(update));
+    assertEquals(Optional.of(stored(update, FIRST_SAVE, FIRST_SAVE)), find());
   }
 
   @Test
   void shouldNotFindSourceViewForApprovalWithoutOne() {
-    assertEquals(Optional.empty(), repository.find(approvalIdentifier));
+    assertEquals(Optional.empty(), find());
   }
 
   @Test
-  void shouldReplaceSourceViewFromNewerSnapshot() {
-    repository.save(sourceView(EARLIER, VIEW_VERSION));
-    var newer = sourceView(NOW, VIEW_VERSION);
+  void shouldReplaceSourceViewFromNewerSnapshotAndKeepCreatedDate() {
+    repository.save(update(OLDER_SNAPSHOT, VIEW_VERSION));
+    var newer = update(NEWER_SNAPSHOT, VIEW_VERSION);
 
-    assertTrue(repository.save(newer));
-    assertEquals(Optional.of(newer), findWithoutDates());
-  }
-
-  @Test
-  void shouldKeepCreatedDateAndSetModifiedDateWhenSourceViewIsReplaced() {
-    repository.save(sourceView(EARLIER, VIEW_VERSION));
-    var firstCreatedDate = repository.find(approvalIdentifier).orElseThrow().createdDate();
-
-    repository.save(sourceView(NOW, VIEW_VERSION));
-    var replaced = repository.find(approvalIdentifier).orElseThrow();
-
-    assertEquals(firstCreatedDate, replaced.createdDate());
-    assertFalse(replaced.modifiedDate().isBefore(firstCreatedDate));
+    assertTrue(repositoryAt(SECOND_SAVE).save(newer));
+    assertEquals(Optional.of(stored(newer, FIRST_SAVE, SECOND_SAVE)), find());
   }
 
   @Test
   void shouldNotReplaceSourceViewWithOneFromOlderSnapshot() {
-    var newer = sourceView(NOW, VIEW_VERSION);
+    var newer = update(NEWER_SNAPSHOT, VIEW_VERSION);
     repository.save(newer);
 
-    assertFalse(repository.save(sourceView(EARLIER, VIEW_VERSION + 1)));
-    assertEquals(Optional.of(newer), findWithoutDates());
+    assertFalse(repositoryAt(SECOND_SAVE).save(update(OLDER_SNAPSHOT, VIEW_VERSION + 1)));
+    assertEquals(Optional.of(stored(newer, FIRST_SAVE, FIRST_SAVE)), find());
   }
 
   @Test
   void shouldReplaceSourceViewOfSameSnapshotWhenViewVersionIsHigher() {
-    var stored = sourceView(NOW, VIEW_VERSION);
+    var stored = update(NEWER_SNAPSHOT, VIEW_VERSION);
     repository.save(stored);
     var upgraded = withViewVersion(stored, VIEW_VERSION + 1);
 
-    assertTrue(repository.save(upgraded));
-    assertEquals(Optional.of(upgraded), findWithoutDates());
+    assertTrue(repositoryAt(SECOND_SAVE).save(upgraded));
+    assertEquals(Optional.of(stored(upgraded, FIRST_SAVE, SECOND_SAVE)), find());
   }
 
   @Test
   void shouldNotReplaceSourceViewOfSameSnapshotAndViewVersion() {
-    var stored = sourceView(NOW, VIEW_VERSION);
+    var stored = update(NEWER_SNAPSHOT, VIEW_VERSION);
     repository.save(stored);
 
-    assertFalse(repository.save(withViewVersion(stored, VIEW_VERSION)));
-    assertEquals(Optional.of(stored), findWithoutDates());
+    assertFalse(repositoryAt(SECOND_SAVE).save(withViewVersion(stored, VIEW_VERSION)));
+    assertEquals(Optional.of(stored(stored, FIRST_SAVE, FIRST_SAVE)), find());
   }
 
   @Test
   void shouldNotReplaceSourceViewOfSameSnapshotWithLowerViewVersion() {
-    var stored = sourceView(NOW, VIEW_VERSION + 1);
+    var stored = update(NEWER_SNAPSHOT, VIEW_VERSION + 1);
     repository.save(stored);
 
-    assertFalse(repository.save(withViewVersion(stored, VIEW_VERSION)));
-    assertEquals(Optional.of(stored), findWithoutDates());
+    assertFalse(repositoryAt(SECOND_SAVE).save(withViewVersion(stored, VIEW_VERSION)));
+    assertEquals(Optional.of(stored(stored, FIRST_SAVE, FIRST_SAVE)), find());
   }
 
-  private Optional<StoredSourceView> findWithoutDates() {
-    return repository
-        .find(approvalIdentifier)
-        .map(stored -> withViewVersion(stored, stored.viewVersion(), stored.view()));
+  private SourceViewRepository repositoryAt(Instant now) {
+    return new DynamoDbSourceViewRepository(
+        dynamoDbLocal.client(), ENVIRONMENT, Clock.fixed(now, ZoneOffset.UTC));
   }
 
-  private StoredSourceView sourceView(Instant snapshotTime, int viewVersion) {
-    return new StoredSourceView(
+  private Optional<StoredSourceView> find() {
+    return repository.find(approvalIdentifier);
+  }
+
+  private SourceViewUpdate update(Instant snapshotTime, int viewVersion) {
+    return new SourceViewUpdate(
         approvalIdentifier,
         SortableIdentifier.create(snapshotTime, randomUUID()),
         randomString(),
         viewVersion,
-        clinicalTrialView(),
-        null,
-        null);
+        clinicalTrialView());
   }
 
-  private static StoredSourceView withViewVersion(StoredSourceView sourceView, int viewVersion) {
-    return withViewVersion(sourceView, viewVersion, clinicalTrialView());
-  }
-
-  private static StoredSourceView withViewVersion(
-      StoredSourceView sourceView, int viewVersion, SourceView view) {
-    return new StoredSourceView(
-        sourceView.approvalIdentifier(),
-        sourceView.snapshotIdentifier(),
-        sourceView.contentHash(),
+  private static SourceViewUpdate withViewVersion(SourceViewUpdate update, int viewVersion) {
+    return new SourceViewUpdate(
+        update.approvalIdentifier(),
+        update.snapshotIdentifier(),
+        update.contentHash(),
         viewVersion,
-        view,
-        null,
-        null);
+        clinicalTrialView());
+  }
+
+  private static StoredSourceView stored(
+      SourceViewUpdate update, Instant createdDate, Instant modifiedDate) {
+    return new StoredSourceView(
+        update.approvalIdentifier(),
+        update.snapshotIdentifier(),
+        update.contentHash(),
+        update.viewVersion(),
+        update.view(),
+        createdDate,
+        modifiedDate);
   }
 
   private static ClinicalTrialView clinicalTrialView() {
