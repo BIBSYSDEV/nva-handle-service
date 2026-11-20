@@ -102,14 +102,9 @@ public class IndexingService {
   }
 
   private void updateSourceView(SourceSnapshot snapshot) {
-    attempt(() -> saveSourceViewWhenOutdated(snapshot))
-        .orElse(failure -> logSourceViewFailure(snapshot, failure.getException()));
-  }
-
-  private boolean saveSourceViewWhenOutdated(SourceSnapshot snapshot)
-      throws SourceViewGeneratorException {
-    return isSourceViewOutdated(snapshot)
-        && sourceViewRepository.save(createSourceViewUpdate(snapshot));
+    if (isSourceViewOutdated(snapshot)) {
+      createSourceViewUpdate(snapshot).ifPresent(sourceViewRepository::save);
+    }
   }
 
   private boolean isSourceViewOutdated(SourceSnapshot snapshot) {
@@ -121,23 +116,23 @@ public class IndexingService {
         .isEmpty();
   }
 
-  private SourceViewUpdate createSourceViewUpdate(SourceSnapshot snapshot)
-      throws SourceViewGeneratorException {
-    return new SourceViewUpdate(
-        snapshot.approvalIdentifier(),
-        snapshot.identifier(),
-        contentHash(snapshot),
-        VIEW_VERSION,
-        sourceViewGenerator.generate(snapshot));
+  private Optional<SourceViewUpdate> createSourceViewUpdate(SourceSnapshot snapshot) {
+    try {
+      return Optional.of(
+          new SourceViewUpdate(
+              snapshot.approvalIdentifier(),
+              snapshot.identifier(),
+              contentHash(snapshot),
+              VIEW_VERSION,
+              sourceViewGenerator.generate(snapshot)));
+    } catch (SourceViewGeneratorException exception) {
+      LOGGER.error(SOURCE_VIEW_FAILED_MESSAGE, snapshot.approvalIdentifier(), exception);
+      return Optional.empty();
+    }
   }
 
   private static String contentHash(SourceSnapshot snapshot) {
     return Optional.ofNullable(snapshot.content()).map(Content::hash).orElse(null);
-  }
-
-  private static boolean logSourceViewFailure(SourceSnapshot snapshot, Exception exception) {
-    LOGGER.error(SOURCE_VIEW_FAILED_MESSAGE, snapshot.approvalIdentifier(), exception);
-    return false;
   }
 
   private static Optional<IndexDocument> skipApproval(

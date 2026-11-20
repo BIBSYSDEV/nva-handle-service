@@ -102,6 +102,36 @@ class IndexingServiceTest {
   }
 
   @Test
+  void shouldRebuildSourceViewWhenContentHashHasChanged() throws Exception {
+    var snapshot = givenSnapshotWithIndexDocument();
+    var storedWithOtherContent =
+        new StoredSourceView(
+            snapshot.approvalIdentifier(),
+            snapshot.identifier(),
+            randomString(),
+            VIEW_VERSION,
+            clinicalTrialView(),
+            null,
+            null);
+    when(sourceViewRepository.find(snapshot.approvalIdentifier()))
+        .thenReturn(Optional.of(storedWithOtherContent));
+
+    indexingService.index(List.of(snapshot.approvalIdentifier()));
+
+    verify(sourceViewGenerator).generate(snapshot);
+  }
+
+  @Test
+  void shouldReportApprovalAsFailedWhenSourceViewCannotBeSaved() throws Exception {
+    var snapshot = givenSnapshotWithIndexDocument();
+    when(sourceViewRepository.save(any())).thenThrow(new IllegalStateException());
+
+    assertEquals(
+        Set.of(snapshot.approvalIdentifier()),
+        indexingService.index(List.of(snapshot.approvalIdentifier())).failed());
+  }
+
+  @Test
   void shouldIndexApprovalWhenSourceViewCannotBeCreated() throws Exception {
     var snapshot = givenSnapshotWithIndexDocument();
     when(sourceViewGenerator.generate(snapshot)).thenThrow(SourceViewGeneratorException.class);
