@@ -4,13 +4,13 @@ import static no.sikt.nva.approvals.utils.TestUtils.randomSourceSnapshotWithCont
 import static no.unit.nva.testutils.RandomDataGenerator.randomString;
 import static nva.commons.core.ioutils.IoUtils.stringFromResources;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.anEmptyMap;
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.empty;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.net.URI;
@@ -60,7 +60,6 @@ class SourceViewGeneratorTest {
   private static final String EEA_REGION = "EEA";
   private static final String NORWAY_REGION = "Norway";
   private static final String TRIAL_START_DATE = "2022-10-05";
-  private static final String STATUSES_FIELD = "statuses";
   private static final String SPONSOR_NAME = "Akershus University Hospital";
   private static final String EMPTY_CONTENT_MESSAGE = "Snapshot content is empty";
   private static final URI TRIAL_SITE_ID =
@@ -159,18 +158,15 @@ class SourceViewGeneratorTest {
   }
 
   @Test
-  void shouldCreateEmptyCollectionsAndNoNullsWhenSourceIsMinimal() throws Exception {
+  void shouldCreateEmptyCollectionsWhenSourceIsMinimal() throws Exception {
     var content = Content.create(JSON_LD_MEDIA_TYPE, MINIMAL_CLINICAL_TRIAL);
     var view = (ClinicalTrialView) generator.generate(randomSourceSnapshotWithContent(content));
 
-    var json =
-        JsonUtils.dtoObjectMapper.readTree(JsonUtils.dtoObjectMapper.writeValueAsString(view));
-
     assertEquals(CLINICAL_TRIAL_TITLE, view.title());
+    assertThat(view.statuses(), is(anEmptyMap()));
     assertThat(view.events(), is(empty()));
     assertThat(view.sponsors(), is(empty()));
     assertThat(view.trialSites(), is(empty()));
-    assertFalse(json.has(STATUSES_FIELD));
   }
 
   @Test
