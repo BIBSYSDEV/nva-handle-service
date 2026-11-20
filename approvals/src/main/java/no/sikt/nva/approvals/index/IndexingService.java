@@ -2,6 +2,7 @@ package no.sikt.nva.approvals.index;
 
 import static java.util.function.Predicate.not;
 import static java.util.stream.Collectors.toSet;
+import static no.sikt.nva.approvals.index.SourceViewGenerator.VIEW_VERSION;
 import static nva.commons.core.attempt.Try.attempt;
 
 import java.util.Collection;
@@ -10,11 +11,16 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import no.sikt.nva.approvals.domain.Approval;
+import no.sikt.nva.approvals.domain.Content;
 import no.sikt.nva.approvals.domain.SourceSnapshot;
+import no.sikt.nva.approvals.domain.SourceViewUpdate;
+import no.sikt.nva.approvals.domain.StoredSourceView;
 import no.sikt.nva.approvals.persistence.ApprovalRepository;
 import no.sikt.nva.approvals.persistence.ChangeRepository;
 import no.sikt.nva.approvals.persistence.DynamoDbApprovalRepository;
 import no.sikt.nva.approvals.persistence.DynamoDbChangeRepository;
+import no.sikt.nva.approvals.persistence.DynamoDbSourceViewRepository;
+import no.sikt.nva.approvals.persistence.SourceViewRepository;
 import nva.commons.core.Environment;
 import nva.commons.core.JacocoGenerated;
 import org.slf4j.Logger;
@@ -26,22 +32,30 @@ public class IndexingService {
   private static final String APPROVAL_NOT_FOUND_MESSAGE = "Approval not found ";
   private static final String INDEXING_FAILED_MESSAGE =
       "Could not create an index document of approval {}";
+  private static final String SOURCE_VIEW_FAILED_MESSAGE =
+      "Could not update the source view of approval {}";
   private static final Logger LOGGER = LoggerFactory.getLogger(IndexingService.class);
 
   private final ChangeRepository changeRepository;
   private final ApprovalRepository approvalRepository;
   private final IndexDocumentGenerator generator;
   private final SearchClient searchClient;
+  private final SourceViewGenerator sourceViewGenerator;
+  private final SourceViewRepository sourceViewRepository;
 
   public IndexingService(
       ChangeRepository changeRepository,
       ApprovalRepository approvalRepository,
       IndexDocumentGenerator generator,
-      SearchClient searchClient) {
+      SearchClient searchClient,
+      SourceViewGenerator sourceViewGenerator,
+      SourceViewRepository sourceViewRepository) {
     this.changeRepository = changeRepository;
     this.approvalRepository = approvalRepository;
     this.generator = generator;
     this.searchClient = searchClient;
+    this.sourceViewGenerator = sourceViewGenerator;
+    this.sourceViewRepository = sourceViewRepository;
   }
 
   @JacocoGenerated
@@ -50,7 +64,9 @@ public class IndexingService {
         DynamoDbChangeRepository.defaultInstance(environment),
         DynamoDbApprovalRepository.defaultInstance(environment),
         new IndexDocumentGenerator(),
-        SearchClient.defaultInstance(environment));
+        SearchClient.defaultInstance(environment),
+        new SourceViewGenerator(),
+        DynamoDbSourceViewRepository.defaultInstance(environment));
   }
 
   public IndexingResult index(Collection<UUID> approvalIdentifiers) {
@@ -80,9 +96,48 @@ public class IndexingService {
 
   private Optional<IndexDocument> createIndexDocument(UUID approvalIdentifier)
       throws IndexingServiceException, IndexDocumentGeneratorException {
-    return Optional.of(
-        generator.generate(
-            fetchLatestSnapshot(approvalIdentifier), fetchApproval(approvalIdentifier)));
+    var snapshot = fetchLatestSnapshot(approvalIdentifier);
+    updateSourceView(snapshot);
+    return Optional.of(generator.generate(snapshot, fetchApproval(approvalIdentifier)));
+  }
+
+  private void updateSourceView(SourceSnapshot snapshot) {
+    attempt(() -> saveSourceViewWhenOutdated(snapshot))
+        .orElse(failure -> logSourceViewFailure(snapshot, failure.getException()));
+  }
+
+  private boolean saveSourceViewWhenOutdated(SourceSnapshot snapshot)
+      throws SourceViewGeneratorException {
+    return isSourceViewOutdated(snapshot)
+        && sourceViewRepository.save(createSourceViewUpdate(snapshot));
+  }
+
+  private boolean isSourceViewOutdated(SourceSnapshot snapshot) {
+    return sourceViewRepository
+        .find(snapshot.approvalIdentifier())
+        .filter(stored -> stored.viewVersion() == VIEW_VERSION)
+        .map(StoredSourceView::contentHash)
+        .filter(storedHash -> storedHash.equals(contentHash(snapshot)))
+        .isEmpty();
+  }
+
+  private SourceViewUpdate createSourceViewUpdate(SourceSnapshot snapshot)
+      throws SourceViewGeneratorException {
+    return new SourceViewUpdate(
+        snapshot.approvalIdentifier(),
+        snapshot.identifier(),
+        contentHash(snapshot),
+        VIEW_VERSION,
+        sourceViewGenerator.generate(snapshot));
+  }
+
+  private static String contentHash(SourceSnapshot snapshot) {
+    return Optional.ofNullable(snapshot.content()).map(Content::hash).orElse(null);
+  }
+
+  private static boolean logSourceViewFailure(SourceSnapshot snapshot, Exception exception) {
+    LOGGER.error(SOURCE_VIEW_FAILED_MESSAGE, snapshot.approvalIdentifier(), exception);
+    return false;
   }
 
   private static Optional<IndexDocument> skipApproval(

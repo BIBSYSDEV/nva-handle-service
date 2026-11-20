@@ -9,6 +9,8 @@ import no.unit.nva.commons.json.JsonUtils;
 
 public class SourceViewGenerator {
 
+  public static final int VIEW_VERSION = 1;
+
   private static final String EMPTY_CONTENT_MESSAGE = "Snapshot content is empty";
   private static final String FRAMING_FAILED_MESSAGE =
       "Could not create source view for approval %s";
@@ -21,7 +23,7 @@ public class SourceViewGenerator {
     if (isMissingContent(snapshot)) {
       throw new SourceViewGeneratorException(EMPTY_CONTENT_MESSAGE);
     }
-    return attempt(() -> FRAMER.frame(snapshot))
+    return attempt(() -> FRAMER.frame(snapshot.content().body()))
         .map(framed -> JsonUtils.dtoObjectMapper.readValue(framed.toString(), SourceView.class))
         .orElseThrow(
             failure ->
