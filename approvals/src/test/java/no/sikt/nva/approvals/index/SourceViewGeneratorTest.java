@@ -14,6 +14,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import java.net.URI;
 import java.nio.file.Path;
 import no.sikt.nva.approvals.domain.ClinicalTrialView;
+import no.sikt.nva.approvals.domain.ClinicalTrialView.Event;
 import no.sikt.nva.approvals.domain.ClinicalTrialView.Investigator;
 import no.sikt.nva.approvals.domain.ClinicalTrialView.TrialSite;
 import no.sikt.nva.approvals.domain.Content;
@@ -30,6 +31,15 @@ class SourceViewGeneratorTest {
   private static final String TYPE_FIELD = "type";
   private static final String INVESTIGATOR_TITLE = "Prof.";
   private static final String NORWAY_STATUS = "Ongoing";
+  private static final String EEA_STATUS = "Authorised";
+  private static final URI CLINICAL_TRIAL_ID =
+      URI.create("https://st-api.legemiddelverket.no/ctis/clinical-trial/2022-500027-76-00");
+  private static final String CLINICAL_TRIAL_IDENTIFIER = "2022-500027-76-00";
+  private static final String MODIFIED_DATE = "2026-02-24T14:17:11.3001327";
+  private static final String TRIAL_START = "TrialStart";
+  private static final String EEA_REGION = "EEA";
+  private static final String NORWAY_REGION = "Norway";
+  private static final String TRIAL_START_DATE = "2022-10-05";
   private static final String STATUSES_FIELD = "statuses";
   private static final String SPONSOR_NAME = "Akershus University Hospital";
   private static final String EMPTY_CONTENT_MESSAGE = "Snapshot content is empty";
@@ -83,6 +93,21 @@ class SourceViewGeneratorTest {
             .map(Investigator::firstName)
             .toList(),
         containsInAnyOrder("Ola", "Kari"));
+  }
+
+  @Test
+  void shouldCreateIdentifiersModifiedDateAndEvents() throws SourceViewGeneratorException {
+    var view = generateClinicalTrialView();
+
+    assertEquals(CLINICAL_TRIAL_ID, view.id());
+    assertEquals(CLINICAL_TRIAL_IDENTIFIER, view.identifier());
+    assertEquals(MODIFIED_DATE, view.modified());
+    assertEquals(EEA_STATUS, view.statuses().eea());
+    assertThat(
+        view.events(),
+        containsInAnyOrder(
+            new Event(TRIAL_START, EEA_REGION, TRIAL_START_DATE),
+            new Event(TRIAL_START, NORWAY_REGION, TRIAL_START_DATE)));
   }
 
   @Test
