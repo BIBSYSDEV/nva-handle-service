@@ -12,6 +12,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import no.sikt.nva.approvals.domain.ClinicalTrialView;
+import no.sikt.nva.approvals.domain.SourceView;
 import no.sikt.nva.approvals.domain.StoredSourceView;
 import no.unit.nva.identifiers.SortableIdentifier;
 import nva.commons.core.Environment;
@@ -25,7 +26,6 @@ class DynamoDbSourceViewRepositoryTest {
   private static final String TABLE = ENVIRONMENT.readEnv(DynamoDbConstants.TABLE);
   private static final Instant NOW = Instant.parse("2026-11-20T12:00:00Z");
   private static final Instant EARLIER = NOW.minusSeconds(3600);
-  private static final Instant FIRST_VIEW_CREATED = NOW.minusSeconds(7200);
   private static final int VIEW_VERSION = 1;
 
   private SourceViewRepository repository;
@@ -49,7 +49,7 @@ class DynamoDbSourceViewRepositoryTest {
     var sourceView = sourceView(NOW, VIEW_VERSION);
 
     assertTrue(repository.save(sourceView));
-    assertEquals(Optional.of(sourceView), repository.find(approvalIdentifier));
+    assertEquals(Optional.of(sourceView), findWithoutDates());
   }
 
   @Test
@@ -63,7 +63,19 @@ class DynamoDbSourceViewRepositoryTest {
     var newer = sourceView(NOW, VIEW_VERSION);
 
     assertTrue(repository.save(newer));
-    assertEquals(Optional.of(newer), repository.find(approvalIdentifier));
+    assertEquals(Optional.of(newer), findWithoutDates());
+  }
+
+  @Test
+  void shouldKeepCreatedDateAndSetModifiedDateWhenSourceViewIsReplaced() {
+    repository.save(sourceView(EARLIER, VIEW_VERSION));
+    var firstCreatedDate = repository.find(approvalIdentifier).orElseThrow().createdDate();
+
+    repository.save(sourceView(NOW, VIEW_VERSION));
+    var replaced = repository.find(approvalIdentifier).orElseThrow();
+
+    assertEquals(firstCreatedDate, replaced.createdDate());
+    assertFalse(replaced.modifiedDate().isBefore(firstCreatedDate));
   }
 
   @Test
@@ -72,7 +84,7 @@ class DynamoDbSourceViewRepositoryTest {
     repository.save(newer);
 
     assertFalse(repository.save(sourceView(EARLIER, VIEW_VERSION + 1)));
-    assertEquals(Optional.of(newer), repository.find(approvalIdentifier));
+    assertEquals(Optional.of(newer), findWithoutDates());
   }
 
   @Test
@@ -82,7 +94,7 @@ class DynamoDbSourceViewRepositoryTest {
     var upgraded = withViewVersion(stored, VIEW_VERSION + 1);
 
     assertTrue(repository.save(upgraded));
-    assertEquals(Optional.of(upgraded), repository.find(approvalIdentifier));
+    assertEquals(Optional.of(upgraded), findWithoutDates());
   }
 
   @Test
@@ -91,7 +103,22 @@ class DynamoDbSourceViewRepositoryTest {
     repository.save(stored);
 
     assertFalse(repository.save(withViewVersion(stored, VIEW_VERSION)));
-    assertEquals(Optional.of(stored), repository.find(approvalIdentifier));
+    assertEquals(Optional.of(stored), findWithoutDates());
+  }
+
+  @Test
+  void shouldNotReplaceSourceViewOfSameSnapshotWithLowerViewVersion() {
+    var stored = sourceView(NOW, VIEW_VERSION + 1);
+    repository.save(stored);
+
+    assertFalse(repository.save(withViewVersion(stored, VIEW_VERSION)));
+    assertEquals(Optional.of(stored), findWithoutDates());
+  }
+
+  private Optional<StoredSourceView> findWithoutDates() {
+    return repository
+        .find(approvalIdentifier)
+        .map(stored -> withViewVersion(stored, stored.viewVersion(), stored.view()));
   }
 
   private StoredSourceView sourceView(Instant snapshotTime, int viewVersion) {
@@ -101,19 +128,24 @@ class DynamoDbSourceViewRepositoryTest {
         randomString(),
         viewVersion,
         clinicalTrialView(),
-        FIRST_VIEW_CREATED,
-        Instant.now());
+        null,
+        null);
   }
 
   private static StoredSourceView withViewVersion(StoredSourceView sourceView, int viewVersion) {
+    return withViewVersion(sourceView, viewVersion, clinicalTrialView());
+  }
+
+  private static StoredSourceView withViewVersion(
+      StoredSourceView sourceView, int viewVersion, SourceView view) {
     return new StoredSourceView(
         sourceView.approvalIdentifier(),
         sourceView.snapshotIdentifier(),
         sourceView.contentHash(),
         viewVersion,
-        clinicalTrialView(),
-        sourceView.createdDate(),
-        Instant.now());
+        view,
+        null,
+        null);
   }
 
   private static ClinicalTrialView clinicalTrialView() {

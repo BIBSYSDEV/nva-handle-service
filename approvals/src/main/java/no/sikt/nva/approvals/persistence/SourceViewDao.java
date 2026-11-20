@@ -30,15 +30,16 @@ public record SourceViewDao(
   public static final String SNAPSHOT_IDENTIFIER = "snapshotIdentifier";
   public static final String VIEW_VERSION = "viewVersion";
 
-  public static SourceViewDao fromStoredSourceView(StoredSourceView sourceView) {
+  public static SourceViewDao fromStoredSourceView(
+      StoredSourceView sourceView, Instant createdDate, Instant modifiedDate) {
     return new SourceViewDao(
         sourceView.approvalIdentifier(),
         sourceView.snapshotIdentifier(),
         sourceView.contentHash(),
         sourceView.viewVersion(),
         sourceView.view(),
-        sourceView.createdDate(),
-        sourceView.modifiedDate());
+        createdDate,
+        modifiedDate);
   }
 
   public static SourceViewDao fromJson(String json) {

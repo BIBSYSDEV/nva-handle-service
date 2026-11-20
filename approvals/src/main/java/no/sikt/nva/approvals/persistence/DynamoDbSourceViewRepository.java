@@ -8,6 +8,7 @@ import static no.sikt.nva.approvals.persistence.SourceViewDao.SNAPSHOT_IDENTIFIE
 import static no.sikt.nva.approvals.persistence.SourceViewDao.SORT_KEY;
 import static no.sikt.nva.approvals.persistence.SourceViewDao.VIEW_VERSION;
 
+import java.time.Instant;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
@@ -61,10 +62,17 @@ public class DynamoDbSourceViewRepository implements SourceViewRepository {
 
   @Override
   public boolean save(StoredSourceView sourceView) {
+    var modifiedDate = Instant.now();
+    var createdDate =
+        find(sourceView.approvalIdentifier())
+            .map(StoredSourceView::createdDate)
+            .orElse(modifiedDate);
     try {
       table.putItem(
           PutItemEnhancedRequest.builder(EnhancedDocument.class)
-              .item(SourceViewDao.fromStoredSourceView(sourceView).toEnhancedDocument())
+              .item(
+                  SourceViewDao.fromStoredSourceView(sourceView, createdDate, modifiedDate)
+                      .toEnhancedDocument())
               .conditionExpression(newerThanStored(sourceView))
               .build());
       return true;
