@@ -3,7 +3,6 @@ package no.sikt.nva.approvals.persistence;
 import static java.util.function.Predicate.not;
 import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toMap;
-import static java.util.stream.Collectors.toSet;
 import static no.sikt.nva.approvals.persistence.ApprovalDao.toDatabaseIdentifier;
 import static no.sikt.nva.approvals.persistence.DynamoDbConstants.PK0;
 import static no.sikt.nva.approvals.persistence.DynamoDbConstants.SK0;
@@ -11,18 +10,21 @@ import static no.sikt.nva.approvals.persistence.DynamoDbConstants.TABLE;
 import static no.sikt.nva.approvals.persistence.DynamoDbConstants.defaultDynamoClient;
 import static no.sikt.nva.approvals.persistence.DynamoDbConstants.documentTableSchema;
 import static no.sikt.nva.approvals.persistence.SourceViewDao.SORT_KEY;
+import static nva.commons.core.attempt.Try.attempt;
 
 import java.time.Clock;
+import java.util.Collection;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.function.Function;
-import java.util.stream.Stream;
 import no.sikt.nva.approvals.domain.SourceViewUpdate;
 import no.sikt.nva.approvals.domain.StoredSourceView;
 import nva.commons.core.Environment;
 import nva.commons.core.JacocoGenerated;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedClient;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbTable;
 import software.amazon.awssdk.enhanced.dynamodb.Key;
@@ -34,10 +36,11 @@ import software.amazon.awssdk.services.dynamodb.model.UpdateItemRequest;
 
 public class DynamoDbSourceViewRepository implements SourceViewRepository {
 
+  private static final Logger LOGGER = LoggerFactory.getLogger(DynamoDbSourceViewRepository.class);
+  private static final String UNREADABLE_SOURCE_VIEW_MESSAGE =
+      "Ignoring stored source view of approval {} that can not be read";
   private static final String CREATED_DATE = "createdDate";
   private static final Set<String> KEY_ATTRIBUTES = Set.of(PK0, SK0);
-  private static final Set<String> NOT_ASSIGNED =
-      Stream.concat(KEY_ATTRIBUTES.stream(), Stream.of(CREATED_DATE)).collect(toSet());
   private static final String NAME_PLACEHOLDER = "#%s";
   private static final String VALUE_PLACEHOLDER = ":%s";
   private static final String ASSIGNMENT = "#%s = :%s";
@@ -76,8 +79,20 @@ public class DynamoDbSourceViewRepository implements SourceViewRepository {
     return Optional.ofNullable(
             table.getItem(request -> request.key(key(approvalIdentifier)).consistentRead(true)))
         .map(EnhancedDocument::toJson)
-        .map(SourceViewDao::fromJson)
-        .map(SourceViewDao::toStoredSourceView);
+        .flatMap(json -> readStoredSourceView(approvalIdentifier, json));
+  }
+
+  private static Optional<StoredSourceView> readStoredSourceView(
+      UUID approvalIdentifier, String json) {
+    return attempt(() -> SourceViewDao.fromJson(json).toStoredSourceView())
+        .map(Optional::of)
+        .orElse(failure -> skipUnreadableSourceView(approvalIdentifier, failure.getException()));
+  }
+
+  private static Optional<StoredSourceView> skipUnreadableSourceView(
+      UUID approvalIdentifier, Exception exception) {
+    LOGGER.warn(UNREADABLE_SOURCE_VIEW_MESSAGE, approvalIdentifier, exception);
+    return Optional.empty();
   }
 
   @Override
@@ -100,7 +115,7 @@ public class DynamoDbSourceViewRepository implements SourceViewRepository {
     return UpdateItemRequest.builder()
         .tableName(tableName)
         .key(keyAttributes(approvalIdentifier))
-        .updateExpression(UPDATE_EXPRESSION.formatted(assignments(attributes)))
+        .updateExpression(UPDATE_EXPRESSION.formatted(assignments(nonKeyAttributes)))
         .conditionExpression(NEWER_THAN_STORED)
         .expressionAttributeNames(
             nonKeyAttributes.stream()
@@ -110,9 +125,9 @@ public class DynamoDbSourceViewRepository implements SourceViewRepository {
         .build();
   }
 
-  private static String assignments(Map<String, AttributeValue> attributes) {
-    return attributes.keySet().stream()
-        .filter(not(NOT_ASSIGNED::contains))
+  private static String assignments(Collection<String> nonKeyAttributes) {
+    return nonKeyAttributes.stream()
+        .filter(not(CREATED_DATE::equals))
         .map(attribute -> ASSIGNMENT.formatted(attribute, attribute))
         .collect(joining(ASSIGNMENT_SEPARATOR));
   }

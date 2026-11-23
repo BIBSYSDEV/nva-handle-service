@@ -7,7 +7,6 @@ import no.unit.nva.identifiers.SortableIdentifier;
 public record StoredSourceView(
     UUID approvalIdentifier,
     SortableIdentifier snapshotIdentifier,
-    String contentHash,
     int viewVersion,
     SourceView view,
     Instant createdDate,

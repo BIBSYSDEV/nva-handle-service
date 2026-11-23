@@ -1,6 +1,9 @@
 package no.sikt.nva.approvals.persistence;
 
 import static java.util.UUID.randomUUID;
+import static no.sikt.nva.approvals.persistence.DynamoDbConstants.PK0;
+import static no.sikt.nva.approvals.persistence.DynamoDbConstants.SK0;
+import static no.sikt.nva.approvals.persistence.DynamoDbConstants.STRING;
 import static no.sikt.nva.approvals.persistence.DynamoDbConstants.documentTableSchema;
 import static no.sikt.nva.approvals.persistence.DynamoDbLocal.dynamoDBLocal;
 import static no.unit.nva.testutils.RandomDataGenerator.randomString;
@@ -30,6 +33,8 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedClient;
+import software.amazon.awssdk.enhanced.dynamodb.DynamoDbTable;
+import software.amazon.awssdk.enhanced.dynamodb.document.EnhancedDocument;
 
 class DynamoDbSourceViewRepositoryTest {
 
@@ -42,6 +47,10 @@ class DynamoDbSourceViewRepositoryTest {
   private static final int VIEW_VERSION = 1;
   private static final String TYPE = "type";
   private static final String UNKNOWN_VIEW_TYPE = "UnknownView";
+  private static final String UNREADABLE_ITEM_TEMPLATE =
+      """
+      {"type": "SourceView", "approvalIdentifier": "%s", "snapshotIdentifier": "not-valid"}
+      """;
 
   private DynamoDbLocal dynamoDbLocal;
   private SourceViewRepository repository;
@@ -73,7 +82,6 @@ class DynamoDbSourceViewRepositoryTest {
         new SourceViewUpdate(
             approvalIdentifier,
             SortableIdentifier.create(NEWER_SNAPSHOT, randomUUID()),
-            randomString(),
             VIEW_VERSION,
             fullClinicalTrialView());
 
@@ -91,6 +99,19 @@ class DynamoDbSourceViewRepositoryTest {
     assertTrue(find().map(StoredSourceView::view).isEmpty());
     assertTrue(repositoryAt(SECOND_SAVE).save(repaired));
     assertEquals(Optional.of(stored(repaired, FIRST_SAVE, SECOND_SAVE)), find());
+  }
+
+  @Test
+  void shouldNotFindSourceViewWhenStoredItemCanNotBeRead() {
+    var unreadableItem =
+        EnhancedDocument.builder()
+            .json(UNREADABLE_ITEM_TEMPLATE.formatted(approvalIdentifier))
+            .put(PK0, ApprovalDao.toDatabaseIdentifier(approvalIdentifier), STRING)
+            .put(SK0, SourceViewDao.SORT_KEY, STRING)
+            .build();
+    enhancedTable().putItem(unreadableItem);
+
+    assertEquals(Optional.empty(), find());
   }
 
   @Test
@@ -151,16 +172,18 @@ class DynamoDbSourceViewRepositoryTest {
         new SourceViewDao(
             update.approvalIdentifier(),
             update.snapshotIdentifier(),
-            update.contentHash(),
             update.viewVersion(),
             unreadableView,
             FIRST_SAVE,
             FIRST_SAVE);
-    DynamoDbEnhancedClient.builder()
+    enhancedTable().putItem(dao.toEnhancedDocument());
+  }
+
+  private DynamoDbTable<EnhancedDocument> enhancedTable() {
+    return DynamoDbEnhancedClient.builder()
         .dynamoDbClient(dynamoDbLocal.client())
         .build()
-        .table(TABLE, documentTableSchema())
-        .putItem(dao.toEnhancedDocument());
+        .table(TABLE, documentTableSchema());
   }
 
   private static ClinicalTrialView fullClinicalTrialView() {
@@ -175,7 +198,6 @@ class DynamoDbSourceViewRepositoryTest {
         List.of(
             new TrialSite(
                 randomUri(),
-                randomString(),
                 randomString(),
                 new Investigator(
                     randomUri(), randomString(), randomString(), randomString(), randomString()))));
@@ -194,18 +216,13 @@ class DynamoDbSourceViewRepositoryTest {
     return new SourceViewUpdate(
         approvalIdentifier,
         SortableIdentifier.create(snapshotTime, randomUUID()),
-        randomString(),
         viewVersion,
         clinicalTrialView());
   }
 
   private static SourceViewUpdate withViewVersion(SourceViewUpdate update, int viewVersion) {
     return new SourceViewUpdate(
-        update.approvalIdentifier(),
-        update.snapshotIdentifier(),
-        update.contentHash(),
-        viewVersion,
-        clinicalTrialView());
+        update.approvalIdentifier(), update.snapshotIdentifier(), viewVersion, clinicalTrialView());
   }
 
   private static StoredSourceView stored(
@@ -213,7 +230,6 @@ class DynamoDbSourceViewRepositoryTest {
     return new StoredSourceView(
         update.approvalIdentifier(),
         update.snapshotIdentifier(),
-        update.contentHash(),
         update.viewVersion(),
         update.view(),
         createdDate,

@@ -18,27 +18,20 @@ class SourceViewUpdateTest {
   @ParameterizedTest
   @MethodSource("updatesWithOneMissingField")
   void shouldRejectUpdateWithMissingField(
-      UUID approvalIdentifier,
-      SortableIdentifier snapshotIdentifier,
-      String contentHash,
-      SourceView view) {
+      UUID approvalIdentifier, SortableIdentifier snapshotIdentifier, SourceView view) {
     assertThrows(
         NullPointerException.class,
-        () ->
-            new SourceViewUpdate(
-                approvalIdentifier, snapshotIdentifier, contentHash, VIEW_VERSION, view));
+        () -> new SourceViewUpdate(approvalIdentifier, snapshotIdentifier, VIEW_VERSION, view));
   }
 
   private static Stream<Arguments> updatesWithOneMissingField() {
     var approvalIdentifier = randomUUID();
     var snapshotIdentifier = SortableIdentifier.next();
-    var contentHash = randomString();
     var view = clinicalTrialView();
     return Stream.of(
-        Arguments.of(null, snapshotIdentifier, contentHash, view),
-        Arguments.of(approvalIdentifier, null, contentHash, view),
-        Arguments.of(approvalIdentifier, snapshotIdentifier, null, view),
-        Arguments.of(approvalIdentifier, snapshotIdentifier, contentHash, null));
+        Arguments.of(null, snapshotIdentifier, view),
+        Arguments.of(approvalIdentifier, null, view),
+        Arguments.of(approvalIdentifier, snapshotIdentifier, null));
   }
 
   private static ClinicalTrialView clinicalTrialView() {

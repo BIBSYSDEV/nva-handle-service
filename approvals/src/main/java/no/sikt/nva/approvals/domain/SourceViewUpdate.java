@@ -8,14 +8,12 @@ import no.unit.nva.identifiers.SortableIdentifier;
 public record SourceViewUpdate(
     UUID approvalIdentifier,
     SortableIdentifier snapshotIdentifier,
-    String contentHash,
     int viewVersion,
     SourceView view) {
 
   public SourceViewUpdate {
     requireNonNull(approvalIdentifier);
     requireNonNull(snapshotIdentifier);
-    requireNonNull(contentHash);
     requireNonNull(view);
   }
 }

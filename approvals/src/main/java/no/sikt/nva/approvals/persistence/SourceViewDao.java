@@ -21,7 +21,6 @@ import software.amazon.awssdk.enhanced.dynamodb.document.EnhancedDocument;
 public record SourceViewDao(
     UUID approvalIdentifier,
     SortableIdentifier snapshotIdentifier,
-    String contentHash,
     int viewVersion,
     JsonNode view,
     Instant createdDate,
@@ -35,7 +34,6 @@ public record SourceViewDao(
     return new SourceViewDao(
         update.approvalIdentifier(),
         update.snapshotIdentifier(),
-        update.contentHash(),
         update.viewVersion(),
         JsonUtils.dtoObjectMapper.valueToTree(update.view()),
         createdDate,
@@ -49,13 +47,7 @@ public record SourceViewDao(
 
   public StoredSourceView toStoredSourceView() {
     return new StoredSourceView(
-        approvalIdentifier,
-        snapshotIdentifier,
-        contentHash,
-        viewVersion,
-        readView(),
-        createdDate,
-        modifiedDate);
+        approvalIdentifier, snapshotIdentifier, viewVersion, readView(), createdDate, modifiedDate);
   }
 
   public EnhancedDocument toEnhancedDocument() {
