@@ -1312,6 +1312,7 @@ components:
           type: array
           items:
             type: object
+            required: [type]
             properties:
               type:
                 type: string
@@ -1322,12 +1323,14 @@ components:
           type: array
           items:
             type: object
+            required: [type]
             properties:
               type:
                 type: string
                 enum: [TrialSite]
               organization:
                 type: object
+                required: [type]
                 properties:
                   type:
                     type: string
@@ -1339,6 +1342,7 @@ components:
                 type: string
               investigator:
                 type: object
+                required: [type]
                 properties:
                   type:
                     type: string
