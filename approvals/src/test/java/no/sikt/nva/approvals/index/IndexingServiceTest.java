@@ -80,6 +80,18 @@ class IndexingServiceTest {
   }
 
   @Test
+  void shouldRebuildSourceViewThatCanNotBeReadEvenWhenContentAndViewVersionAreUnchanged()
+      throws Exception {
+    var snapshot = givenSnapshotWithIndexDocument();
+    when(sourceViewRepository.find(snapshot.approvalIdentifier()))
+        .thenReturn(Optional.of(storedSourceView(snapshot, CURRENT_VIEW_VERSION, null)));
+
+    indexingService.index(List.of(snapshot.approvalIdentifier()));
+
+    verify(sourceViewGenerator).generate(snapshot);
+  }
+
+  @Test
   void shouldNotRebuildSourceViewWhenContentAndViewVersionAreUnchanged() throws Exception {
     var snapshot = givenSnapshotWithIndexDocument();
     when(sourceViewRepository.find(snapshot.approvalIdentifier()))

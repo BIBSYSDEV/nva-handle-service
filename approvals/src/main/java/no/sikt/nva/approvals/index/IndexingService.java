@@ -1,5 +1,6 @@
 package no.sikt.nva.approvals.index;
 
+import static java.util.Objects.nonNull;
 import static java.util.function.Predicate.not;
 import static java.util.stream.Collectors.toSet;
 import static no.sikt.nva.approvals.index.SourceViewGenerator.CURRENT_VIEW_VERSION;
@@ -110,6 +111,7 @@ public class IndexingService {
   private boolean isSourceViewOutdated(SourceSnapshot snapshot) {
     return sourceViewRepository
         .find(snapshot.approvalIdentifier())
+        .filter(stored -> nonNull(stored.view()))
         .filter(stored -> stored.viewVersion() == CURRENT_VIEW_VERSION)
         .map(StoredSourceView::contentHash)
         .filter(storedHash -> storedHash.equals(contentHash(snapshot)))
