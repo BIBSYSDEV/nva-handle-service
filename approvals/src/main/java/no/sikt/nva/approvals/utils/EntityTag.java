@@ -2,6 +2,7 @@ package no.sikt.nva.approvals.utils;
 
 import static nva.commons.core.attempt.Try.attempt;
 
+import java.time.Instant;
 import java.util.Arrays;
 import java.util.Optional;
 import no.unit.nva.identifiers.SortableIdentifier;
@@ -15,11 +16,16 @@ public final class EntityTag {
   private static final String LIST_SEPARATOR = ",";
   private static final String QUOTE = "\"";
   private static final String EMPTY = "";
+  private static final String VIEW_SEPARATOR = ".";
 
   private EntityTag() {}
 
   public static String forVersion(SortableIdentifier version) {
     return "\"%s\"".formatted(version);
+  }
+
+  public static String forVersionAndView(SortableIdentifier version, Instant viewModifiedDate) {
+    return "\"%s%s%s\"".formatted(version, VIEW_SEPARATOR, viewModifiedDate.toEpochMilli());
   }
 
   public static boolean isMatchedByIfNoneMatch(RequestInfo requestInfo, String entityTag) {
@@ -30,8 +36,7 @@ public final class EntityTag {
   }
 
   public static Optional<SortableIdentifier> toVersion(String entityTag) {
-    return attempt(() -> new SortableIdentifier(entityTag.strip().replace(QUOTE, EMPTY)))
-        .toOptional();
+    return attempt(() -> new SortableIdentifier(versionPart(entityTag))).toOptional();
   }
 
   private static boolean containsMatch(String headerValue, String entityTag) {
@@ -43,6 +48,12 @@ public final class EntityTag {
         .map(String::strip)
         .map(EntityTag::withoutWeakPrefix)
         .anyMatch(entityTag::equals);
+  }
+
+  private static String versionPart(String entityTag) {
+    var unquoted = entityTag.strip().replace(QUOTE, EMPTY);
+    var separatorIndex = unquoted.indexOf(VIEW_SEPARATOR);
+    return separatorIndex < 0 ? unquoted : unquoted.substring(0, separatorIndex);
   }
 
   private static String withoutWeakPrefix(String candidate) {
