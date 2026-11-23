@@ -1224,6 +1224,16 @@ components:
           type: string
           format: uri
           description: The full handle URI (e.g., https://hdl.handle.net/11250.1/12345)
+        sourceView:
+          description: >-
+            View of the latest source data for the approval landing page. Omitted until the
+            source has been indexed. Values are passed through from the source as-is.
+          oneOf:
+            - $ref: "#/components/schemas/ClinicalTrialView"
+          discriminator:
+            propertyName: type
+            mapping:
+              ClinicalTrial: "#/components/schemas/ClinicalTrialView"
       example:
         "@context": https://api.nva.unit.no/approval/context/v1
         type: Approval
@@ -1235,6 +1245,78 @@ components:
             value: "123456"
         source: https://example.com/source/12345
         handle: https://hdl.handle.net/11250.1/98765
+    ClinicalTrialView:
+      type: object
+      description: Landing page view of a clinical trial from CTIS
+      required:
+        - type
+      properties:
+        type:
+          type: string
+          enum: [ClinicalTrial]
+        id:
+          type: string
+          format: uri
+          description: URI of the clinical trial at the source
+        identifier:
+          type: string
+          description: The EU CT number of the trial
+        title:
+          type: string
+        modified:
+          type: string
+          description: Last modification time at the source, without time zone
+        statuses:
+          type: object
+          description: Trial status per region, keyed by region
+          additionalProperties:
+            type: string
+        events:
+          type: array
+          items:
+            type: object
+            properties:
+              type:
+                type: string
+                description: Kind of event, e.g. TrialStart
+              region:
+                type: string
+              date:
+                type: string
+                format: date
+        sponsors:
+          type: array
+          items:
+            type: object
+            properties:
+              name:
+                type: string
+        trialSites:
+          type: array
+          items:
+            type: object
+            properties:
+              nvaOrganizationId:
+                type: string
+                format: uri
+              departmentName:
+                type: string
+              siteLocation:
+                type: string
+              investigator:
+                type: object
+                properties:
+                  nvaPersonId:
+                    type: string
+                    format: uri
+                  title:
+                    type: string
+                  firstName:
+                    type: string
+                  lastName:
+                    type: string
+                  department:
+                    type: string
     ApprovalSearchResults:
       type: object
       description: One page of approvals matching a search
