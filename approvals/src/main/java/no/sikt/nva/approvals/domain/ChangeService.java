@@ -1,5 +1,6 @@
 package no.sikt.nva.approvals.domain;
 
+import java.util.Optional;
 import java.util.UUID;
 import no.unit.nva.identifiers.SortableIdentifier;
 
@@ -10,4 +11,6 @@ public interface ChangeService {
 
   ChangeList listChangesByApproval(UUID approvalIdentifier, SortableIdentifier cursor)
       throws ApprovalNotFoundException, InvalidCursorException;
+
+  Optional<SourceSnapshot> findLatestSnapshot(UUID approvalIdentifier);
 }

@@ -2,6 +2,7 @@ package no.sikt.nva.approvals.domain;
 
 import static java.util.Objects.nonNull;
 
+import java.util.Optional;
 import java.util.UUID;
 import no.sikt.nva.approvals.persistence.ApprovalRepository;
 import no.sikt.nva.approvals.persistence.ChangeRepository;
@@ -46,6 +47,11 @@ public class ChangeServiceImpl implements ChangeService {
     }
     var approval = fetchApproval(approvalIdentifier);
     return changeRepository.listChangesByApproval(approval, cursor, PAGE_SIZE);
+  }
+
+  @Override
+  public Optional<SourceSnapshot> findLatestSnapshot(UUID approvalIdentifier) {
+    return changeRepository.findLatestSnapshot(approvalIdentifier);
   }
 
   private Approval fetchApproval(UUID approvalIdentifier) throws ApprovalNotFoundException {
