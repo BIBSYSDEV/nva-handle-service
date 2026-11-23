@@ -5,6 +5,8 @@ import static nva.commons.core.attempt.Try.attempt;
 import java.time.Instant;
 import java.util.Arrays;
 import java.util.Optional;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import no.unit.nva.identifiers.SortableIdentifier;
 import nva.commons.apigateway.RequestInfo;
 import org.apache.hc.core5.http.HttpHeaders;
@@ -14,9 +16,9 @@ public final class EntityTag {
   private static final String WEAK_PREFIX = "W/";
   private static final String ANY = "*";
   private static final String LIST_SEPARATOR = ",";
-  private static final String QUOTE = "\"";
-  private static final String EMPTY = "";
   private static final String VIEW_SEPARATOR = ".";
+  private static final Pattern SINGLE_ENTITY_TAG = Pattern.compile("^\"([^\".,\\s]+)(\\.\\d+)?\"$");
+  private static final int VERSION_GROUP = 1;
 
   private EntityTag() {}
 
@@ -36,7 +38,10 @@ public final class EntityTag {
   }
 
   public static Optional<SortableIdentifier> toVersion(String entityTag) {
-    return attempt(() -> new SortableIdentifier(versionPart(entityTag))).toOptional();
+    return Optional.of(SINGLE_ENTITY_TAG.matcher(entityTag.strip()))
+        .filter(Matcher::matches)
+        .map(matcher -> matcher.group(VERSION_GROUP))
+        .flatMap(version -> attempt(() -> new SortableIdentifier(version)).toOptional());
   }
 
   private static boolean containsMatch(String headerValue, String entityTag) {
@@ -48,12 +53,6 @@ public final class EntityTag {
         .map(String::strip)
         .map(EntityTag::withoutWeakPrefix)
         .anyMatch(entityTag::equals);
-  }
-
-  private static String versionPart(String entityTag) {
-    var unquoted = entityTag.strip().replace(QUOTE, EMPTY);
-    var separatorIndex = unquoted.indexOf(VIEW_SEPARATOR);
-    return separatorIndex < 0 ? unquoted : unquoted.substring(0, separatorIndex);
   }
 
   private static String withoutWeakPrefix(String candidate) {

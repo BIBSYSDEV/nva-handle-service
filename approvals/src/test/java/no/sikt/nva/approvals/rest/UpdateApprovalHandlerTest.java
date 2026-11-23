@@ -389,7 +389,10 @@ class UpdateApprovalHandlerTest {
         "\"other\"",
         "\"other\", \"%s\"",
         "*",
-        "\"0196a2f1e2c4-00000000-0000-0000-0000-000000000000\""
+        "\"0196a2f1e2c4-00000000-0000-0000-0000-000000000000\"",
+        "\"%s.1\", \"other\"",
+        "\"%s.whatever\"",
+        "\"%s.\""
       })
   void shouldReturnPreconditionFailedWhenIfMatchIsNotTheCurrentEntityTag(String ifMatchTemplate)
       throws IOException {
