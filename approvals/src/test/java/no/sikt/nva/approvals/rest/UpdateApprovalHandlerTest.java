@@ -371,7 +371,7 @@ class UpdateApprovalHandlerTest {
   void shouldAcceptUpdateWhenIfMatchIsEntityTagWithView() throws IOException {
     var version = SortableIdentifier.next();
     handler = handlerWithStoredApproval(version);
-    var ifMatch = EntityTag.forVersionAndView(version, Instant.now());
+    var ifMatch = EntityTag.forVersionAndSource(version, Instant.now(), Instant.now());
 
     handler.handleRequest(
         createRequestWithIfMatch(randomUpdateApprovalRequest(), approvalId, ifMatch),

@@ -2,7 +2,6 @@ package no.sikt.nva.approvals.rest;
 
 import static java.net.HttpURLConnection.HTTP_NOT_MODIFIED;
 import static java.net.HttpURLConnection.HTTP_OK;
-import static java.util.Objects.isNull;
 import static no.sikt.nva.approvals.utils.RequestUtils.getApiHost;
 import static no.sikt.nva.approvals.utils.RequestUtils.getApprovalIdentifier;
 import static nva.commons.apigateway.MediaTypes.APPLICATION_JSON_LD;
@@ -73,7 +72,7 @@ public class FetchApprovalHandler extends ApiGatewayHandler<Void, Object> {
     addAdditionalHeaders(() -> Map.of(HttpHeaders.ETAG, entityTag));
     return EntityTag.isMatchedByIfNoneMatch(requestInfo, entityTag)
         ? NOT_MODIFIED_BODY
-        : ApprovalResponse.fromApproval(approval, sourceView.view(), apiHost);
+        : ApprovalResponse.fromApproval(approval, sourceView, apiHost);
   }
 
   @Override
@@ -82,8 +81,9 @@ public class FetchApprovalHandler extends ApiGatewayHandler<Void, Object> {
   }
 
   private static String entityTag(Approval approval, ApprovalSourceView sourceView) {
-    return isNull(sourceView.viewModified())
+    return sourceView.isEmpty()
         ? EntityTag.forVersion(approval.version())
-        : EntityTag.forVersionAndView(approval.version(), sourceView.viewModified());
+        : EntityTag.forVersionAndSource(
+            approval.version(), sourceView.viewModified(), sourceView.sourceModified());
   }
 }

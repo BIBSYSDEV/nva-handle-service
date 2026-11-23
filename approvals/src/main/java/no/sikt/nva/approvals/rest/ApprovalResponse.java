@@ -9,9 +9,11 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.annotation.JsonTypeInfo.Id;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import java.net.URI;
+import java.time.Instant;
 import java.util.Collection;
 import java.util.UUID;
 import no.sikt.nva.approvals.domain.Approval;
+import no.sikt.nva.approvals.domain.ApprovalSourceView;
 import no.sikt.nva.approvals.domain.NamedIdentifier;
 import no.sikt.nva.approvals.domain.SourceView;
 import no.sikt.nva.approvals.utils.UriConstants;
@@ -25,10 +27,12 @@ public record ApprovalResponse(
     Collection<NamedIdentifier> identifiers,
     URI source,
     String handle,
-    SourceView sourceView) {
+    SourceView sourceView,
+    Instant sourceViewModified,
+    Instant sourceModified) {
 
   public static ApprovalResponse fromApproval(
-      Approval approval, SourceView sourceView, String apiHost) {
+      Approval approval, ApprovalSourceView sourceView, String apiHost) {
     var id = approvalId(apiHost, approval.identifier());
     var contextUri = UriConstants.context(apiHost);
     return new ApprovalResponse(
@@ -38,7 +42,9 @@ public record ApprovalResponse(
         approval.namedIdentifiers(),
         approval.source(),
         extractHandle(approval),
-        sourceView);
+        sourceView.view(),
+        sourceView.viewModified(),
+        sourceView.sourceModified());
   }
 
   private static String extractHandle(Approval approval) {
