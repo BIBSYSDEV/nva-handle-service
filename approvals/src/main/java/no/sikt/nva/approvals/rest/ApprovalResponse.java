@@ -13,6 +13,7 @@ import java.util.Collection;
 import java.util.UUID;
 import no.sikt.nva.approvals.domain.Approval;
 import no.sikt.nva.approvals.domain.NamedIdentifier;
+import no.sikt.nva.approvals.domain.SourceView;
 import no.sikt.nva.approvals.utils.UriConstants;
 
 @JsonTypeInfo(use = Id.NAME, property = "type")
@@ -23,9 +24,11 @@ public record ApprovalResponse(
     UUID identifier,
     Collection<NamedIdentifier> identifiers,
     URI source,
-    String handle) {
+    String handle,
+    SourceView sourceView) {
 
-  public static ApprovalResponse fromApproval(Approval approval, String apiHost) {
+  public static ApprovalResponse fromApproval(
+      Approval approval, SourceView sourceView, String apiHost) {
     var id = approvalId(apiHost, approval.identifier());
     var contextUri = UriConstants.context(apiHost);
     return new ApprovalResponse(
@@ -34,7 +37,8 @@ public record ApprovalResponse(
         approval.identifier(),
         approval.namedIdentifiers(),
         approval.source(),
-        extractHandle(approval));
+        extractHandle(approval),
+        sourceView);
   }
 
   private static String extractHandle(Approval approval) {
