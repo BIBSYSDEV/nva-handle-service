@@ -15,6 +15,8 @@ import no.sikt.nva.approvals.domain.SourceViewUpdate;
 import no.sikt.nva.approvals.domain.StoredSourceView;
 import no.unit.nva.commons.json.JsonUtils;
 import no.unit.nva.identifiers.SortableIdentifier;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import software.amazon.awssdk.enhanced.dynamodb.document.EnhancedDocument;
 
 @JsonTypeName("SourceView")
@@ -28,6 +30,9 @@ public record SourceViewDao(
     implements DatabaseEntry {
 
   public static final String SORT_KEY = "SourceView";
+  private static final Logger LOGGER = LoggerFactory.getLogger(SourceViewDao.class);
+  private static final String UNREADABLE_VIEW_MESSAGE =
+      "Stored source view of approval {} can not be read and will be rebuilt";
 
   public static SourceViewDao fromSourceViewUpdate(
       SourceViewUpdate update, Instant createdDate, Instant modifiedDate) {
@@ -65,6 +70,11 @@ public record SourceViewDao(
 
   private SourceView readView() {
     return attempt(() -> JsonUtils.dtoObjectMapper.treeToValue(view, SourceView.class))
-        .orElse(failure -> null);
+        .orElse(failure -> skipUnreadableView(failure.getException()));
+  }
+
+  private SourceView skipUnreadableView(Exception exception) {
+    LOGGER.warn(UNREADABLE_VIEW_MESSAGE, approvalIdentifier, exception);
+    return null;
   }
 }
