@@ -220,6 +220,34 @@ class FetchApprovalHandlerTest {
         response.getHeaders().get(HttpHeaders.ETAG));
   }
 
+  @Test
+  void shouldReturnNotModifiedWhenIfNoneMatchHasCurrentVersionAndSourceView() {
+    var approval = approvalWithVersion(SortableIdentifier.next());
+    var stored = givenStoredSourceView(approval);
+    handler = handlerFor(approval);
+    var ifNoneMatch = EntityTag.forVersionAndView(approval.version(), stored.modifiedDate());
+
+    var response =
+        handleRequestAsString(createRequestWithIfNoneMatch(approval.identifier(), ifNoneMatch));
+
+    assertEquals(HTTP_NOT_MODIFIED, response.getStatusCode());
+  }
+
+  @Test
+  void shouldReturnSourceViewWhenIfNoneMatchHasVersionFromBeforeSourceViewWasStored()
+      throws JsonProcessingException {
+    var approval = approvalWithVersion(SortableIdentifier.next());
+    var stored = givenStoredSourceView(approval);
+    handler = handlerFor(approval);
+    var ifNoneMatch = EntityTag.forVersion(approval.version());
+
+    var response =
+        handleRequest(createRequestWithIfNoneMatch(approval.identifier(), ifNoneMatch));
+
+    assertEquals(HTTP_OK, response.getStatusCode());
+    assertEquals(stored.view(), response.getBodyObject(ApprovalResponse.class).sourceView());
+  }
+
   @ParameterizedTest
   @ValueSource(strings = {"\"%s\"", "W/\"%s\"", "\"other\", \"%s\"", "*"})
   void shouldReturnNotModifiedWithoutBodyWhenIfNoneMatchMatches(String ifNoneMatchTemplate) {
