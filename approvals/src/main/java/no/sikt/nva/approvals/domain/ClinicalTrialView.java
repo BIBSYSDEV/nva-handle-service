@@ -2,7 +2,6 @@ package no.sikt.nva.approvals.domain;
 
 import static java.util.Objects.nonNull;
 
-import com.fasterxml.jackson.annotation.JsonAlias;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.annotation.JsonTypeInfo.Id;
 import com.fasterxml.jackson.annotation.JsonTypeName;
@@ -54,9 +53,9 @@ public record ClinicalTrialView(
   @JsonTypeInfo(use = Id.NAME, property = TYPE_PROPERTY, defaultImpl = Investigator.class)
   @JsonTypeName("Investigator")
   public record Investigator(
-      @JsonAlias("person") URI id,
-      String title,
-      String firstName,
-      String lastName,
-      String department) {}
+      Person person, String title, String firstName, String lastName, String department) {}
+
+  @JsonTypeInfo(use = Id.NAME, property = TYPE_PROPERTY, defaultImpl = Person.class)
+  @JsonTypeName("Person")
+  public record Person(URI id) {}
 }

@@ -27,7 +27,7 @@
     "firstName":                   { "@type": "xsd:string" },
     "lastName":                    { "@type": "xsd:string" },
     "department":                  { "@type": "xsd:string" },
-    "person":                      { "@id": "ctis:nvaPersonId", "@type": "@id" }
+    "person":                      { "@id": "ctis:nvaPersonId" }
   },
   "@type": "ClinicalTrial",
   "@explicit": true,

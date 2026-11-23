@@ -1299,6 +1299,7 @@ components:
           type: array
           items:
             type: object
+            required: [type]
             properties:
               type:
                 type: string
@@ -1347,9 +1348,16 @@ components:
                   type:
                     type: string
                     enum: [Investigator]
-                  id:
-                    type: string
-                    format: uri
+                  person:
+                    type: object
+                    required: [type]
+                    properties:
+                      type:
+                        type: string
+                        enum: [Person]
+                      id:
+                        type: string
+                        format: uri
                   title:
                     type: string
                   firstName:

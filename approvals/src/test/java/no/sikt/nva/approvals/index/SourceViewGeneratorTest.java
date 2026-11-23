@@ -23,6 +23,7 @@ import no.sikt.nva.approvals.domain.ClinicalTrialView;
 import no.sikt.nva.approvals.domain.ClinicalTrialView.Event;
 import no.sikt.nva.approvals.domain.ClinicalTrialView.Investigator;
 import no.sikt.nva.approvals.domain.ClinicalTrialView.Organization;
+import no.sikt.nva.approvals.domain.ClinicalTrialView.Person;
 import no.sikt.nva.approvals.domain.ClinicalTrialView.TrialSite;
 import no.sikt.nva.approvals.domain.Content;
 import no.sikt.nva.approvals.domain.SourceView;
@@ -141,7 +142,7 @@ class SourceViewGeneratorTest {
             new Organization(TRIAL_SITE_ID),
             TRIAL_SITE_DEPARTMENT,
             new Investigator(
-                INVESTIGATOR_ID,
+                new Person(INVESTIGATOR_ID),
                 INVESTIGATOR_TITLE,
                 INVESTIGATOR_FIRST_NAME,
                 INVESTIGATOR_LAST_NAME,
@@ -276,7 +277,8 @@ class SourceViewGeneratorTest {
     "/sponsors/0/type, Sponsor",
     "/trialSites/0/type, TrialSite",
     "/trialSites/0/organization/type, Organization",
-    "/trialSites/0/investigator/type, Investigator"
+    "/trialSites/0/investigator/type, Investigator",
+    "/trialSites/0/investigator/person/type, Person"
   })
   void shouldWriteTypeOnEachNestedObject(String path, String type) throws Exception {
     var view =
@@ -290,13 +292,13 @@ class SourceViewGeneratorTest {
   }
 
   @Test
-  void shouldLeaveOutOrganizationAndInvestigatorIdWhenSourceHasNoNvaIds() throws Exception {
+  void shouldLeaveOutOrganizationAndPersonWhenSourceHasNoNvaIds() throws Exception {
     var view = viewFrom(CLINICAL_TRIAL_WITH_ONE_TRIAL_SITE.formatted(null, null));
 
     var trialSite = JsonUtils.dtoObjectMapper.valueToTree(view).at("/trialSites/0");
 
     assertTrue(trialSite.at("/organization").isMissingNode());
-    assertTrue(trialSite.at("/investigator/id").isMissingNode());
+    assertTrue(trialSite.at("/investigator/person").isMissingNode());
     assertEquals(INVESTIGATOR_TYPE, trialSite.at("/investigator/type").asText());
   }
 
