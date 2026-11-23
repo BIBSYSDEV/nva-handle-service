@@ -241,8 +241,7 @@ class FetchApprovalHandlerTest {
     handler = handlerFor(approval);
     var ifNoneMatch = EntityTag.forVersion(approval.version());
 
-    var response =
-        handleRequest(createRequestWithIfNoneMatch(approval.identifier(), ifNoneMatch));
+    var response = handleRequest(createRequestWithIfNoneMatch(approval.identifier(), ifNoneMatch));
 
     assertEquals(HTTP_OK, response.getStatusCode());
     assertEquals(stored.view(), response.getBodyObject(ApprovalResponse.class).sourceView());
