@@ -736,7 +736,11 @@ paths:
         - $ref: "#/components/parameters/IfNoneMatch"
       security:
         - CognitoUserPool:
-            ["https://api.nva.unit.no/scopes/third-party/approval-upsert", "https://api.nva.unit.no/scopes/backend", "https://api.nva.unit.no/scopes/frontend"]
+            [
+              "https://api.nva.unit.no/scopes/third-party/approval-upsert",
+              "https://api.nva.unit.no/scopes/backend",
+              "https://api.nva.unit.no/scopes/frontend",
+            ]
       x-amazon-apigateway-integration:
         uri:
           Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${NvaFetchApprovalSourceFunction.Arn}/invocations
@@ -748,7 +752,7 @@ paths:
           description: Source document found
           headers:
             ETag:
-              $ref: "#/components/headers/SourceSnapshotETag"
+              $ref: "#/components/headers/ETag"
           content:
             application/ld+json:
               schema:
@@ -760,7 +764,7 @@ paths:
           description: Not Modified - the `If-None-Match` matches the current `ETag`. No body.
           headers:
             ETag:
-              $ref: "#/components/headers/SourceSnapshotETag"
+              $ref: "#/components/headers/ETag"
         "400":
           description: Bad Request
           content:
@@ -1411,11 +1415,7 @@ components:
         example: '"0196a2f1e2c4-3f9b1c2d-..."'
   headers:
     ETag:
-      description: Strong entity tag of the approval version.
-      schema:
-        type: string
-    SourceSnapshotETag:
-      description: Strong entity tag of the source snapshot that was returned.
+      description: Strong entity tag of the entity version.
       schema:
         type: string
   responses:
