@@ -243,6 +243,9 @@ class FetchApprovalHandlerTest {
     assertFalse(body.has(SOURCE_VIEW_FIELD));
     assertFalse(body.has(SOURCE_VIEW_MODIFIED_FIELD));
     assertEquals(SOURCE_MODIFIED.toString(), body.get(SOURCE_MODIFIED_FIELD).asText());
+    assertEquals(
+        COMPOSITE_ENTITY_TAG.formatted(approval.version(), 0, SOURCE_MODIFIED.toEpochMilli()),
+        response.getHeaders().get(HttpHeaders.ETAG));
   }
 
   @Test
