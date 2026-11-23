@@ -3,6 +3,7 @@ package no.sikt.nva.approvals.domain;
 import static java.util.Objects.nonNull;
 
 import com.fasterxml.jackson.annotation.JsonTypeName;
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import java.net.URI;
 import java.util.List;
 import java.util.Map;
@@ -13,7 +14,7 @@ public record ClinicalTrialView(
     String identifier,
     String title,
     String modified,
-    Map<String, String> statuses,
+    @JsonDeserialize(contentUsing = JsonLdLiteralDeserializer.class) Map<String, String> statuses,
     List<Event> events,
     List<Sponsor> sponsors,
     List<TrialSite> trialSites)

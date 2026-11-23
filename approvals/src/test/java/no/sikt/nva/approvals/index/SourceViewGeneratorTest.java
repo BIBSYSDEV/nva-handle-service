@@ -52,6 +52,8 @@ class SourceViewGeneratorTest {
   private static final String EEA_REGION_KEY = "eea";
   private static final String NORWAY_REGION_KEY = "norway";
   private static final String SWEDEN_REGION_KEY = "sweden";
+  private static final String DENMARK_REGION_KEY = "denmark";
+  private static final String DENMARK_STATUS = "Ended";
   private static final URI CLINICAL_TRIAL_ID =
       URI.create("https://st-api.legemiddelverket.no/ctis/clinical-trial/2022-500027-76-00");
   private static final String CLINICAL_TRIAL_IDENTIFIER = "2022-500027-76-00";
@@ -70,6 +72,15 @@ class SourceViewGeneratorTest {
       """
       {"@context": "https://api.legemiddelverket.no/ctis/context/clinical-trial.json",
        "type": "ClinicalTrial", "publicTitle": "%s"}
+      """
+          .formatted(CLINICAL_TRIAL_TITLE);
+  private static final String TRIAL_WITH_TYPED_UNKNOWN_REGION =
+      """
+      {"@context": "https://api.legemiddelverket.no/ctis/context/clinical-trial.json",
+       "type": "ClinicalTrial", "publicTitle": "%s",
+       "statuses": {
+         "denmark": {"@value": "Ended", "@type": "http://www.w3.org/2001/XMLSchema#string"}
+       }}
       """
           .formatted(CLINICAL_TRIAL_TITLE);
   private static final String BIOBANK =
@@ -139,6 +150,14 @@ class SourceViewGeneratorTest {
         containsInAnyOrder(
             new Event(TRIAL_START, EEA_REGION, TRIAL_START_DATE),
             new Event(TRIAL_START, NORWAY_REGION, TRIAL_START_DATE)));
+  }
+
+  @Test
+  void shouldCreateStatusAsPlainTextForTypedRegionUnknownToFrame() throws Exception {
+    var content = Content.create(JSON_LD_MEDIA_TYPE, TRIAL_WITH_TYPED_UNKNOWN_REGION);
+    var view = (ClinicalTrialView) generator.generate(randomSourceSnapshotWithContent(content));
+
+    assertEquals(Map.of(DENMARK_REGION_KEY, DENMARK_STATUS), view.statuses());
   }
 
   @Test
