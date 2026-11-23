@@ -12,7 +12,6 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import no.sikt.nva.approvals.domain.Approval;
-import no.sikt.nva.approvals.domain.Content;
 import no.sikt.nva.approvals.domain.SourceSnapshot;
 import no.sikt.nva.approvals.domain.SourceViewUpdate;
 import no.sikt.nva.approvals.domain.StoredSourceView;
@@ -121,12 +120,24 @@ public class IndexingService {
   }
 
   private static boolean isOutdated(StoredSourceView stored, SourceSnapshot snapshot) {
-    return stored.viewVersion() < CURRENT_VIEW_VERSION
-        || (stored.viewVersion() == CURRENT_VIEW_VERSION && isStale(stored, snapshot));
+    return isFromOlderSnapshot(stored, snapshot) || isOutdatedViewOfSameSnapshot(stored, snapshot);
   }
 
-  private static boolean isStale(StoredSourceView stored, SourceSnapshot snapshot) {
-    return isNull(stored.view()) || !stored.contentHash().equals(contentHash(snapshot));
+  private static boolean isFromOlderSnapshot(StoredSourceView stored, SourceSnapshot snapshot) {
+    return stored.snapshotIdentifier().compareTo(snapshot.identifier()) < 0;
+  }
+
+  private static boolean isOutdatedViewOfSameSnapshot(
+      StoredSourceView stored, SourceSnapshot snapshot) {
+    return stored.snapshotIdentifier().equals(snapshot.identifier()) && isOutdatedView(stored);
+  }
+
+  private static boolean isOutdatedView(StoredSourceView stored) {
+    return stored.viewVersion() < CURRENT_VIEW_VERSION || isUnreadableCurrentView(stored);
+  }
+
+  private static boolean isUnreadableCurrentView(StoredSourceView stored) {
+    return stored.viewVersion() == CURRENT_VIEW_VERSION && isNull(stored.view());
   }
 
   private Optional<SourceViewUpdate> createSourceViewUpdate(SourceSnapshot snapshot) {
@@ -135,17 +146,12 @@ public class IndexingService {
           new SourceViewUpdate(
               snapshot.approvalIdentifier(),
               snapshot.identifier(),
-              contentHash(snapshot),
               CURRENT_VIEW_VERSION,
               sourceViewGenerator.generate(snapshot)));
     } catch (SourceViewGeneratorException exception) {
       LOGGER.error(SOURCE_VIEW_FAILED_MESSAGE, snapshot.approvalIdentifier(), exception);
       return Optional.empty();
     }
-  }
-
-  private static String contentHash(SourceSnapshot snapshot) {
-    return Optional.ofNullable(snapshot.content()).map(Content::hash).orElse(null);
   }
 
   private static Optional<IndexDocument> skipApproval(

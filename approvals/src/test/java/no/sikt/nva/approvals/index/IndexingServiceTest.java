@@ -19,6 +19,7 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import java.io.IOException;
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -33,6 +34,7 @@ import no.sikt.nva.approvals.index.IndexDocument.Display;
 import no.sikt.nva.approvals.persistence.ApprovalRepository;
 import no.sikt.nva.approvals.persistence.ChangeRepository;
 import no.sikt.nva.approvals.persistence.SourceViewRepository;
+import no.unit.nva.identifiers.SortableIdentifier;
 import nva.commons.logutils.LogRecorder;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -141,20 +143,24 @@ class IndexingServiceTest {
   }
 
   @Test
-  void shouldRebuildSourceViewWhenContentHashHasChanged() throws Exception {
+  void shouldRebuildSourceViewWhenStoredViewIsFromOlderSnapshot() throws Exception {
     var snapshot = givenSnapshotWithIndexDocument();
     var view = givenGeneratedView(snapshot);
-    var storedWithOtherContent =
-        new StoredSourceView(
-            snapshot.approvalIdentifier(),
-            snapshot.identifier(),
-            randomString(),
-            CURRENT_VIEW_VERSION,
-            clinicalTrialView(),
-            null,
-            null);
     when(sourceViewRepository.find(snapshot.approvalIdentifier()))
-        .thenReturn(Optional.of(storedWithOtherContent));
+        .thenReturn(Optional.of(storedFromOlderSnapshot(snapshot, CURRENT_VIEW_VERSION)));
+
+    indexingService.index(List.of(snapshot.approvalIdentifier()));
+
+    verifySavedView(snapshot, view);
+  }
+
+  @Test
+  void shouldRebuildSourceViewFromNewerSnapshotEvenWhenStoredViewVersionIsHigher()
+      throws Exception {
+    var snapshot = givenSnapshotWithIndexDocument();
+    var view = givenGeneratedView(snapshot);
+    when(sourceViewRepository.find(snapshot.approvalIdentifier()))
+        .thenReturn(Optional.of(storedFromOlderSnapshot(snapshot, CURRENT_VIEW_VERSION + 1)));
 
     indexingService.index(List.of(snapshot.approvalIdentifier()));
 
@@ -164,6 +170,7 @@ class IndexingServiceTest {
   @Test
   void shouldReportApprovalAsFailedWhenSourceViewCannotBeSaved() throws Exception {
     var snapshot = givenSnapshotWithIndexDocument();
+    when(searchClient.index(anyCollection())).thenReturn(Set.of(snapshot.approvalIdentifier()));
     when(sourceViewRepository.save(any())).thenThrow(new IllegalStateException());
 
     assertEquals(
@@ -314,11 +321,7 @@ class IndexingServiceTest {
     verify(sourceViewRepository)
         .save(
             new SourceViewUpdate(
-                snapshot.approvalIdentifier(),
-                snapshot.identifier(),
-                snapshot.content().hash(),
-                CURRENT_VIEW_VERSION,
-                view));
+                snapshot.approvalIdentifier(), snapshot.identifier(), CURRENT_VIEW_VERSION, view));
   }
 
   private SourceSnapshot givenSnapshotWithIndexDocument() throws IndexDocumentGeneratorException {
@@ -332,11 +335,16 @@ class IndexingServiceTest {
   private static StoredSourceView storedSourceView(
       SourceSnapshot snapshot, int viewVersion, SourceView view) {
     return new StoredSourceView(
+        snapshot.approvalIdentifier(), snapshot.identifier(), viewVersion, view, null, null);
+  }
+
+  private static StoredSourceView storedFromOlderSnapshot(
+      SourceSnapshot snapshot, int viewVersion) {
+    return new StoredSourceView(
         snapshot.approvalIdentifier(),
-        snapshot.identifier(),
-        snapshot.content().hash(),
+        SortableIdentifier.create(Instant.EPOCH, randomUUID()),
         viewVersion,
-        view,
+        clinicalTrialView(),
         null,
         null);
   }
