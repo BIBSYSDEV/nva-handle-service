@@ -83,6 +83,13 @@ class SourceViewGeneratorTest {
        }}
       """
           .formatted(CLINICAL_TRIAL_TITLE);
+  private static final String TRIAL_WITH_LIST_AS_STATUS =
+      """
+      {"@context": "https://api.legemiddelverket.no/ctis/context/clinical-trial.json",
+       "type": "ClinicalTrial", "publicTitle": "%s",
+       "statuses": { "denmark": ["Ended", "Halted"] }}
+      """
+          .formatted(CLINICAL_TRIAL_TITLE);
   private static final String BIOBANK =
       """
       {"@context": "https://api.legemiddelverket.no/ctis/context/clinical-trial.json",
@@ -150,6 +157,14 @@ class SourceViewGeneratorTest {
         containsInAnyOrder(
             new Event(TRIAL_START, EEA_REGION, TRIAL_START_DATE),
             new Event(TRIAL_START, NORWAY_REGION, TRIAL_START_DATE)));
+  }
+
+  @Test
+  void shouldThrowWhenStatusIsNotASingleValue() {
+    var content = Content.create(JSON_LD_MEDIA_TYPE, TRIAL_WITH_LIST_AS_STATUS);
+    var snapshot = randomSourceSnapshotWithContent(content);
+
+    assertThrows(SourceViewGeneratorException.class, () -> generator.generate(snapshot));
   }
 
   @Test
