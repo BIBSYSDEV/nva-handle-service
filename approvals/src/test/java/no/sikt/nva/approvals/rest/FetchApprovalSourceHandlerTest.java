@@ -1,12 +1,17 @@
 package no.sikt.nva.approvals.rest;
 
 import static java.net.HttpURLConnection.HTTP_BAD_GATEWAY;
+import static java.net.HttpURLConnection.HTTP_BAD_REQUEST;
 import static java.net.HttpURLConnection.HTTP_NOT_ACCEPTABLE;
 import static java.net.HttpURLConnection.HTTP_NOT_FOUND;
 import static java.net.HttpURLConnection.HTTP_NOT_MODIFIED;
 import static java.net.HttpURLConnection.HTTP_OK;
 import static java.util.UUID.randomUUID;
+import static no.sikt.nva.approvals.domain.ApprovalActivity.CREATE_APPROVAL;
 import static no.sikt.nva.approvals.persistence.DynamoDbLocal.dynamoDBLocal;
+import static no.sikt.nva.approvals.utils.TestUtils.randomApproval;
+import static no.sikt.nva.approvals.utils.TestUtils.randomHandle;
+import static no.sikt.nva.approvals.utils.TestUtils.randomRevision;
 import static no.sikt.nva.approvals.utils.TestUtils.randomSourceSnapshotWithContent;
 import static no.unit.nva.testutils.RandomDataGenerator.randomString;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -122,6 +127,59 @@ class FetchApprovalSourceHandlerTest {
   }
 
   @Test
+  void shouldReturnSourceDocumentOfRequestedChange() throws IOException {
+    var snapshot = saveSnapshot();
+
+    var response =
+        send(request(snapshot.approvalIdentifier(), snapshot.identifier().toString(), Map.of()));
+
+    assertThat(response.getStatusCode(), equalTo(HTTP_OK));
+    assertThat(response.getBody(), equalTo(snapshot.content().body()));
+  }
+
+  @Test
+  void shouldReturnNotFoundWhenChangeIsNotSourceSnapshot() throws IOException {
+    var revision = randomRevision(randomApproval(randomHandle()), CREATE_APPROVAL);
+    approvalRepository.save(revision);
+
+    var response =
+        sendForProblem(
+            request(revision.approval().identifier(), revision.identifier().toString(), Map.of()));
+
+    assertThat(response.getStatusCode(), equalTo(HTTP_NOT_FOUND));
+    assertThat(
+        response.getBodyObject(Problem.class).getDetail(),
+        equalTo("No source document is recorded for the change"));
+  }
+
+  @Test
+  void shouldReturnBadRequestWhenChangeIdentifierIsMalformed() throws IOException {
+    var response = sendForProblem(request(randomUUID(), randomString(), Map.of()));
+
+    assertThat(response.getStatusCode(), equalTo(HTTP_BAD_REQUEST));
+  }
+
+  @Test
+  void shouldReturnNotFoundWhenChangeIsNotRecordedForApproval() throws IOException {
+    var snapshot = saveSnapshot();
+
+    var response =
+        sendForProblem(
+            request(snapshot.approvalIdentifier(), SortableIdentifier.next().toString(), Map.of()));
+
+    assertThat(response.getStatusCode(), equalTo(HTTP_NOT_FOUND));
+  }
+
+  @Test
+  void shouldReturnBadRequestWhenChangeIdentifierIsBlank() throws IOException {
+    saveSnapshot();
+
+    var response = sendForProblem(request(randomUUID(), " ", Map.of()));
+
+    assertThat(response.getStatusCode(), equalTo(HTTP_BAD_REQUEST));
+  }
+
+  @Test
   void shouldReturnBadGatewayWhenSourceLookupFails() throws IOException {
     var approvalIdentifier = randomUUID();
     var failingChangeService = mock(ChangeService.class);
@@ -164,8 +222,20 @@ class FetchApprovalSourceHandlerTest {
 
   private static InputStream request(UUID approvalIdentifier, Map<String, String> headers)
       throws IOException {
+    return request(Map.of("approvalId", approvalIdentifier.toString()), headers);
+  }
+
+  private static InputStream request(
+      UUID approvalIdentifier, String changeIdentifier, Map<String, String> headers)
+      throws IOException {
+    return request(
+        Map.of("approvalId", approvalIdentifier.toString(), "changeId", changeIdentifier), headers);
+  }
+
+  private static InputStream request(
+      Map<String, String> pathParameters, Map<String, String> headers) throws IOException {
     return new HandlerRequestBuilder<Void>(JsonUtils.dtoObjectMapper)
-        .withPathParameters(Map.of("approvalId", approvalIdentifier.toString()))
+        .withPathParameters(pathParameters)
         .withHeaders(headers)
         .build();
   }

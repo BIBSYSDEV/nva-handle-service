@@ -54,6 +54,15 @@ public class ChangeServiceImpl implements ChangeService {
     return changeRepository.findLatestSnapshot(approvalIdentifier);
   }
 
+  @Override
+  public Optional<SourceSnapshot> findSnapshot(
+      UUID approvalIdentifier, SortableIdentifier changeIdentifier) {
+    return changeRepository
+        .findChange(approvalIdentifier, changeIdentifier)
+        .filter(SourceSnapshot.class::isInstance)
+        .map(SourceSnapshot.class::cast);
+  }
+
   private Approval fetchApproval(UUID approvalIdentifier) throws ApprovalNotFoundException {
     return approvalRepository
         .findByApprovalIdentifier(approvalIdentifier)
