@@ -34,6 +34,8 @@ public class IndexingService {
       "Could not create an index document of approval {}";
   private static final String SOURCE_VIEW_FAILED_MESSAGE =
       "Could not update the source view of approval {}";
+  private static final String SOURCE_VIEW_REJECTED_MESSAGE =
+      "Stored source view of approval {} was not replaced, a newer view is already stored";
   private static final Logger LOGGER = LoggerFactory.getLogger(IndexingService.class);
 
   private final ChangeRepository changeRepository;
@@ -108,7 +110,13 @@ public class IndexingService {
 
   private void updateSourceView(SourceSnapshot snapshot) {
     if (isSourceViewOutdated(snapshot)) {
-      createSourceViewUpdate(snapshot).ifPresent(sourceViewRepository::save);
+      createSourceViewUpdate(snapshot).ifPresent(this::saveSourceView);
+    }
+  }
+
+  private void saveSourceView(SourceViewUpdate update) {
+    if (!sourceViewRepository.save(update)) {
+      LOGGER.warn(SOURCE_VIEW_REJECTED_MESSAGE, update.approvalIdentifier());
     }
   }
 

@@ -43,6 +43,8 @@ class IndexingServiceTest {
 
   private static final String SOURCE_VIEW_FAILURE_METRIC_FILTER_PATTERN =
       "Could not update the source view";
+  private static final String SOURCE_VIEW_NOT_REPLACED_TEXT = "was not replaced";
+  private static final Instant FAR_FUTURE = Instant.parse("2999-01-01T00:00:00Z");
 
   private IndexingService indexingService;
   private ChangeRepository changeRepository;
@@ -82,7 +84,7 @@ class IndexingServiceTest {
   }
 
   @Test
-  void shouldRebuildSourceViewThatCanNotBeReadEvenWhenContentAndViewVersionAreUnchanged()
+  void shouldRebuildSourceViewThatCanNotBeReadEvenWhenSnapshotAndViewVersionAreUnchanged()
       throws Exception {
     var snapshot = givenSnapshotWithIndexDocument();
     var view = givenGeneratedView(snapshot);
@@ -107,7 +109,7 @@ class IndexingServiceTest {
   }
 
   @Test
-  void shouldNotRebuildSourceViewWhenContentAndViewVersionAreUnchanged() throws Exception {
+  void shouldNotRebuildSourceViewWhenSnapshotAndViewVersionAreUnchanged() throws Exception {
     var snapshot = givenSnapshotWithIndexDocument();
     when(sourceViewRepository.find(snapshot.approvalIdentifier()))
         .thenReturn(
@@ -140,6 +142,28 @@ class IndexingServiceTest {
     indexingService.index(List.of(snapshot.approvalIdentifier()));
 
     verifySavedView(snapshot, view);
+  }
+
+  @Test
+  void shouldNotRebuildSourceViewWhenStoredViewIsFromNewerSnapshot() throws Exception {
+    var snapshot = givenSnapshotWithIndexDocument();
+    when(sourceViewRepository.find(snapshot.approvalIdentifier()))
+        .thenReturn(Optional.of(storedFromSnapshotAt(snapshot, FAR_FUTURE, CURRENT_VIEW_VERSION)));
+
+    indexingService.index(List.of(snapshot.approvalIdentifier()));
+
+    verify(sourceViewGenerator, never()).generate(any());
+  }
+
+  @Test
+  void shouldLogWhenStoredSourceViewIsNotReplaced() throws Exception {
+    var logRecorder = LogRecorder.forClass(IndexingService.class);
+    var snapshot = givenSnapshotWithIndexDocument();
+    when(sourceViewRepository.save(any())).thenReturn(false);
+
+    indexingService.index(List.of(snapshot.approvalIdentifier()));
+
+    assertThat(logRecorder.asString(), containsString(SOURCE_VIEW_NOT_REPLACED_TEXT));
   }
 
   @Test
@@ -340,9 +364,14 @@ class IndexingServiceTest {
 
   private static StoredSourceView storedFromOlderSnapshot(
       SourceSnapshot snapshot, int viewVersion) {
+    return storedFromSnapshotAt(snapshot, Instant.EPOCH, viewVersion);
+  }
+
+  private static StoredSourceView storedFromSnapshotAt(
+      SourceSnapshot snapshot, Instant snapshotTime, int viewVersion) {
     return new StoredSourceView(
         snapshot.approvalIdentifier(),
-        SortableIdentifier.create(Instant.EPOCH, randomUUID()),
+        SortableIdentifier.create(snapshotTime, randomUUID()),
         viewVersion,
         clinicalTrialView(),
         null,
