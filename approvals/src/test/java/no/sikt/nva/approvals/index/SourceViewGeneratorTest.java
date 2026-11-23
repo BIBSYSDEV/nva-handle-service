@@ -58,6 +58,12 @@ class SourceViewGeneratorTest {
        "type": "ClinicalTrial", "publicTitle": "%s"}
       """
           .formatted(CLINICAL_TRIAL_TITLE);
+  private static final String BIOBANK =
+      """
+      {"@context": "https://api.legemiddelverket.no/ctis/context/clinical-trial.json",
+       "type": "Biobank", "publicTitle": "%s"}
+      """
+          .formatted(CLINICAL_TRIAL_TITLE);
 
   private final SourceViewGenerator generator = new SourceViewGenerator();
 
@@ -72,7 +78,7 @@ class SourceViewGeneratorTest {
   void shouldKeepInvestigatorTitleSeparateFromTrialTitle() throws SourceViewGeneratorException {
     var view = generateClinicalTrialView();
 
-    var investigator = firstTrialSite(view).investigator();
+    var investigator = trialSiteWithKnownOrganization(view).investigator();
 
     assertEquals(INVESTIGATOR_TITLE, investigator.title());
   }
@@ -82,7 +88,7 @@ class SourceViewGeneratorTest {
       throws SourceViewGeneratorException {
     var view = generateClinicalTrialView();
 
-    var trialSite = firstTrialSite(view);
+    var trialSite = trialSiteWithKnownOrganization(view);
 
     assertEquals(TRIAL_SITE_ID, trialSite.nvaOrganizationId());
     assertEquals(INVESTIGATOR_ID, trialSite.investigator().nvaPersonId());
@@ -164,6 +170,13 @@ class SourceViewGeneratorTest {
   }
 
   @Test
+  void shouldThrowWhenSnapshotIsNotAClinicalTrial() {
+    var snapshot = randomSourceSnapshotWithContent(Content.create(JSON_LD_MEDIA_TYPE, BIOBANK));
+
+    assertThrows(SourceViewGeneratorException.class, () -> generator.generate(snapshot));
+  }
+
+  @Test
   void shouldThrowWhenSnapshotContentIsMissing() {
     var snapshot = randomSourceSnapshotWithContent(new Content(null, null, null));
 
@@ -179,7 +192,7 @@ class SourceViewGeneratorTest {
     return (ClinicalTrialView) generator.generate(randomSourceSnapshotWithContent(content));
   }
 
-  private static TrialSite firstTrialSite(ClinicalTrialView view) {
+  private static TrialSite trialSiteWithKnownOrganization(ClinicalTrialView view) {
     return view.trialSites().stream()
         .filter(trialSite -> TRIAL_SITE_ID.equals(trialSite.nvaOrganizationId()))
         .findFirst()
