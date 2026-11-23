@@ -13,6 +13,7 @@ import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.emptyOrNullString;
 import static org.hamcrest.Matchers.is;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -31,6 +32,7 @@ import java.util.UUID;
 import no.sikt.nva.approvals.domain.Approval;
 import no.sikt.nva.approvals.domain.ClinicalTrialView;
 import no.sikt.nva.approvals.domain.FakeApprovalService;
+import no.sikt.nva.approvals.domain.SourceView;
 import no.sikt.nva.approvals.domain.StoredSourceView;
 import no.sikt.nva.approvals.persistence.SourceViewRepository;
 import no.sikt.nva.approvals.utils.EntityTag;
@@ -61,6 +63,10 @@ class FetchApprovalHandlerTest {
   private static final String COGNITO_AUTHORIZER_URLS_ENV = "COGNITO_AUTHORIZER_URLS";
   private static final String API_HOST_ENV = "API_HOST";
   private static final int VIEW_VERSION = 1;
+  private static final Instant VIEW_CREATED = Instant.parse("2026-11-01T10:00:00Z");
+  private static final Instant VIEW_MODIFIED = Instant.parse("2026-11-20T10:00:00Z");
+  private static final String SOURCE_VIEW_FIELD = "sourceView";
+  private static final String COMPOSITE_ENTITY_TAG = "\"%s.%d\"";
   private FetchApprovalHandler handler;
   private ByteArrayOutputStream output;
   private Environment environment;
@@ -208,16 +214,28 @@ class FetchApprovalHandlerTest {
   }
 
   @Test
-  void shouldReturnEntityTagFromApprovalVersionAndSourceView() {
+  void shouldReturnEntityTagFromApprovalVersionAndSourceViewModifiedDate() {
     var approval = approvalWithVersion(SortableIdentifier.next());
-    var stored = givenStoredSourceView(approval);
+    givenStoredSourceView(approval);
     handler = handlerFor(approval);
 
     var response = handleRequest(createRequestWithPathParameter(approval.identifier()));
 
     assertEquals(
-        EntityTag.forVersionAndView(approval.version(), stored.modifiedDate()),
+        COMPOSITE_ENTITY_TAG.formatted(approval.version(), VIEW_MODIFIED.toEpochMilli()),
         response.getHeaders().get(HttpHeaders.ETAG));
+  }
+
+  @Test
+  void shouldIgnoreStoredSourceViewThatCanNotBeRead() throws JsonProcessingException {
+    var approval = approvalWithVersion(SortableIdentifier.next());
+    givenStoredSourceView(approval, null);
+    handler = handlerFor(approval);
+
+    var response = handleRequestAsString(createRequestWithPathParameter(approval.identifier()));
+
+    assertEquals(quoted(approval.version()), response.getHeaders().get(HttpHeaders.ETAG));
+    assertFalse(JsonUtils.dtoObjectMapper.readTree(response.getBody()).has(SOURCE_VIEW_FIELD));
   }
 
   @Test
@@ -354,18 +372,21 @@ class FetchApprovalHandlerTest {
   }
 
   private StoredSourceView givenStoredSourceView(Approval approval) {
-    var view =
+    return givenStoredSourceView(
+        approval,
         new ClinicalTrialView(
-            randomUri(), randomString(), randomString(), null, null, null, null, null);
+            randomUri(), randomString(), randomString(), null, null, null, null, null));
+  }
+
+  private StoredSourceView givenStoredSourceView(Approval approval, SourceView view) {
     var stored =
         new StoredSourceView(
             approval.identifier(),
             SortableIdentifier.next(),
-            randomString(),
             VIEW_VERSION,
             view,
-            Instant.now(),
-            Instant.now());
+            VIEW_CREATED,
+            VIEW_MODIFIED);
     when(sourceViewRepository.find(approval.identifier())).thenReturn(Optional.of(stored));
     return stored;
   }

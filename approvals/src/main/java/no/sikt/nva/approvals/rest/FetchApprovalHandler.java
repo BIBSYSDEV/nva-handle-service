@@ -2,6 +2,7 @@ package no.sikt.nva.approvals.rest;
 
 import static java.net.HttpURLConnection.HTTP_NOT_MODIFIED;
 import static java.net.HttpURLConnection.HTTP_OK;
+import static java.util.Objects.nonNull;
 import static no.sikt.nva.approvals.utils.RequestUtils.getApiHost;
 import static no.sikt.nva.approvals.utils.RequestUtils.getApprovalIdentifier;
 import static nva.commons.apigateway.MediaTypes.APPLICATION_JSON_LD;
@@ -69,7 +70,8 @@ public class FetchApprovalHandler extends ApiGatewayHandler<Void, Object> {
             .getApprovalByIdentifier(getApprovalIdentifier(requestInfo))
             .orElseThrow(() -> new NotFoundException(APPROVAL_NOT_FOUND_MESSAGE));
 
-    var sourceView = sourceViewRepository.find(approval.identifier());
+    var sourceView =
+        sourceViewRepository.find(approval.identifier()).filter(stored -> nonNull(stored.view()));
     var entityTag = entityTag(approval, sourceView);
     addAdditionalHeaders(() -> Map.of(HttpHeaders.ETAG, entityTag));
     return EntityTag.isMatchedByIfNoneMatch(requestInfo, entityTag)
