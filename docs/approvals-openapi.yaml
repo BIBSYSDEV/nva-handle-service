@@ -1231,10 +1231,6 @@ components:
             source has been indexed. Values are passed through from the source as-is.
           oneOf:
             - $ref: "#/components/schemas/ClinicalTrialView"
-          discriminator:
-            propertyName: type
-            mapping:
-              ClinicalTrial: "#/components/schemas/ClinicalTrialView"
         sourceViewModified:
           type: string
           format: date-time

@@ -11,8 +11,10 @@ import static org.hamcrest.Matchers.empty;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
+import com.fasterxml.jackson.databind.exc.MismatchedInputException;
 import java.net.URI;
 import java.nio.file.Path;
 import java.util.Map;
@@ -24,6 +26,8 @@ import no.sikt.nva.approvals.domain.Content;
 import no.sikt.nva.approvals.domain.SourceView;
 import no.unit.nva.commons.json.JsonUtils;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 class SourceViewGeneratorTest {
 
@@ -83,13 +87,12 @@ class SourceViewGeneratorTest {
        }}
       """
           .formatted(CLINICAL_TRIAL_TITLE);
-  private static final String TRIAL_WITH_LIST_AS_STATUS =
+  private static final String TRIAL_WITH_STATUS =
       """
       {"@context": "https://api.legemiddelverket.no/ctis/context/clinical-trial.json",
-       "type": "ClinicalTrial", "publicTitle": "%s",
-       "statuses": { "denmark": ["Ended", "Halted"] }}
-      """
-          .formatted(CLINICAL_TRIAL_TITLE);
+       "type": "ClinicalTrial", "publicTitle": "title",
+       "statuses": { "denmark": %s }}
+      """;
   private static final String BIOBANK =
       """
       {"@context": "https://api.legemiddelverket.no/ctis/context/clinical-trial.json",
@@ -159,12 +162,16 @@ class SourceViewGeneratorTest {
             new Event(TRIAL_START, NORWAY_REGION, TRIAL_START_DATE)));
   }
 
-  @Test
-  void shouldThrowWhenStatusIsNotASingleValue() {
-    var content = Content.create(JSON_LD_MEDIA_TYPE, TRIAL_WITH_LIST_AS_STATUS);
+  @ParameterizedTest
+  @ValueSource(strings = {"[\"Ended\", \"Halted\"]", "{\"@id\": \"https://example.org/status\"}"})
+  void shouldRejectStatusThatIsNotASingleValue(String status) {
+    var content = Content.create(JSON_LD_MEDIA_TYPE, TRIAL_WITH_STATUS.formatted(status));
     var snapshot = randomSourceSnapshotWithContent(content);
 
-    assertThrows(SourceViewGeneratorException.class, () -> generator.generate(snapshot));
+    var exception =
+        assertThrows(SourceViewGeneratorException.class, () -> generator.generate(snapshot));
+
+    assertInstanceOf(MismatchedInputException.class, exception.getCause());
   }
 
   @Test
