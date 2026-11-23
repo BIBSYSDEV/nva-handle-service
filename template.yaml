@@ -23,6 +23,10 @@ Parameters:
     Type: "AWS::SSM::Parameter::Value<String>"
     Description: The Api domain
     Default: /NVA/ApiDomain
+  SlackSnsArn:
+    Type: "AWS::SSM::Parameter::Value<String>"
+    Description: SNS topic that forwards alarms to Slack
+    Default: /NVA/Monitoring/SlackSnsArn
   CustomDomainBasePath:
     Type: String
     Description: Base path mapping in CustomDomain
@@ -249,6 +253,8 @@ Resources:
       Threshold: 0
       ComparisonOperator: GreaterThanThreshold
       TreatMissingData: notBreaching
+      AlarmActions:
+        - !Ref SlackSnsArn
 
   BatchJobDlqAlarm:
     Type: AWS::CloudWatch::Alarm
@@ -265,6 +271,8 @@ Resources:
       Threshold: 0
       ComparisonOperator: GreaterThanThreshold
       TreatMissingData: notBreaching
+      AlarmActions:
+        - !Ref SlackSnsArn
 
   BatchJobWorkDlqAlarm:
     Type: AWS::CloudWatch::Alarm
@@ -281,6 +289,8 @@ Resources:
       Threshold: 0
       ComparisonOperator: GreaterThanThreshold
       TreatMissingData: notBreaching
+      AlarmActions:
+        - !Ref SlackSnsArn
 
   IndexApprovalDlqAlarm:
     Type: AWS::CloudWatch::Alarm
@@ -297,6 +307,8 @@ Resources:
       Threshold: 0
       ComparisonOperator: GreaterThanThreshold
       TreatMissingData: notBreaching
+      AlarmActions:
+        - !Ref SlackSnsArn
 
   ApprovalsStreamDlqAlarm:
     Type: AWS::CloudWatch::Alarm
@@ -313,6 +325,8 @@ Resources:
       Threshold: 0
       ComparisonOperator: GreaterThanThreshold
       TreatMissingData: notBreaching
+      AlarmActions:
+        - !Ref SlackSnsArn
 
   ApprovalsStreamPipeRole:
     Type: AWS::IAM::Role
@@ -1044,6 +1058,8 @@ Resources:
       Threshold: 0
       ComparisonOperator: GreaterThanThreshold
       TreatMissingData: notBreaching
+      AlarmActions:
+        - !Ref SlackSnsArn
 
   NvaIndexApprovalFunction:
     Type: AWS::Serverless::Function
