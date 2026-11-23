@@ -19,6 +19,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import no.sikt.nva.approvals.persistence.DynamoDbApprovalRepository;
 import no.sikt.nva.approvals.persistence.DynamoDbChangeRepository;
@@ -117,6 +118,16 @@ class ChangeServiceTest {
             .changes();
 
     assertThat(changes, empty());
+  }
+
+  @Test
+  void shouldFindLatestSnapshotOfApproval() {
+    var approvalIdentifier = saveRevision().approval().identifier();
+    var snapshot = saveSnapshotOfSourceChangedAt(approvalIdentifier, randomTimestamp());
+
+    var latestSnapshot = changeService.findLatestSnapshot(approvalIdentifier);
+
+    assertThat(latestSnapshot, equalTo(Optional.of(snapshot)));
   }
 
   @Test
