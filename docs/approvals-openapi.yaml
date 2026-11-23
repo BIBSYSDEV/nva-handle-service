@@ -1235,6 +1235,17 @@ components:
             propertyName: type
             mapping:
               ClinicalTrial: "#/components/schemas/ClinicalTrialView"
+        sourceViewModified:
+          type: string
+          format: date-time
+          description: When the `sourceView` was last built. Omitted when there is no `sourceView`.
+        sourceModified:
+          type: string
+          format: date-time
+          description: >-
+            When a change in the source was last registered. A `sourceModified` later than
+            `sourceViewModified` means the `sourceView` lags the source. Omitted before the source
+            has been read.
       example:
         "@context": https://api.nva.unit.no/approval/context/v1
         type: Approval
@@ -1259,6 +1270,8 @@ components:
               date: "2024-06-22"
           sponsors:
             - name: Helse Bergen HF
+        sourceViewModified: "2026-11-20T10:00:00Z"
+        sourceModified: "2026-11-19T10:00:00Z"
     ClinicalTrialView:
       type: object
       description: Landing page view of a clinical trial from CTIS
@@ -1510,8 +1523,9 @@ components:
   headers:
     ETag:
       description: >-
-        Strong entity tag of the entity version. For an approval it also covers the
-        `sourceView` when present, and changes when either changes.
+        Strong entity tag of the entity version. For an approval it also covers
+        `sourceViewModified` and `sourceModified` when present, and changes when any of them
+        changes.
       schema:
         type: string
   responses:
