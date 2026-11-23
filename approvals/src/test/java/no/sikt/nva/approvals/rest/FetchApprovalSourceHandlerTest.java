@@ -1,5 +1,6 @@
 package no.sikt.nva.approvals.rest;
 
+import static java.net.HttpURLConnection.HTTP_BAD_GATEWAY;
 import static java.net.HttpURLConnection.HTTP_NOT_ACCEPTABLE;
 import static java.net.HttpURLConnection.HTTP_NOT_FOUND;
 import static java.net.HttpURLConnection.HTTP_NOT_MODIFIED;
@@ -12,12 +13,15 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.emptyOrNullString;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.is;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Map;
 import java.util.UUID;
+import no.sikt.nva.approvals.domain.ChangeService;
 import no.sikt.nva.approvals.domain.ChangeServiceImpl;
 import no.sikt.nva.approvals.domain.Content;
 import no.sikt.nva.approvals.domain.SourceSnapshot;
@@ -45,7 +49,6 @@ class FetchApprovalSourceHandlerTest {
   private static final String CONTENT_TYPE_HEADER = "Content-Type";
   private static final String ETAG_HEADER = "ETag";
   private static final String IF_NONE_MATCH_HEADER = "If-None-Match";
-  private static final String QUOTED = "\"%s\"";
   private static final String SOURCE_MEDIA_TYPE = "application/json";
 
   private DynamoDbLocal dynamoDbLocal;
@@ -119,6 +122,19 @@ class FetchApprovalSourceHandlerTest {
   }
 
   @Test
+  void shouldReturnBadGatewayWhenSourceLookupFails() throws IOException {
+    var approvalIdentifier = randomUUID();
+    var failingChangeService = mock(ChangeService.class);
+    when(failingChangeService.findLatestSnapshot(approvalIdentifier))
+        .thenThrow(new IllegalStateException(randomString()));
+    handler = new FetchApprovalSourceHandler(failingChangeService, ENVIRONMENT);
+
+    var response = sendForProblem(request(approvalIdentifier, Map.of()));
+
+    assertThat(response.getStatusCode(), equalTo(HTTP_BAD_GATEWAY));
+  }
+
+  @Test
   void shouldReturnNotAcceptableWhenAcceptHeaderIsUnsupported() throws IOException {
     var response = sendForProblem(request(randomUUID(), Map.of(ACCEPT_HEADER, "text/html")));
 
@@ -126,7 +142,7 @@ class FetchApprovalSourceHandlerTest {
   }
 
   private static String quoted(SortableIdentifier identifier) {
-    return QUOTED.formatted(identifier);
+    return "\"%s\"".formatted(identifier);
   }
 
   private SourceSnapshot saveSnapshot() {

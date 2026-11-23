@@ -718,6 +718,70 @@ paths:
             "application/json":
               schema:
                 $ref: "#/components/schemas/Problem"
+  /{approvalId}/source:
+    get:
+      tags:
+        - Approval
+        - external
+      operationId: getApprovalSource
+      summary: Get latest source document
+      description: Returns the source document of the latest source snapshot of an approval.
+      parameters:
+        - name: approvalId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - $ref: "#/components/parameters/IfNoneMatch"
+      x-amazon-apigateway-integration:
+        uri:
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${NvaFetchApprovalSourceFunction.Arn}/invocations
+        responses: {}
+        httpMethod: POST
+        type: AWS_PROXY
+      responses:
+        "200":
+          description: Source document found
+          headers:
+            ETag:
+              $ref: "#/components/headers/SourceSnapshotETag"
+          content:
+            application/ld+json:
+              schema:
+                type: object
+            application/json:
+              schema:
+                type: object
+        "304":
+          description: Not Modified - the `If-None-Match` matches the current `ETag`. No body.
+          headers:
+            ETag:
+              $ref: "#/components/headers/SourceSnapshotETag"
+        "400":
+          description: Bad Request
+          content:
+            "application/json":
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "404":
+          description: Not found
+          content:
+            "application/json":
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "406":
+          description: Not Acceptable
+          content:
+            "application/json":
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "502":
+          description: Bad gateway
+          content:
+            "application/json":
+              schema:
+                $ref: "#/components/schemas/Problem"
 components:
   schemas:
     ApprovalWritableState:
@@ -1339,6 +1403,10 @@ components:
   headers:
     ETag:
       description: Strong entity tag of the approval version.
+      schema:
+        type: string
+    SourceSnapshotETag:
+      description: Strong entity tag of the source snapshot that was returned.
       schema:
         type: string
   responses:
