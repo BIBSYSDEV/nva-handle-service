@@ -112,7 +112,7 @@ public class IndexingService {
     return sourceViewRepository
         .find(snapshot.approvalIdentifier())
         .filter(stored -> nonNull(stored.view()))
-        .filter(stored -> stored.viewVersion() == CURRENT_VIEW_VERSION)
+        .filter(stored -> stored.viewVersion() >= CURRENT_VIEW_VERSION)
         .map(StoredSourceView::contentHash)
         .filter(storedHash -> storedHash.equals(contentHash(snapshot)))
         .isEmpty();

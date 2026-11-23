@@ -11,6 +11,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyCollection;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -64,31 +65,36 @@ class IndexingServiceTest {
   @Test
   void shouldSaveSourceViewOfSnapshotWhenNoneIsStored() throws Exception {
     var snapshot = givenSnapshotWithIndexDocument();
-    var view = clinicalTrialView();
-    when(sourceViewGenerator.generate(snapshot)).thenReturn(view);
+    var view = givenGeneratedView(snapshot);
 
     indexingService.index(List.of(snapshot.approvalIdentifier()));
 
-    verify(sourceViewRepository)
-        .save(
-            new SourceViewUpdate(
-                snapshot.approvalIdentifier(),
-                snapshot.identifier(),
-                snapshot.content().hash(),
-                CURRENT_VIEW_VERSION,
-                view));
+    verifySavedView(snapshot, view);
   }
 
   @Test
   void shouldRebuildSourceViewThatCanNotBeReadEvenWhenContentAndViewVersionAreUnchanged()
       throws Exception {
     var snapshot = givenSnapshotWithIndexDocument();
+    var view = givenGeneratedView(snapshot);
     when(sourceViewRepository.find(snapshot.approvalIdentifier()))
         .thenReturn(Optional.of(storedSourceView(snapshot, CURRENT_VIEW_VERSION, null)));
 
     indexingService.index(List.of(snapshot.approvalIdentifier()));
 
-    verify(sourceViewGenerator).generate(snapshot);
+    verifySavedView(snapshot, view);
+  }
+
+  @Test
+  void shouldNotRebuildSourceViewWhenStoredViewVersionIsNewer() throws Exception {
+    var snapshot = givenSnapshotWithIndexDocument();
+    when(sourceViewRepository.find(snapshot.approvalIdentifier()))
+        .thenReturn(
+            Optional.of(storedSourceView(snapshot, CURRENT_VIEW_VERSION + 1, clinicalTrialView())));
+
+    indexingService.index(List.of(snapshot.approvalIdentifier()));
+
+    verifyNoInteractions(sourceViewGenerator);
   }
 
   @Test
@@ -106,18 +112,20 @@ class IndexingServiceTest {
   @Test
   void shouldRebuildSourceViewWhenStoredViewVersionIsOlder() throws Exception {
     var snapshot = givenSnapshotWithIndexDocument();
+    var view = givenGeneratedView(snapshot);
     when(sourceViewRepository.find(snapshot.approvalIdentifier()))
         .thenReturn(
             Optional.of(storedSourceView(snapshot, CURRENT_VIEW_VERSION - 1, clinicalTrialView())));
 
     indexingService.index(List.of(snapshot.approvalIdentifier()));
 
-    verify(sourceViewGenerator).generate(snapshot);
+    verifySavedView(snapshot, view);
   }
 
   @Test
   void shouldRebuildSourceViewWhenContentHashHasChanged() throws Exception {
     var snapshot = givenSnapshotWithIndexDocument();
+    var view = givenGeneratedView(snapshot);
     var storedWithOtherContent =
         new StoredSourceView(
             snapshot.approvalIdentifier(),
@@ -132,7 +140,7 @@ class IndexingServiceTest {
 
     indexingService.index(List.of(snapshot.approvalIdentifier()));
 
-    verify(sourceViewGenerator).generate(snapshot);
+    verifySavedView(snapshot, view);
   }
 
   @Test
@@ -153,6 +161,7 @@ class IndexingServiceTest {
     indexingService.index(List.of(snapshot.approvalIdentifier()));
 
     verify(searchClient).index(anyCollection());
+    verify(sourceViewRepository, never()).save(any());
   }
 
   @Test
@@ -263,6 +272,24 @@ class IndexingServiceTest {
 
     assertThrows(
         SearchClientException.class, () -> indexingService.index(List.of(document.identifier())));
+  }
+
+  private SourceView givenGeneratedView(SourceSnapshot snapshot)
+      throws SourceViewGeneratorException {
+    var view = clinicalTrialView();
+    when(sourceViewGenerator.generate(snapshot)).thenReturn(view);
+    return view;
+  }
+
+  private void verifySavedView(SourceSnapshot snapshot, SourceView view) {
+    verify(sourceViewRepository)
+        .save(
+            new SourceViewUpdate(
+                snapshot.approvalIdentifier(),
+                snapshot.identifier(),
+                snapshot.content().hash(),
+                CURRENT_VIEW_VERSION,
+                view));
   }
 
   private SourceSnapshot givenSnapshotWithIndexDocument() throws IndexDocumentGeneratorException {
