@@ -42,6 +42,10 @@ class SourceViewGeneratorTest {
   private static final String CLINICAL_TRIAL_TYPE = "ClinicalTrial";
   private static final String TYPE_FIELD = "type";
   private static final String INVESTIGATOR_TITLE = "Prof.";
+  private static final String INVESTIGATOR_FIRST_NAME = "Ola";
+  private static final String INVESTIGATOR_LAST_NAME = "Nordmann";
+  private static final String INVESTIGATOR_DEPARTMENT = "Department of Oncology";
+  private static final String TRIAL_SITE_DEPARTMENT = "Akershus University Hospital";
   private static final String NORWAY_STATUS = "Ongoing";
   private static final String EEA_STATUS = "Authorised";
   private static final String SWEDEN_STATUS = "Ended";
@@ -95,14 +99,21 @@ class SourceViewGeneratorTest {
   }
 
   @Test
-  void shouldCreateTrialSitesWithInvestigatorsAndNvaIdentifiers()
-      throws SourceViewGeneratorException {
+  void shouldCreateTrialSiteWithEveryFieldOfItsInvestigator() throws SourceViewGeneratorException {
     var view = generateClinicalTrialView();
 
-    var trialSite = trialSiteWithKnownOrganization(view);
+    var expected =
+        new TrialSite(
+            TRIAL_SITE_ID,
+            TRIAL_SITE_DEPARTMENT,
+            new Investigator(
+                INVESTIGATOR_ID,
+                INVESTIGATOR_TITLE,
+                INVESTIGATOR_FIRST_NAME,
+                INVESTIGATOR_LAST_NAME,
+                INVESTIGATOR_DEPARTMENT));
 
-    assertEquals(TRIAL_SITE_ID, trialSite.nvaOrganizationId());
-    assertEquals(INVESTIGATOR_ID, trialSite.investigator().nvaPersonId());
+    assertEquals(expected, trialSiteWithKnownOrganization(view));
   }
 
   @Test
