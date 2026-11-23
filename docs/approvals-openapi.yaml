@@ -1245,6 +1245,19 @@ components:
             value: "123456"
         source: https://example.com/source/12345
         handle: https://hdl.handle.net/11250.1/98765
+        sourceView:
+          type: ClinicalTrial
+          identifier: 2023-510166-27-01
+          title: Prospective comparison of sirolimus against corticosteroids
+          statuses:
+            eea: Authorised
+            norway: Authorised
+          events:
+            - type: TrialStart
+              region: Norway
+              date: "2024-06-22"
+          sponsors:
+            - name: Helse Bergen HF
     ClinicalTrialView:
       type: object
       description: Landing page view of a clinical trial from CTIS
