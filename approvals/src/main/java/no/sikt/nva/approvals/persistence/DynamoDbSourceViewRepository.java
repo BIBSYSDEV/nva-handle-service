@@ -3,6 +3,7 @@ package no.sikt.nva.approvals.persistence;
 import static java.util.function.Predicate.not;
 import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toMap;
+import static java.util.stream.Collectors.toSet;
 import static no.sikt.nva.approvals.persistence.ApprovalDao.toDatabaseIdentifier;
 import static no.sikt.nva.approvals.persistence.DynamoDbConstants.PK0;
 import static no.sikt.nva.approvals.persistence.DynamoDbConstants.SK0;
@@ -17,6 +18,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.function.Function;
+import java.util.stream.Stream;
 import no.sikt.nva.approvals.domain.SourceViewUpdate;
 import no.sikt.nva.approvals.domain.StoredSourceView;
 import nva.commons.core.Environment;
@@ -33,7 +35,9 @@ import software.amazon.awssdk.services.dynamodb.model.UpdateItemRequest;
 public class DynamoDbSourceViewRepository implements SourceViewRepository {
 
   private static final String CREATED_DATE = "createdDate";
-  private static final Set<String> NOT_ASSIGNED = Set.of(PK0, SK0, CREATED_DATE);
+  private static final Set<String> KEY_ATTRIBUTES = Set.of(PK0, SK0);
+  private static final Set<String> NOT_ASSIGNED =
+      Stream.concat(KEY_ATTRIBUTES.stream(), Stream.of(CREATED_DATE)).collect(toSet());
   private static final String NAME_PLACEHOLDER = "#%s";
   private static final String VALUE_PLACEHOLDER = ":%s";
   private static final String ASSIGNMENT = "#%s = :%s";
@@ -92,7 +96,7 @@ public class DynamoDbSourceViewRepository implements SourceViewRepository {
   private UpdateItemRequest updateRequest(
       UUID approvalIdentifier, Map<String, AttributeValue> attributes) {
     var nonKeyAttributes =
-        attributes.keySet().stream().filter(not(Set.of(PK0, SK0)::contains)).toList();
+        attributes.keySet().stream().filter(not(KEY_ATTRIBUTES::contains)).toList();
     return UpdateItemRequest.builder()
         .tableName(tableName)
         .key(keyAttributes(approvalIdentifier))
