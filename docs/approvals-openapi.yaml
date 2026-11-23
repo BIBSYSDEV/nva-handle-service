@@ -1312,6 +1312,9 @@ components:
           items:
             type: object
             properties:
+              type:
+                type: string
+                enum: [Sponsor]
               name:
                 type: string
         trialSites:
@@ -1319,7 +1322,10 @@ components:
           items:
             type: object
             properties:
-              nvaOrganizationId:
+              type:
+                type: string
+                enum: [TrialSite]
+              organization:
                 type: string
                 format: uri
               departmentName:
@@ -1327,7 +1333,10 @@ components:
               investigator:
                 type: object
                 properties:
-                  nvaPersonId:
+                  type:
+                    type: string
+                    enum: [Investigator]
+                  person:
                     type: string
                     format: uri
                   title:

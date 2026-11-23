@@ -2,6 +2,8 @@ package no.sikt.nva.approvals.domain;
 
 import static java.util.Objects.nonNull;
 
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import com.fasterxml.jackson.annotation.JsonTypeInfo.Id;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import java.net.URI;
@@ -20,6 +22,8 @@ public record ClinicalTrialView(
     List<TrialSite> trialSites)
     implements SourceView {
 
+  private static final String TYPE_PROPERTY = "type";
+
   public ClinicalTrialView {
     statuses = nonNull(statuses) ? statuses : Map.of();
     events = emptyIfNull(events);
@@ -33,11 +37,16 @@ public record ClinicalTrialView(
 
   public record Event(String type, String region, String date) {}
 
+  @JsonTypeInfo(use = Id.NAME, property = TYPE_PROPERTY, defaultImpl = Sponsor.class)
+  @JsonTypeName("Sponsor")
   public record Sponsor(String name) {}
 
-  public record TrialSite(
-      URI nvaOrganizationId, String departmentName, Investigator investigator) {}
+  @JsonTypeInfo(use = Id.NAME, property = TYPE_PROPERTY, defaultImpl = TrialSite.class)
+  @JsonTypeName("TrialSite")
+  public record TrialSite(URI organization, String departmentName, Investigator investigator) {}
 
+  @JsonTypeInfo(use = Id.NAME, property = TYPE_PROPERTY, defaultImpl = Investigator.class)
+  @JsonTypeName("Investigator")
   public record Investigator(
-      URI nvaPersonId, String title, String firstName, String lastName, String department) {}
+      URI person, String title, String firstName, String lastName, String department) {}
 }

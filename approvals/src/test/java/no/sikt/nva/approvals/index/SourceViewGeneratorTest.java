@@ -8,6 +8,7 @@ import static org.hamcrest.Matchers.anEmptyMap;
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.empty;
+import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -68,6 +69,7 @@ class SourceViewGeneratorTest {
   private static final String TRIAL_START_DATE = "2022-10-05";
   private static final String SPONSOR_NAME = "Akershus University Hospital";
   private static final String EMPTY_CONTENT_MESSAGE = "Snapshot content is empty";
+  private static final String TYPE_PROPERTY = "type";
   private static final URI TRIAL_SITE_ID =
       URI.create("https://api.nva.unit.no/cristin/organization/1972.0.0.0");
   private static final URI INVESTIGATOR_ID =
@@ -250,11 +252,21 @@ class SourceViewGeneratorTest {
     var view = generateClinicalTrialView(CLINICAL_TRIAL_WITH_NULL_VALUES_FILE);
 
     assertThat(
-        view.trialSites().stream().map(TrialSite::nvaOrganizationId).toList(),
+        view.trialSites().stream().map(TrialSite::organization).toList(),
         containsInAnyOrder(null, null, NORD_NORGE_ORGANIZATION_ID));
     assertThat(
         view.trialSites().stream().map(TrialSite::investigator).map(Investigator::title).toList(),
         containsInAnyOrder(null, DOCTOR_TITLE, PROFESSOR_TITLE));
+  }
+
+  @ParameterizedTest
+  @ValueSource(strings = {"Sponsor", "TrialSite", "Investigator"})
+  void shouldWriteTypeOfSponsorsTrialSitesAndInvestigators(String type) throws Exception {
+    var view = generateClinicalTrialView();
+
+    var json = JsonUtils.dtoObjectMapper.valueToTree(view);
+
+    assertThat(json.findValuesAsText(TYPE_PROPERTY), hasItem(type));
   }
 
   @Test
@@ -280,7 +292,7 @@ class SourceViewGeneratorTest {
 
   private static TrialSite trialSiteWithKnownOrganization(ClinicalTrialView view) {
     return view.trialSites().stream()
-        .filter(trialSite -> TRIAL_SITE_ID.equals(trialSite.nvaOrganizationId()))
+        .filter(trialSite -> TRIAL_SITE_ID.equals(trialSite.organization()))
         .findFirst()
         .orElseThrow();
   }
