@@ -35,7 +35,7 @@ public class DynamoDbSourceViewRepository implements SourceViewRepository {
   private static final String NEWER_THAN_STORED =
       "attribute_not_exists(#snapshotIdentifier)"
           + " OR #snapshotIdentifier < :snapshotIdentifier"
-          + " OR (#snapshotIdentifier = :snapshotIdentifier AND #viewVersion < :viewVersion)";
+          + " OR (#snapshotIdentifier = :snapshotIdentifier AND #viewVersion <= :viewVersion)";
 
   private final DynamoDbTable<EnhancedDocument> table;
   private final Clock clock;

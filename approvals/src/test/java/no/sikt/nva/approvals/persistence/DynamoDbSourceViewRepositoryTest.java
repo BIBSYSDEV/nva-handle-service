@@ -83,14 +83,14 @@ class DynamoDbSourceViewRepositoryTest {
   }
 
   @Test
-  void shouldReplaceStoredSourceViewThatCanNotBeReadAnymore() {
+  void shouldRepairStoredSourceViewThatCanNotBeReadAnymore() {
     var unreadable = update(NEWER_SNAPSHOT, VIEW_VERSION);
     storeWithUnreadableView(unreadable);
-    var upgraded = withViewVersion(unreadable, VIEW_VERSION + 1);
+    var repaired = withViewVersion(unreadable, VIEW_VERSION);
 
     assertTrue(find().map(StoredSourceView::view).isEmpty());
-    assertTrue(repositoryAt(SECOND_SAVE).save(upgraded));
-    assertEquals(Optional.of(upgraded.view()), find().map(StoredSourceView::view));
+    assertTrue(repositoryAt(SECOND_SAVE).save(repaired));
+    assertEquals(Optional.of(stored(repaired, FIRST_SAVE, SECOND_SAVE)), find());
   }
 
   @Test
@@ -127,12 +127,13 @@ class DynamoDbSourceViewRepositoryTest {
   }
 
   @Test
-  void shouldNotReplaceSourceViewOfSameSnapshotAndViewVersion() {
+  void shouldReplaceSourceViewOfSameSnapshotAndViewVersion() {
     var stored = update(NEWER_SNAPSHOT, VIEW_VERSION);
     repository.save(stored);
+    var rebuilt = withViewVersion(stored, VIEW_VERSION);
 
-    assertFalse(repositoryAt(SECOND_SAVE).save(withViewVersion(stored, VIEW_VERSION)));
-    assertEquals(Optional.of(stored(stored, FIRST_SAVE, FIRST_SAVE)), find());
+    assertTrue(repositoryAt(SECOND_SAVE).save(rebuilt));
+    assertEquals(Optional.of(stored(rebuilt, FIRST_SAVE, SECOND_SAVE)), find());
   }
 
   @Test
