@@ -3,7 +3,9 @@ package no.sikt.nva.approvals.rest;
 import static java.net.HttpURLConnection.HTTP_NOT_MODIFIED;
 import static java.net.HttpURLConnection.HTTP_OK;
 import static no.sikt.nva.approvals.utils.RequestUtils.getApprovalIdentifier;
+import static no.sikt.nva.approvals.utils.RequestUtils.toApiGatewayException;
 import static nva.commons.apigateway.MediaTypes.APPLICATION_JSON_LD;
+import static nva.commons.core.attempt.Try.attempt;
 
 import com.amazonaws.services.lambda.runtime.Context;
 import java.util.List;
@@ -54,8 +56,8 @@ public class FetchApprovalSourceHandler extends ApiGatewayHandler<Void, String> 
   protected String processInput(Void input, RequestInfo requestInfo, Context context)
       throws ApiGatewayException {
     var snapshot =
-        changeService
-            .findLatestSnapshot(getApprovalIdentifier(requestInfo))
+        attempt(() -> changeService.findLatestSnapshot(getApprovalIdentifier(requestInfo)))
+            .orElseThrow(failure -> toApiGatewayException(failure.getException()))
             .orElseThrow(() -> new NotFoundException(SOURCE_NOT_FOUND_MESSAGE));
     var entityTag = EntityTag.forVersion(snapshot.identifier());
     addAdditionalHeaders(() -> representationHeaders(snapshot, entityTag));
