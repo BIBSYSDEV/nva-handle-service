@@ -13,8 +13,6 @@
     "identifier":                  { "@type": "xsd:string" },
     "modified":                    { "@type": "xsd:dateTime" },
     "statuses":                    { "@id": "clinicalTrialStatuses" },
-    "eea":                         { "@type": "xsd:string" },
-    "norway":                      { "@type": "xsd:string" },
     "events":                      { "@id": "event", "@container": "@set" },
     "region":                      { "@type": "xsd:string" },
     "date":                        { "@type": "xsd:date" },
