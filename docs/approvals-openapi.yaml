@@ -1315,8 +1315,6 @@ components:
                 format: uri
               departmentName:
                 type: string
-              siteLocation:
-                type: string
               investigator:
                 type: object
                 properties:
