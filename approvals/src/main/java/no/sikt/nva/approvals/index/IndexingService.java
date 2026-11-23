@@ -91,15 +91,20 @@ public class IndexingService {
   }
 
   private Optional<IndexDocument> generateIndexDocument(UUID approvalIdentifier) {
-    return attempt(() -> createIndexDocument(approvalIdentifier))
+    return attempt(() -> updateSourceViewAndCreateIndexDocument(approvalIdentifier))
         .orElse(failure -> skipApproval(approvalIdentifier, failure.getException()));
   }
 
-  private Optional<IndexDocument> createIndexDocument(UUID approvalIdentifier)
+  private Optional<IndexDocument> updateSourceViewAndCreateIndexDocument(UUID approvalIdentifier)
       throws IndexingServiceException, IndexDocumentGeneratorException {
     var snapshot = fetchLatestSnapshot(approvalIdentifier);
     updateSourceView(snapshot);
-    return Optional.of(generator.generate(snapshot, fetchApproval(approvalIdentifier)));
+    return createIndexDocument(snapshot);
+  }
+
+  private Optional<IndexDocument> createIndexDocument(SourceSnapshot snapshot)
+      throws IndexingServiceException, IndexDocumentGeneratorException {
+    return Optional.of(generator.generate(snapshot, fetchApproval(snapshot.approvalIdentifier())));
   }
 
   private void updateSourceView(SourceSnapshot snapshot) {
@@ -117,7 +122,7 @@ public class IndexingService {
 
   private static boolean isOutdated(StoredSourceView stored, SourceSnapshot snapshot) {
     return stored.viewVersion() < CURRENT_VIEW_VERSION
-        || stored.viewVersion() == CURRENT_VIEW_VERSION && isStale(stored, snapshot);
+        || (stored.viewVersion() == CURRENT_VIEW_VERSION && isStale(stored, snapshot));
   }
 
   private static boolean isStale(StoredSourceView stored, SourceSnapshot snapshot) {
