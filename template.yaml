@@ -903,7 +903,7 @@ Resources:
   NvaFetchApprovalSourceFunction:
     Type: AWS::Serverless::Function
     Properties:
-      Description: Returns the source document of the latest source snapshot of an approval, see docs/approvals-openapi.yaml
+      Description: Returns the source document of the latest source snapshot of an approval
       CodeUri: approvals
       Handler: no.sikt.nva.approvals.rest.FetchApprovalSourceHandler::handleRequest
       Policies:
