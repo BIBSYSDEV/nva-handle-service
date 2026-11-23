@@ -8,12 +8,12 @@ import static org.hamcrest.Matchers.anEmptyMap;
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.empty;
-import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.fasterxml.jackson.databind.exc.MismatchedInputException;
 import java.net.URI;
@@ -22,12 +22,14 @@ import java.util.Map;
 import no.sikt.nva.approvals.domain.ClinicalTrialView;
 import no.sikt.nva.approvals.domain.ClinicalTrialView.Event;
 import no.sikt.nva.approvals.domain.ClinicalTrialView.Investigator;
+import no.sikt.nva.approvals.domain.ClinicalTrialView.Organization;
 import no.sikt.nva.approvals.domain.ClinicalTrialView.TrialSite;
 import no.sikt.nva.approvals.domain.Content;
 import no.sikt.nva.approvals.domain.SourceView;
 import no.unit.nva.commons.json.JsonUtils;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
 class SourceViewGeneratorTest {
@@ -69,7 +71,17 @@ class SourceViewGeneratorTest {
   private static final String TRIAL_START_DATE = "2022-10-05";
   private static final String SPONSOR_NAME = "Akershus University Hospital";
   private static final String EMPTY_CONTENT_MESSAGE = "Snapshot content is empty";
-  private static final String TYPE_PROPERTY = "type";
+  private static final String INVESTIGATOR_TYPE = "Investigator";
+  private static final String CLINICAL_TRIAL_WITH_ONE_TRIAL_SITE =
+      """
+      {"@context": "https://api.legemiddelverket.no/ctis/context/clinical-trial.json",
+       "type": "ClinicalTrial", "publicTitle": "title",
+       "sponsors": [{"type": "Sponsor", "name": "sponsor"}],
+       "trialSites": [{"type": "TrialSite", "departmentName": "department",
+                       "nvaOrganizationId": %s,
+                       "investigator": {"type": "Investigator", "firstName": "Ola",
+                                        "nvaPersonId": %s}}]}
+      """;
   private static final URI TRIAL_SITE_ID =
       URI.create("https://api.nva.unit.no/cristin/organization/1972.0.0.0");
   private static final URI INVESTIGATOR_ID =
@@ -126,7 +138,7 @@ class SourceViewGeneratorTest {
 
     var expected =
         new TrialSite(
-            TRIAL_SITE_ID,
+            new Organization(TRIAL_SITE_ID),
             TRIAL_SITE_DEPARTMENT,
             new Investigator(
                 INVESTIGATOR_ID,
@@ -253,20 +265,39 @@ class SourceViewGeneratorTest {
 
     assertThat(
         view.trialSites().stream().map(TrialSite::organization).toList(),
-        containsInAnyOrder(null, null, NORD_NORGE_ORGANIZATION_ID));
+        containsInAnyOrder(null, null, new Organization(NORD_NORGE_ORGANIZATION_ID)));
     assertThat(
         view.trialSites().stream().map(TrialSite::investigator).map(Investigator::title).toList(),
         containsInAnyOrder(null, DOCTOR_TITLE, PROFESSOR_TITLE));
   }
 
   @ParameterizedTest
-  @ValueSource(strings = {"Sponsor", "TrialSite", "Investigator"})
-  void shouldWriteTypeOfSponsorsTrialSitesAndInvestigators(String type) throws Exception {
-    var view = generateClinicalTrialView();
+  @CsvSource({
+    "/sponsors/0/type, Sponsor",
+    "/trialSites/0/type, TrialSite",
+    "/trialSites/0/organization/type, Organization",
+    "/trialSites/0/investigator/type, Investigator"
+  })
+  void shouldWriteTypeOnEachNestedObject(String path, String type) throws Exception {
+    var view =
+        viewFrom(
+            CLINICAL_TRIAL_WITH_ONE_TRIAL_SITE.formatted(
+                "\"%s\"".formatted(TRIAL_SITE_ID), "\"%s\"".formatted(INVESTIGATOR_ID)));
 
     var json = JsonUtils.dtoObjectMapper.valueToTree(view);
 
-    assertThat(json.findValuesAsText(TYPE_PROPERTY), hasItem(type));
+    assertEquals(type, json.at(path).asText());
+  }
+
+  @Test
+  void shouldLeaveOutOrganizationAndInvestigatorIdWhenSourceHasNoNvaIds() throws Exception {
+    var view = viewFrom(CLINICAL_TRIAL_WITH_ONE_TRIAL_SITE.formatted(null, null));
+
+    var trialSite = JsonUtils.dtoObjectMapper.valueToTree(view).at("/trialSites/0");
+
+    assertTrue(trialSite.at("/organization").isMissingNode());
+    assertTrue(trialSite.at("/investigator/id").isMissingNode());
+    assertEquals(INVESTIGATOR_TYPE, trialSite.at("/investigator/type").asText());
   }
 
   @Test
@@ -286,13 +317,17 @@ class SourceViewGeneratorTest {
 
   private ClinicalTrialView generateClinicalTrialView(String file)
       throws SourceViewGeneratorException {
-    var content = Content.create(JSON_LD_MEDIA_TYPE, stringFromResources(Path.of(file)));
+    return viewFrom(stringFromResources(Path.of(file)));
+  }
+
+  private ClinicalTrialView viewFrom(String json) throws SourceViewGeneratorException {
+    var content = Content.create(JSON_LD_MEDIA_TYPE, json);
     return (ClinicalTrialView) generator.generate(randomSourceSnapshotWithContent(content));
   }
 
   private static TrialSite trialSiteWithKnownOrganization(ClinicalTrialView view) {
     return view.trialSites().stream()
-        .filter(trialSite -> TRIAL_SITE_ID.equals(trialSite.organization()))
+        .filter(trialSite -> new Organization(TRIAL_SITE_ID).equals(trialSite.organization()))
         .findFirst()
         .orElseThrow();
   }

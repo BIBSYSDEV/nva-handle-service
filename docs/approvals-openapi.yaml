@@ -1265,7 +1265,8 @@ components:
               region: Norway
               date: "2024-06-22"
           sponsors:
-            - name: Helse Bergen HF
+            - type: Sponsor
+              name: Helse Bergen HF
         sourceViewModified: "2026-11-20T10:00:00Z"
         sourceModified: "2026-11-19T10:00:00Z"
     ClinicalTrialView:
@@ -1326,8 +1327,14 @@ components:
                 type: string
                 enum: [TrialSite]
               organization:
-                type: string
-                format: uri
+                type: object
+                properties:
+                  type:
+                    type: string
+                    enum: [Organization]
+                  id:
+                    type: string
+                    format: uri
               departmentName:
                 type: string
               investigator:
@@ -1336,7 +1343,7 @@ components:
                   type:
                     type: string
                     enum: [Investigator]
-                  person:
+                  id:
                     type: string
                     format: uri
                   title:

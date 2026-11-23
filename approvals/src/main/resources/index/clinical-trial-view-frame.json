@@ -20,7 +20,7 @@
     "name":                        { "@type": "xsd:string" },
     "trialSites":                  { "@id": "trialSite", "@container": "@set" },
     "departmentName":              { "@type": "xsd:string" },
-    "organization":                { "@id": "ctis:nvaOrganizationId", "@type": "@id" },
+    "organization":                { "@id": "ctis:nvaOrganizationId" },
     "investigator": {
       "@context": { "title": { "@id": "ctis:title", "@type": "xsd:string" } }
     },
