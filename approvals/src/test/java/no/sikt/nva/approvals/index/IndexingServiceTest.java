@@ -45,12 +45,13 @@ class IndexingServiceTest {
   private SourceViewRepository sourceViewRepository;
 
   @BeforeEach
-  void setUp() {
+  void setUp() throws SourceViewGeneratorException {
     changeRepository = mock(ChangeRepository.class);
     approvalRepository = mock(ApprovalRepository.class);
     generator = mock(IndexDocumentGenerator.class);
     searchClient = mock(SearchClient.class);
     sourceViewGenerator = mock(SourceViewGenerator.class);
+    when(sourceViewGenerator.generate(any())).thenReturn(clinicalTrialView());
     sourceViewRepository = mock(SourceViewRepository.class);
     indexingService =
         new IndexingService(
@@ -107,6 +108,17 @@ class IndexingServiceTest {
     indexingService.index(List.of(snapshot.approvalIdentifier()));
 
     verifyNoInteractions(sourceViewGenerator);
+  }
+
+  @Test
+  void shouldNotRebuildSourceViewWithNewerVersionEvenWhenItCanNotBeRead() throws Exception {
+    var snapshot = givenSnapshotWithIndexDocument();
+    when(sourceViewRepository.find(snapshot.approvalIdentifier()))
+        .thenReturn(Optional.of(storedSourceView(snapshot, CURRENT_VIEW_VERSION + 1, null)));
+
+    indexingService.index(List.of(snapshot.approvalIdentifier()));
+
+    verify(sourceViewGenerator, never()).generate(any());
   }
 
   @Test
