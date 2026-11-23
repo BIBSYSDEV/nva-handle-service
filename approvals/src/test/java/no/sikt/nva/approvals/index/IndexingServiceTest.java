@@ -6,6 +6,8 @@ import static no.sikt.nva.approvals.utils.TestUtils.randomApproval;
 import static no.sikt.nva.approvals.utils.TestUtils.randomSourceSnapshot;
 import static no.unit.nva.testutils.RandomDataGenerator.randomString;
 import static no.unit.nva.testutils.RandomDataGenerator.randomUri;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.containsString;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
@@ -31,10 +33,14 @@ import no.sikt.nva.approvals.index.IndexDocument.Display;
 import no.sikt.nva.approvals.persistence.ApprovalRepository;
 import no.sikt.nva.approvals.persistence.ChangeRepository;
 import no.sikt.nva.approvals.persistence.SourceViewRepository;
+import nva.commons.logutils.LogRecorder;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 class IndexingServiceTest {
+
+  private static final String SOURCE_VIEW_FAILURE_METRIC_FILTER_PATTERN =
+      "Could not update the source view";
 
   private IndexingService indexingService;
   private ChangeRepository changeRepository;
@@ -163,6 +169,17 @@ class IndexingServiceTest {
     assertEquals(
         Set.of(snapshot.approvalIdentifier()),
         indexingService.index(List.of(snapshot.approvalIdentifier())).failed());
+  }
+
+  @Test
+  void shouldLogTextMatchedBySourceViewFailureMetricFilter() throws Exception {
+    var logRecorder = LogRecorder.forClass(IndexingService.class);
+    var snapshot = givenSnapshotWithIndexDocument();
+    when(sourceViewGenerator.generate(snapshot)).thenThrow(SourceViewGeneratorException.class);
+
+    indexingService.index(List.of(snapshot.approvalIdentifier()));
+
+    assertThat(logRecorder.asString(), containsString(SOURCE_VIEW_FAILURE_METRIC_FILTER_PATTERN));
   }
 
   @Test
