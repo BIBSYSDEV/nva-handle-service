@@ -29,8 +29,6 @@ public record SourceViewDao(
     implements DatabaseEntry {
 
   public static final String SORT_KEY = "SourceView";
-  public static final String SNAPSHOT_IDENTIFIER = "snapshotIdentifier";
-  public static final String VIEW_VERSION = "viewVersion";
 
   public static SourceViewDao fromSourceViewUpdate(
       SourceViewUpdate update, Instant createdDate, Instant modifiedDate) {
