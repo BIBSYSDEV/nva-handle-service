@@ -9,7 +9,7 @@ import no.unit.nva.commons.json.JsonUtils;
 
 public class SourceViewGenerator {
 
-  public static final int VIEW_VERSION = 1;
+  public static final int CURRENT_VIEW_VERSION = 1;
 
   private static final String EMPTY_CONTENT_MESSAGE = "Snapshot content is empty";
   private static final String FRAMING_FAILED_MESSAGE =

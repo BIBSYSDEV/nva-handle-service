@@ -2,7 +2,7 @@ package no.sikt.nva.approvals.index;
 
 import static java.util.function.Predicate.not;
 import static java.util.stream.Collectors.toSet;
-import static no.sikt.nva.approvals.index.SourceViewGenerator.VIEW_VERSION;
+import static no.sikt.nva.approvals.index.SourceViewGenerator.CURRENT_VIEW_VERSION;
 import static nva.commons.core.attempt.Try.attempt;
 
 import java.util.Collection;
@@ -110,7 +110,7 @@ public class IndexingService {
   private boolean isSourceViewOutdated(SourceSnapshot snapshot) {
     return sourceViewRepository
         .find(snapshot.approvalIdentifier())
-        .filter(stored -> stored.viewVersion() == VIEW_VERSION)
+        .filter(stored -> stored.viewVersion() == CURRENT_VIEW_VERSION)
         .map(StoredSourceView::contentHash)
         .filter(storedHash -> storedHash.equals(contentHash(snapshot)))
         .isEmpty();
@@ -123,7 +123,7 @@ public class IndexingService {
               snapshot.approvalIdentifier(),
               snapshot.identifier(),
               contentHash(snapshot),
-              VIEW_VERSION,
+              CURRENT_VIEW_VERSION,
               sourceViewGenerator.generate(snapshot)));
     } catch (SourceViewGeneratorException exception) {
       LOGGER.error(SOURCE_VIEW_FAILED_MESSAGE, snapshot.approvalIdentifier(), exception);

@@ -1,7 +1,7 @@
 package no.sikt.nva.approvals.index;
 
 import static java.util.UUID.randomUUID;
-import static no.sikt.nva.approvals.index.SourceViewGenerator.VIEW_VERSION;
+import static no.sikt.nva.approvals.index.SourceViewGenerator.CURRENT_VIEW_VERSION;
 import static no.sikt.nva.approvals.utils.TestUtils.randomApproval;
 import static no.sikt.nva.approvals.utils.TestUtils.randomSourceSnapshot;
 import static no.unit.nva.testutils.RandomDataGenerator.randomString;
@@ -75,7 +75,7 @@ class IndexingServiceTest {
                 snapshot.approvalIdentifier(),
                 snapshot.identifier(),
                 snapshot.content().hash(),
-                VIEW_VERSION,
+                CURRENT_VIEW_VERSION,
                 view));
   }
 
@@ -83,7 +83,8 @@ class IndexingServiceTest {
   void shouldNotRebuildSourceViewWhenContentAndViewVersionAreUnchanged() throws Exception {
     var snapshot = givenSnapshotWithIndexDocument();
     when(sourceViewRepository.find(snapshot.approvalIdentifier()))
-        .thenReturn(Optional.of(storedSourceView(snapshot, VIEW_VERSION, clinicalTrialView())));
+        .thenReturn(
+            Optional.of(storedSourceView(snapshot, CURRENT_VIEW_VERSION, clinicalTrialView())));
 
     indexingService.index(List.of(snapshot.approvalIdentifier()));
 
@@ -94,7 +95,8 @@ class IndexingServiceTest {
   void shouldRebuildSourceViewWhenStoredViewVersionIsOlder() throws Exception {
     var snapshot = givenSnapshotWithIndexDocument();
     when(sourceViewRepository.find(snapshot.approvalIdentifier()))
-        .thenReturn(Optional.of(storedSourceView(snapshot, VIEW_VERSION - 1, clinicalTrialView())));
+        .thenReturn(
+            Optional.of(storedSourceView(snapshot, CURRENT_VIEW_VERSION - 1, clinicalTrialView())));
 
     indexingService.index(List.of(snapshot.approvalIdentifier()));
 
@@ -109,7 +111,7 @@ class IndexingServiceTest {
             snapshot.approvalIdentifier(),
             snapshot.identifier(),
             randomString(),
-            VIEW_VERSION,
+            CURRENT_VIEW_VERSION,
             clinicalTrialView(),
             null,
             null);
