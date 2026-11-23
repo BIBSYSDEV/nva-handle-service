@@ -20,7 +20,6 @@
     "name":                        { "@type": "xsd:string" },
     "trialSites":                  { "@id": "trialSite", "@container": "@set" },
     "departmentName":              { "@type": "xsd:string" },
-    "siteLocation":                { "@type": "xsd:string" },
     "nvaOrganizationId":           { "@type": "@id" },
     "investigator": {
       "@context": { "title": { "@id": "ctis:title", "@type": "xsd:string" } }
@@ -41,7 +40,6 @@
   "trialSites": {
     "@explicit": true,
     "departmentName": {},
-    "siteLocation": {},
     "nvaOrganizationId": {},
     "investigator": {
       "@explicit": true,

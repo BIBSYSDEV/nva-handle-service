@@ -22,10 +22,7 @@ public record ClinicalTrialView(
   public record Sponsor(String name) {}
 
   public record TrialSite(
-      URI nvaOrganizationId,
-      String departmentName,
-      String siteLocation,
-      Investigator investigator) {}
+      URI nvaOrganizationId, String departmentName, Investigator investigator) {}
 
   public record Investigator(
       URI nvaPersonId, String title, String firstName, String lastName, String department) {}

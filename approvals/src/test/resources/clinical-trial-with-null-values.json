@@ -1,0 +1,97 @@
+{
+  "@context": "https://api.legemiddelverket.no/ctis/context/clinical-trial.json",
+  "id": "https://api.legemiddelverket.no/ctis/clinical-trial/2023-510166-27-01",
+  "type": "ClinicalTrial",
+  "identifier": "2023-510166-27-01",
+  "handle": "https://hdl.handle.net/20.500.14886/5352441",
+  "events": [
+    { "type": "TrialStart", "region": "EEA", "date": "2024-06-22" },
+    { "type": "TrialStart", "region": "Norway", "date": "2024-06-22" },
+    { "type": "RecruitmentStart", "region": "Norway", "date": "2024-06-22" }
+  ],
+  "statuses": { "eea": "Authorised", "norway": "Authorised" },
+  "modified": "2026-02-24T14:17:11.3001327",
+  "publicTitle": "Prospective comparison of sirolimus against corticosteroids",
+  "protocolCode": null,
+  "sponsors": [
+    {
+      "type": "Sponsor",
+      "name": "Helse Bergen HF",
+      "organizationTypeCode": "8",
+      "organizationTypeDisplayName": "Hospital/Clinic/Other health care facility",
+      "contactInformation": {
+        "address": {
+          "street": "Example street 1",
+          "city": "Bergen",
+          "postcode": "5000",
+          "country": "Norway"
+        },
+        "telephone": null,
+        "email": null
+      }
+    }
+  ],
+  "publicContactPoint": {
+    "type": "PublicContactPoint",
+    "organizationName": "Helse Bergen HF",
+    "functionalName": "Contact Person",
+    "functionalEmailAddress": "contact@example.org",
+    "functionalPhoneNumber": "+4700000000"
+  },
+  "trialSites": [
+    {
+      "type": "TrialSite",
+      "organizationId": "415464",
+      "departmentName": "Stavanger University Hospital HF",
+      "siteLocation": "Example street 2",
+      "address": { "street": "Example street 2", "city": "Stavanger", "postcode": "4000", "country": "Norway" },
+      "nvaOrganizationId": null,
+      "investigator": {
+        "type": "Investigator",
+        "organizationId": "415464",
+        "title": null,
+        "firstName": "First",
+        "lastName": "Investigator",
+        "department": "Department of Ophthalmology",
+        "contactInformation": { "telephone": "+4700000001", "email": "first@example.org" },
+        "nvaPersonId": null
+      }
+    },
+    {
+      "type": "TrialSite",
+      "organizationId": "465064",
+      "departmentName": "Helse Bergen HF",
+      "siteLocation": "Example street 1",
+      "address": { "street": "Example street 1", "city": "Bergen", "postcode": "5000", "country": "Norway" },
+      "nvaOrganizationId": null,
+      "investigator": {
+        "type": "Investigator",
+        "organizationId": "465064",
+        "title": "Dr.",
+        "firstName": "Second",
+        "lastName": "Investigator",
+        "department": "Department of Ophthalmology",
+        "contactInformation": { "telephone": "+4700000002", "email": "second@example.org" },
+        "nvaPersonId": null
+      }
+    },
+    {
+      "type": "TrialSite",
+      "organizationId": "465067",
+      "departmentName": "Universitetssykehuset Nord-Norge HF",
+      "siteLocation": "P. O. Box 100",
+      "address": { "street": "P. O. Box 100", "city": "Tromsoe", "postcode": "9000", "country": "Norway" },
+      "nvaOrganizationId": "https://api.nva.unit.no/cristin/organization/1902.0.0.0",
+      "investigator": {
+        "type": "Investigator",
+        "organizationId": "465067",
+        "title": "Prof.",
+        "firstName": "Third",
+        "lastName": "Investigator",
+        "department": "Department of Ophthalmology",
+        "contactInformation": { "telephone": "+4700000003", "email": "third@example.org" },
+        "nvaPersonId": "https://api.nva.unit.no/cristin/person/479515"
+      }
+    }
+  ]
+}

@@ -5,8 +5,10 @@ import static no.unit.nva.testutils.RandomDataGenerator.randomString;
 import static nva.commons.core.ioutils.IoUtils.stringFromResources;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsInAnyOrder;
+import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.empty;
 import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.not;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -27,6 +29,15 @@ class SourceViewGeneratorTest {
 
   private static final String JSON_LD_MEDIA_TYPE = "application/ld+json";
   private static final String CLINICAL_TRIAL_FILE = "clinical-trial.json";
+  private static final String CLINICAL_TRIAL_WITH_NULL_VALUES_FILE =
+      "clinical-trial-with-null-values.json";
+  private static final URI NORD_NORGE_ORGANIZATION_ID =
+      URI.create("https://api.nva.unit.no/cristin/organization/1902.0.0.0");
+  private static final String DOCTOR_TITLE = "Dr.";
+  private static final String PROFESSOR_TITLE = "Prof.";
+  private static final String EXAMPLE_EMAIL_DOMAIN = "@example.org";
+  private static final String EXAMPLE_PHONE_PREFIX = "+47000";
+  private static final String EXAMPLE_STREET = "Example street";
   private static final String CLINICAL_TRIAL_TITLE = "METIMMOX-2: Test Clinical Trial";
   private static final String CLINICAL_TRIAL_TYPE = "ClinicalTrial";
   private static final String TYPE_FIELD = "type";
@@ -186,9 +197,36 @@ class SourceViewGeneratorTest {
     assertEquals(EMPTY_CONTENT_MESSAGE, exception.getMessage());
   }
 
+  @Test
+  void shouldCreateViewWhenSourceHasExplicitNullValues() throws Exception {
+    var view = generateClinicalTrialView(CLINICAL_TRIAL_WITH_NULL_VALUES_FILE);
+
+    assertThat(
+        view.trialSites().stream().map(TrialSite::nvaOrganizationId).toList(),
+        containsInAnyOrder(null, null, NORD_NORGE_ORGANIZATION_ID));
+    assertThat(
+        view.trialSites().stream().map(TrialSite::investigator).map(Investigator::title).toList(),
+        containsInAnyOrder(null, DOCTOR_TITLE, PROFESSOR_TITLE));
+  }
+
+  @Test
+  void shouldLeaveOutContactInformationAndAddresses() throws Exception {
+    var view = generateClinicalTrialView(CLINICAL_TRIAL_WITH_NULL_VALUES_FILE);
+
+    var json = JsonUtils.dtoObjectMapper.writeValueAsString(view);
+
+    assertThat(json, not(containsString(EXAMPLE_EMAIL_DOMAIN)));
+    assertThat(json, not(containsString(EXAMPLE_PHONE_PREFIX)));
+    assertThat(json, not(containsString(EXAMPLE_STREET)));
+  }
+
   private ClinicalTrialView generateClinicalTrialView() throws SourceViewGeneratorException {
-    var content =
-        Content.create(JSON_LD_MEDIA_TYPE, stringFromResources(Path.of(CLINICAL_TRIAL_FILE)));
+    return generateClinicalTrialView(CLINICAL_TRIAL_FILE);
+  }
+
+  private ClinicalTrialView generateClinicalTrialView(String file)
+      throws SourceViewGeneratorException {
+    var content = Content.create(JSON_LD_MEDIA_TYPE, stringFromResources(Path.of(file)));
     return (ClinicalTrialView) generator.generate(randomSourceSnapshotWithContent(content));
   }
 
