@@ -18,11 +18,11 @@ class EntityTagTest {
   }
 
   @Test
-  void shouldReadVersionFromEntityTagWithRevision() {
+  void shouldNotReadVersionFromEntityTagWithRevision() {
     var version = SortableIdentifier.next();
 
     var entityTag = EntityTag.forVersionAndRevision(version, REVISION);
 
-    assertEquals(Optional.of(version), EntityTag.toVersion(entityTag));
+    assertEquals(Optional.empty(), EntityTag.toVersion(entityTag));
   }
 }

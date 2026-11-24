@@ -16,7 +16,7 @@ public final class EntityTag {
   private static final String ANY = "*";
   private static final String LIST_SEPARATOR = ",";
   private static final String PART_SEPARATOR = ".";
-  private static final Pattern SINGLE_ENTITY_TAG = Pattern.compile("^\"([^\".,\\s]+)(\\.\\d+)*\"$");
+  private static final Pattern SINGLE_ENTITY_TAG = Pattern.compile("^\"([^\".,\\s]+)\"$");
   private static final int VERSION_GROUP = 1;
 
   private EntityTag() {}
