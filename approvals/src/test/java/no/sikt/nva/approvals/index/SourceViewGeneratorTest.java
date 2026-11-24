@@ -11,19 +11,27 @@ import static org.hamcrest.Matchers.empty;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.fasterxml.jackson.databind.exc.MismatchedInputException;
 import java.net.URI;
 import java.nio.file.Path;
 import java.util.Map;
 import no.sikt.nva.approvals.domain.ClinicalTrialView;
 import no.sikt.nva.approvals.domain.ClinicalTrialView.Event;
 import no.sikt.nva.approvals.domain.ClinicalTrialView.Investigator;
+import no.sikt.nva.approvals.domain.ClinicalTrialView.Organization;
+import no.sikt.nva.approvals.domain.ClinicalTrialView.Person;
 import no.sikt.nva.approvals.domain.ClinicalTrialView.TrialSite;
 import no.sikt.nva.approvals.domain.Content;
 import no.sikt.nva.approvals.domain.SourceView;
 import no.unit.nva.commons.json.JsonUtils;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.ValueSource;
 
 class SourceViewGeneratorTest {
 
@@ -52,6 +60,8 @@ class SourceViewGeneratorTest {
   private static final String EEA_REGION_KEY = "eea";
   private static final String NORWAY_REGION_KEY = "norway";
   private static final String SWEDEN_REGION_KEY = "sweden";
+  private static final String DENMARK_REGION_KEY = "denmark";
+  private static final String DENMARK_STATUS = "Ended";
   private static final URI CLINICAL_TRIAL_ID =
       URI.create("https://st-api.legemiddelverket.no/ctis/clinical-trial/2022-500027-76-00");
   private static final String CLINICAL_TRIAL_IDENTIFIER = "2022-500027-76-00";
@@ -62,6 +72,17 @@ class SourceViewGeneratorTest {
   private static final String TRIAL_START_DATE = "2022-10-05";
   private static final String SPONSOR_NAME = "Akershus University Hospital";
   private static final String EMPTY_CONTENT_MESSAGE = "Snapshot content is empty";
+  private static final String INVESTIGATOR_TYPE = "Investigator";
+  private static final String CLINICAL_TRIAL_WITH_ONE_TRIAL_SITE =
+      """
+      {"@context": "https://api.legemiddelverket.no/ctis/context/clinical-trial.json",
+       "type": "ClinicalTrial", "publicTitle": "title",
+       "sponsors": [{"type": "Sponsor", "name": "sponsor"}],
+       "trialSites": [{"type": "TrialSite", "departmentName": "department",
+                       "nvaOrganizationId": %s,
+                       "investigator": {"type": "Investigator", "firstName": "Ola",
+                                        "nvaPersonId": %s}}]}
+      """;
   private static final URI TRIAL_SITE_ID =
       URI.create("https://api.nva.unit.no/cristin/organization/1972.0.0.0");
   private static final URI INVESTIGATOR_ID =
@@ -72,6 +93,21 @@ class SourceViewGeneratorTest {
        "type": "ClinicalTrial", "publicTitle": "%s"}
       """
           .formatted(CLINICAL_TRIAL_TITLE);
+  private static final String TRIAL_WITH_TYPED_UNKNOWN_REGION =
+      """
+      {"@context": "https://api.legemiddelverket.no/ctis/context/clinical-trial.json",
+       "type": "ClinicalTrial", "publicTitle": "%s",
+       "statuses": {
+         "denmark": {"@value": "Ended", "@type": "http://www.w3.org/2001/XMLSchema#string"}
+       }}
+      """
+          .formatted(CLINICAL_TRIAL_TITLE);
+  private static final String TRIAL_WITH_STATUS =
+      """
+      {"@context": "https://api.legemiddelverket.no/ctis/context/clinical-trial.json",
+       "type": "ClinicalTrial", "publicTitle": "title",
+       "statuses": { "denmark": %s }}
+      """;
   private static final String BIOBANK =
       """
       {"@context": "https://api.legemiddelverket.no/ctis/context/clinical-trial.json",
@@ -103,10 +139,10 @@ class SourceViewGeneratorTest {
 
     var expected =
         new TrialSite(
-            TRIAL_SITE_ID,
+            new Organization(TRIAL_SITE_ID),
             TRIAL_SITE_DEPARTMENT,
             new Investigator(
-                INVESTIGATOR_ID,
+                new Person(INVESTIGATOR_ID),
                 INVESTIGATOR_TITLE,
                 INVESTIGATOR_FIRST_NAME,
                 INVESTIGATOR_LAST_NAME,
@@ -139,6 +175,26 @@ class SourceViewGeneratorTest {
         containsInAnyOrder(
             new Event(TRIAL_START, EEA_REGION, TRIAL_START_DATE),
             new Event(TRIAL_START, NORWAY_REGION, TRIAL_START_DATE)));
+  }
+
+  @ParameterizedTest
+  @ValueSource(strings = {"[\"Ended\", \"Halted\"]", "{\"@id\": \"https://example.org/status\"}"})
+  void shouldRejectStatusThatIsNotASingleValue(String status) {
+    var content = Content.create(JSON_LD_MEDIA_TYPE, TRIAL_WITH_STATUS.formatted(status));
+    var snapshot = randomSourceSnapshotWithContent(content);
+
+    var exception =
+        assertThrows(SourceViewGeneratorException.class, () -> generator.generate(snapshot));
+
+    assertInstanceOf(MismatchedInputException.class, exception.getCause());
+  }
+
+  @Test
+  void shouldCreateStatusAsPlainTextForTypedRegionUnknownToFrame() throws Exception {
+    var content = Content.create(JSON_LD_MEDIA_TYPE, TRIAL_WITH_TYPED_UNKNOWN_REGION);
+    var view = (ClinicalTrialView) generator.generate(randomSourceSnapshotWithContent(content));
+
+    assertEquals(Map.of(DENMARK_REGION_KEY, DENMARK_STATUS), view.statuses());
   }
 
   @Test
@@ -209,11 +265,41 @@ class SourceViewGeneratorTest {
     var view = generateClinicalTrialView(CLINICAL_TRIAL_WITH_NULL_VALUES_FILE);
 
     assertThat(
-        view.trialSites().stream().map(TrialSite::nvaOrganizationId).toList(),
-        containsInAnyOrder(null, null, NORD_NORGE_ORGANIZATION_ID));
+        view.trialSites().stream().map(TrialSite::organization).toList(),
+        containsInAnyOrder(null, null, new Organization(NORD_NORGE_ORGANIZATION_ID)));
     assertThat(
         view.trialSites().stream().map(TrialSite::investigator).map(Investigator::title).toList(),
         containsInAnyOrder(null, DOCTOR_TITLE, PROFESSOR_TITLE));
+  }
+
+  @ParameterizedTest
+  @CsvSource({
+    "/sponsors/0/type, Sponsor",
+    "/trialSites/0/type, TrialSite",
+    "/trialSites/0/organization/type, Organization",
+    "/trialSites/0/investigator/type, Investigator",
+    "/trialSites/0/investigator/person/type, Person"
+  })
+  void shouldWriteTypeOnEachNestedObject(String path, String type) throws Exception {
+    var view =
+        viewFrom(
+            CLINICAL_TRIAL_WITH_ONE_TRIAL_SITE.formatted(
+                "\"%s\"".formatted(TRIAL_SITE_ID), "\"%s\"".formatted(INVESTIGATOR_ID)));
+
+    var json = JsonUtils.dtoObjectMapper.valueToTree(view);
+
+    assertEquals(type, json.at(path).asText());
+  }
+
+  @Test
+  void shouldLeaveOutOrganizationAndPersonWhenSourceHasNoNvaIds() throws Exception {
+    var view = viewFrom(CLINICAL_TRIAL_WITH_ONE_TRIAL_SITE.formatted(null, null));
+
+    var trialSite = JsonUtils.dtoObjectMapper.valueToTree(view).at("/trialSites/0");
+
+    assertTrue(trialSite.at("/organization").isMissingNode());
+    assertTrue(trialSite.at("/investigator/person").isMissingNode());
+    assertEquals(INVESTIGATOR_TYPE, trialSite.at("/investigator/type").asText());
   }
 
   @Test
@@ -233,13 +319,17 @@ class SourceViewGeneratorTest {
 
   private ClinicalTrialView generateClinicalTrialView(String file)
       throws SourceViewGeneratorException {
-    var content = Content.create(JSON_LD_MEDIA_TYPE, stringFromResources(Path.of(file)));
+    return viewFrom(stringFromResources(Path.of(file)));
+  }
+
+  private ClinicalTrialView viewFrom(String json) throws SourceViewGeneratorException {
+    var content = Content.create(JSON_LD_MEDIA_TYPE, json);
     return (ClinicalTrialView) generator.generate(randomSourceSnapshotWithContent(content));
   }
 
   private static TrialSite trialSiteWithKnownOrganization(ClinicalTrialView view) {
     return view.trialSites().stream()
-        .filter(trialSite -> TRIAL_SITE_ID.equals(trialSite.nvaOrganizationId()))
+        .filter(trialSite -> new Organization(TRIAL_SITE_ID).equals(trialSite.organization()))
         .findFirst()
         .orElseThrow();
   }

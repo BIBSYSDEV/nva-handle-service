@@ -1231,10 +1231,6 @@ components:
             source has been indexed. Values are passed through from the source as-is.
           oneOf:
             - $ref: "#/components/schemas/ClinicalTrialView"
-          discriminator:
-            propertyName: type
-            mapping:
-              ClinicalTrial: "#/components/schemas/ClinicalTrialView"
         sourceViewModified:
           type: string
           format: date-time
@@ -1269,7 +1265,8 @@ components:
               region: Norway
               date: "2024-06-22"
           sponsors:
-            - name: Helse Bergen HF
+            - type: Sponsor
+              name: Helse Bergen HF
         sourceViewModified: "2026-11-20T10:00:00Z"
         sourceModified: "2026-11-19T10:00:00Z"
     ClinicalTrialView:
@@ -1302,6 +1299,7 @@ components:
           type: array
           items:
             type: object
+            required: [type]
             properties:
               type:
                 type: string
@@ -1315,25 +1313,51 @@ components:
           type: array
           items:
             type: object
+            required: [type]
             properties:
+              type:
+                type: string
+                enum: [Sponsor]
               name:
                 type: string
         trialSites:
           type: array
           items:
             type: object
+            required: [type]
             properties:
-              nvaOrganizationId:
+              type:
                 type: string
-                format: uri
+                enum: [TrialSite]
+              organization:
+                type: object
+                required: [type]
+                properties:
+                  type:
+                    type: string
+                    enum: [Organization]
+                  id:
+                    type: string
+                    format: uri
               departmentName:
                 type: string
               investigator:
                 type: object
+                required: [type]
                 properties:
-                  nvaPersonId:
+                  type:
                     type: string
-                    format: uri
+                    enum: [Investigator]
+                  person:
+                    type: object
+                    required: [type]
+                    properties:
+                      type:
+                        type: string
+                        enum: [Person]
+                      id:
+                        type: string
+                        format: uri
                   title:
                     type: string
                   firstName:

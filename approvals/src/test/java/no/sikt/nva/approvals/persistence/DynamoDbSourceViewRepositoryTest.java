@@ -22,6 +22,8 @@ import java.util.UUID;
 import no.sikt.nva.approvals.domain.ClinicalTrialView;
 import no.sikt.nva.approvals.domain.ClinicalTrialView.Event;
 import no.sikt.nva.approvals.domain.ClinicalTrialView.Investigator;
+import no.sikt.nva.approvals.domain.ClinicalTrialView.Organization;
+import no.sikt.nva.approvals.domain.ClinicalTrialView.Person;
 import no.sikt.nva.approvals.domain.ClinicalTrialView.Sponsor;
 import no.sikt.nva.approvals.domain.ClinicalTrialView.TrialSite;
 import no.sikt.nva.approvals.domain.SourceViewUpdate;
@@ -197,10 +199,14 @@ class DynamoDbSourceViewRepositoryTest {
         List.of(new Sponsor(randomString())),
         List.of(
             new TrialSite(
-                randomUri(),
+                new Organization(randomUri()),
                 randomString(),
                 new Investigator(
-                    randomUri(), randomString(), randomString(), randomString(), randomString()))));
+                    new Person(randomUri()),
+                    randomString(),
+                    randomString(),
+                    randomString(),
+                    randomString()))));
   }
 
   private SourceViewRepository repositoryAt(Instant now) {

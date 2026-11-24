@@ -20,14 +20,14 @@
     "name":                        { "@type": "xsd:string" },
     "trialSites":                  { "@id": "trialSite", "@container": "@set" },
     "departmentName":              { "@type": "xsd:string" },
-    "nvaOrganizationId":           { "@type": "@id" },
+    "organization":                { "@id": "ctis:nvaOrganizationId" },
     "investigator": {
       "@context": { "title": { "@id": "ctis:title", "@type": "xsd:string" } }
     },
     "firstName":                   { "@type": "xsd:string" },
     "lastName":                    { "@type": "xsd:string" },
     "department":                  { "@type": "xsd:string" },
-    "nvaPersonId":                 { "@type": "@id" }
+    "person":                      { "@id": "ctis:nvaPersonId" }
   },
   "@type": "ClinicalTrial",
   "@explicit": true,
@@ -40,14 +40,14 @@
   "trialSites": {
     "@explicit": true,
     "departmentName": {},
-    "nvaOrganizationId": {},
+    "organization": {},
     "investigator": {
       "@explicit": true,
       "title": {},
       "firstName": {},
       "lastName": {},
       "department": {},
-      "nvaPersonId": {}
+      "person": {}
     }
   }
 }
