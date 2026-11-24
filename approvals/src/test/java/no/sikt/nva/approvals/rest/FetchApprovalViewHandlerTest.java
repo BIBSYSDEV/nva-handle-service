@@ -76,6 +76,21 @@ class FetchApprovalViewHandlerTest {
   }
 
   @Test
+  void shouldReturnJsonLdWithContextOfTheApprovalApi() throws IOException {
+    var storedView = givenStoredView();
+
+    var response =
+        send(
+            request(
+                storedView.approvalIdentifier(),
+                Map.of(HttpHeaders.ACCEPT, "application/ld+json")));
+
+    assertEquals(
+        "https://%s/approval/context/v1".formatted(API_HOST),
+        bodyOf(response).get("@context").asText());
+  }
+
+  @Test
   void shouldReturnEntityTagOfSnapshotAndViewVersion() throws IOException {
     var storedView = givenStoredView();
 

@@ -115,6 +115,40 @@
       "@context": {
         "cloudEventIdentifier": "schema:identifier"
       }
+    },
+    "wasDerivedFrom": {
+      "@id": "prov:wasDerivedFrom",
+      "@type": "@id"
+    },
+    "ClinicalTrialView": {
+      "@id": "ClinicalTrialView",
+      "@context": {
+        "@propagate": true,
+        "identifier": { "@id": "schema:identifier", "@type": "xsd:string" },
+        "title": { "@id": "schema:name", "@type": "xsd:string" },
+        "modified": { "@id": "schema:dateModified" },
+        "statuses": { "@id": "regionStatus", "@container": "@set" },
+        "status": { "@type": "xsd:string" },
+        "region": { "@type": "xsd:string" },
+        "events": { "@id": "event", "@container": "@set" },
+        "date": { "@type": "xsd:date" },
+        "sponsors": { "@id": "schema:sponsor", "@container": "@set" },
+        "name": { "@id": "schema:name", "@type": "xsd:string" },
+        "trialSites": { "@id": "trialSite", "@container": "@set" },
+        "departmentName": { "@type": "xsd:string" },
+        "organization": {},
+        "investigator": {},
+        "person": {},
+        "firstName": { "@id": "schema:givenName", "@type": "xsd:string" },
+        "lastName": { "@id": "schema:familyName", "@type": "xsd:string" },
+        "department": { "@type": "xsd:string" },
+        "Investigator": {
+          "@id": "Investigator",
+          "@context": {
+            "title": { "@id": "schema:honorificPrefix", "@type": "xsd:string" }
+          }
+        }
+      }
     }
   }
 }
