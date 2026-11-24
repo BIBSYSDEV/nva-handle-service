@@ -16,7 +16,6 @@ import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import no.sikt.nva.approvals.domain.ClinicalTrialView;
@@ -25,6 +24,7 @@ import no.sikt.nva.approvals.domain.ClinicalTrialView.Investigator;
 import no.sikt.nva.approvals.domain.ClinicalTrialView.Organization;
 import no.sikt.nva.approvals.domain.ClinicalTrialView.Person;
 import no.sikt.nva.approvals.domain.ClinicalTrialView.Sponsor;
+import no.sikt.nva.approvals.domain.ClinicalTrialView.Status;
 import no.sikt.nva.approvals.domain.ClinicalTrialView.TrialSite;
 import no.sikt.nva.approvals.domain.SourceViewUpdate;
 import no.sikt.nva.approvals.domain.StoredSourceView;
@@ -193,7 +193,7 @@ class DynamoDbSourceViewRepositoryTest {
         randomString(),
         randomString(),
         randomString(),
-        Map.of(randomString(), randomString()),
+        List.of(new Status(randomString(), randomString())),
         List.of(new Event(randomString(), randomString(), randomString())),
         List.of(new Sponsor(randomString())),
         List.of(
