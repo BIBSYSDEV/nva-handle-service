@@ -106,6 +106,12 @@ class SourceViewGeneratorTest {
        "type": "ClinicalTrial", "publicTitle": "title",
        "statuses": { "denmark": %s }}
       """;
+  private static final String TRIAL_WITH_SEVERAL_STATUS_NODES =
+      """
+      {"@context": "https://api.legemiddelverket.no/ctis/context/clinical-trial.json",
+       "type": "ClinicalTrial", "publicTitle": "title",
+       "statuses": [{ "eea": "Ended" }, { "norway": "Ongoing" }]}
+      """;
   private static final String BIOBANK =
       """
       {"@context": "https://api.legemiddelverket.no/ctis/context/clinical-trial.json",
@@ -184,6 +190,17 @@ class SourceViewGeneratorTest {
         assertThrows(SourceViewGeneratorException.class, () -> generator.generate(snapshot));
 
     assertInstanceOf(MismatchedInputException.class, exception.getCause());
+  }
+
+  @Test
+  void shouldRejectStatusesThatAreNotOneStatusPerRegion() {
+    var content = Content.create(JSON_LD_MEDIA_TYPE, TRIAL_WITH_SEVERAL_STATUS_NODES);
+    var snapshot = randomSourceSnapshotWithContent(content);
+
+    var exception =
+        assertThrows(SourceViewGeneratorException.class, () -> generator.generate(snapshot));
+
+    assertInstanceOf(IllegalArgumentException.class, exception.getCause());
   }
 
   @Test

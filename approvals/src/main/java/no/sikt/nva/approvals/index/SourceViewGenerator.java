@@ -25,6 +25,8 @@ public class SourceViewGenerator {
   private static final String STATUSES_FIELD = "statuses";
   private static final String REGION_FIELD = "region";
   private static final String STATUS_FIELD = "status";
+  private static final String NOT_STATUS_PER_REGION_MESSAGE =
+      "Expected statuses to be one status per region, but got: %s";
 
   public SourceView generate(SourceSnapshot snapshot) throws SourceViewGeneratorException {
     if (isMissingContent(snapshot)) {
@@ -42,9 +44,11 @@ public class SourceViewGenerator {
   }
 
   private static ObjectNode withStatusesAsList(ObjectNode view) {
-    var statuses = view.get(STATUSES_FIELD);
+    var statuses = view.path(STATUSES_FIELD);
     if (statuses instanceof ObjectNode statusPerRegion) {
       view.set(STATUSES_FIELD, toStatusList(statusPerRegion));
+    } else if (!statuses.isMissingNode() && !statuses.isNull()) {
+      throw new IllegalArgumentException(NOT_STATUS_PER_REGION_MESSAGE.formatted(statuses));
     }
     return view;
   }
