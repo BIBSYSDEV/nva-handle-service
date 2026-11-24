@@ -1,14 +1,37 @@
 package no.sikt.nva.approvals.rest;
 
+import static no.sikt.nva.approvals.index.SourceViewGenerator.CURRENT_VIEW_VERSION;
 import static no.sikt.nva.approvals.utils.JsonLdTestUtils.APPROVAL_ONTOLOGY_NAMESPACE;
 import static no.sikt.nva.approvals.utils.JsonLdTestUtils.expandWithServedContext;
+import static no.sikt.nva.approvals.utils.TestUtils.randomSourceSnapshotWithContent;
+import static nva.commons.core.ioutils.IoUtils.stringFromResources;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import com.apicatalog.jsonld.JsonLdError;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import jakarta.json.JsonObject;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.nio.file.Path;
+import java.time.Instant;
+import java.util.Map;
+import java.util.Optional;
+import java.util.UUID;
+import no.sikt.nva.approvals.domain.Content;
+import no.sikt.nva.approvals.domain.SourceViewService;
+import no.sikt.nva.approvals.domain.StoredSourceView;
+import no.sikt.nva.approvals.index.SourceViewGenerator;
+import no.unit.nva.commons.json.JsonUtils;
+import no.unit.nva.stubs.FakeContext;
+import no.unit.nva.testutils.HandlerRequestBuilder;
+import nva.commons.apigateway.GatewayResponse;
+import nva.commons.core.Environment;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 class ViewContextExpansionTest {
@@ -18,37 +41,32 @@ class ViewContextExpansionTest {
   private static final String PROV_AGENT = "http://www.w3.org/ns/prov#agent";
   private static final String ID_KEYWORD = "@id";
   private static final String TYPE_KEYWORD = "@type";
-  private static final String VIEW_DOCUMENT =
-      """
-      {
-        "type": "ClinicalTrialView",
-        "id": "https://localhost/approval/6ff5f1b5-97c1-40f0-86ad-2cbd9006eee2/view",
-        "wasDerivedFrom": "https://localhost/approval/6ff5f1b5-97c1-40f0-86ad-2cbd9006eee2/change/1",
-        "identifier": "2023-510166-27-01",
-        "title": "A trial",
-        "modified": "2026-02-24T00:15:01.9330493",
-        "statuses": [{ "type": "Status", "region": "eea", "status": "Authorised" }],
-        "events": [{ "type": "TrialStart", "region": "EEA", "date": "2025-03-31" }],
-        "sponsors": [{ "type": "Sponsor", "name": "Helse Bergen HF" }],
-        "trialSites": [{
-          "type": "TrialSite",
-          "departmentName": "Hematology",
-          "organization": { "type": "Organization", "id": "https://localhost/cristin/organization/1.0.0.0" },
-          "investigator": {
-            "type": "Investigator",
-            "person": { "type": "Person", "id": "https://localhost/cristin/person/1" },
-            "title": "Dr.",
-            "firstName": "Ola",
-            "lastName": "Nordmann",
-            "department": "Hematology"
-          }
-        }]
-      }
-      """;
+  private static final String CONTEXT_KEYWORD = "@context";
+  private static final String JSON_LD_MEDIA_TYPE = "application/ld+json";
+  private static final String CLINICAL_TRIAL_FILE = "clinical-trial.json";
+  private static final String APPROVAL_ID_PATH_PARAMETER = "approvalId";
+  private static final Instant SAVED = Instant.parse("2026-11-20T10:00:00Z");
+  private static String viewDocument;
+
+  @BeforeAll
+  static void fetchViewOfClinicalTrialSource() throws Exception {
+    var content =
+        Content.create(JSON_LD_MEDIA_TYPE, stringFromResources(Path.of(CLINICAL_TRIAL_FILE)));
+    var snapshot = randomSourceSnapshotWithContent(content);
+    var storedView =
+        new StoredSourceView(
+            snapshot.approvalIdentifier(),
+            snapshot.identifier(),
+            CURRENT_VIEW_VERSION,
+            new SourceViewGenerator().generate(snapshot),
+            SAVED,
+            SAVED);
+    viewDocument = withoutContext(fetchView(storedView));
+  }
 
   @Test
   void shouldExpandViewFieldsWithoutApprovalMeanings() throws IOException, JsonLdError {
-    var view = expandWithServedContext(VIEW_DOCUMENT);
+    var view = expandWithServedContext(viewDocument);
 
     assertThat(
         view.keySet(),
@@ -67,14 +85,14 @@ class ViewContextExpansionTest {
 
   @Test
   void shouldExpandSponsorNameAsNameAndNotAsIdentifierNamespace() throws IOException, JsonLdError {
-    var sponsor = firstNode(expandWithServedContext(VIEW_DOCUMENT), schema("sponsor"));
+    var sponsor = firstNode(expandWithServedContext(viewDocument), schema("sponsor"));
 
     assertThat(sponsor.keySet(), containsInAnyOrder(TYPE_KEYWORD, schema("name")));
   }
 
   @Test
   void shouldExpandInvestigatorTitleAsHonorificPrefix() throws IOException, JsonLdError {
-    var trialSite = firstNode(expandWithServedContext(VIEW_DOCUMENT), ontology("trialSite"));
+    var trialSite = firstNode(expandWithServedContext(viewDocument), ontology("trialSite"));
     var investigator = firstNode(trialSite, ontology("investigator"));
 
     assertThat(
@@ -90,7 +108,7 @@ class ViewContextExpansionTest {
 
   @Test
   void shouldLinkTrialSiteAndInvestigatorToTheirAgents() throws IOException, JsonLdError {
-    var trialSite = firstNode(expandWithServedContext(VIEW_DOCUMENT), ontology("trialSite"));
+    var trialSite = firstNode(expandWithServedContext(viewDocument), ontology("trialSite"));
     var organization = firstNode(trialSite, PROV_AGENT);
     var person = firstNode(firstNode(trialSite, ontology("investigator")), PROV_AGENT);
 
@@ -100,10 +118,32 @@ class ViewContextExpansionTest {
 
   @Test
   void shouldExpandStatusAsRegionAndStatus() throws IOException, JsonLdError {
-    var status = firstNode(expandWithServedContext(VIEW_DOCUMENT), ontology("regionStatus"));
+    var status = firstNode(expandWithServedContext(viewDocument), ontology("regionStatus"));
 
     assertThat(
         status.keySet(), containsInAnyOrder(TYPE_KEYWORD, ontology("region"), ontology("status")));
+  }
+
+  private static String fetchView(StoredSourceView storedView) throws IOException {
+    var sourceViewService = mock(SourceViewService.class);
+    when(sourceViewService.fetchStoredView(storedView.approvalIdentifier()))
+        .thenReturn(Optional.of(storedView));
+    var output = new ByteArrayOutputStream();
+    new FetchApprovalViewHandler(sourceViewService, new Environment())
+        .handleRequest(request(storedView.approvalIdentifier()), output, new FakeContext());
+    return GatewayResponse.fromOutputStream(output, String.class).getBody();
+  }
+
+  private static InputStream request(UUID approvalIdentifier) throws IOException {
+    return new HandlerRequestBuilder<Void>(JsonUtils.dtoObjectMapper)
+        .withPathParameters(Map.of(APPROVAL_ID_PATH_PARAMETER, approvalIdentifier.toString()))
+        .build();
+  }
+
+  private static String withoutContext(String body) throws IOException {
+    var view = (ObjectNode) JsonUtils.dtoObjectMapper.readTree(body);
+    view.remove(CONTEXT_KEYWORD);
+    return view.toString();
   }
 
   private static JsonObject firstNode(JsonObject node, String property) {

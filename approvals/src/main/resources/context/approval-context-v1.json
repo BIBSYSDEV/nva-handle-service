@@ -126,7 +126,7 @@
         "@propagate": true,
         "identifier": { "@id": "schema:identifier", "@type": "xsd:string" },
         "title": { "@id": "schema:name", "@type": "xsd:string" },
-        "modified": { "@id": "schema:dateModified" },
+        "modified": { "@id": "schema:dateModified", "@type": "xsd:dateTime" },
         "statuses": { "@id": "regionStatus", "@container": "@set" },
         "status": { "@type": "xsd:string" },
         "region": { "@type": "xsd:string" },
