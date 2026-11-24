@@ -1021,6 +1021,30 @@ Resources:
       LogGroupName: !Sub "/aws/lambda/${NvaIndexApprovalFunction}"
       RetentionInDays: 90
 
+  SourceViewFailureMetricFilter:
+    Type: AWS::Logs::MetricFilter
+    Properties:
+      LogGroupName: !Ref NvaIndexApprovalFunctionLogGroup
+      FilterPattern: '"Could not update the source view"'
+      MetricTransformations:
+        - MetricNamespace: !Sub "NVA/Approvals/${AWS::StackName}"
+          MetricName: SourceViewFailures
+          MetricValue: "1"
+          DefaultValue: 0
+
+  SourceViewFailureAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmDescription: A source view could not be created from the latest snapshot
+      Namespace: !Sub "NVA/Approvals/${AWS::StackName}"
+      MetricName: SourceViewFailures
+      Statistic: Sum
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 0
+      ComparisonOperator: GreaterThanThreshold
+      TreatMissingData: notBreaching
+
   NvaIndexApprovalFunction:
     Type: AWS::Serverless::Function
     Properties:
