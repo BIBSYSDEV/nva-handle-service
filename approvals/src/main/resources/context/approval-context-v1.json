@@ -5,6 +5,7 @@
     "xsd": "http://www.w3.org/2001/XMLSchema#",
     "schema": "https://schema.org/",
     "prov": "http://www.w3.org/ns/prov#",
+    "nva": "https://nva.sikt.no/ontology/publication#",
     "spdx": "http://spdx.org/rdf/terms#",
     "hydra": "http://www.w3.org/ns/hydra/core#",
     "sameAs": {
@@ -139,8 +140,8 @@
         "organization": { "@id": "prov:agent" },
         "investigator": {},
         "person": { "@id": "prov:agent" },
-        "Organization": "schema:Organization",
-        "Person": "schema:Person",
+        "Organization": "nva:Organization",
+        "Person": "nva:Person",
         "firstName": { "@id": "schema:givenName", "@type": "xsd:string" },
         "lastName": { "@id": "schema:familyName", "@type": "xsd:string" },
         "department": { "@type": "xsd:string" },

@@ -20,9 +20,15 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import no.sikt.nva.approvals.domain.ClinicalTrialView;
+import no.sikt.nva.approvals.domain.ClinicalTrialView.Investigator;
+import no.sikt.nva.approvals.domain.ClinicalTrialView.Organization;
+import no.sikt.nva.approvals.domain.ClinicalTrialView.Person;
+import no.sikt.nva.approvals.domain.ClinicalTrialView.TrialSite;
 import no.sikt.nva.approvals.domain.SourceViewService;
 import no.sikt.nva.approvals.domain.StoredSourceView;
 import no.unit.nva.commons.json.JsonUtils;
+import no.unit.nva.identifiers.OrganizationIdentifier;
+import no.unit.nva.identifiers.PersonIdentifier;
 import no.unit.nva.identifiers.SortableIdentifier;
 import no.unit.nva.stubs.FakeContext;
 import no.unit.nva.testutils.HandlerRequestBuilder;
@@ -41,6 +47,9 @@ class FetchApprovalViewHandlerTest {
   private static final String COGNITO_AUTHORIZER_URLS_ENV = "COGNITO_AUTHORIZER_URLS";
   private static final Instant SAVED = Instant.parse("2026-11-20T10:00:00Z");
   private static final int VIEW_VERSION = 1;
+  private static final OrganizationIdentifier ORGANIZATION =
+      new OrganizationIdentifier("1936.0.0.0");
+  private static final PersonIdentifier PERSON = new PersonIdentifier("47186");
   private static final String CLINICAL_TRIAL_VIEW_TYPE = "ClinicalTrialView";
 
   private SourceViewService sourceViewService;
@@ -91,6 +100,21 @@ class FetchApprovalViewHandlerTest {
   }
 
   @Test
+  void shouldIdentifyOrganizationAndPersonWithUrisOfThisEnvironment() throws IOException {
+    var storedView = givenStoredView();
+
+    var trialSite =
+        bodyOf(send(request(storedView.approvalIdentifier(), Map.of()))).at("/trialSites/0");
+
+    assertEquals(
+        "https://%s/cristin/organization/%s".formatted(API_HOST, ORGANIZATION.value()),
+        trialSite.at("/organization/id").asText());
+    assertEquals(
+        "https://%s/cristin/person/%s".formatted(API_HOST, PERSON.value()),
+        trialSite.at("/investigator/person/id").asText());
+  }
+
+  @Test
   void shouldReturnEntityTagOfSnapshotAndViewVersion() throws IOException {
     var storedView = givenStoredView();
 
@@ -124,9 +148,14 @@ class FetchApprovalViewHandlerTest {
   }
 
   private StoredSourceView givenStoredView() {
+    var trialSite =
+        new TrialSite(
+            new Organization(ORGANIZATION),
+            randomString(),
+            new Investigator(new Person(PERSON), null, null, null, null));
     var view =
         new ClinicalTrialView(
-            randomString(), randomString(), null, null, List.of(), List.of(), List.of());
+            randomString(), randomString(), null, null, List.of(), List.of(), List.of(trialSite));
     var storedView =
         new StoredSourceView(
             UUID.randomUUID(), SortableIdentifier.next(), VIEW_VERSION, view, SAVED, SAVED);

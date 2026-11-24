@@ -799,7 +799,6 @@ paths:
     get:
       tags:
         - Approval
-        - external
       operationId: getApprovalView
       summary: Get view of the source
       description: >-
