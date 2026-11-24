@@ -64,7 +64,9 @@ class FetchApprovalHandlerTest {
   private static final Instant VIEW_MODIFIED = Instant.parse("2026-11-20T10:00:00Z");
   private static final Instant SOURCE_MODIFIED = Instant.parse("2026-11-19T10:00:00Z");
   private static final String SOURCE_VIEW_FIELD = "sourceView";
-  private static final String COMPOSITE_ENTITY_TAG = "\"%s.%d\"";
+  private static final String SOURCE_VIEW_MODIFIED_FIELD = "sourceViewModified";
+  private static final String SOURCE_MODIFIED_FIELD = "sourceModified";
+  private static final String COMPOSITE_ENTITY_TAG = "\"%s.%d.%d\"";
   private FetchApprovalHandler handler;
   private ByteArrayOutputStream output;
   private Environment environment;
@@ -200,7 +202,7 @@ class FetchApprovalHandlerTest {
   }
 
   @Test
-  void shouldReturnSourceView() throws JsonProcessingException {
+  void shouldReturnSourceViewWithViewAndSourceModifiedDates() throws JsonProcessingException {
     var approval = approvalWithVersion(SortableIdentifier.next());
     var sourceView = givenSourceView(approval);
     handler = handlerFor(approval);
@@ -210,10 +212,12 @@ class FetchApprovalHandlerTest {
             .getBodyObject(ApprovalResponse.class);
 
     assertEquals(sourceView.view(), body.sourceView());
+    assertEquals(VIEW_MODIFIED, body.sourceViewModified());
+    assertEquals(SOURCE_MODIFIED, body.sourceModified());
   }
 
   @Test
-  void shouldReturnEntityTagFromApprovalVersionAndSourceViewModifiedDate() {
+  void shouldReturnEntityTagFromApprovalVersionAndViewAndSourceModifiedDates() {
     var approval = approvalWithVersion(SortableIdentifier.next());
     givenSourceView(approval);
     handler = handlerFor(approval);
@@ -221,21 +225,27 @@ class FetchApprovalHandlerTest {
     var response = handleRequest(createRequestWithPathParameter(approval.identifier()));
 
     assertEquals(
-        COMPOSITE_ENTITY_TAG.formatted(approval.version(), VIEW_MODIFIED.toEpochMilli()),
+        COMPOSITE_ENTITY_TAG.formatted(
+            approval.version(), VIEW_MODIFIED.toEpochMilli(), SOURCE_MODIFIED.toEpochMilli()),
         response.getHeaders().get(HttpHeaders.ETAG));
   }
 
   @Test
-  void shouldReturnVersionEntityTagWithoutSourceViewWhenNoViewIsAvailable()
+  void shouldReturnSourceModifiedWithoutSourceViewWhenNoViewIsAvailable()
       throws JsonProcessingException {
     var approval = approvalWithVersion(SortableIdentifier.next());
     givenSourceView(approval, new ApprovalSourceView(null, null, SOURCE_MODIFIED));
     handler = handlerFor(approval);
 
     var response = handleRequestAsString(createRequestWithPathParameter(approval.identifier()));
+    var body = JsonUtils.dtoObjectMapper.readTree(response.getBody());
 
-    assertEquals(quoted(approval.version()), response.getHeaders().get(HttpHeaders.ETAG));
-    assertFalse(JsonUtils.dtoObjectMapper.readTree(response.getBody()).has(SOURCE_VIEW_FIELD));
+    assertFalse(body.has(SOURCE_VIEW_FIELD));
+    assertFalse(body.has(SOURCE_VIEW_MODIFIED_FIELD));
+    assertEquals(SOURCE_MODIFIED.toString(), body.get(SOURCE_MODIFIED_FIELD).asText());
+    assertEquals(
+        COMPOSITE_ENTITY_TAG.formatted(approval.version(), 0, SOURCE_MODIFIED.toEpochMilli()),
+        response.getHeaders().get(HttpHeaders.ETAG));
   }
 
   @Test
@@ -243,7 +253,9 @@ class FetchApprovalHandlerTest {
     var approval = approvalWithVersion(SortableIdentifier.next());
     var sourceView = givenSourceView(approval);
     handler = handlerFor(approval);
-    var ifNoneMatch = EntityTag.forVersionAndView(approval.version(), sourceView.viewModified());
+    var ifNoneMatch =
+        EntityTag.forVersionAndSource(
+            approval.version(), sourceView.viewModified(), sourceView.sourceModified());
 
     var response =
         handleRequestAsString(createRequestWithIfNoneMatch(approval.identifier(), ifNoneMatch));
