@@ -807,6 +807,7 @@ paths:
         Returns the view of the source of an approval, built from a source snapshot when the
         approval is indexed. `wasDerivedFrom` names that snapshot, so a view that lags behind the
         latest source can be detected by comparing it with the `ETag` of `/{approvalId}/source`.
+        The response is plain JSON. It has no JSON-LD context yet.
       parameters:
         - name: approvalId
           in: path
