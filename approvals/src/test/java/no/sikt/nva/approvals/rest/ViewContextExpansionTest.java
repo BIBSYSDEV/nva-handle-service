@@ -7,13 +7,18 @@ import static no.sikt.nva.approvals.utils.TestUtils.randomSourceSnapshotWithCont
 import static nva.commons.core.ioutils.IoUtils.stringFromResources;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsInAnyOrder;
+import static org.hamcrest.Matchers.empty;
+import static org.hamcrest.Matchers.is;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import com.apicatalog.jsonld.JsonLdError;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import jakarta.json.JsonArray;
 import jakarta.json.JsonObject;
+import jakarta.json.JsonString;
+import jakarta.json.JsonValue;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -22,6 +27,8 @@ import java.time.Instant;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.function.Function;
+import java.util.stream.Stream;
 import no.sikt.nva.approvals.domain.Content;
 import no.sikt.nva.approvals.domain.SourceViewService;
 import no.sikt.nva.approvals.domain.StoredSourceView;
@@ -42,6 +49,9 @@ class ViewContextExpansionTest {
   private static final String ID_KEYWORD = "@id";
   private static final String TYPE_KEYWORD = "@type";
   private static final String CONTEXT_KEYWORD = "@context";
+  private static final String VALUE_KEYWORD = "@value";
+  private static final String ONTOLOGY_FILE = "ontology/approval-ontology-1.0.0.ttl";
+  private static final boolean NOT_UNDER_EVENT = false;
   private static final String JSON_LD_MEDIA_TYPE = "application/ld+json";
   private static final String CLINICAL_TRIAL_FILE = "clinical-trial.json";
   private static final String APPROVAL_ID_PATH_PARAMETER = "approvalId";
@@ -122,6 +132,60 @@ class ViewContextExpansionTest {
 
     assertThat(
         status.keySet(), containsInAnyOrder(TYPE_KEYWORD, ontology("region"), ontology("status")));
+  }
+
+  @Test
+  void shouldDeclareEveryApprovalTermOfTheViewInTheOntology() throws IOException, JsonLdError {
+    var ontology = stringFromResources(Path.of(ONTOLOGY_FILE));
+
+    var undeclaredTerms =
+        approvalTerms(expandWithServedContext(viewDocument), NOT_UNDER_EVENT)
+            .map(ViewContextExpansionTest::localName)
+            .distinct()
+            .filter(term -> !ontology.contains(":%s a ".formatted(term)))
+            .toList();
+
+    assertThat(undeclaredTerms, is(empty()));
+  }
+
+  private static Stream<String> approvalTerms(JsonValue value, boolean underEvent) {
+    return switch (value) {
+      case JsonObject node -> approvalTermsOfNode(node, underEvent);
+      case JsonArray values -> values.stream().flatMap(item -> approvalTerms(item, underEvent));
+      default -> Stream.empty();
+    };
+  }
+
+  private static Stream<String> approvalTermsOfNode(JsonObject node, boolean underEvent) {
+    if (node.containsKey(VALUE_KEYWORD)) {
+      return Stream.empty();
+    }
+    var properties = node.keySet().stream().filter(ViewContextExpansionTest::isApprovalTerm);
+    var types = underEvent ? Stream.<String>empty() : approvalTypesOf(node);
+    var nested =
+        node.entrySet().stream()
+            .flatMap(entry -> approvalTerms(entry.getValue(), isEvent(entry.getKey())));
+    return Stream.of(properties, types, nested).flatMap(Function.identity());
+  }
+
+  private static Stream<String> approvalTypesOf(JsonObject node) {
+    return node.containsKey(TYPE_KEYWORD)
+        ? node.getJsonArray(TYPE_KEYWORD).getValuesAs(JsonString.class).stream()
+            .map(JsonString::getString)
+            .filter(ViewContextExpansionTest::isApprovalTerm)
+        : Stream.empty();
+  }
+
+  private static boolean isEvent(String property) {
+    return ontology("event").equals(property);
+  }
+
+  private static boolean isApprovalTerm(String iri) {
+    return iri.startsWith(APPROVAL_ONTOLOGY_NAMESPACE);
+  }
+
+  private static String localName(String iri) {
+    return iri.substring(APPROVAL_ONTOLOGY_NAMESPACE.length());
   }
 
   private static String fetchView(StoredSourceView storedView) throws IOException {

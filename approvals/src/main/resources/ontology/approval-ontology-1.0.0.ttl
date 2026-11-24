@@ -93,6 +93,10 @@
     rdfs:label "Investigator" ;
     rdfs:comment "The investigator role at a trial site, linked to the person with prov:agent. Title, names and department are as stated by the source." .
 
+:Event a rdfs:Class ;
+    rdfs:label "Event" ;
+    rdfs:comment "An event in the life of a clinical trial. Each event is typed by the source with a class in this namespace, e.g. TrialStart, which is not declared here because the source decides the set." .
+
 #################################################################
 #    Properties
 #################################################################
@@ -171,7 +175,8 @@
 :event a rdf:Property ;
     rdfs:label "event" ;
     rdfs:comment "An event in the life of the clinical trial in a region. Its type is named by the source, e.g. TrialStart." ;
-    rdfs:domain :ClinicalTrialView .
+    rdfs:domain :ClinicalTrialView ;
+    rdfs:range :Event .
 
 :date a rdf:Property ;
     rdfs:label "date" ;

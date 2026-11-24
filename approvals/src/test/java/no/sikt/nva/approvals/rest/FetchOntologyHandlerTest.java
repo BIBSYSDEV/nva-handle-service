@@ -20,8 +20,6 @@ import nva.commons.apigateway.GatewayResponse;
 import nva.commons.core.ioutils.IoUtils;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.ValueSource;
 
 class FetchOntologyHandlerTest {
 
@@ -172,31 +170,6 @@ class FetchOntologyHandlerTest {
     assertThat(
         ontology,
         containsString(":ApprovalCreation a rdfs:Class ;\n    rdfs:subClassOf prov:Activity"));
-  }
-
-  @ParameterizedTest
-  @ValueSource(
-      strings = {
-        ":ClinicalTrialView a rdfs:Class",
-        ":Status a rdfs:Class",
-        ":Sponsor a rdfs:Class",
-        ":TrialSite a rdfs:Class",
-        ":Investigator a rdfs:Class",
-        ":regionStatus a rdf:Property",
-        ":region a rdf:Property",
-        ":status a rdf:Property",
-        ":event a rdf:Property",
-        ":date a rdf:Property",
-        ":trialSite a rdf:Property",
-        ":departmentName a rdf:Property",
-        ":investigator a rdf:Property",
-        ":department a rdf:Property"
-      })
-  void shouldDefineTermsUsedByClinicalTrialView(String declaration) throws IOException {
-    handler.handleRequest(createRequest(), outputStream, CONTEXT);
-
-    var response = GatewayResponse.fromOutputStream(outputStream, String.class);
-    assertThat(response.getBody(), containsString(declaration));
   }
 
   @Test
