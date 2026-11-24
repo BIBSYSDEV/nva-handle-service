@@ -4,6 +4,7 @@ import static no.sikt.nva.approvals.utils.JsonLdTestUtils.APPROVAL_ONTOLOGY_NAME
 import static no.sikt.nva.approvals.utils.JsonLdTestUtils.expandWithServedContext;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsInAnyOrder;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import com.apicatalog.jsonld.JsonLdError;
 import java.io.IOException;
@@ -17,6 +18,9 @@ class ApprovalContextExpansionTest {
       "%sidentifiers".formatted(APPROVAL_ONTOLOGY_NAMESPACE);
   private static final String SOURCE_PROPERTY = "%ssource".formatted(APPROVAL_ONTOLOGY_NAMESPACE);
   private static final String HANDLE_PROPERTY = "%shandle".formatted(APPROVAL_ONTOLOGY_NAMESPACE);
+  private static final String SOURCE_VIEW_PROPERTY =
+      "%ssourceView".formatted(APPROVAL_ONTOLOGY_NAMESPACE);
+  private static final String JSON_LITERAL_TYPE = "@json";
   private static final String NAMESPACE_PROPERTY =
       "%snamespace".formatted(APPROVAL_ONTOLOGY_NAMESPACE);
   private static final String VALUE_PROPERTY = "%svalue".formatted(APPROVAL_ONTOLOGY_NAMESPACE);
@@ -30,7 +34,8 @@ class ApprovalContextExpansionTest {
         "identifier": "6ff5f1b5-97c1-40f0-86ad-2cbd9006eee2",
         "identifiers": [{ "type": "Identifier", "name": "REK", "value": "2024/123" }],
         "source": "https://example.com/source/12345",
-        "handle": "https://hdl.handle.net/11250.1/98765"
+        "handle": "https://hdl.handle.net/11250.1/98765",
+        "sourceView": { "type": "ClinicalTrial", "title": "A trial", "statuses": { "eea": "Ended" } }
       }
       """;
 
@@ -46,7 +51,18 @@ class ApprovalContextExpansionTest {
             APPROVAL_ID_PROPERTY,
             IDENTIFIERS_PROPERTY,
             SOURCE_PROPERTY,
-            HANDLE_PROPERTY));
+            HANDLE_PROPERTY,
+            SOURCE_VIEW_PROPERTY));
+  }
+
+  @Test
+  void shouldKeepSourceViewAsJsonLiteral() throws IOException, JsonLdError {
+    var expandedSourceView =
+        expandWithServedContext(APPROVAL_DOCUMENT)
+            .getJsonArray(SOURCE_VIEW_PROPERTY)
+            .getJsonObject(0);
+
+    assertEquals(JSON_LITERAL_TYPE, expandedSourceView.getString(TYPE_KEYWORD));
   }
 
   @Test

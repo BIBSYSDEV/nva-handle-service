@@ -94,6 +94,12 @@
     rdfs:domain :Approval ;
     rdfs:range xsd:anyURI .
 
+:sourceView a rdf:Property ;
+    rdfs:label "sourceView" ;
+    rdfs:comment "A view of the latest source data for presenting the approval, typed by the kind of source (e.g. ClinicalTrial). Stored as an opaque JSON literal; it is not part of the approval vocabulary." ;
+    rdfs:domain :Approval ;
+    rdfs:range rdf:JSON .
+
 :namespace a rdf:Property ;
     rdfs:label "namespace" ;
     rdfs:comment "The namespace the identifier value belongs to, e.g. REK or DMP. A value is unique within its namespace, but the same value may exist in another namespace. Serialized as the JSON field name." ;
