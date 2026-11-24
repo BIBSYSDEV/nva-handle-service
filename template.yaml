@@ -933,6 +933,31 @@ Resources:
             Method: get
             RestApiId: !Ref NvaApprovalsApi
 
+  NvaFetchApprovalViewFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub "/aws/lambda/${NvaFetchApprovalViewFunction}"
+      RetentionInDays: 90
+
+  NvaFetchApprovalViewFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Description: Returns the view of the source of an approval
+      CodeUri: approvals
+      Handler: no.sikt.nva.approvals.rest.FetchApprovalViewHandler::handleRequest
+      Policies:
+        - !Ref DynamoDbTableAccessPolicy
+      Environment:
+        Variables:
+          TABLE: !Ref ApprovalsTable
+      Events:
+        FetchApprovalView:
+          Type: Api
+          Properties:
+            Path: /{approvalId}/view
+            Method: get
+            RestApiId: !Ref NvaApprovalsApi
+
   NvaCreateSnapshotFunctionLogGroup:
     Type: AWS::Logs::LogGroup
     Properties:
