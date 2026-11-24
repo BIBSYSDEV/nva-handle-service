@@ -100,6 +100,18 @@
     rdfs:domain :Approval ;
     rdfs:range rdf:JSON .
 
+:sourceViewModified a rdf:Property ;
+    rdfs:label "sourceViewModified" ;
+    rdfs:comment "When the sourceView was last built from the source." ;
+    rdfs:domain :Approval ;
+    rdfs:range xsd:dateTime .
+
+:sourceModified a rdf:Property ;
+    rdfs:label "sourceModified" ;
+    rdfs:comment "When a change in the source was last registered. A sourceModified later than sourceViewModified means the sourceView lags the source." ;
+    rdfs:domain :Approval ;
+    rdfs:range xsd:dateTime .
+
 :namespace a rdf:Property ;
     rdfs:label "namespace" ;
     rdfs:comment "The namespace the identifier value belongs to, e.g. REK or DMP. A value is unique within its namespace, but the same value may exist in another namespace. Serialized as the JSON field name." ;

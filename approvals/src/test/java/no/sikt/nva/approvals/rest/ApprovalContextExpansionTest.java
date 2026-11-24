@@ -20,6 +20,10 @@ class ApprovalContextExpansionTest {
   private static final String HANDLE_PROPERTY = "%shandle".formatted(APPROVAL_ONTOLOGY_NAMESPACE);
   private static final String SOURCE_VIEW_PROPERTY =
       "%ssourceView".formatted(APPROVAL_ONTOLOGY_NAMESPACE);
+  private static final String SOURCE_VIEW_MODIFIED_PROPERTY =
+      "%ssourceViewModified".formatted(APPROVAL_ONTOLOGY_NAMESPACE);
+  private static final String SOURCE_MODIFIED_PROPERTY =
+      "%ssourceModified".formatted(APPROVAL_ONTOLOGY_NAMESPACE);
   private static final String JSON_LITERAL_TYPE = "@json";
   private static final String NAMESPACE_PROPERTY =
       "%snamespace".formatted(APPROVAL_ONTOLOGY_NAMESPACE);
@@ -35,7 +39,9 @@ class ApprovalContextExpansionTest {
         "identifiers": [{ "type": "Identifier", "name": "REK", "value": "2024/123" }],
         "source": "https://example.com/source/12345",
         "handle": "https://hdl.handle.net/11250.1/98765",
-        "sourceView": { "type": "ClinicalTrial", "title": "A trial", "statuses": { "eea": "Ended" } }
+        "sourceView": { "type": "ClinicalTrial", "title": "A trial", "statuses": { "eea": "Ended" } },
+        "sourceViewModified": "2026-11-20T10:00:00Z",
+        "sourceModified": "2026-11-19T10:00:00Z"
       }
       """;
 
@@ -52,7 +58,9 @@ class ApprovalContextExpansionTest {
             IDENTIFIERS_PROPERTY,
             SOURCE_PROPERTY,
             HANDLE_PROPERTY,
-            SOURCE_VIEW_PROPERTY));
+            SOURCE_VIEW_PROPERTY,
+            SOURCE_VIEW_MODIFIED_PROPERTY,
+            SOURCE_MODIFIED_PROPERTY));
   }
 
   @Test
