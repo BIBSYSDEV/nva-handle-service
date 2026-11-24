@@ -796,6 +796,72 @@ paths:
             "application/json":
               schema:
                 $ref: "#/components/schemas/Problem"
+  /{approvalId}/view:
+    get:
+      tags:
+        - Approval
+        - external
+      operationId: getApprovalView
+      summary: Get view of the source
+      description: >-
+        Returns the view of the source of an approval, built from a source snapshot when the
+        approval is indexed. `wasDerivedFrom` names that snapshot, so a view that lags behind the
+        latest source can be detected by comparing it with the `ETag` of `/{approvalId}/source`.
+        The response is plain JSON. It has no JSON-LD context yet.
+      parameters:
+        - name: approvalId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - $ref: "#/components/parameters/IfNoneMatch"
+      security:
+        - CognitoUserPool:
+            [
+              "https://api.nva.unit.no/scopes/third-party/approval-upsert",
+              "https://api.nva.unit.no/scopes/backend",
+              "https://api.nva.unit.no/scopes/frontend",
+            ]
+      x-amazon-apigateway-integration:
+        uri:
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${NvaFetchApprovalViewFunction.Arn}/invocations
+        responses: {}
+        httpMethod: POST
+        type: AWS_PROXY
+      responses:
+        "200":
+          description: View found
+          headers:
+            ETag:
+              $ref: "#/components/headers/ETag"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClinicalTrialView"
+        "304":
+          description: Not Modified - the `If-None-Match` matches the current `ETag`. No body.
+          headers:
+            ETag:
+              $ref: "#/components/headers/ETag"
+        "400":
+          description: Bad Request
+          content:
+            "application/json":
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "401":
+          description: Unauthorized
+          content:
+            "application/json":
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "404":
+          description: The approval has no view
+          content:
+            "application/json":
+              schema:
+                $ref: "#/components/schemas/Problem"
 components:
   schemas:
     ApprovalWritableState:
@@ -1253,20 +1319,6 @@ components:
             value: "123456"
         source: https://example.com/source/12345
         handle: https://hdl.handle.net/11250.1/98765
-        sourceView:
-          type: ClinicalTrial
-          identifier: 2023-510166-27-01
-          title: Prospective comparison of sirolimus against corticosteroids
-          statuses:
-            eea: Authorised
-            norway: Authorised
-          events:
-            - type: TrialStart
-              region: Norway
-              date: "2024-06-22"
-          sponsors:
-            - type: Sponsor
-              name: Helse Bergen HF
         sourceViewModified: "2026-11-20T10:00:00Z"
         sourceModified: "2026-11-19T10:00:00Z"
     ClinicalTrialView:
@@ -1274,14 +1326,20 @@ components:
       description: Landing page view of a clinical trial from CTIS
       required:
         - type
+        - id
+        - wasDerivedFrom
       properties:
         type:
           type: string
-          enum: [ClinicalTrial]
+          enum: [ClinicalTrialView]
         id:
           type: string
           format: uri
-          description: URI of the clinical trial at the source
+          description: URI of this view
+        wasDerivedFrom:
+          type: string
+          format: uri
+          description: URI of the source snapshot the view was built from, a change of the approval
         identifier:
           type: string
           description: The EU CT number of the trial
@@ -1366,6 +1424,22 @@ components:
                     type: string
                   department:
                     type: string
+      example:
+        type: ClinicalTrialView
+        id: https://api.nva.unit.no/approval/6ff5f1b5-97c1-40f0-86ad-2cbd9006eee2/view
+        wasDerivedFrom: https://api.nva.unit.no/approval/6ff5f1b5-97c1-40f0-86ad-2cbd9006eee2/change/0190a6f1d2c3-6b1e4c5a-1f2d-4e8a-9b3c-2d4e6f8a0b1c
+        identifier: 2023-510166-27-01
+        title: Prospective comparison of sirolimus against corticosteroids
+        statuses:
+          eea: Authorised
+          norway: Authorised
+        events:
+          - type: TrialStart
+            region: Norway
+            date: "2024-06-22"
+        sponsors:
+          - type: Sponsor
+            name: Helse Bergen HF
     ApprovalSearchResults:
       type: object
       description: One page of approvals matching a search
