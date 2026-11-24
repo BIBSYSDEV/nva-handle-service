@@ -9,6 +9,7 @@ public final class UriConstants {
 
   private static final String APPROVAL_PATH = "approval";
   private static final String CHANGE_PATH = "change";
+  private static final String VIEW_PATH = "view";
   private static final String EVENT_PATH = "event";
   private static final String CUSTOMER_PATH = "customer";
   private static final String USERS_ROLES_PATH = "users-roles";
@@ -86,6 +87,10 @@ public final class UriConstants {
         .addChild(EVENT_PATH)
         .addChild(eventIdentifier.toString())
         .getUri();
+  }
+
+  public static URI viewId(String apiHost, UUID approvalIdentifier) {
+    return UriWrapper.fromUri(approvalId(apiHost, approvalIdentifier)).addChild(VIEW_PATH).getUri();
   }
 
   public static URI changeId(

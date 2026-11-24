@@ -2,6 +2,7 @@ package no.sikt.nva.approvals.domain;
 
 import static java.util.Objects.nonNull;
 
+import java.util.Optional;
 import java.util.UUID;
 import no.sikt.nva.approvals.persistence.ChangeRepository;
 import no.sikt.nva.approvals.persistence.DynamoDbChangeRepository;
@@ -28,9 +29,12 @@ public class SourceViewService {
         DynamoDbChangeRepository.defaultInstance(environment));
   }
 
+  public Optional<StoredSourceView> fetchStoredView(UUID approvalIdentifier) {
+    return sourceViewRepository.find(approvalIdentifier).filter(stored -> nonNull(stored.view()));
+  }
+
   public ApprovalSourceView fetchSourceView(UUID approvalIdentifier) {
-    var readableView =
-        sourceViewRepository.find(approvalIdentifier).filter(stored -> nonNull(stored.view()));
+    var readableView = fetchStoredView(approvalIdentifier);
     var sourceModified =
         changeRepository.findLatestSnapshot(approvalIdentifier).map(SourceSnapshot::createdDate);
     return new ApprovalSourceView(

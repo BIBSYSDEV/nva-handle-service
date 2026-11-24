@@ -28,6 +28,10 @@ public final class EntityTag {
     return "\"%s\"".formatted(version);
   }
 
+  public static String forVersionAndRevision(SortableIdentifier version, int revision) {
+    return "\"%s%s%d\"".formatted(version, PART_SEPARATOR, revision);
+  }
+
   public static String forVersionAndSource(
       SortableIdentifier version, Instant viewModified, Instant sourceModified) {
     return "\"%s%s%d%s%d\""
