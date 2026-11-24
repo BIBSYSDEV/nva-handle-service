@@ -519,8 +519,7 @@ paths:
           required: true
           description: >-
             The single `ETag` of the approval version the update is based on. Lists, `*` and
-            weak tags (`W/"..."`) never match. Only the approval version part of the tag is
-            compared, so a tag from before the `sourceView` was rebuilt is still accepted.
+            weak tags (`W/"..."`) never match.
           schema:
             type: string
             example: '"0196a2f1e2c4-3f9b1c2d-..."'
@@ -1291,23 +1290,6 @@ components:
           type: string
           format: uri
           description: The full handle URI (e.g., https://hdl.handle.net/11250.1/12345)
-        sourceView:
-          description: >-
-            View of the latest source data for the approval landing page. Omitted until the
-            source has been indexed. Values are passed through from the source as-is.
-          oneOf:
-            - $ref: "#/components/schemas/ClinicalTrialView"
-        sourceViewModified:
-          type: string
-          format: date-time
-          description: When the `sourceView` was last built. Omitted when there is no `sourceView`.
-        sourceModified:
-          type: string
-          format: date-time
-          description: >-
-            When a change in the source was last registered. A `sourceModified` later than
-            `sourceViewModified` means the `sourceView` lags the source. Omitted before the source
-            has been read.
       example:
         "@context": https://api.nva.unit.no/approval/context/v1
         type: Approval
@@ -1319,8 +1301,6 @@ components:
             value: "123456"
         source: https://example.com/source/12345
         handle: https://hdl.handle.net/11250.1/98765
-        sourceViewModified: "2026-11-20T10:00:00Z"
-        sourceModified: "2026-11-19T10:00:00Z"
     ClinicalTrialView:
       type: object
       description: Landing page view of a clinical trial from CTIS
@@ -1620,10 +1600,7 @@ components:
         example: '"0196a2f1e2c4-3f9b1c2d-..."'
   headers:
     ETag:
-      description: >-
-        Strong entity tag of the entity version. For an approval it also covers
-        `sourceViewModified` and `sourceModified` when present, and changes when any of them
-        changes.
+      description: Strong entity tag of the entity version.
       schema:
         type: string
   responses:

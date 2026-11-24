@@ -1,9 +1,7 @@
 package no.sikt.nva.approvals.utils;
 
-import static java.util.Objects.isNull;
 import static nva.commons.core.attempt.Try.attempt;
 
-import java.time.Instant;
 import java.util.Arrays;
 import java.util.Optional;
 import java.util.regex.Matcher;
@@ -18,8 +16,7 @@ public final class EntityTag {
   private static final String ANY = "*";
   private static final String LIST_SEPARATOR = ",";
   private static final String PART_SEPARATOR = ".";
-  private static final long MISSING_TIMESTAMP = 0;
-  private static final Pattern SINGLE_ENTITY_TAG = Pattern.compile("^\"([^\".,\\s]+)(\\.\\d+)*\"$");
+  private static final Pattern SINGLE_ENTITY_TAG = Pattern.compile("^\"([^\".,\\s]+)\"$");
   private static final int VERSION_GROUP = 1;
 
   private EntityTag() {}
@@ -30,17 +27,6 @@ public final class EntityTag {
 
   public static String forVersionAndRevision(SortableIdentifier version, int revision) {
     return "\"%s%s%d\"".formatted(version, PART_SEPARATOR, revision);
-  }
-
-  public static String forVersionAndSource(
-      SortableIdentifier version, Instant viewModified, Instant sourceModified) {
-    return "\"%s%s%d%s%d\""
-        .formatted(
-            version,
-            PART_SEPARATOR,
-            epochMillis(viewModified),
-            PART_SEPARATOR,
-            epochMillis(sourceModified));
   }
 
   public static boolean isMatchedByIfNoneMatch(RequestInfo requestInfo, String entityTag) {
@@ -66,10 +52,6 @@ public final class EntityTag {
         .map(String::strip)
         .map(EntityTag::withoutWeakPrefix)
         .anyMatch(entityTag::equals);
-  }
-
-  private static long epochMillis(Instant timestamp) {
-    return isNull(timestamp) ? MISSING_TIMESTAMP : timestamp.toEpochMilli();
   }
 
   private static String withoutWeakPrefix(String candidate) {
