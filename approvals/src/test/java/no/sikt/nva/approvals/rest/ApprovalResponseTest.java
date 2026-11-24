@@ -20,7 +20,7 @@ class ApprovalResponseTest {
     var handle = randomHandle();
     var approval = randomApproval(handle);
 
-    var response = ApprovalResponse.fromApproval(approval, API_HOST);
+    var response = ApprovalResponse.fromApproval(approval, null, API_HOST);
 
     assertEquals(approval.identifier(), response.identifier());
     assertEquals(approval.namedIdentifiers(), response.identifiers());
@@ -33,7 +33,7 @@ class ApprovalResponseTest {
     var handle = randomHandle();
     var approval = randomApproval(handle);
 
-    var response = ApprovalResponse.fromApproval(approval, API_HOST);
+    var response = ApprovalResponse.fromApproval(approval, null, API_HOST);
 
     var expectedId = URI.create("https://" + API_HOST + "/approval/" + approval.identifier());
     assertEquals(expectedId, response.id());
@@ -43,7 +43,7 @@ class ApprovalResponseTest {
   void shouldReferenceVersionedContext() {
     var approval = randomApproval(randomHandle());
 
-    var response = ApprovalResponse.fromApproval(approval, API_HOST);
+    var response = ApprovalResponse.fromApproval(approval, null, API_HOST);
 
     var expectedContext = URI.create("https://%s/approval/context/v1".formatted(API_HOST));
     assertEquals(expectedContext, response.context());
@@ -53,7 +53,7 @@ class ApprovalResponseTest {
   void shouldSerializeHandleAsString() throws JsonProcessingException {
     var handle = randomHandle();
     var approval = randomApproval(handle);
-    var response = ApprovalResponse.fromApproval(approval, API_HOST);
+    var response = ApprovalResponse.fromApproval(approval, null, API_HOST);
 
     var json = JsonUtils.dtoObjectMapper.writeValueAsString(response);
     var jsonNode = JsonUtils.dtoObjectMapper.readTree(json);
@@ -67,7 +67,7 @@ class ApprovalResponseTest {
   void shouldRoundTripThroughJson() throws JsonProcessingException {
     var handle = randomHandle();
     var approval = randomApproval(handle);
-    var response = ApprovalResponse.fromApproval(approval, API_HOST);
+    var response = ApprovalResponse.fromApproval(approval, null, API_HOST);
 
     var json = JsonUtils.dtoObjectMapper.writeValueAsString(response);
     var deserialized = JsonUtils.dtoObjectMapper.readValue(json, ApprovalResponse.class);
