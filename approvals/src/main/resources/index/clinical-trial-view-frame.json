@@ -3,7 +3,7 @@
     "@version": 1.1,
     "@vocab": "https://api.legemiddelverket.no/ontology#",
     "ctis": "https://api.legemiddelverket.no/ontology#",
-    "ClinicalTrial": {
+    "ClinicalTrialView": {
       "@id": "ctis:ClinicalTrial",
       "@context": { "title": { "@id": "ctis:publicTitle", "@type": "xsd:string" } }
     },
@@ -29,7 +29,7 @@
     "department":                  { "@type": "xsd:string" },
     "person":                      { "@id": "ctis:nvaPersonId" }
   },
-  "@type": "ClinicalTrial",
+  "@type": "ClinicalTrialView",
   "@explicit": true,
   "identifier": {},
   "title": {},

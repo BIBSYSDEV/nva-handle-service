@@ -380,7 +380,7 @@ class IndexingServiceTest {
 
   private static ClinicalTrialView clinicalTrialView() {
     return new ClinicalTrialView(
-        null, randomString(), randomString(), null, null, List.of(), List.of(), List.of());
+        randomString(), randomString(), null, null, List.of(), List.of(), List.of());
   }
 
   private IndexDocument indexDocument() throws IndexDocumentGeneratorException {

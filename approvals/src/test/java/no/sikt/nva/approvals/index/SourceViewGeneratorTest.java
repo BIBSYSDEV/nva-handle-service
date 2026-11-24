@@ -47,7 +47,7 @@ class SourceViewGeneratorTest {
   private static final String EXAMPLE_PHONE_PREFIX = "+47000";
   private static final String EXAMPLE_STREET = "Example street";
   private static final String CLINICAL_TRIAL_TITLE = "METIMMOX-2: Test Clinical Trial";
-  private static final String CLINICAL_TRIAL_TYPE = "ClinicalTrial";
+  private static final String CLINICAL_TRIAL_VIEW_TYPE = "ClinicalTrialView";
   private static final String TYPE_FIELD = "type";
   private static final String INVESTIGATOR_TITLE = "Prof.";
   private static final String INVESTIGATOR_FIRST_NAME = "Ola";
@@ -62,8 +62,6 @@ class SourceViewGeneratorTest {
   private static final String SWEDEN_REGION_KEY = "sweden";
   private static final String DENMARK_REGION_KEY = "denmark";
   private static final String DENMARK_STATUS = "Ended";
-  private static final URI CLINICAL_TRIAL_ID =
-      URI.create("https://st-api.legemiddelverket.no/ctis/clinical-trial/2022-500027-76-00");
   private static final String CLINICAL_TRIAL_IDENTIFIER = "2022-500027-76-00";
   private static final String MODIFIED_DATE = "2026-02-24T14:17:11.3001327";
   private static final String TRIAL_START = "TrialStart";
@@ -167,7 +165,6 @@ class SourceViewGeneratorTest {
   void shouldCreateIdentifiersModifiedDateAndEvents() throws SourceViewGeneratorException {
     var view = generateClinicalTrialView();
 
-    assertEquals(CLINICAL_TRIAL_ID, view.id());
     assertEquals(CLINICAL_TRIAL_IDENTIFIER, view.identifier());
     assertEquals(MODIFIED_DATE, view.modified());
     assertThat(
@@ -226,13 +223,13 @@ class SourceViewGeneratorTest {
   }
 
   @Test
-  void shouldSerializeViewWithClinicalTrialType() throws Exception {
+  void shouldSerializeViewWithClinicalTrialViewType() throws Exception {
     SourceView view = generateClinicalTrialView();
 
     var json =
         JsonUtils.dtoObjectMapper.readTree(JsonUtils.dtoObjectMapper.writeValueAsString(view));
 
-    assertEquals(CLINICAL_TRIAL_TYPE, json.get(TYPE_FIELD).asText());
+    assertEquals(CLINICAL_TRIAL_VIEW_TYPE, json.get(TYPE_FIELD).asText());
   }
 
   @Test

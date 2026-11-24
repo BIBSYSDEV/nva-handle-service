@@ -21,12 +21,12 @@ class ApprovalResponseTest {
   private static final Instant VIEW_MODIFIED = Instant.parse("2026-11-20T10:00:00Z");
   private static final Instant SOURCE_MODIFIED = Instant.parse("2026-11-19T10:00:00Z");
   private static final String TRIAL_TITLE = "A trial";
-  private static final String CLINICAL_TRIAL_TYPE = "ClinicalTrial";
+  private static final String CLINICAL_TRIAL_TYPE = "ClinicalTrialView";
 
   @Test
   void shouldSerializeSourceViewWithItsTypeAndModifiedDates() throws JsonProcessingException {
     var view =
-        new ClinicalTrialView(null, null, TRIAL_TITLE, null, null, List.of(), List.of(), List.of());
+        new ClinicalTrialView(null, TRIAL_TITLE, null, null, List.of(), List.of(), List.of());
     var sourceView = new ApprovalSourceView(view, VIEW_MODIFIED, SOURCE_MODIFIED);
     var response =
         ApprovalResponse.fromApproval(randomApproval(randomHandle()), sourceView, API_HOST);

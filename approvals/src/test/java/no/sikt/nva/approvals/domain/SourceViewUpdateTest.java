@@ -35,7 +35,6 @@ class SourceViewUpdateTest {
   }
 
   private static ClinicalTrialView clinicalTrialView() {
-    return new ClinicalTrialView(
-        null, randomString(), randomString(), null, null, null, null, null);
+    return new ClinicalTrialView(randomString(), randomString(), null, null, null, null, null);
   }
 }
