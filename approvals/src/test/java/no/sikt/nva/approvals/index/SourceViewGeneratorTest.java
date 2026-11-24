@@ -28,6 +28,8 @@ import no.sikt.nva.approvals.domain.ClinicalTrialView.TrialSite;
 import no.sikt.nva.approvals.domain.Content;
 import no.sikt.nva.approvals.domain.SourceView;
 import no.unit.nva.commons.json.JsonUtils;
+import no.unit.nva.identifiers.OrganizationIdentifier;
+import no.unit.nva.identifiers.PersonIdentifier;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
@@ -39,8 +41,8 @@ class SourceViewGeneratorTest {
   private static final String CLINICAL_TRIAL_FILE = "clinical-trial.json";
   private static final String CLINICAL_TRIAL_WITH_NULL_VALUES_FILE =
       "clinical-trial-with-null-values.json";
-  private static final URI NORD_NORGE_ORGANIZATION_ID =
-      URI.create("https://api.nva.unit.no/cristin/organization/1902.0.0.0");
+  private static final OrganizationIdentifier NORD_NORGE_ORGANIZATION =
+      new OrganizationIdentifier("1902.0.0.0");
   private static final String DOCTOR_TITLE = "Dr.";
   private static final String PROFESSOR_TITLE = "Prof.";
   private static final String EXAMPLE_EMAIL_DOMAIN = "@example.org";
@@ -85,6 +87,9 @@ class SourceViewGeneratorTest {
       URI.create("https://api.nva.unit.no/cristin/organization/1972.0.0.0");
   private static final URI INVESTIGATOR_ID =
       URI.create("https://api.nva.unit.no/cristin/person/23297");
+  private static final OrganizationIdentifier TRIAL_SITE_ORGANIZATION =
+      new OrganizationIdentifier("1972.0.0.0");
+  private static final PersonIdentifier INVESTIGATOR_PERSON = new PersonIdentifier("23297");
   private static final String MINIMAL_CLINICAL_TRIAL =
       """
       {"@context": "https://api.legemiddelverket.no/ctis/context/clinical-trial.json",
@@ -143,10 +148,10 @@ class SourceViewGeneratorTest {
 
     var expected =
         new TrialSite(
-            new Organization(TRIAL_SITE_ID),
+            new Organization(TRIAL_SITE_ORGANIZATION),
             TRIAL_SITE_DEPARTMENT,
             new Investigator(
-                new Person(INVESTIGATOR_ID),
+                new Person(INVESTIGATOR_PERSON),
                 INVESTIGATOR_TITLE,
                 INVESTIGATOR_FIRST_NAME,
                 INVESTIGATOR_LAST_NAME,
@@ -277,7 +282,7 @@ class SourceViewGeneratorTest {
 
     assertThat(
         view.trialSites().stream().map(TrialSite::organization).toList(),
-        containsInAnyOrder(null, null, new Organization(NORD_NORGE_ORGANIZATION_ID)));
+        containsInAnyOrder(null, null, new Organization(NORD_NORGE_ORGANIZATION)));
     assertThat(
         view.trialSites().stream().map(TrialSite::investigator).map(Investigator::title).toList(),
         containsInAnyOrder(null, DOCTOR_TITLE, PROFESSOR_TITLE));
@@ -314,6 +319,29 @@ class SourceViewGeneratorTest {
   }
 
   @Test
+  void shouldStoreCristinIdentifiersInsteadOfUris() throws Exception {
+    var view = generateClinicalTrialView();
+
+    var trialSite = trialSiteWithKnownOrganization(view);
+
+    assertEquals(TRIAL_SITE_ORGANIZATION, trialSite.organization().identifier());
+    assertEquals(INVESTIGATOR_PERSON, trialSite.investigator().person().identifier());
+  }
+
+  @Test
+  void shouldLeaveOutOrganizationAndPersonThatAreNotCristinUris() throws Exception {
+    var view =
+        viewFrom(
+            CLINICAL_TRIAL_WITH_ONE_TRIAL_SITE.formatted(
+                "\"https://example.org/organization/1\"", "\"https://example.org/person/1\""));
+
+    var trialSite = JsonUtils.dtoObjectMapper.valueToTree(view).at("/trialSites/0");
+
+    assertTrue(trialSite.at("/organization").isMissingNode());
+    assertTrue(trialSite.at("/investigator/person").isMissingNode());
+  }
+
+  @Test
   void shouldLeaveOutContactInformationAndAddresses() throws Exception {
     var view = generateClinicalTrialView(CLINICAL_TRIAL_WITH_NULL_VALUES_FILE);
 
@@ -340,7 +368,8 @@ class SourceViewGeneratorTest {
 
   private static TrialSite trialSiteWithKnownOrganization(ClinicalTrialView view) {
     return view.trialSites().stream()
-        .filter(trialSite -> new Organization(TRIAL_SITE_ID).equals(trialSite.organization()))
+        .filter(
+            trialSite -> new Organization(TRIAL_SITE_ORGANIZATION).equals(trialSite.organization()))
         .findFirst()
         .orElseThrow();
   }

@@ -44,6 +44,7 @@ import org.junit.jupiter.api.Test;
 class ViewContextExpansionTest {
 
   private static final String SCHEMA = "https://schema.org/";
+  private static final String NVA_PUBLICATION = "https://nva.sikt.no/ontology/publication#";
   private static final String PROV_WAS_DERIVED_FROM = "http://www.w3.org/ns/prov#wasDerivedFrom";
   private static final String PROV_AGENT = "http://www.w3.org/ns/prov#agent";
   private static final String ID_KEYWORD = "@id";
@@ -122,8 +123,8 @@ class ViewContextExpansionTest {
     var organization = firstNode(trialSite, PROV_AGENT);
     var person = firstNode(firstNode(trialSite, ontology("investigator")), PROV_AGENT);
 
-    assertEquals(schema("Organization"), organization.getJsonArray(TYPE_KEYWORD).getString(0));
-    assertEquals(schema("Person"), person.getJsonArray(TYPE_KEYWORD).getString(0));
+    assertEquals(nva("Organization"), organization.getJsonArray(TYPE_KEYWORD).getString(0));
+    assertEquals(nva("Person"), person.getJsonArray(TYPE_KEYWORD).getString(0));
   }
 
   @Test
@@ -212,6 +213,10 @@ class ViewContextExpansionTest {
 
   private static JsonObject firstNode(JsonObject node, String property) {
     return node.getJsonArray(property).getJsonObject(0);
+  }
+
+  private static String nva(String term) {
+    return "%s%s".formatted(NVA_PUBLICATION, term);
   }
 
   private static String schema(String term) {

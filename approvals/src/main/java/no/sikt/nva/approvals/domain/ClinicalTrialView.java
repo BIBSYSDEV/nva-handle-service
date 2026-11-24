@@ -6,8 +6,9 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.annotation.JsonTypeInfo.Id;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
-import java.net.URI;
 import java.util.List;
+import no.unit.nva.identifiers.OrganizationIdentifier;
+import no.unit.nva.identifiers.PersonIdentifier;
 
 @JsonTypeName("ClinicalTrialView")
 public record ClinicalTrialView(
@@ -51,7 +52,7 @@ public record ClinicalTrialView(
 
   @JsonTypeInfo(use = Id.NAME, property = TYPE_PROPERTY, defaultImpl = Organization.class)
   @JsonTypeName("Organization")
-  public record Organization(URI id) {}
+  public record Organization(OrganizationIdentifier identifier) {}
 
   @JsonTypeInfo(use = Id.NAME, property = TYPE_PROPERTY, defaultImpl = Investigator.class)
   @JsonTypeName("Investigator")
@@ -60,5 +61,5 @@ public record ClinicalTrialView(
 
   @JsonTypeInfo(use = Id.NAME, property = TYPE_PROPERTY, defaultImpl = Person.class)
   @JsonTypeName("Person")
-  public record Person(URI id) {}
+  public record Person(PersonIdentifier identifier) {}
 }

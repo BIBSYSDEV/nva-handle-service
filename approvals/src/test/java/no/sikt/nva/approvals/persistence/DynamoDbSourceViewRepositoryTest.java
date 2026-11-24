@@ -7,7 +7,6 @@ import static no.sikt.nva.approvals.persistence.DynamoDbConstants.STRING;
 import static no.sikt.nva.approvals.persistence.DynamoDbConstants.documentTableSchema;
 import static no.sikt.nva.approvals.persistence.DynamoDbLocal.dynamoDBLocal;
 import static no.unit.nva.testutils.RandomDataGenerator.randomString;
-import static no.unit.nva.testutils.RandomDataGenerator.randomUri;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -29,6 +28,8 @@ import no.sikt.nva.approvals.domain.ClinicalTrialView.TrialSite;
 import no.sikt.nva.approvals.domain.SourceViewUpdate;
 import no.sikt.nva.approvals.domain.StoredSourceView;
 import no.unit.nva.commons.json.JsonUtils;
+import no.unit.nva.identifiers.OrganizationIdentifier;
+import no.unit.nva.identifiers.PersonIdentifier;
 import no.unit.nva.identifiers.SortableIdentifier;
 import nva.commons.core.Environment;
 import org.junit.jupiter.api.AfterEach;
@@ -198,10 +199,10 @@ class DynamoDbSourceViewRepositoryTest {
         List.of(new Sponsor(randomString())),
         List.of(
             new TrialSite(
-                new Organization(randomUri()),
+                new Organization(new OrganizationIdentifier("1.0.0.0")),
                 randomString(),
                 new Investigator(
-                    new Person(randomUri()),
+                    new Person(new PersonIdentifier("1")),
                     randomString(),
                     randomString(),
                     randomString(),
