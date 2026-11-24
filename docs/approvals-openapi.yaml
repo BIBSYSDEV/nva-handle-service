@@ -806,7 +806,6 @@ paths:
         Returns the view of the source of an approval, built from a source snapshot when the
         approval is indexed. `wasDerivedFrom` names that snapshot, so a view that lags behind the
         latest source can be detected by comparing it with the `ETag` of `/{approvalId}/source`.
-        The response is plain JSON. It has no JSON-LD context yet.
       parameters:
         - name: approvalId
           in: path
@@ -835,6 +834,9 @@ paths:
             ETag:
               $ref: "#/components/headers/ETag"
           content:
+            application/ld+json:
+              schema:
+                $ref: "#/components/schemas/ClinicalTrialView"
             application/json:
               schema:
                 $ref: "#/components/schemas/ClinicalTrialView"
@@ -1309,6 +1311,10 @@ components:
         - id
         - wasDerivedFrom
       properties:
+        "@context":
+          type: string
+          format: uri
+          description: Versioned JSON-LD context URI for this resource
         type:
           type: string
           enum: [ClinicalTrialView]
@@ -1414,6 +1420,7 @@ components:
                   department:
                     type: string
       example:
+        "@context": https://api.nva.unit.no/approval/context/v1
         type: ClinicalTrialView
         id: https://api.nva.unit.no/approval/6ff5f1b5-97c1-40f0-86ad-2cbd9006eee2/view
         wasDerivedFrom: https://api.nva.unit.no/approval/6ff5f1b5-97c1-40f0-86ad-2cbd9006eee2/change/0190a6f1d2c3-6b1e4c5a-1f2d-4e8a-9b3c-2d4e6f8a0b1c

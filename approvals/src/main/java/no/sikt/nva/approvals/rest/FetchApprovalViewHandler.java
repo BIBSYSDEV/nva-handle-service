@@ -4,17 +4,22 @@ import static java.net.HttpURLConnection.HTTP_NOT_MODIFIED;
 import static java.net.HttpURLConnection.HTTP_OK;
 import static no.sikt.nva.approvals.utils.RequestUtils.getApiHost;
 import static no.sikt.nva.approvals.utils.RequestUtils.getApprovalIdentifier;
+import static no.sikt.nva.approvals.utils.UriConstants.CONTEXT_PROPERTY;
 import static no.sikt.nva.approvals.utils.UriConstants.changeId;
+import static no.sikt.nva.approvals.utils.UriConstants.context;
 import static no.sikt.nva.approvals.utils.UriConstants.viewId;
+import static nva.commons.apigateway.MediaTypes.APPLICATION_JSON_LD;
 
 import com.amazonaws.services.lambda.runtime.Context;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import java.util.List;
 import java.util.Map;
 import no.sikt.nva.approvals.domain.SourceViewService;
 import no.sikt.nva.approvals.domain.StoredSourceView;
 import no.sikt.nva.approvals.utils.EntityTag;
 import no.unit.nva.commons.json.JsonUtils;
 import nva.commons.apigateway.ApiGatewayHandler;
+import nva.commons.apigateway.MediaType;
 import nva.commons.apigateway.RequestInfo;
 import nva.commons.apigateway.exceptions.ApiGatewayException;
 import nva.commons.apigateway.exceptions.NotFoundException;
@@ -45,6 +50,11 @@ public class FetchApprovalViewHandler extends ApiGatewayHandler<Void, Object> {
   }
 
   @Override
+  protected List<MediaType> listSupportedMediaTypes() {
+    return List.of(MediaType.JSON_UTF_8, APPLICATION_JSON_LD);
+  }
+
+  @Override
   protected void validateRequest(Void input, RequestInfo requestInfo, Context context) {}
 
   @Override
@@ -70,6 +80,7 @@ public class FetchApprovalViewHandler extends ApiGatewayHandler<Void, Object> {
   private ObjectNode toResponse(StoredSourceView storedView) {
     ObjectNode view = JsonUtils.dtoObjectMapper.valueToTree(storedView.view());
     var response = JsonUtils.dtoObjectMapper.createObjectNode();
+    response.put(CONTEXT_PROPERTY, context(apiHost).toString());
     response.set(TYPE_FIELD, view.remove(TYPE_FIELD));
     response.put(ID_FIELD, viewId(apiHost, storedView.approvalIdentifier()).toString());
     response.put(WAS_DERIVED_FROM_FIELD, derivedFrom(storedView));
