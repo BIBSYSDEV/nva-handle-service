@@ -51,6 +51,10 @@ public final class RequestUtils {
             failure -> badRequest(INVALID_APPROVAL_IDENTIFIER_MESSAGE, APPROVAL_ID_PATH_PARAMETER));
   }
 
+  public static boolean hasChangeIdentifier(RequestInfo requestInfo) {
+    return requestInfo.getPathParameters().containsKey(CHANGE_ID_PATH_PARAMETER);
+  }
+
   public static SortableIdentifier getChangeIdentifier(RequestInfo requestInfo)
       throws BadRequestException {
     return attempt(() -> requestInfo.getPathParameter(CHANGE_ID_PATH_PARAMETER))

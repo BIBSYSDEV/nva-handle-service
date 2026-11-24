@@ -917,7 +917,7 @@ Resources:
   NvaFetchApprovalSourceFunction:
     Type: AWS::Serverless::Function
     Properties:
-      Description: Returns the source document of the latest source snapshot of an approval
+      Description: Returns the source document of an approval
       CodeUri: approvals
       Handler: no.sikt.nva.approvals.rest.FetchApprovalSourceHandler::handleRequest
       Policies:
@@ -930,6 +930,12 @@ Resources:
           Type: Api
           Properties:
             Path: /{approvalId}/source
+            Method: get
+            RestApiId: !Ref NvaApprovalsApi
+        FetchChangeSource:
+          Type: Api
+          Properties:
+            Path: /{approvalId}/change/{changeId}/source
             Method: get
             RestApiId: !Ref NvaApprovalsApi
 

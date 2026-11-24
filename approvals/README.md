@@ -145,6 +145,10 @@ Corrections against the current implementation:
   `?person=`, `?organization=`, `?identifier=` and `?handle=` are, and combine with each other and with `?query=`.
 - Content negotiation: `application/json` and `application/ld+json`. With no `Accept` header the response is
   `application/json`, and any other `Accept` gives `406 Not Acceptable`.
+- `FetchApprovalSourceHandler` serves `GET /{approvalId}/source` and `GET /{approvalId}/change/{changeId}/source`.
+  Both return a stored source document as the source system served it, under the media type recorded with the
+  snapshot, with the `ETag`; `If-None-Match` then gives `304 Not Modified`. A `changeId` that
+  is unknown, or that names an approval revision, gives `404` rather than the latest document.
 - `GET /context` and `GET /ontology` serve the JSON-LD context and the RDF ontology (Turtle) for the API. Both are
   versioned, see [Vocabulary and versioning](#vocabulary-and-versioning).
 
@@ -228,18 +232,20 @@ items and an update at most 42, so every write fits in one transaction.
 
 ## Endpoints
 
-| Method | Path                              | OperationId          | Scope                                                        | Success | Description                                                  |
-| ------ | --------------------------------- | -------------------- | ------------------------------------------------------------ | ------- | ------------------------------------------------------------ |
-| POST   | `/`                               | `createApproval`     | `…/scopes/third-party/approval-upsert` or `…/scopes/backend` | `202`   | Create an approval with identifiers and a source URI         |
-| GET    | `/`                               | `getApprovalByQuery` | open                                                         | `200`   | Look up an approval by `?handle=` or `?name=`&`?value=`      |
-| GET    | `/{approvalId}`                   | `getApprovalById`    | open                                                         | `200`   | Fetch an approval by id (json or ld+json)                    |
-| GET    | `/{approvalId}/change`            | `getApprovalChanges` | `…/scopes/third-party/approval-upsert` or `…/scopes/backend` | `200`   | Changes of an approval, newest first, `?cursor=` from `next` |
-| GET    | `/{approvalId}/change/{changeId}` | `getChange`          | `…/scopes/third-party/approval-upsert` or `…/scopes/backend` | `200`   | One change of an approval (json or ld+json)                  |
-| PUT    | `/{approvalId}`                   | `updateApproval`     | `…/scopes/third-party/approval-upsert` or `…/scopes/backend` | `202`   | Replace the identifiers on an approval                       |
-| GET    | `/context`                        | `getContext`         | open                                                         | `200`   | Current JSON-LD context                                      |
-| GET    | `/context/{version}`              | `getContextVersion`  | open                                                         | `200`   | JSON-LD context version (`v1`)                               |
-| GET    | `/ontology`                       | `getOntology`        | open                                                         | `200`   | Latest RDF ontology (Turtle)                                 |
-| GET    | `/ontology/{version}`             | `getOntologyVersion` | open                                                         | `200`   | RDF ontology version (`1.0.0`)                               |
+| Method | Path                                     | OperationId          | Scope                                                                             | Success | Description                                                    |
+| ------ | ---------------------------------------- | -------------------- | --------------------------------------------------------------------------------- | ------- | -------------------------------------------------------------- |
+| POST   | `/`                                      | `createApproval`     | `…/scopes/third-party/approval-upsert` or `…/scopes/backend`                      | `202`   | Create an approval with identifiers and a source URI           |
+| GET    | `/`                                      | `getApprovalByQuery` | open                                                                              | `200`   | Look up an approval by `?handle=` or `?name=`&`?value=`        |
+| GET    | `/{approvalId}`                          | `getApprovalById`    | open                                                                              | `200`   | Fetch an approval by id (json or ld+json)                      |
+| GET    | `/{approvalId}/change`                   | `getApprovalChanges` | `…/scopes/third-party/approval-upsert` or `…/scopes/backend`                      | `200`   | Changes of an approval, newest first, `?cursor=` from `next`   |
+| GET    | `/{approvalId}/change/{changeId}`        | `getChange`          | `…/scopes/third-party/approval-upsert` or `…/scopes/backend`                      | `200`   | One change of an approval (json or ld+json)                    |
+| PUT    | `/{approvalId}`                          | `updateApproval`     | `…/scopes/third-party/approval-upsert` or `…/scopes/backend`                      | `202`   | Replace the identifiers on an approval                         |
+| GET    | `/{approvalId}/source`                   | `getApprovalSource`  | `…/scopes/third-party/approval-upsert`, `…/scopes/backend` or `…/scopes/frontend` | `200`   | Latest source document of an approval, as the source served it |
+| GET    | `/{approvalId}/change/{changeId}/source` | `getChangeSource`    | `…/scopes/third-party/approval-upsert`, `…/scopes/backend` or `…/scopes/frontend` | `200`   | Source document recorded with one change                       |
+| GET    | `/context`                               | `getContext`         | open                                                                              | `200`   | Current JSON-LD context                                        |
+| GET    | `/context/{version}`                     | `getContextVersion`  | open                                                                              | `200`   | JSON-LD context version (`v1`)                                 |
+| GET    | `/ontology`                              | `getOntology`        | open                                                                              | `200`   | Latest RDF ontology (Turtle)                                   |
+| GET    | `/ontology/{version}`                    | `getOntologyVersion` | open                                                                              | `200`   | RDF ontology version (`1.0.0`)                                 |
 
 Error codes: `400` (invalid request, with `errors`), `401` (missing or invalid token), `403` (missing scope), `404`,
 `409` (identifier already in use, with `conflictingKeys`), `502`.

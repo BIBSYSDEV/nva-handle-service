@@ -796,6 +796,88 @@ paths:
             "application/json":
               schema:
                 $ref: "#/components/schemas/Problem"
+  /{approvalId}/change/{changeId}/source:
+    get:
+      tags:
+        - Approval
+        - external
+      operationId: getChangeSource
+      summary: Get source document of a change
+      description: Returns the source document recorded with one source snapshot of an approval.
+      parameters:
+        - name: approvalId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: changeId
+          in: path
+          required: true
+          schema:
+            type: string
+        - $ref: "#/components/parameters/IfNoneMatch"
+      security:
+        - CognitoUserPool:
+            [
+              "https://api.nva.unit.no/scopes/third-party/approval-upsert",
+              "https://api.nva.unit.no/scopes/backend",
+              "https://api.nva.unit.no/scopes/frontend",
+            ]
+      x-amazon-apigateway-integration:
+        uri:
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${NvaFetchApprovalSourceFunction.Arn}/invocations
+        responses: {}
+        httpMethod: POST
+        type: AWS_PROXY
+      responses:
+        "200":
+          description: Source document found
+          headers:
+            ETag:
+              $ref: "#/components/headers/ETag"
+          content:
+            application/ld+json:
+              schema:
+                type: object
+            application/json:
+              schema:
+                type: object
+        "304":
+          description: Not Modified - the `If-None-Match` matches the current `ETag`. No body.
+          headers:
+            ETag:
+              $ref: "#/components/headers/ETag"
+        "400":
+          description: Bad Request
+          content:
+            "application/json":
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "401":
+          description: Unauthorized
+          content:
+            "application/json":
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "404":
+          description: Not found
+          content:
+            "application/json":
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "406":
+          description: Not Acceptable
+          content:
+            "application/json":
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "502":
+          description: Bad gateway
+          content:
+            "application/json":
+              schema:
+                $ref: "#/components/schemas/Problem"
 components:
   schemas:
     ApprovalWritableState:

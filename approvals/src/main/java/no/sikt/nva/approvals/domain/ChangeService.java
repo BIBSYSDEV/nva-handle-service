@@ -13,4 +13,7 @@ public interface ChangeService {
       throws ApprovalNotFoundException, InvalidCursorException;
 
   Optional<SourceSnapshot> findLatestSnapshot(UUID approvalIdentifier);
+
+  Optional<SourceSnapshot> findSnapshot(
+      UUID approvalIdentifier, SortableIdentifier changeIdentifier);
 }

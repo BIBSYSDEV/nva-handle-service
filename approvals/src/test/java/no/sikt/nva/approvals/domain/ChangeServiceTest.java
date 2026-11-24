@@ -131,6 +131,26 @@ class ChangeServiceTest {
   }
 
   @Test
+  void shouldFindSnapshotOfChange() {
+    var snapshot = saveSnapshotOfSourceChangedAt(randomUUID(), randomTimestamp());
+
+    var foundSnapshot =
+        changeService.findSnapshot(snapshot.approvalIdentifier(), snapshot.identifier());
+
+    assertThat(foundSnapshot, equalTo(Optional.of(snapshot)));
+  }
+
+  @Test
+  void shouldFindNoSnapshotWhenChangeIsApprovalRevision() {
+    var revision = saveRevision();
+
+    var foundSnapshot =
+        changeService.findSnapshot(revision.approval().identifier(), revision.identifier());
+
+    assertThat(foundSnapshot, equalTo(Optional.empty()));
+  }
+
+  @Test
   void shouldThrowApprovalNotFoundWhenApprovalDoesNotExist() {
     assertThrows(
         ApprovalNotFoundException.class,
