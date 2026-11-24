@@ -2,8 +2,11 @@ package no.sikt.nva.approvals.utils;
 
 import static nva.commons.core.attempt.Try.attempt;
 
+import java.time.Instant;
 import java.util.Arrays;
 import java.util.Optional;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import no.unit.nva.identifiers.SortableIdentifier;
 import nva.commons.apigateway.RequestInfo;
 import org.apache.hc.core5.http.HttpHeaders;
@@ -13,13 +16,18 @@ public final class EntityTag {
   private static final String WEAK_PREFIX = "W/";
   private static final String ANY = "*";
   private static final String LIST_SEPARATOR = ",";
-  private static final String QUOTE = "\"";
-  private static final String EMPTY = "";
+  private static final String VIEW_SEPARATOR = ".";
+  private static final Pattern SINGLE_ENTITY_TAG = Pattern.compile("^\"([^\".,\\s]+)(\\.\\d+)?\"$");
+  private static final int VERSION_GROUP = 1;
 
   private EntityTag() {}
 
   public static String forVersion(SortableIdentifier version) {
     return "\"%s\"".formatted(version);
+  }
+
+  public static String forVersionAndView(SortableIdentifier version, Instant viewModifiedDate) {
+    return "\"%s%s%s\"".formatted(version, VIEW_SEPARATOR, viewModifiedDate.toEpochMilli());
   }
 
   public static boolean isMatchedByIfNoneMatch(RequestInfo requestInfo, String entityTag) {
@@ -30,8 +38,10 @@ public final class EntityTag {
   }
 
   public static Optional<SortableIdentifier> toVersion(String entityTag) {
-    return attempt(() -> new SortableIdentifier(entityTag.strip().replace(QUOTE, EMPTY)))
-        .toOptional();
+    return Optional.of(SINGLE_ENTITY_TAG.matcher(entityTag.strip()))
+        .filter(Matcher::matches)
+        .map(matcher -> matcher.group(VERSION_GROUP))
+        .flatMap(version -> attempt(() -> new SortableIdentifier(version)).toOptional());
   }
 
   private static boolean containsMatch(String headerValue, String entityTag) {
