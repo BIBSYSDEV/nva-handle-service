@@ -27,15 +27,6 @@
     "handle": {
       "@type": "@id"
     },
-    "sourceView": {
-      "@type": "@json"
-    },
-    "sourceViewModified": {
-      "@type": "xsd:dateTime"
-    },
-    "sourceModified": {
-      "@type": "xsd:dateTime"
-    },
     "name": {
       "@id": "namespace",
       "@type": "xsd:string"

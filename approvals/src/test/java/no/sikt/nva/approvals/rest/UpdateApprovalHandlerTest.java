@@ -30,7 +30,6 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
-import java.time.Instant;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -45,7 +44,6 @@ import no.sikt.nva.approvals.domain.ApprovalServiceException;
 import no.sikt.nva.approvals.domain.CustomerMismatchException;
 import no.sikt.nva.approvals.domain.FakeApprovalService;
 import no.sikt.nva.approvals.domain.NamedIdentifier;
-import no.sikt.nva.approvals.utils.EntityTag;
 import no.unit.nva.commons.json.JsonUtils;
 import no.unit.nva.identifiers.SortableIdentifier;
 import no.unit.nva.stubs.FakeContext;
@@ -357,21 +355,6 @@ class UpdateApprovalHandlerTest {
     var version = SortableIdentifier.next();
     handler = handlerWithStoredApproval(version);
     var ifMatch = ENTITY_TAG_TEMPLATE.formatted(version);
-
-    handler.handleRequest(
-        createRequestWithIfMatch(randomUpdateApprovalRequest(), approvalId, ifMatch),
-        output,
-        context);
-
-    var response = GatewayResponse.fromOutputStream(output, Void.class);
-    assertEquals(HTTP_ACCEPTED, response.getStatusCode());
-  }
-
-  @Test
-  void shouldAcceptUpdateWhenIfMatchIsEntityTagWithView() throws IOException {
-    var version = SortableIdentifier.next();
-    handler = handlerWithStoredApproval(version);
-    var ifMatch = EntityTag.forVersionAndSource(version, Instant.now(), Instant.now());
 
     handler.handleRequest(
         createRequestWithIfMatch(randomUpdateApprovalRequest(), approvalId, ifMatch),

@@ -1,7 +1,6 @@
 package no.sikt.nva.approvals.domain;
 
 import static java.util.UUID.randomUUID;
-import static no.sikt.nva.approvals.utils.TestUtils.randomSourceSnapshot;
 import static no.unit.nva.testutils.RandomDataGenerator.randomString;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -12,7 +11,6 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
-import no.sikt.nva.approvals.persistence.ChangeRepository;
 import no.sikt.nva.approvals.persistence.SourceViewRepository;
 import no.unit.nva.identifiers.SortableIdentifier;
 import org.junit.jupiter.api.BeforeEach;
@@ -24,45 +22,36 @@ class SourceViewServiceTest {
   private static final int VIEW_VERSION = 1;
 
   private SourceViewRepository sourceViewRepository;
-  private ChangeRepository changeRepository;
   private SourceViewService service;
   private UUID approvalIdentifier;
 
   @BeforeEach
   void setUp() {
     sourceViewRepository = mock(SourceViewRepository.class);
-    changeRepository = mock(ChangeRepository.class);
-    service = new SourceViewService(sourceViewRepository, changeRepository);
+    service = new SourceViewService(sourceViewRepository);
     approvalIdentifier = randomUUID();
   }
 
   @Test
-  void shouldReturnViewWithViewAndSourceModifiedDates() {
-    var view = clinicalTrialView();
-    givenStoredView(view);
-    var snapshot = givenLatestSnapshot();
+  void shouldReturnStoredView() {
+    var stored = givenStoredView(clinicalTrialView());
 
-    assertEquals(
-        new ApprovalSourceView(view, VIEW_MODIFIED, snapshot.createdDate()),
-        service.fetchSourceView(approvalIdentifier));
+    assertEquals(Optional.of(stored), service.fetchStoredView(approvalIdentifier));
   }
 
   @Test
-  void shouldLeaveOutViewThatCanNotBeReadButKeepSourceModifiedDate() {
+  void shouldLeaveOutStoredViewThatCanNotBeRead() {
     givenStoredView(null);
-    var snapshot = givenLatestSnapshot();
 
-    assertEquals(
-        new ApprovalSourceView(null, null, snapshot.createdDate()),
-        service.fetchSourceView(approvalIdentifier));
+    assertTrue(service.fetchStoredView(approvalIdentifier).isEmpty());
   }
 
   @Test
-  void shouldReturnEmptySourceViewWhenNothingIsStored() {
-    assertTrue(service.fetchSourceView(approvalIdentifier).isEmpty());
+  void shouldReturnNothingWhenNoViewIsStored() {
+    assertTrue(service.fetchStoredView(approvalIdentifier).isEmpty());
   }
 
-  private void givenStoredView(SourceView view) {
+  private StoredSourceView givenStoredView(SourceView view) {
     var stored =
         new StoredSourceView(
             approvalIdentifier,
@@ -72,12 +61,7 @@ class SourceViewServiceTest {
             VIEW_MODIFIED,
             VIEW_MODIFIED);
     when(sourceViewRepository.find(approvalIdentifier)).thenReturn(Optional.of(stored));
-  }
-
-  private SourceSnapshot givenLatestSnapshot() {
-    var snapshot = randomSourceSnapshot(approvalIdentifier);
-    when(changeRepository.findLatestSnapshot(approvalIdentifier)).thenReturn(Optional.of(snapshot));
-    return snapshot;
+    return stored;
   }
 
   private static ClinicalTrialView clinicalTrialView() {

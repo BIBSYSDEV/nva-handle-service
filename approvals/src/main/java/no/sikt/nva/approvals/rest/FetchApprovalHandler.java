@@ -9,11 +9,8 @@ import static nva.commons.apigateway.MediaTypes.APPLICATION_JSON_LD;
 import com.amazonaws.services.lambda.runtime.Context;
 import java.util.List;
 import java.util.Map;
-import no.sikt.nva.approvals.domain.Approval;
 import no.sikt.nva.approvals.domain.ApprovalService;
 import no.sikt.nva.approvals.domain.ApprovalServiceImpl;
-import no.sikt.nva.approvals.domain.ApprovalSourceView;
-import no.sikt.nva.approvals.domain.SourceViewService;
 import no.sikt.nva.approvals.utils.EntityTag;
 import nva.commons.apigateway.ApiGatewayHandler;
 import nva.commons.apigateway.MediaType;
@@ -30,24 +27,16 @@ public class FetchApprovalHandler extends ApiGatewayHandler<Void, Object> {
   private static final String NOT_MODIFIED_BODY = "";
 
   private final ApprovalService approvalService;
-  private final SourceViewService sourceViewService;
   private final String apiHost;
 
   @JacocoGenerated
   public FetchApprovalHandler() {
-    this(
-        ApprovalServiceImpl.defaultInstance(new Environment()),
-        SourceViewService.defaultInstance(new Environment()),
-        new Environment());
+    this(ApprovalServiceImpl.defaultInstance(new Environment()), new Environment());
   }
 
-  public FetchApprovalHandler(
-      ApprovalService approvalService,
-      SourceViewService sourceViewService,
-      Environment environment) {
+  public FetchApprovalHandler(ApprovalService approvalService, Environment environment) {
     super(Void.class, environment);
     this.approvalService = approvalService;
-    this.sourceViewService = sourceViewService;
     this.apiHost = getApiHost(environment);
   }
 
@@ -67,23 +56,15 @@ public class FetchApprovalHandler extends ApiGatewayHandler<Void, Object> {
             .getApprovalByIdentifier(getApprovalIdentifier(requestInfo))
             .orElseThrow(() -> new NotFoundException(APPROVAL_NOT_FOUND_MESSAGE));
 
-    var sourceView = sourceViewService.fetchSourceView(approval.identifier());
-    var entityTag = entityTag(approval, sourceView);
+    var entityTag = EntityTag.forVersion(approval.version());
     addAdditionalHeaders(() -> Map.of(HttpHeaders.ETAG, entityTag));
     return EntityTag.isMatchedByIfNoneMatch(requestInfo, entityTag)
         ? NOT_MODIFIED_BODY
-        : ApprovalResponse.fromApproval(approval, sourceView, apiHost);
+        : ApprovalResponse.fromApproval(approval, apiHost);
   }
 
   @Override
   protected Integer getSuccessStatusCode(Void input, Object output) {
     return NOT_MODIFIED_BODY.equals(output) ? HTTP_NOT_MODIFIED : HTTP_OK;
-  }
-
-  private static String entityTag(Approval approval, ApprovalSourceView sourceView) {
-    return sourceView.isEmpty()
-        ? EntityTag.forVersion(approval.version())
-        : EntityTag.forVersionAndSource(
-            approval.version(), sourceView.viewModified(), sourceView.sourceModified());
   }
 }

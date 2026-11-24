@@ -5,7 +5,6 @@ import static java.net.HttpURLConnection.HTTP_NOT_FOUND;
 import static java.net.HttpURLConnection.HTTP_NOT_MODIFIED;
 import static java.net.HttpURLConnection.HTTP_OK;
 import static no.sikt.nva.approvals.utils.TestUtils.randomApproval;
-import static no.unit.nva.testutils.RandomDataGenerator.randomString;
 import static no.unit.nva.testutils.RandomDataGenerator.randomUri;
 import static nva.commons.apigateway.ApiGatewayHandler.ALLOWED_ORIGIN_ENV;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -13,11 +12,8 @@ import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.emptyOrNullString;
 import static org.hamcrest.Matchers.is;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 
 import com.amazonaws.services.lambda.runtime.Context;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -25,16 +21,11 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
-import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import no.sikt.nva.approvals.domain.Approval;
-import no.sikt.nva.approvals.domain.ApprovalSourceView;
-import no.sikt.nva.approvals.domain.ClinicalTrialView;
 import no.sikt.nva.approvals.domain.FakeApprovalService;
-import no.sikt.nva.approvals.domain.SourceViewService;
-import no.sikt.nva.approvals.utils.EntityTag;
 import no.unit.nva.commons.json.JsonUtils;
 import no.unit.nva.identifiers.SortableIdentifier;
 import no.unit.nva.stubs.FakeContext;
@@ -61,22 +52,13 @@ class FetchApprovalHandlerTest {
   private static final String API_HOST = "api.unittest.nva.unit.no";
   private static final String COGNITO_AUTHORIZER_URLS_ENV = "COGNITO_AUTHORIZER_URLS";
   private static final String API_HOST_ENV = "API_HOST";
-  private static final Instant VIEW_MODIFIED = Instant.parse("2026-11-20T10:00:00Z");
-  private static final Instant SOURCE_MODIFIED = Instant.parse("2026-11-19T10:00:00Z");
-  private static final String SOURCE_VIEW_FIELD = "sourceView";
-  private static final String SOURCE_VIEW_MODIFIED_FIELD = "sourceViewModified";
-  private static final String SOURCE_MODIFIED_FIELD = "sourceModified";
-  private static final String COMPOSITE_ENTITY_TAG = "\"%s.%d.%d\"";
   private FetchApprovalHandler handler;
   private ByteArrayOutputStream output;
   private Environment environment;
-  private SourceViewService sourceViewService;
 
   @BeforeEach
   void setUp() {
     output = new ByteArrayOutputStream();
-    sourceViewService = mock(SourceViewService.class);
-    lenient().when(sourceViewService.fetchSourceView(any())).thenReturn(ApprovalSourceView.NONE);
     environment = mock(Environment.class);
     lenient().when(environment.readEnv(ALLOWED_ORIGIN_ENV)).thenReturn("*");
     lenient()
@@ -89,9 +71,7 @@ class FetchApprovalHandlerTest {
   void shouldReturnOkResponseWithApprovalOnSuccess() {
     var approvalId = UUID.randomUUID();
     var approval = randomApproval(approvalId, randomUri());
-    handler =
-        new FetchApprovalHandler(
-            new FakeApprovalService(List.of(approval)), sourceViewService, environment);
+    handler = new FetchApprovalHandler(new FakeApprovalService(List.of(approval)), environment);
     var request = createRequestWithPathParameter(approvalId);
 
     var response = handleRequest(request);
@@ -102,7 +82,7 @@ class FetchApprovalHandlerTest {
   @Test
   void shouldReturnNotFoundWhenApprovalDoesNotExist() {
     var approvalId = UUID.randomUUID();
-    handler = new FetchApprovalHandler(new FakeApprovalService(), sourceViewService, environment);
+    handler = new FetchApprovalHandler(new FakeApprovalService(), environment);
     var request = createRequestWithPathParameter(approvalId);
 
     var response = handleRequest(request);
@@ -112,7 +92,7 @@ class FetchApprovalHandlerTest {
 
   @Test
   void shouldReturnBadRequestWhenApprovalIdIsInvalid() {
-    handler = new FetchApprovalHandler(new FakeApprovalService(), sourceViewService, environment);
+    handler = new FetchApprovalHandler(new FakeApprovalService(), environment);
     var request = createRequestWithInvalidId();
 
     var response = handleRequestAsProblem(request);
@@ -132,9 +112,7 @@ class FetchApprovalHandlerTest {
   void shouldReturnJsonWhenAcceptHeaderIsApplicationJson() {
     var approvalId = UUID.randomUUID();
     var approval = randomApproval(approvalId, randomUri());
-    handler =
-        new FetchApprovalHandler(
-            new FakeApprovalService(List.of(approval)), sourceViewService, environment);
+    handler = new FetchApprovalHandler(new FakeApprovalService(List.of(approval)), environment);
     var request = createRequestWithAcceptHeader(approvalId, MediaType.JSON_UTF_8.toString());
 
     var response = handleRequest(request);
@@ -148,9 +126,7 @@ class FetchApprovalHandlerTest {
   void shouldReturnJsonWhenNoAcceptHeaderProvided() {
     var approvalId = UUID.randomUUID();
     var approval = randomApproval(approvalId, randomUri());
-    handler =
-        new FetchApprovalHandler(
-            new FakeApprovalService(List.of(approval)), sourceViewService, environment);
+    handler = new FetchApprovalHandler(new FakeApprovalService(List.of(approval)), environment);
     var request = createRequestWithPathParameter(approvalId);
 
     var response = handleRequest(request);
@@ -165,9 +141,7 @@ class FetchApprovalHandlerTest {
     var browserAcceptHeader = "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8";
     var approvalId = UUID.randomUUID();
     var approval = randomApproval(approvalId, randomUri());
-    handler =
-        new FetchApprovalHandler(
-            new FakeApprovalService(List.of(approval)), sourceViewService, environment);
+    handler = new FetchApprovalHandler(new FakeApprovalService(List.of(approval)), environment);
     var request = createRequestWithAcceptHeader(approvalId, browserAcceptHeader);
 
     var response = handleRequest(request);
@@ -181,9 +155,7 @@ class FetchApprovalHandlerTest {
   void shouldReturnNotAcceptableWhenAcceptHeaderIsUnsupported() {
     var approvalId = UUID.randomUUID();
     var approval = randomApproval(approvalId, randomUri());
-    handler =
-        new FetchApprovalHandler(
-            new FakeApprovalService(List.of(approval)), sourceViewService, environment);
+    handler = new FetchApprovalHandler(new FakeApprovalService(List.of(approval)), environment);
     var request = createRequestWithAcceptHeader(approvalId, "application/xml");
 
     var response = handleRequest(request);
@@ -199,82 +171,6 @@ class FetchApprovalHandlerTest {
     var response = handleRequest(createRequestWithPathParameter(approval.identifier()));
 
     assertEquals(quoted(approval.version()), response.getHeaders().get(HttpHeaders.ETAG));
-  }
-
-  @Test
-  void shouldReturnSourceViewWithViewAndSourceModifiedDates() throws JsonProcessingException {
-    var approval = approvalWithVersion(SortableIdentifier.next());
-    var sourceView = givenSourceView(approval);
-    handler = handlerFor(approval);
-
-    var body =
-        handleRequest(createRequestWithPathParameter(approval.identifier()))
-            .getBodyObject(ApprovalResponse.class);
-
-    assertEquals(sourceView.view(), body.sourceView());
-    assertEquals(VIEW_MODIFIED, body.sourceViewModified());
-    assertEquals(SOURCE_MODIFIED, body.sourceModified());
-  }
-
-  @Test
-  void shouldReturnEntityTagFromApprovalVersionAndViewAndSourceModifiedDates() {
-    var approval = approvalWithVersion(SortableIdentifier.next());
-    givenSourceView(approval);
-    handler = handlerFor(approval);
-
-    var response = handleRequest(createRequestWithPathParameter(approval.identifier()));
-
-    assertEquals(
-        COMPOSITE_ENTITY_TAG.formatted(
-            approval.version(), VIEW_MODIFIED.toEpochMilli(), SOURCE_MODIFIED.toEpochMilli()),
-        response.getHeaders().get(HttpHeaders.ETAG));
-  }
-
-  @Test
-  void shouldReturnSourceModifiedWithoutSourceViewWhenNoViewIsAvailable()
-      throws JsonProcessingException {
-    var approval = approvalWithVersion(SortableIdentifier.next());
-    givenSourceView(approval, new ApprovalSourceView(null, null, SOURCE_MODIFIED));
-    handler = handlerFor(approval);
-
-    var response = handleRequestAsString(createRequestWithPathParameter(approval.identifier()));
-    var body = JsonUtils.dtoObjectMapper.readTree(response.getBody());
-
-    assertFalse(body.has(SOURCE_VIEW_FIELD));
-    assertFalse(body.has(SOURCE_VIEW_MODIFIED_FIELD));
-    assertEquals(SOURCE_MODIFIED.toString(), body.get(SOURCE_MODIFIED_FIELD).asText());
-    assertEquals(
-        COMPOSITE_ENTITY_TAG.formatted(approval.version(), 0, SOURCE_MODIFIED.toEpochMilli()),
-        response.getHeaders().get(HttpHeaders.ETAG));
-  }
-
-  @Test
-  void shouldReturnNotModifiedWhenIfNoneMatchHasCurrentVersionAndSourceView() {
-    var approval = approvalWithVersion(SortableIdentifier.next());
-    var sourceView = givenSourceView(approval);
-    handler = handlerFor(approval);
-    var ifNoneMatch =
-        EntityTag.forVersionAndSource(
-            approval.version(), sourceView.viewModified(), sourceView.sourceModified());
-
-    var response =
-        handleRequestAsString(createRequestWithIfNoneMatch(approval.identifier(), ifNoneMatch));
-
-    assertEquals(HTTP_NOT_MODIFIED, response.getStatusCode());
-  }
-
-  @Test
-  void shouldReturnSourceViewWhenIfNoneMatchHasVersionFromBeforeSourceViewWasStored()
-      throws JsonProcessingException {
-    var approval = approvalWithVersion(SortableIdentifier.next());
-    var sourceView = givenSourceView(approval);
-    handler = handlerFor(approval);
-    var ifNoneMatch = EntityTag.forVersion(approval.version());
-
-    var response = handleRequest(createRequestWithIfNoneMatch(approval.identifier(), ifNoneMatch));
-
-    assertEquals(HTTP_OK, response.getStatusCode());
-    assertEquals(sourceView.view(), response.getBodyObject(ApprovalResponse.class).sourceView());
   }
 
   @ParameterizedTest
@@ -379,18 +275,7 @@ class FetchApprovalHandlerTest {
   }
 
   private FetchApprovalHandler handlerFor(Approval approval) {
-    return new FetchApprovalHandler(
-        new FakeApprovalService(List.of(approval)), sourceViewService, environment);
-  }
-
-  private ApprovalSourceView givenSourceView(Approval approval) {
-    var view = new ClinicalTrialView(randomString(), randomString(), null, null, null, null, null);
-    return givenSourceView(approval, new ApprovalSourceView(view, VIEW_MODIFIED, SOURCE_MODIFIED));
-  }
-
-  private ApprovalSourceView givenSourceView(Approval approval, ApprovalSourceView sourceView) {
-    when(sourceViewService.fetchSourceView(approval.identifier())).thenReturn(sourceView);
-    return sourceView;
+    return new FetchApprovalHandler(new FakeApprovalService(List.of(approval)), environment);
   }
 
   private static Approval approvalWithVersion(SortableIdentifier version) {
