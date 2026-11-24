@@ -4,7 +4,6 @@ import static no.sikt.nva.approvals.utils.TestUtils.randomSourceSnapshotWithCont
 import static no.unit.nva.testutils.RandomDataGenerator.randomString;
 import static nva.commons.core.ioutils.IoUtils.stringFromResources;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.anEmptyMap;
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.empty;
@@ -18,12 +17,13 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import com.fasterxml.jackson.databind.exc.MismatchedInputException;
 import java.net.URI;
 import java.nio.file.Path;
-import java.util.Map;
+import java.util.List;
 import no.sikt.nva.approvals.domain.ClinicalTrialView;
 import no.sikt.nva.approvals.domain.ClinicalTrialView.Event;
 import no.sikt.nva.approvals.domain.ClinicalTrialView.Investigator;
 import no.sikt.nva.approvals.domain.ClinicalTrialView.Organization;
 import no.sikt.nva.approvals.domain.ClinicalTrialView.Person;
+import no.sikt.nva.approvals.domain.ClinicalTrialView.Status;
 import no.sikt.nva.approvals.domain.ClinicalTrialView.TrialSite;
 import no.sikt.nva.approvals.domain.Content;
 import no.sikt.nva.approvals.domain.SourceView;
@@ -106,6 +106,12 @@ class SourceViewGeneratorTest {
        "type": "ClinicalTrial", "publicTitle": "title",
        "statuses": { "denmark": %s }}
       """;
+  private static final String TRIAL_WITH_SEVERAL_STATUS_NODES =
+      """
+      {"@context": "https://api.legemiddelverket.no/ctis/context/clinical-trial.json",
+       "type": "ClinicalTrial", "publicTitle": "title",
+       "statuses": [{ "eea": "Ended" }, { "norway": "Ongoing" }]}
+      """;
   private static final String BIOBANK =
       """
       {"@context": "https://api.legemiddelverket.no/ctis/context/clinical-trial.json",
@@ -187,26 +193,34 @@ class SourceViewGeneratorTest {
   }
 
   @Test
+  void shouldRejectStatusesThatAreNotOneStatusPerRegion() {
+    var content = Content.create(JSON_LD_MEDIA_TYPE, TRIAL_WITH_SEVERAL_STATUS_NODES);
+    var snapshot = randomSourceSnapshotWithContent(content);
+
+    var exception =
+        assertThrows(SourceViewGeneratorException.class, () -> generator.generate(snapshot));
+
+    assertInstanceOf(IllegalArgumentException.class, exception.getCause());
+  }
+
+  @Test
   void shouldCreateStatusAsPlainTextForTypedRegionUnknownToFrame() throws Exception {
     var content = Content.create(JSON_LD_MEDIA_TYPE, TRIAL_WITH_TYPED_UNKNOWN_REGION);
     var view = (ClinicalTrialView) generator.generate(randomSourceSnapshotWithContent(content));
 
-    assertEquals(Map.of(DENMARK_REGION_KEY, DENMARK_STATUS), view.statuses());
+    assertEquals(List.of(new Status(DENMARK_REGION_KEY, DENMARK_STATUS)), view.statuses());
   }
 
   @Test
   void shouldCreateStatusesForEveryRegionAndSponsorName() throws SourceViewGeneratorException {
     var view = generateClinicalTrialView();
 
-    assertEquals(
-        Map.of(
-            EEA_REGION_KEY,
-            EEA_STATUS,
-            NORWAY_REGION_KEY,
-            NORWAY_STATUS,
-            SWEDEN_REGION_KEY,
-            SWEDEN_STATUS),
-        view.statuses());
+    assertThat(
+        view.statuses(),
+        containsInAnyOrder(
+            new Status(EEA_REGION_KEY, EEA_STATUS),
+            new Status(NORWAY_REGION_KEY, NORWAY_STATUS),
+            new Status(SWEDEN_REGION_KEY, SWEDEN_STATUS)));
     assertEquals(SPONSOR_NAME, view.sponsors().getFirst().name());
   }
 
@@ -216,7 +230,7 @@ class SourceViewGeneratorTest {
     var view = (ClinicalTrialView) generator.generate(randomSourceSnapshotWithContent(content));
 
     assertEquals(CLINICAL_TRIAL_TITLE, view.title());
-    assertThat(view.statuses(), is(anEmptyMap()));
+    assertThat(view.statuses(), is(empty()));
     assertThat(view.events(), is(empty()));
     assertThat(view.sponsors(), is(empty()));
     assertThat(view.trialSites(), is(empty()));

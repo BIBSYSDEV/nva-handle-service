@@ -8,14 +8,13 @@ import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import java.net.URI;
 import java.util.List;
-import java.util.Map;
 
 @JsonTypeName("ClinicalTrialView")
 public record ClinicalTrialView(
     String identifier,
     String title,
     String modified,
-    @JsonDeserialize(contentUsing = JsonLdLiteralDeserializer.class) Map<String, String> statuses,
+    List<Status> statuses,
     List<Event> events,
     List<Sponsor> sponsors,
     List<TrialSite> trialSites)
@@ -24,7 +23,7 @@ public record ClinicalTrialView(
   private static final String TYPE_PROPERTY = "type";
 
   public ClinicalTrialView {
-    statuses = nonNull(statuses) ? statuses : Map.of();
+    statuses = emptyIfNull(statuses);
     events = emptyIfNull(events);
     sponsors = emptyIfNull(sponsors);
     trialSites = emptyIfNull(trialSites);
@@ -33,6 +32,11 @@ public record ClinicalTrialView(
   private static <T> List<T> emptyIfNull(List<T> list) {
     return nonNull(list) ? list : List.of();
   }
+
+  @JsonTypeInfo(use = Id.NAME, property = TYPE_PROPERTY, defaultImpl = Status.class)
+  @JsonTypeName("Status")
+  public record Status(
+      String region, @JsonDeserialize(using = JsonLdLiteralDeserializer.class) String status) {}
 
   public record Event(String type, String region, String date) {}
 

@@ -1329,10 +1329,19 @@ components:
           type: string
           description: Last modification time at the source, without time zone
         statuses:
-          type: object
-          description: Trial status per region, keyed by region
-          additionalProperties:
-            type: string
+          type: array
+          description: Trial status per region
+          items:
+            type: object
+            required: [type]
+            properties:
+              type:
+                type: string
+                enum: [Status]
+              region:
+                type: string
+              status:
+                type: string
         events:
           type: array
           items:
@@ -1411,8 +1420,12 @@ components:
         identifier: 2023-510166-27-01
         title: Prospective comparison of sirolimus against corticosteroids
         statuses:
-          eea: Authorised
-          norway: Authorised
+          - type: Status
+            region: eea
+            status: Authorised
+          - type: Status
+            region: norway
+            status: Authorised
         events:
           - type: TrialStart
             region: Norway
