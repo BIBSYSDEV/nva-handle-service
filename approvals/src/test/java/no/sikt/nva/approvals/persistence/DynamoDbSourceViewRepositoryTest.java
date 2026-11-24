@@ -190,7 +190,6 @@ class DynamoDbSourceViewRepositoryTest {
 
   private static ClinicalTrialView fullClinicalTrialView() {
     return new ClinicalTrialView(
-        randomUri(),
         randomString(),
         randomString(),
         randomString(),
@@ -244,6 +243,6 @@ class DynamoDbSourceViewRepositoryTest {
 
   private static ClinicalTrialView clinicalTrialView() {
     return new ClinicalTrialView(
-        null, randomString(), randomString(), null, null, List.of(), List.of(), List.of());
+        randomString(), randomString(), null, null, List.of(), List.of(), List.of());
   }
 }

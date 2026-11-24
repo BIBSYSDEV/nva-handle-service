@@ -384,9 +384,7 @@ class FetchApprovalHandlerTest {
   }
 
   private ApprovalSourceView givenSourceView(Approval approval) {
-    var view =
-        new ClinicalTrialView(
-            randomUri(), randomString(), randomString(), null, null, null, null, null);
+    var view = new ClinicalTrialView(randomString(), randomString(), null, null, null, null, null);
     return givenSourceView(approval, new ApprovalSourceView(view, VIEW_MODIFIED, SOURCE_MODIFIED));
   }
 

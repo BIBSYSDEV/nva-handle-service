@@ -10,9 +10,8 @@ import java.net.URI;
 import java.util.List;
 import java.util.Map;
 
-@JsonTypeName("ClinicalTrial")
+@JsonTypeName("ClinicalTrialView")
 public record ClinicalTrialView(
-    URI id,
     String identifier,
     String title,
     String modified,
