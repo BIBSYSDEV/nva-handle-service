@@ -31,8 +31,7 @@ final class ClinicalTrialFramer {
     return Optional.ofNullable(snapshot.content()).map(Content::body).isEmpty();
   }
 
-  JsonObject frame(SourceSnapshot snapshot) throws JsonLdError {
-    var body = snapshot.content().body();
+  JsonObject frame(String body) throws JsonLdError {
     return JsonLd.frame(JsonDocument.of(IoUtils.stringToStream(body)), frameDocument)
         .loader((_, _) -> CTIS_CLINICAL_TRIAL_CONTEXT)
         .get();
