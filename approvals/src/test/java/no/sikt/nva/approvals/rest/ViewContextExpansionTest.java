@@ -4,6 +4,7 @@ import static no.sikt.nva.approvals.utils.JsonLdTestUtils.APPROVAL_ONTOLOGY_NAME
 import static no.sikt.nva.approvals.utils.JsonLdTestUtils.expandWithServedContext;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsInAnyOrder;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import com.apicatalog.jsonld.JsonLdError;
 import jakarta.json.JsonObject;
@@ -14,6 +15,7 @@ class ViewContextExpansionTest {
 
   private static final String SCHEMA = "https://schema.org/";
   private static final String PROV_WAS_DERIVED_FROM = "http://www.w3.org/ns/prov#wasDerivedFrom";
+  private static final String PROV_AGENT = "http://www.w3.org/ns/prov#agent";
   private static final String ID_KEYWORD = "@id";
   private static final String TYPE_KEYWORD = "@type";
   private static final String VIEW_DOCUMENT =
@@ -79,11 +81,21 @@ class ViewContextExpansionTest {
         investigator.keySet(),
         containsInAnyOrder(
             TYPE_KEYWORD,
-            ontology("person"),
+            PROV_AGENT,
             schema("honorificPrefix"),
             schema("givenName"),
             schema("familyName"),
             ontology("department")));
+  }
+
+  @Test
+  void shouldLinkTrialSiteAndInvestigatorToTheirAgents() throws IOException, JsonLdError {
+    var trialSite = firstNode(expandWithServedContext(VIEW_DOCUMENT), ontology("trialSite"));
+    var organization = firstNode(trialSite, PROV_AGENT);
+    var person = firstNode(firstNode(trialSite, ontology("investigator")), PROV_AGENT);
+
+    assertEquals(schema("Organization"), organization.getJsonArray(TYPE_KEYWORD).getString(0));
+    assertEquals(schema("Person"), person.getJsonArray(TYPE_KEYWORD).getString(0));
   }
 
   @Test
