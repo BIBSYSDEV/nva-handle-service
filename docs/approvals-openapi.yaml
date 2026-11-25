@@ -813,13 +813,6 @@ paths:
             type: string
             format: uuid
         - $ref: "#/components/parameters/IfNoneMatch"
-      security:
-        - CognitoUserPool:
-            [
-              "https://api.nva.unit.no/scopes/third-party/approval-upsert",
-              "https://api.nva.unit.no/scopes/backend",
-              "https://api.nva.unit.no/scopes/frontend",
-            ]
       x-amazon-apigateway-integration:
         uri:
           Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${NvaFetchApprovalViewFunction.Arn}/invocations
@@ -846,12 +839,6 @@ paths:
               $ref: "#/components/headers/ETag"
         "400":
           description: Bad Request
-          content:
-            "application/json":
-              schema:
-                $ref: "#/components/schemas/Problem"
-        "401":
-          description: Unauthorized
           content:
             "application/json":
               schema:
