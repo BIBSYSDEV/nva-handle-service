@@ -13,9 +13,12 @@ import java.net.http.HttpRequest.Builder;
 import java.net.http.HttpResponse;
 import java.net.http.HttpResponse.BodyHandlers;
 import java.time.Duration;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
+import no.sikt.nva.approvals.domain.BearerToken;
 import no.sikt.nva.approvals.domain.IdentifierPolicyService;
 import no.sikt.nva.approvals.domain.IdentifierPolicyServiceImpl;
 import no.sikt.nva.approvals.domain.NoAuthentication;
@@ -24,6 +27,7 @@ import no.sikt.nva.approvals.domain.SourceAuthentication;
 import no.sikt.nva.approvals.domain.SourceConfig;
 import nva.commons.core.Environment;
 import nva.commons.core.JacocoGenerated;
+import nva.commons.core.StringUtils;
 import nva.commons.core.attempt.Failure;
 import nva.commons.secrets.SecretsReader;
 
@@ -43,16 +47,22 @@ public class SourceClient {
       "Source %s rejected the credentials with status %s";
   private static final String UNEXPECTED_STATUS_MESSAGE = "Source %s responded with status %s";
 
+  private static final String INVALID_BEARER_TOKEN_MESSAGE =
+      "No valid bearer token stored under key %s";
+
   private final IdentifierPolicyService identifierPolicyService;
+  private final Supplier<SourceCredentials> sourceCredentialsSupplier;
   private final OAuth2TokenService tokenService;
   private final HttpClient httpClient;
+  private final AtomicReference<SourceCredentials> sourceCredentials = new AtomicReference<>();
 
   public SourceClient(
       IdentifierPolicyService identifierPolicyService,
       Supplier<SourceCredentials> sourceCredentialsSupplier,
       HttpClient httpClient) {
     this.identifierPolicyService = identifierPolicyService;
-    this.tokenService = new OAuth2TokenService(sourceCredentialsSupplier, httpClient);
+    this.sourceCredentialsSupplier = sourceCredentialsSupplier;
+    this.tokenService = new OAuth2TokenService(this::fetchSourceCredentials, httpClient);
     this.httpClient = httpClient;
   }
 
@@ -76,15 +86,25 @@ public class SourceClient {
     var sourceConfig = fetchSourceConfig(source, customerIdentifier);
     var request = createRequest(source, sourceConfig.authentication());
     var response = fetchSource(request);
-    discardRejectedAccessToken(response, sourceConfig.authentication());
+    discardRejectedCredentials(response, sourceConfig.authentication());
     return toSourceResponse(source, response);
   }
 
-  private void discardRejectedAccessToken(
+  private void discardRejectedCredentials(
       HttpResponse<String> response, SourceAuthentication authentication) {
-    if (isRejected(response) && authentication instanceof OAuth2ClientCredentials(String key)) {
-      tokenService.discardAccessToken(key);
+    if (isRejected(response) && usesSourceSecret(authentication)) {
+      discardSourceCredentials();
+      if (authentication instanceof OAuth2ClientCredentials(String key)) {
+        tokenService.discardAccessToken(key);
+      }
     }
+  }
+
+  private static boolean usesSourceSecret(SourceAuthentication authentication) {
+    return switch (authentication) {
+      case NoAuthentication _ -> false;
+      case OAuth2ClientCredentials _, BearerToken _ -> true;
+    };
   }
 
   private static boolean isRejected(HttpResponse<String> response) {
@@ -127,11 +147,48 @@ public class SourceClient {
 
   private Optional<String> findAuthorization(SourceAuthentication authentication)
       throws SourceClientException {
+    try {
+      return createAuthorization(authentication);
+    } catch (SourceClientException exception) {
+      discardSourceCredentials();
+      throw exception;
+    }
+  }
+
+  private Optional<String> createAuthorization(SourceAuthentication authentication)
+      throws SourceClientException {
     return switch (authentication) {
       case NoAuthentication _ -> Optional.empty();
       case OAuth2ClientCredentials credentials ->
           Optional.of(BEARER_PREFIX + tokenService.getAccessToken(credentials.key()));
+      case BearerToken bearerToken -> Optional.of(BEARER_PREFIX + findBearerToken(bearerToken));
     };
+  }
+
+  private String findBearerToken(BearerToken bearerToken) throws SourceClientException {
+    return fetchSourceCredentials()
+        .findCredentials(bearerToken.key(), BearerTokenCredentials.class)
+        .map(BearerTokenCredentials::token)
+        .map(String::strip)
+        .filter(StringUtils::isNotBlank)
+        .filter(SourceClient::hasNoControlCharacters)
+        .orElseThrow(
+            () ->
+                new SourceClientException(
+                    INVALID_BEARER_TOKEN_MESSAGE.formatted(bearerToken.key())));
+  }
+
+  private static boolean hasNoControlCharacters(String token) {
+    return token.chars().noneMatch(Character::isISOControl);
+  }
+
+  private SourceCredentials fetchSourceCredentials() {
+    return sourceCredentials.updateAndGet(
+        current -> Objects.nonNull(current) ? current : sourceCredentialsSupplier.get());
+  }
+
+  private void discardSourceCredentials() {
+    sourceCredentials.set(null);
   }
 
   private static Optional<SourceResponse> toSourceResponse(

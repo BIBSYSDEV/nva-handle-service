@@ -15,7 +15,6 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.Base64;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Supplier;
@@ -23,8 +22,8 @@ import no.unit.nva.commons.json.JsonUtils;
 
 /**
  * Requests OAuth2 client credentials access tokens with the source credentials stored under a key,
- * and reuses each key's token until shortly before it expires. Credentials are read when the first
- * token is requested and kept after that, so neither credentials nor tokens are captured in a
+ * and reuses each key's token until shortly before it expires. Credentials are read from the
+ * supplier only when a token is requested, so neither credentials nor tokens are captured in a
  * SnapStart snapshot.
  */
 public class OAuth2TokenService {
@@ -47,7 +46,6 @@ public class OAuth2TokenService {
   private final Supplier<SourceCredentials> sourceCredentialsSupplier;
   private final HttpClient httpClient;
   private final Map<String, AccessToken> accessTokens = new ConcurrentHashMap<>();
-  private SourceCredentials sourceCredentials;
 
   public OAuth2TokenService(
       Supplier<SourceCredentials> sourceCredentialsSupplier, HttpClient httpClient) {
@@ -74,17 +72,11 @@ public class OAuth2TokenService {
   }
 
   private OAuth2Credentials findCredentials(String credentialsKey) throws SourceClientException {
-    return readSourceCredentials()
-        .findCredentials(credentialsKey)
+    return sourceCredentialsSupplier
+        .get()
+        .findCredentials(credentialsKey, OAuth2Credentials.class)
         .orElseThrow(
             () -> new SourceClientException(MISSING_CREDENTIALS_MESSAGE.formatted(credentialsKey)));
-  }
-
-  private SourceCredentials readSourceCredentials() {
-    if (Objects.isNull(sourceCredentials)) {
-      sourceCredentials = sourceCredentialsSupplier.get();
-    }
-    return sourceCredentials;
   }
 
   private AccessToken requestAccessToken(OAuth2Credentials credentials)

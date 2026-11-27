@@ -1,5 +1,6 @@
 package no.sikt.nva.approvals.source;
 
+import static java.net.HttpURLConnection.HTTP_FORBIDDEN;
 import static java.net.HttpURLConnection.HTTP_INTERNAL_ERROR;
 import static java.net.HttpURLConnection.HTTP_NOT_FOUND;
 import static java.net.HttpURLConnection.HTTP_OK;
@@ -29,6 +30,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import no.sikt.nva.approvals.domain.BearerToken;
 import no.sikt.nva.approvals.domain.IdentifierPolicy;
 import no.sikt.nva.approvals.domain.NoAuthentication;
 import no.sikt.nva.approvals.domain.OAuth2ClientCredentials;
@@ -37,6 +39,7 @@ import no.sikt.nva.approvals.domain.SourceConfig;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.NullAndEmptySource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentMatcher;
 
@@ -58,6 +61,8 @@ class SourceClientTest {
   private URI tokenUri;
   private String credentialsKey;
   private String accessToken;
+  private String bearerTokenKey;
+  private String bearerToken;
   private UUID customerIdentifier;
   private IdentifierPolicy identifierPolicy;
 
@@ -68,16 +73,22 @@ class SourceClientTest {
     tokenUri = randomUri();
     credentialsKey = randomString();
     accessToken = randomString();
+    bearerTokenKey = randomString();
+    bearerToken = randomString();
     customerIdentifier = randomUUID();
     identifierPolicy = IdentifierPolicy.DENY_ALL;
-    doReturn(new StubResponse(HTTP_OK, TOKEN_RESPONSE.formatted(accessToken), Map.of()))
-        .when(httpClient)
-        .send(argThat(isRequestTo(tokenUri)), any());
+    stubTokenEndpoint(tokenUri, HTTP_OK);
     sourceClient =
         new SourceClient(
             customer ->
                 customerIdentifier.equals(customer) ? identifierPolicy : IdentifierPolicy.DENY_ALL,
-            () -> new SourceCredentials(Map.of(credentialsKey, randomOAuth2Credentials())),
+            () ->
+                new SourceCredentials(
+                    Map.of(
+                        credentialsKey,
+                        randomOAuth2Credentials(),
+                        bearerTokenKey,
+                        new BearerTokenCredentials(bearerToken))),
             httpClient);
   }
 
@@ -125,6 +136,138 @@ class SourceClientTest {
 
     assertThrowsExactly(
         SourceClientException.class, () -> fetchWith(new OAuth2ClientCredentials(randomString())));
+  }
+
+  @Test
+  void shouldAuthenticateWithBearerTokenFromSecret() throws Exception {
+    stubSource(HTTP_OK, randomString());
+
+    fetchWith(new BearerToken(bearerTokenKey));
+
+    verify(httpClient).send(argThat(hasAuthorization("Bearer " + bearerToken)), any());
+  }
+
+  @Test
+  void shouldKeepSecretBetweenAcceptedFetches() throws Exception {
+    stubSource(HTTP_OK, randomString());
+    var firstBearerToken = bearerToken;
+
+    fetchWith(new BearerToken(bearerTokenKey));
+    bearerToken = randomString();
+    fetchWith(new BearerToken(bearerTokenKey));
+
+    verify(httpClient, times(2))
+        .send(argThat(hasAuthorization("Bearer " + firstBearerToken)), any());
+  }
+
+  @Test
+  void shouldReadSecretAgainAfterSourceRejectsBearerToken() throws Exception {
+    stubSource(HTTP_UNAUTHORIZED, randomString());
+    assertThrowsExactly(
+        SourceAuthenticationException.class, () -> fetchWith(new BearerToken(bearerTokenKey)));
+    bearerToken = randomString();
+    stubSource(HTTP_OK, randomString());
+
+    fetchWith(new BearerToken(bearerTokenKey));
+
+    verify(httpClient).send(argThat(hasAuthorization("Bearer " + bearerToken)), any());
+  }
+
+  @Test
+  void shouldReadSecretAgainAfterBearerTokenKeyWasMissing() throws Exception {
+    stubSource(HTTP_OK, randomString());
+    var addedKey = randomString();
+    assertThrowsExactly(SourceClientException.class, () -> fetchWith(new BearerToken(addedKey)));
+    bearerTokenKey = addedKey;
+
+    fetchWith(new BearerToken(addedKey));
+
+    verify(httpClient).send(argThat(hasAuthorization("Bearer " + bearerToken)), any());
+  }
+
+  @Test
+  void shouldReadSecretAgainAfterSourceRejectsOAuth2Token() throws Exception {
+    stubSource(HTTP_UNAUTHORIZED, randomString());
+    assertThrowsExactly(
+        SourceAuthenticationException.class,
+        () -> fetchWith(new OAuth2ClientCredentials(credentialsKey)));
+    tokenUri = randomUri();
+    stubTokenEndpoint(tokenUri, HTTP_OK);
+    stubSource(HTTP_OK, randomString());
+
+    fetchWith(new OAuth2ClientCredentials(credentialsKey));
+
+    verify(httpClient).send(argThat(isRequestTo(tokenUri)), any());
+  }
+
+  @Test
+  void shouldReadSecretAgainAfterTokenEndpointRejectsCredentials() throws Exception {
+    stubTokenEndpoint(tokenUri, HTTP_UNAUTHORIZED);
+    stubSource(HTTP_OK, randomString());
+    assertThrowsExactly(
+        SourceClientException.class, () -> fetchWith(new OAuth2ClientCredentials(credentialsKey)));
+    tokenUri = randomUri();
+    stubTokenEndpoint(tokenUri, HTTP_OK);
+
+    fetchWith(new OAuth2ClientCredentials(credentialsKey));
+
+    verify(httpClient).send(argThat(isRequestTo(tokenUri)), any());
+  }
+
+  @Test
+  void shouldKeepSecretWhenSourceWithoutAuthenticationRejectsRequest() throws Exception {
+    stubSource(HTTP_OK, randomString());
+    var firstBearerToken = bearerToken;
+    fetchWith(new BearerToken(bearerTokenKey));
+    stubSource(HTTP_FORBIDDEN, randomString());
+    assertThrowsExactly(
+        SourceAuthenticationException.class, () -> fetchWith(new NoAuthentication()));
+    bearerToken = randomString();
+    stubSource(HTTP_OK, randomString());
+
+    fetchWith(new BearerToken(bearerTokenKey));
+
+    verify(httpClient, times(2))
+        .send(argThat(hasAuthorization("Bearer " + firstBearerToken)), any());
+  }
+
+  @Test
+  void shouldStripWhitespaceAroundStoredBearerToken() throws Exception {
+    stubSource(HTTP_OK, randomString());
+    var storedBearerToken = bearerToken;
+    bearerToken = " %s\n".formatted(storedBearerToken);
+
+    fetchWith(new BearerToken(bearerTokenKey));
+
+    verify(httpClient).send(argThat(hasAuthorization("Bearer " + storedBearerToken)), any());
+  }
+
+  @Test
+  void shouldThrowWhenStoredBearerTokenContainsControlCharacters() throws Exception {
+    stubSource(HTTP_OK, randomString());
+    bearerToken = "%s\n%s".formatted(randomString(), randomString());
+
+    assertThrowsExactly(
+        SourceClientException.class, () -> fetchWith(new BearerToken(bearerTokenKey)));
+  }
+
+  @ParameterizedTest
+  @NullAndEmptySource
+  @ValueSource(strings = {"  "})
+  void shouldThrowWhenStoredBearerTokenIsBlank(String storedBearerToken) throws Exception {
+    stubSource(HTTP_OK, randomString());
+    bearerToken = storedBearerToken;
+
+    assertThrowsExactly(
+        SourceClientException.class, () -> fetchWith(new BearerToken(bearerTokenKey)));
+  }
+
+  @Test
+  void shouldThrowWhenBearerTokenKeyHasNoBearerToken() throws Exception {
+    stubSource(HTTP_OK, randomString());
+
+    assertThrowsExactly(
+        SourceClientException.class, () -> fetchWith(new BearerToken(credentialsKey)));
   }
 
   @Test
@@ -199,6 +342,12 @@ class SourceClientTest {
     identifierPolicy =
         new IdentifierPolicy(Set.of(), List.of(new SourceConfig(baseUri, authentication)));
     return sourceClient.fetchSource(sourceUri(), customerIdentifier);
+  }
+
+  private void stubTokenEndpoint(URI uri, int status) throws IOException, InterruptedException {
+    doReturn(new StubResponse(status, TOKEN_RESPONSE.formatted(accessToken), Map.of()))
+        .when(httpClient)
+        .send(argThat(isRequestTo(uri)), any());
   }
 
   private void stubSource(int status, String body) throws IOException, InterruptedException {

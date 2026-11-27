@@ -113,19 +113,6 @@ class OAuth2TokenServiceTest {
   }
 
   @Test
-  void shouldKeepCredentialsReadForFirstAccessToken() throws Exception {
-    stubTokenEndpoint(tokenUri, HTTP_OK, tokenResponse(randomString(), ONE_HOUR_IN_SECONDS));
-
-    tokenService.getAccessToken(credentialsKey);
-    storedCredentials.set(
-        new SourceCredentials(Map.of(credentialsKey, randomCredentials(randomUri()))));
-    tokenService.discardAccessToken(credentialsKey);
-    tokenService.getAccessToken(credentialsKey);
-
-    verify(httpClient, times(2)).send(argThat(isRequestTo(tokenUri)), any());
-  }
-
-  @Test
   void shouldLimitHowLongTokenRequestWaitsForResponse() throws Exception {
     stubTokenEndpoint(tokenUri, HTTP_OK, tokenResponse(randomString(), ONE_HOUR_IN_SECONDS));
 

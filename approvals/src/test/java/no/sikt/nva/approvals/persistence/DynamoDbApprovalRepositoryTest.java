@@ -55,6 +55,7 @@ import java.util.stream.Stream;
 import no.sikt.nva.approvals.domain.Approval;
 import no.sikt.nva.approvals.domain.ApprovalModifiedException;
 import no.sikt.nva.approvals.domain.ApprovalRevision;
+import no.sikt.nva.approvals.domain.BearerToken;
 import no.sikt.nva.approvals.domain.Handle;
 import no.sikt.nva.approvals.domain.IdentifierPolicy;
 import no.sikt.nva.approvals.domain.NamedIdentifier;
@@ -536,7 +537,10 @@ class DynamoDbApprovalRepositoryTest {
   void shouldPersistAndFindIdentifierPolicyWithSourceConfigs() {
     var customerIdentifier = randomUUID();
     var sourceConfigs =
-        List.of(randomSourceConfig(), new SourceConfig(randomUri(), new NoAuthentication()));
+        List.of(
+            randomSourceConfig(),
+            new SourceConfig(randomUri(), new NoAuthentication()),
+            new SourceConfig(randomUri(), new BearerToken(randomString())));
     var identifierPolicy = new IdentifierPolicy(Set.of(DMP), false, sourceConfigs);
     approvalRepository.saveIdentifierPolicy(customerIdentifier, identifierPolicy);
 
