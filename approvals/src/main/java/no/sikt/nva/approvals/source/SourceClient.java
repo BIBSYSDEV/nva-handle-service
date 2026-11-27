@@ -84,14 +84,14 @@ public class SourceClient {
     var sourceConfig = fetchSourceConfig(source, customerIdentifier);
     var request = createRequest(source, sourceConfig.authentication());
     var response = fetchSource(request);
-    discardRejectedAccessToken(response, sourceConfig.authentication());
+    discardRejectedCredentials(response, sourceConfig.authentication());
     return toSourceResponse(source, response);
   }
 
-  private void discardRejectedAccessToken(
+  private void discardRejectedCredentials(
       HttpResponse<String> response, SourceAuthentication authentication) {
     if (isRejected(response)) {
-      sourceCredentials.set(null);
+      discardSourceCredentials();
       if (authentication instanceof OAuth2ClientCredentials(String key)) {
         tokenService.discardAccessToken(key);
       }
@@ -138,6 +138,16 @@ public class SourceClient {
 
   private Optional<String> findAuthorization(SourceAuthentication authentication)
       throws SourceClientException {
+    try {
+      return createAuthorization(authentication);
+    } catch (SourceClientException exception) {
+      discardSourceCredentials();
+      throw exception;
+    }
+  }
+
+  private Optional<String> createAuthorization(SourceAuthentication authentication)
+      throws SourceClientException {
     return switch (authentication) {
       case NoAuthentication _ -> Optional.empty();
       case OAuth2ClientCredentials credentials ->
@@ -159,6 +169,10 @@ public class SourceClient {
   private SourceCredentials fetchSourceCredentials() {
     return sourceCredentials.updateAndGet(
         current -> Objects.nonNull(current) ? current : sourceCredentialsSupplier.get());
+  }
+
+  private void discardSourceCredentials() {
+    sourceCredentials.set(null);
   }
 
   private static Optional<SourceResponse> toSourceResponse(

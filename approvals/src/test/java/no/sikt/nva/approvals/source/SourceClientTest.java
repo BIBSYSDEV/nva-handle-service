@@ -75,9 +75,7 @@ class SourceClientTest {
     bearerToken = randomString();
     customerIdentifier = randomUUID();
     identifierPolicy = IdentifierPolicy.DENY_ALL;
-    doReturn(new StubResponse(HTTP_OK, TOKEN_RESPONSE.formatted(accessToken), Map.of()))
-        .when(httpClient)
-        .send(argThat(isRequestTo(tokenUri)), any());
+    stubTokenEndpoint(tokenUri, HTTP_OK);
     sourceClient =
         new SourceClient(
             customer ->
@@ -174,6 +172,47 @@ class SourceClientTest {
   }
 
   @Test
+  void shouldReadSecretAgainAfterBearerTokenKeyWasMissing() throws Exception {
+    stubSource(HTTP_OK, randomString());
+    var addedKey = randomString();
+    assertThrowsExactly(SourceClientException.class, () -> fetchWith(new BearerToken(addedKey)));
+    bearerTokenKey = addedKey;
+
+    fetchWith(new BearerToken(addedKey));
+
+    verify(httpClient).send(argThat(hasAuthorization("Bearer " + bearerToken)), any());
+  }
+
+  @Test
+  void shouldReadSecretAgainAfterSourceRejectsOAuth2Token() throws Exception {
+    stubSource(HTTP_UNAUTHORIZED, randomString());
+    assertThrowsExactly(
+        SourceAuthenticationException.class,
+        () -> fetchWith(new OAuth2ClientCredentials(credentialsKey)));
+    tokenUri = randomUri();
+    stubTokenEndpoint(tokenUri, HTTP_OK);
+    stubSource(HTTP_OK, randomString());
+
+    fetchWith(new OAuth2ClientCredentials(credentialsKey));
+
+    verify(httpClient).send(argThat(isRequestTo(tokenUri)), any());
+  }
+
+  @Test
+  void shouldReadSecretAgainAfterTokenEndpointRejectsCredentials() throws Exception {
+    stubTokenEndpoint(tokenUri, HTTP_UNAUTHORIZED);
+    stubSource(HTTP_OK, randomString());
+    assertThrowsExactly(
+        SourceClientException.class, () -> fetchWith(new OAuth2ClientCredentials(credentialsKey)));
+    tokenUri = randomUri();
+    stubTokenEndpoint(tokenUri, HTTP_OK);
+
+    fetchWith(new OAuth2ClientCredentials(credentialsKey));
+
+    verify(httpClient).send(argThat(isRequestTo(tokenUri)), any());
+  }
+
+  @Test
   void shouldThrowWhenBearerTokenKeyHasNoBearerToken() throws Exception {
     stubSource(HTTP_OK, randomString());
 
@@ -253,6 +292,12 @@ class SourceClientTest {
     identifierPolicy =
         new IdentifierPolicy(Set.of(), List.of(new SourceConfig(baseUri, authentication)));
     return sourceClient.fetchSource(sourceUri(), customerIdentifier);
+  }
+
+  private void stubTokenEndpoint(URI uri, int status) throws IOException, InterruptedException {
+    doReturn(new StubResponse(status, TOKEN_RESPONSE.formatted(accessToken), Map.of()))
+        .when(httpClient)
+        .send(argThat(isRequestTo(uri)), any());
   }
 
   private void stubSource(int status, String body) throws IOException, InterruptedException {
