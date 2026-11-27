@@ -48,9 +48,11 @@ flowchart TB
   be resolved as `<one base URI>/<value>`. If a source issues identifiers for different kinds of things, or
   has several series that can produce the same value, each needs its own name.
 - **`Handle`** — a validated handle URI.
-- **`IdentifierPolicy` / `IdentifierPolicyService`** — which identifier names a given customer is allowed to use. An
-  unknown customer resolves to `IdentifierPolicy.DENY_ALL`. Currently domain-level only; not yet wired into the
-  handlers.
+- **`IdentifierPolicy` / `IdentifierPolicyService`** — which identifier names a given customer is allowed to use, and
+  the `sourceConfigs` for the sources it may register. Create and update reject identifier names and sources outside
+  the policy for third-party clients, while the internal backend is allowed everything. The snapshot lambda uses the
+  source config to fetch the source (see [Source authentication](#source-authentication)). An unknown customer
+  resolves to `IdentifierPolicy.DENY_ALL`.
 
 ## Create flow
 
