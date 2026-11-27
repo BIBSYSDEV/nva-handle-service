@@ -38,6 +38,7 @@ import no.sikt.nva.approvals.domain.SourceConfig;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.NullAndEmptySource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentMatcher;
 
@@ -210,6 +211,17 @@ class SourceClientTest {
     fetchWith(new OAuth2ClientCredentials(credentialsKey));
 
     verify(httpClient).send(argThat(isRequestTo(tokenUri)), any());
+  }
+
+  @ParameterizedTest
+  @NullAndEmptySource
+  @ValueSource(strings = {"  "})
+  void shouldThrowWhenStoredBearerTokenIsBlank(String storedBearerToken) throws Exception {
+    stubSource(HTTP_OK, randomString());
+    bearerToken = storedBearerToken;
+
+    assertThrowsExactly(
+        SourceClientException.class, () -> fetchWith(new BearerToken(bearerTokenKey)));
   }
 
   @Test

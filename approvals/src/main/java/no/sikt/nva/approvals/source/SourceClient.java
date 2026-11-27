@@ -27,6 +27,7 @@ import no.sikt.nva.approvals.domain.SourceAuthentication;
 import no.sikt.nva.approvals.domain.SourceConfig;
 import nva.commons.core.Environment;
 import nva.commons.core.JacocoGenerated;
+import nva.commons.core.StringUtils;
 import nva.commons.core.attempt.Failure;
 import nva.commons.secrets.SecretsReader;
 
@@ -160,6 +161,7 @@ public class SourceClient {
     return fetchSourceCredentials()
         .findCredentials(bearerToken.key(), BearerTokenCredentials.class)
         .map(BearerTokenCredentials::token)
+        .filter(StringUtils::isNotBlank)
         .orElseThrow(
             () ->
                 new SourceClientException(
