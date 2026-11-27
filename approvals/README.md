@@ -380,8 +380,10 @@ by editing the item:
   expires. `BearerToken` sends the stored long-lived token as it is.
 - The secret holds the credentials of all sources, so read it, add the entry and write the whole secret back.
 - Add the secret entry before the source config. A missing entry fails the snapshot with a clear error.
-- The secret is read on first use and cached. It is read again after a source answers 401/403 or when credentials are
-  missing or rejected, so rotated or added credentials are picked up on the next SQS retry without a cold start.
+- The secret is read on first use and cached. It is read again after an authenticated source answers 401/403 or when
+  credentials are missing or rejected, so rotated or added credentials are picked up on the next SQS retry without a
+  cold start.
+- Whitespace around a bearer token is stripped. A token with control characters inside it is rejected.
 
 ## Module layout
 

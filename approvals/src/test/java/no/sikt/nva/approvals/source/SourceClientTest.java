@@ -1,5 +1,6 @@
 package no.sikt.nva.approvals.source;
 
+import static java.net.HttpURLConnection.HTTP_FORBIDDEN;
 import static java.net.HttpURLConnection.HTTP_INTERNAL_ERROR;
 import static java.net.HttpURLConnection.HTTP_NOT_FOUND;
 import static java.net.HttpURLConnection.HTTP_OK;
@@ -211,6 +212,43 @@ class SourceClientTest {
     fetchWith(new OAuth2ClientCredentials(credentialsKey));
 
     verify(httpClient).send(argThat(isRequestTo(tokenUri)), any());
+  }
+
+  @Test
+  void shouldKeepSecretWhenSourceWithoutAuthenticationRejectsRequest() throws Exception {
+    stubSource(HTTP_OK, randomString());
+    var firstBearerToken = bearerToken;
+    fetchWith(new BearerToken(bearerTokenKey));
+    stubSource(HTTP_FORBIDDEN, randomString());
+    assertThrowsExactly(
+        SourceAuthenticationException.class, () -> fetchWith(new NoAuthentication()));
+    bearerToken = randomString();
+    stubSource(HTTP_OK, randomString());
+
+    fetchWith(new BearerToken(bearerTokenKey));
+
+    verify(httpClient, times(2))
+        .send(argThat(hasAuthorization("Bearer " + firstBearerToken)), any());
+  }
+
+  @Test
+  void shouldStripWhitespaceAroundStoredBearerToken() throws Exception {
+    stubSource(HTTP_OK, randomString());
+    var storedBearerToken = bearerToken;
+    bearerToken = " %s\n".formatted(storedBearerToken);
+
+    fetchWith(new BearerToken(bearerTokenKey));
+
+    verify(httpClient).send(argThat(hasAuthorization("Bearer " + storedBearerToken)), any());
+  }
+
+  @Test
+  void shouldThrowWhenStoredBearerTokenContainsControlCharacters() throws Exception {
+    stubSource(HTTP_OK, randomString());
+    bearerToken = "%s\n%s".formatted(randomString(), randomString());
+
+    assertThrowsExactly(
+        SourceClientException.class, () -> fetchWith(new BearerToken(bearerTokenKey)));
   }
 
   @ParameterizedTest

@@ -47,7 +47,8 @@ public class SourceClient {
       "Source %s rejected the credentials with status %s";
   private static final String UNEXPECTED_STATUS_MESSAGE = "Source %s responded with status %s";
 
-  private static final String MISSING_BEARER_TOKEN_MESSAGE = "No bearer token stored under key %s";
+  private static final String INVALID_BEARER_TOKEN_MESSAGE =
+      "No valid bearer token stored under key %s";
 
   private final IdentifierPolicyService identifierPolicyService;
   private final Supplier<SourceCredentials> sourceCredentialsSupplier;
@@ -91,12 +92,19 @@ public class SourceClient {
 
   private void discardRejectedCredentials(
       HttpResponse<String> response, SourceAuthentication authentication) {
-    if (isRejected(response)) {
+    if (isRejected(response) && usesSourceSecret(authentication)) {
       discardSourceCredentials();
       if (authentication instanceof OAuth2ClientCredentials(String key)) {
         tokenService.discardAccessToken(key);
       }
     }
+  }
+
+  private static boolean usesSourceSecret(SourceAuthentication authentication) {
+    return switch (authentication) {
+      case NoAuthentication _ -> false;
+      case OAuth2ClientCredentials _, BearerToken _ -> true;
+    };
   }
 
   private static boolean isRejected(HttpResponse<String> response) {
@@ -161,11 +169,17 @@ public class SourceClient {
     return fetchSourceCredentials()
         .findCredentials(bearerToken.key(), BearerTokenCredentials.class)
         .map(BearerTokenCredentials::token)
+        .map(String::strip)
         .filter(StringUtils::isNotBlank)
+        .filter(SourceClient::hasNoControlCharacters)
         .orElseThrow(
             () ->
                 new SourceClientException(
-                    MISSING_BEARER_TOKEN_MESSAGE.formatted(bearerToken.key())));
+                    INVALID_BEARER_TOKEN_MESSAGE.formatted(bearerToken.key())));
+  }
+
+  private static boolean hasNoControlCharacters(String token) {
+    return token.chars().noneMatch(Character::isISOControl);
   }
 
   private SourceCredentials fetchSourceCredentials() {
