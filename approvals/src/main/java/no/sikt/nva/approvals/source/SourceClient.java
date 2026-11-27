@@ -16,6 +16,7 @@ import java.time.Duration;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
 import no.sikt.nva.approvals.domain.BearerToken;
 import no.sikt.nva.approvals.domain.IdentifierPolicyService;
@@ -51,7 +52,7 @@ public class SourceClient {
   private final Supplier<SourceCredentials> sourceCredentialsSupplier;
   private final OAuth2TokenService tokenService;
   private final HttpClient httpClient;
-  private SourceCredentials sourceCredentials;
+  private final AtomicReference<SourceCredentials> sourceCredentials = new AtomicReference<>();
 
   public SourceClient(
       IdentifierPolicyService identifierPolicyService,
@@ -89,8 +90,11 @@ public class SourceClient {
 
   private void discardRejectedAccessToken(
       HttpResponse<String> response, SourceAuthentication authentication) {
-    if (isRejected(response) && authentication instanceof OAuth2ClientCredentials(String key)) {
-      tokenService.discardAccessToken(key);
+    if (isRejected(response)) {
+      sourceCredentials.set(null);
+      if (authentication instanceof OAuth2ClientCredentials(String key)) {
+        tokenService.discardAccessToken(key);
+      }
     }
   }
 
@@ -153,10 +157,8 @@ public class SourceClient {
   }
 
   private SourceCredentials fetchSourceCredentials() {
-    if (Objects.isNull(sourceCredentials)) {
-      sourceCredentials = sourceCredentialsSupplier.get();
-    }
-    return sourceCredentials;
+    return sourceCredentials.updateAndGet(
+        current -> Objects.nonNull(current) ? current : sourceCredentialsSupplier.get());
   }
 
   private static Optional<SourceResponse> toSourceResponse(

@@ -148,6 +148,32 @@ class SourceClientTest {
   }
 
   @Test
+  void shouldKeepSecretBetweenAcceptedFetches() throws Exception {
+    stubSource(HTTP_OK, randomString());
+    var firstBearerToken = bearerToken;
+
+    fetchWith(new BearerToken(bearerTokenKey));
+    bearerToken = randomString();
+    fetchWith(new BearerToken(bearerTokenKey));
+
+    verify(httpClient, times(2))
+        .send(argThat(hasAuthorization("Bearer " + firstBearerToken)), any());
+  }
+
+  @Test
+  void shouldReadSecretAgainAfterSourceRejectsBearerToken() throws Exception {
+    stubSource(HTTP_UNAUTHORIZED, randomString());
+    assertThrowsExactly(
+        SourceAuthenticationException.class, () -> fetchWith(new BearerToken(bearerTokenKey)));
+    bearerToken = randomString();
+    stubSource(HTTP_OK, randomString());
+
+    fetchWith(new BearerToken(bearerTokenKey));
+
+    verify(httpClient).send(argThat(hasAuthorization("Bearer " + bearerToken)), any());
+  }
+
+  @Test
   void shouldThrowWhenBearerTokenKeyHasNoBearerToken() throws Exception {
     stubSource(HTTP_OK, randomString());
 
