@@ -75,7 +75,7 @@ public class OAuth2TokenService {
 
   private OAuth2Credentials findCredentials(String credentialsKey) throws SourceClientException {
     return readSourceCredentials()
-        .findCredentials(credentialsKey)
+        .findCredentials(credentialsKey, OAuth2Credentials.class)
         .orElseThrow(
             () -> new SourceClientException(MISSING_CREDENTIALS_MESSAGE.formatted(credentialsKey)));
   }

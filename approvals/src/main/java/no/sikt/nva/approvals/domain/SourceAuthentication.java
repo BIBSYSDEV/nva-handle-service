@@ -7,6 +7,8 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo.Id;
 @JsonTypeInfo(use = Id.NAME, property = "type")
 @JsonSubTypes({
   @JsonSubTypes.Type(NoAuthentication.class),
-  @JsonSubTypes.Type(OAuth2ClientCredentials.class)
+  @JsonSubTypes.Type(OAuth2ClientCredentials.class),
+  @JsonSubTypes.Type(BearerToken.class)
 })
-public sealed interface SourceAuthentication permits NoAuthentication, OAuth2ClientCredentials {}
+public sealed interface SourceAuthentication
+    permits NoAuthentication, OAuth2ClientCredentials, BearerToken {}

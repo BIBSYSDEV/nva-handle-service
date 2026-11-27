@@ -13,9 +13,11 @@ import java.net.http.HttpRequest.Builder;
 import java.net.http.HttpResponse;
 import java.net.http.HttpResponse.BodyHandlers;
 import java.time.Duration;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Supplier;
+import no.sikt.nva.approvals.domain.BearerToken;
 import no.sikt.nva.approvals.domain.IdentifierPolicyService;
 import no.sikt.nva.approvals.domain.IdentifierPolicyServiceImpl;
 import no.sikt.nva.approvals.domain.NoAuthentication;
@@ -43,16 +45,21 @@ public class SourceClient {
       "Source %s rejected the credentials with status %s";
   private static final String UNEXPECTED_STATUS_MESSAGE = "Source %s responded with status %s";
 
+  private static final String MISSING_BEARER_TOKEN_MESSAGE = "No bearer token stored under key %s";
+
   private final IdentifierPolicyService identifierPolicyService;
+  private final Supplier<SourceCredentials> sourceCredentialsSupplier;
   private final OAuth2TokenService tokenService;
   private final HttpClient httpClient;
+  private SourceCredentials sourceCredentials;
 
   public SourceClient(
       IdentifierPolicyService identifierPolicyService,
       Supplier<SourceCredentials> sourceCredentialsSupplier,
       HttpClient httpClient) {
     this.identifierPolicyService = identifierPolicyService;
-    this.tokenService = new OAuth2TokenService(sourceCredentialsSupplier, httpClient);
+    this.sourceCredentialsSupplier = sourceCredentialsSupplier;
+    this.tokenService = new OAuth2TokenService(this::fetchSourceCredentials, httpClient);
     this.httpClient = httpClient;
   }
 
@@ -131,7 +138,25 @@ public class SourceClient {
       case NoAuthentication _ -> Optional.empty();
       case OAuth2ClientCredentials credentials ->
           Optional.of(BEARER_PREFIX + tokenService.getAccessToken(credentials.key()));
+      case BearerToken bearerToken -> Optional.of(BEARER_PREFIX + findBearerToken(bearerToken));
     };
+  }
+
+  private String findBearerToken(BearerToken bearerToken) throws SourceClientException {
+    return fetchSourceCredentials()
+        .findCredentials(bearerToken.key(), BearerTokenCredentials.class)
+        .map(BearerTokenCredentials::token)
+        .orElseThrow(
+            () ->
+                new SourceClientException(
+                    MISSING_BEARER_TOKEN_MESSAGE.formatted(bearerToken.key())));
+  }
+
+  private SourceCredentials fetchSourceCredentials() {
+    if (Objects.isNull(sourceCredentials)) {
+      sourceCredentials = sourceCredentialsSupplier.get();
+    }
+    return sourceCredentials;
   }
 
   private static Optional<SourceResponse> toSourceResponse(

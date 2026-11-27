@@ -29,6 +29,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import no.sikt.nva.approvals.domain.BearerToken;
 import no.sikt.nva.approvals.domain.IdentifierPolicy;
 import no.sikt.nva.approvals.domain.NoAuthentication;
 import no.sikt.nva.approvals.domain.OAuth2ClientCredentials;
@@ -58,6 +59,8 @@ class SourceClientTest {
   private URI tokenUri;
   private String credentialsKey;
   private String accessToken;
+  private String bearerTokenKey;
+  private String bearerToken;
   private UUID customerIdentifier;
   private IdentifierPolicy identifierPolicy;
 
@@ -68,6 +71,8 @@ class SourceClientTest {
     tokenUri = randomUri();
     credentialsKey = randomString();
     accessToken = randomString();
+    bearerTokenKey = randomString();
+    bearerToken = randomString();
     customerIdentifier = randomUUID();
     identifierPolicy = IdentifierPolicy.DENY_ALL;
     doReturn(new StubResponse(HTTP_OK, TOKEN_RESPONSE.formatted(accessToken), Map.of()))
@@ -77,7 +82,13 @@ class SourceClientTest {
         new SourceClient(
             customer ->
                 customerIdentifier.equals(customer) ? identifierPolicy : IdentifierPolicy.DENY_ALL,
-            () -> new SourceCredentials(Map.of(credentialsKey, randomOAuth2Credentials())),
+            () ->
+                new SourceCredentials(
+                    Map.of(
+                        credentialsKey,
+                        randomOAuth2Credentials(),
+                        bearerTokenKey,
+                        new BearerTokenCredentials(bearerToken))),
             httpClient);
   }
 
@@ -125,6 +136,23 @@ class SourceClientTest {
 
     assertThrowsExactly(
         SourceClientException.class, () -> fetchWith(new OAuth2ClientCredentials(randomString())));
+  }
+
+  @Test
+  void shouldAuthenticateWithBearerTokenFromSecret() throws Exception {
+    stubSource(HTTP_OK, randomString());
+
+    fetchWith(new BearerToken(bearerTokenKey));
+
+    verify(httpClient).send(argThat(hasAuthorization("Bearer " + bearerToken)), any());
+  }
+
+  @Test
+  void shouldThrowWhenBearerTokenKeyHasNoBearerToken() throws Exception {
+    stubSource(HTTP_OK, randomString());
+
+    assertThrowsExactly(
+        SourceClientException.class, () -> fetchWith(new BearerToken(credentialsKey)));
   }
 
   @Test
