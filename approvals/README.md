@@ -342,6 +342,45 @@ Environment variables, set in [`template.yaml`](../template.yaml):
 `CreateApprovalFunction` and `UpdateApprovalFunction` run inside the VPC with a static IP because they reach the Handle
 database; `FetchApprovalFunction`, `FetchContextFunction` and `FetchOntologyFunction` do not.
 
+## Source authentication
+
+The snapshot lambda fetches each source with the `sourceConfig` of the customer's identifier policy whose `baseUri` is a
+prefix of the source URI. The policy is stored in the DynamoDB table as one item per customer, with
+`PK0 = Customer:<customer identifier>` and `SK0 = IdentifierPolicy`. There is no endpoint for it, so add source configs
+by editing the item:
+
+```json
+"sourceConfigs": [
+  { "baseUri": "https://open.example.org/", "authentication": { "type": "NoAuthentication" } },
+  { "baseUri": "https://dmp.example.org/", "authentication": { "type": "OAuth2ClientCredentials", "key": "dmp" } },
+  { "baseUri": "https://rek.example.org/", "authentication": { "type": "BearerToken", "key": "rek" } }
+]
+```
+
+`key` points to an entry in the `ApprovalCredentials` secret, and the entry type must match the authentication type:
+
+```json
+{
+  "credentials": {
+    "dmp": {
+      "type": "OAuth2Credentials",
+      "clientId": "...",
+      "clientSecret": "...",
+      "accessTokenUrl": "https://auth.example.org/token",
+      "scope": "..."
+    },
+    "rek": { "type": "BearerTokenCredentials", "token": "..." }
+  }
+}
+```
+
+- `OAuth2ClientCredentials` requests an access token with the client credentials and reuses it until shortly before it
+  expires. `BearerToken` sends the stored long-lived token as it is.
+- The secret holds the credentials of all sources, so read it, add the entry and write the whole secret back.
+- Add the secret entry before the source config. A missing entry fails the snapshot with a clear error.
+- The secret is read on first use and cached. It is read again after a source answers 401/403 or when credentials are
+  missing or rejected, so rotated or added credentials are picked up on the next SQS retry without a cold start.
+
 ## Module layout
 
 ```
